@@ -1843,16 +1843,140 @@ class BrightDataProductService {
   }
 
   private normalizeWalmartData(rawData: any, url: string): ProductData {
-    return {
-      title: rawData.title || rawData.name,
-      price: this.parsePrice(rawData.price),
-      currency: 'USD',
-      weight: this.parseWeight(rawData.shipping_weight, url),
-      images: rawData.images || [],
-      brand: rawData.brand,
-      category: rawData.category || this.inferCategory(rawData.title),
-      availability: rawData.available ? 'in-stock' : 'out-of-stock'
-    };
+    try {
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+      
+      // Extract price information
+      let price = 0;
+      if (data.final_price) {
+        price = typeof data.final_price === 'number' ? data.final_price : parseFloat(data.final_price) || 0;
+      }
+      
+      // Handle images
+      const images = [];
+      if (data.image_urls && Array.isArray(data.image_urls)) {
+        images.push(...data.image_urls.filter(Boolean));
+      }
+      if (data.main_image) {
+        images.unshift(data.main_image);
+      }
+      
+      // Map category from Walmart structure
+      const category = this.mapWalmartCategory(data.category_name, data.breadcrumb_text);
+      
+      // Extract specifications for weight estimation
+      const specs = data.specifications || [];
+      let weight = this.extractWalmartWeight(specs);
+      if (!weight) {
+        weight = this.estimateProductWeight(data.product_name, category);
+      }
+      
+      return {
+        title: data.product_name || data.title || 'Walmart Product',
+        price,
+        currency: data.currency || 'USD',
+        images,
+        weight,
+        brand: data.brand || this.extractBrandFromSpecs(specs),
+        category,
+        availability: data.is_available ? 'in-stock' : (data.available_for_delivery ? 'in-stock' : 'out-of-stock'),
+        description: data.description || '',
+        specifications: this.formatWalmartSpecs(specs),
+        seller_name: 'Walmart',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Walmart data:', error);
+      return {
+        title: rawData.product_name || rawData.title || 'Walmart Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: rawData.brand || 'Unknown',
+        category: 'general',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Map Walmart category to our standard categories
+   */
+  private mapWalmartCategory(categoryName?: string, breadcrumbText?: string): string {
+    const category = (categoryName || breadcrumbText || '').toLowerCase();
+    
+    if (category.includes('clothing') || category.includes('apparel')) return 'fashion';
+    if (category.includes('shoes') || category.includes('sneakers') || category.includes('footwear')) return 'footwear';
+    if (category.includes('electronics') || category.includes('tech')) return 'electronics';
+    if (category.includes('home') || category.includes('furniture') || category.includes('decor')) return 'home';
+    if (category.includes('beauty') || category.includes('cosmetics') || category.includes('skincare')) return 'beauty';
+    if (category.includes('sports') || category.includes('fitness') || category.includes('outdoor')) return 'sports';
+    if (category.includes('toys') || category.includes('games')) return 'toys';
+    if (category.includes('baby') || category.includes('toddler') || category.includes('infant')) return 'baby';
+    if (category.includes('books') || category.includes('media')) return 'books';
+    
+    return 'general';
+  }
+
+  /**
+   * Extract weight from Walmart specifications
+   */
+  private extractWalmartWeight(specs: any[]): number | undefined {
+    if (!Array.isArray(specs)) return undefined;
+    
+    for (const spec of specs) {
+      if (spec?.name && spec?.value) {
+        const name = spec.name.toLowerCase();
+        const value = spec.value.toString().toLowerCase();
+        
+        if (name.includes('weight') || name.includes('shipping weight') || name.includes('item weight')) {
+          const weightMatch = value.match(/(\d+\.?\d*)\s*(lb|lbs|pound|pounds|kg|kilogram|kilograms|oz|ounce|ounces)/);
+          if (weightMatch) {
+            const weight = parseFloat(weightMatch[1]);
+            const unit = weightMatch[2];
+            
+            // Convert to kg
+            if (unit.includes('lb') || unit.includes('pound')) {
+              return weight * 0.453592; // lbs to kg
+            } else if (unit.includes('oz') || unit.includes('ounce')) {
+              return weight * 0.0283495; // oz to kg
+            } else {
+              return weight; // Already in kg
+            }
+          }
+        }
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extract brand from specifications if not in main data
+   */
+  private extractBrandFromSpecs(specs: any[]): string | undefined {
+    if (!Array.isArray(specs)) return undefined;
+    
+    const brandSpec = specs.find(spec => spec?.name?.toLowerCase() === 'brand');
+    return brandSpec?.value || undefined;
+  }
+
+  /**
+   * Format Walmart specifications for display
+   */
+  private formatWalmartSpecs(specs: any[]): Record<string, any> | undefined {
+    if (!Array.isArray(specs) || specs.length === 0) return undefined;
+    
+    const formatted: Record<string, any> = {};
+    specs.forEach(spec => {
+      if (spec?.name && spec?.value) {
+        formatted[spec.name] = spec.value;
+      }
+    });
+    
+    return Object.keys(formatted).length > 0 ? formatted : undefined;
   }
 
   private normalizeBestBuyData(rawData: any, url: string): ProductData {

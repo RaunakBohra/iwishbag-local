@@ -753,7 +753,7 @@ function getDatasetId(toolName: string): string | null {
     'web_data_amazon_product': 'gd_l7q7dkf244hwjntr0',
     'web_data_ebay_product': 'gd_ltr9mjt81n0zzdk1fb',
     'web_data_bestbuy_products': 'gd_ltre1jqe1jfr7cccf',
-    'web_data_walmart_product': 'your_walmart_dataset_id' // Not provided
+    'web_data_walmart_product': 'gd_l95fol7l1ru6rlo116' // Walmart dataset ID
     // 'flipkart_product': Uses DCA API with collector c_mdy5p87619oyypd0k3
   };
   
