@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Edit2, Check, X } from 'lucide-react';
+import { ExternalLink, Edit2, Check, X, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useProductScraping } from '@/hooks/useProductScraping';
 
 interface EditableUrlInputProps {
   value: string;
@@ -10,6 +11,16 @@ interface EditableUrlInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  showFetchButton?: boolean;
+  onDataFetched?: (data: {
+    productName?: string;
+    price?: number;
+    weight?: number;
+    currency?: string;
+    category?: string;
+    brand?: string;
+    hsn?: string;
+  }) => void;
 }
 
 export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
@@ -17,10 +28,15 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
   onChange,
   placeholder = "https://www.amazon.com/product-link or any international store",
   className,
-  disabled = false
+  disabled = false,
+  showFetchButton = false,
+  onDataFetched
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+  
+  // Product scraping hook (only initialize when needed)
+  const productScraping = showFetchButton ? useProductScraping() : null;
   
   // If no URL is set yet, start in edit mode
   const shouldShowEditMode = isEditing || (!value && !disabled);
@@ -45,6 +61,20 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
       handleSave();
     } else if (e.key === 'Escape') {
       handleCancel();
+    }
+  };
+  
+  const handleFetch = async () => {
+    if (!value || !productScraping || !onDataFetched) return;
+    
+    try {
+      await productScraping.scrapeProduct(value);
+      
+      if (productScraping.shouldAutoFill && productScraping.autoFillData) {
+        onDataFetched(productScraping.autoFillData);
+      }
+    } catch (error) {
+      console.error('Fetch failed:', error);
     }
   };
 
@@ -108,18 +138,43 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
             )}
           </>
         ) : (
-          // View mode - Edit button only (Open is on left)
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleEdit}
-            disabled={disabled}
-            className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-            title="Edit URL"
-          >
-            <Edit2 className="w-3 h-3" />
-          </Button>
+          // View mode buttons
+          <>
+            {/* Fetch button */}
+            {showFetchButton && value && productScraping && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleFetch}
+                disabled={disabled || productScraping.isLoading}
+                className={cn(
+                  "h-7 w-7 p-0",
+                  productScraping.isLoading 
+                    ? "text-orange-500 animate-spin" 
+                    : productScraping.isScraped && !productScraping.error
+                    ? "text-green-600 hover:text-green-800 hover:bg-green-50"
+                    : "text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                )}
+                title={productScraping.isLoading ? "Fetching..." : "Fetch product data"}
+              >
+                <Download className="w-3 h-3" />
+              </Button>
+            )}
+            
+            {/* Edit button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleEdit}
+              disabled={disabled}
+              className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              title="Edit URL"
+            >
+              <Edit2 className="w-3 h-3" />
+            </Button>
+          </>
         )}
       </div>
     </div>

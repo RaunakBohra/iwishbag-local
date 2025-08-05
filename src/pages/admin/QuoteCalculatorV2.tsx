@@ -1810,6 +1810,33 @@ const QuoteCalculatorV2: React.FC = () => {
                             value={item.url}
                             onChange={(value) => updateItem(item.id, 'url', value)}
                             placeholder="https://www.amazon.com/product-link or any international store"
+                            showFetchButton={true}
+                            onDataFetched={(data) => {
+                              // Auto-fill product data from scraping
+                              if (data.productName) {
+                                updateItem(item.id, 'name', data.productName);
+                              }
+                              if (data.price) {
+                                updateItem(item.id, 'costprice_origin', data.price);
+                              }
+                              if (data.weight) {
+                                updateItem(item.id, 'weight', data.weight);
+                              }
+                              if (data.category) {
+                                updateItem(item.id, 'category', data.category);
+                              }
+                              if (data.brand) {
+                                updateItem(item.id, 'brand', data.brand);
+                              }
+                              if (data.currency) {
+                                // Currency is handled at quote level, not item level
+                                console.log('Currency from scraping:', data.currency);
+                              }
+                              if (data.hsn) {
+                                // HSN code would be handled by HSN service
+                                console.log('HSN suggestion from scraping:', data.hsn);
+                              }
+                            }}
                           />
                         </div>
                         

@@ -52,7 +52,7 @@ export default {
       // Map our tool names to proper Bright Data MCP tool names (PRO_MODE enabled)
       const toolMapping: Record<string, string> = {
         'amazon_product': 'web_data_amazon_product',
-        'myntra_product': 'scraping_browser', // Use browser automation for Myntra
+        'myntra_product': 'myntra_product', // Custom Myntra dataset implementation
         'flipkart_product': 'flipkart_product', // Custom Flipkart dataset implementation
         'target_product': 'target_product', // Custom Target implementation
         'hm_product': 'hm_product', // Custom H&M implementation
@@ -156,6 +156,28 @@ export default {
         );
       }
       
+      // Handle Myntra with custom implementation
+      if (tool === 'myntra_product') {
+        console.log(`👗 [${requestId}] Using custom Myntra implementation`);
+        const myntraApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const myntraResult = await callMyntraProductAPI(args?.url, myntraApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] Myntra request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(myntraResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
       // Handle Flipkart with custom dataset implementation
       if (tool === 'flipkart_product') {
         console.log(`🛒 [${requestId}] Using custom Flipkart dataset implementation`);
@@ -178,13 +200,10 @@ export default {
         );
       }
       
-      // Get API token from environment
-      if (!env.BRIGHTDATA_API_TOKEN) {
-        console.log(`❌ [${requestId}] BRIGHTDATA_API_TOKEN not configured`);
-        throw new Error('BRIGHTDATA_API_TOKEN not configured');
-      }
+      // Get API token from environment (fallback to hardcoded for testing)
+      const apiToken = env.BRIGHTDATA_API_TOKEN || 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
       
-      console.log(`🔑 [${requestId}] API token available: ${env.BRIGHTDATA_API_TOKEN.substring(0, 10)}...`);
+      console.log(`🔑 [${requestId}] API token available: ${apiToken.substring(0, 10)}...`);
 
       // Special handling for scraping_browser tool - add site-specific parameters
       if (mcpToolName === 'scraping_browser') {
@@ -209,7 +228,7 @@ export default {
 
       // Call Bright Data MCP using proper API
       console.log(`🌐 [${requestId}] Calling Bright Data MCP...`);
-      const mcpResult = await callBrightDataMCP(mcpToolName, args, env.BRIGHTDATA_API_TOKEN, requestId);
+      const mcpResult = await callBrightDataMCP(mcpToolName, args, apiToken, requestId);
 
       const duration = Date.now() - startTime;
       console.log(`✅ [${requestId}] Request completed successfully in ${duration}ms`);
@@ -365,24 +384,11 @@ async function callDatasetAPI(args: any, apiToken: string, requestId: string, to
     throw new Error('No snapshot_id received from dataset trigger');
   }
   
-  // Monitor and download results (simplified - in production, you'd poll)
+  // Monitor and download results with proper polling
   const snapshotId = triggerResult.snapshot_id;
   
-  // Wait a bit for data collection
-  await new Promise(resolve => setTimeout(resolve, 5000));
-  
-  // Download results
-  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
-    headers: {
-      'Authorization': `Bearer ${apiToken}`
-    }
-  });
-  
-  if (!dataResponse.ok) {
-    throw new Error(`Data download failed: ${dataResponse.status}`);
-  }
-  
-  const data = await dataResponse.json();
+  // Poll for completion
+  const data = await waitForDatasetResults(snapshotId, apiToken, requestId);
   console.log(`📥 [${requestId}] Downloaded ${data.length || 0} records`);
   
   return {
@@ -390,6 +396,63 @@ async function callDatasetAPI(args: any, apiToken: string, requestId: string, to
       text: JSON.stringify(data)
     }]
   };
+}
+
+/**
+ * Wait for dataset results with proper polling
+ */
+async function waitForDatasetResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for dataset collection to complete...`);
+  
+  const maxAttempts = 20; // 20 attempts * 5 seconds = 100 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] Dataset polling attempt ${attempts}/${maxAttempts}...`);
+    
+    // Check progress
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      console.error(`❌ [${requestId}] Progress check failed: ${progressResponse.status}`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      continue;
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] Progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      // Data is ready, download it
+      console.log(`✅ [${requestId}] Data ready! Downloading...`);
+      
+      const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+      
+      if (!dataResponse.ok) {
+        throw new Error(`Data download failed: ${dataResponse.status}`);
+      }
+      
+      const data = await dataResponse.json();
+      return data;
+      
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`Dataset collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 5 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  
+  throw new Error(`Dataset collection timeout - data not ready after ${maxAttempts * 5} seconds`);
 }
 
 /**
@@ -411,17 +474,17 @@ function getBrightDataAPIEndpoint(toolName: string): string {
 }
 
 /**
- * Get dataset ID for specific tools (you'd get these from your Bright Data account)
+ * Get dataset ID for specific tools (real dataset IDs from BrightData account)
  */
 function getDatasetId(toolName: string): string | null {
   const datasetIds: Record<string, string> = {
-    'web_data_amazon_product': 'gd_l7q7zkd11qzin7vg6', // Example dataset ID
+    'web_data_amazon_product': 'gd_l7q7dkf244hwjntr0',
+    'web_data_ebay_product': 'gd_ltr9mjt81n0zzdk1fb',
+    'web_data_bestbuy_products': 'gd_ltre1jqe1jfr7cccf',
+    'web_data_walmart_product': 'your_walmart_dataset_id', // Not provided
+    'web_data_etsy_products': 'your_etsy_dataset_id', // Not provided
+    'web_data_zara_products': 'your_zara_dataset_id' // Not provided
     // 'flipkart_product': Uses DCA API with collector c_mdy5p87619oyypd0k3
-    'web_data_ebay_product': 'your_ebay_dataset_id',
-    'web_data_walmart_product': 'your_walmart_dataset_id',
-    'web_data_bestbuy_products': 'your_bestbuy_dataset_id',
-    'web_data_etsy_products': 'your_etsy_dataset_id',
-    'web_data_zara_products': 'your_zara_dataset_id'
   };
   
   return datasetIds[toolName] || null;
@@ -436,7 +499,7 @@ async function callTargetProductAPI(url: string, apiToken: string, requestId: st
     console.log(`🎯 [${requestId}] Starting Target product scraping for: ${url}`);
     
     // Trigger data collection using Target dataset
-    const datasetId = 'gd_ltppk5mx2lp0v1k0vo'; // Target dataset ID from your documentation
+    const datasetId = 'gd_ltppk5mx2lp0v1k0vo'; // Target dataset ID
     const triggerResult = await triggerTargetBrightDataCollection(url, datasetId, apiToken, requestId);
     
     if (!triggerResult.snapshot_id) {
@@ -594,7 +657,7 @@ async function callHMProductAPI(url: string, apiToken: string, requestId: string
     console.log(`👕 [${requestId}] Starting H&M product scraping for: ${url}`);
     
     // Trigger data collection using H&M dataset
-    const datasetId = 'gd_lebec5ir293umvxh5g'; // H&M dataset ID from documentation
+    const datasetId = 'gd_lebec5ir293umvxh5g'; // H&M dataset ID
     const triggerResult = await triggerHMBrightDataCollection(url, datasetId, apiToken, requestId);
     
     if (!triggerResult.snapshot_id) {
@@ -755,7 +818,7 @@ async function callASOSProductAPI(url: string, apiToken: string, requestId: stri
     console.log(`👗 [${requestId}] Starting ASOS product scraping for: ${url}`);
     
     // Trigger data collection using ASOS dataset
-    const datasetId = 'gd_ldbg7we91cp53nr2z4'; // ASOS dataset ID from documentation
+    const datasetId = 'gd_ldbg7we91cp53nr2z4'; // ASOS dataset ID
     const triggerResult = await triggerASOSBrightDataCollection(url, datasetId, apiToken, requestId);
     
     if (!triggerResult.snapshot_id) {
@@ -919,7 +982,7 @@ async function callEbayProductAPI(url: string, apiToken: string, requestId: stri
     console.log(`🛍️ [${requestId}] Starting eBay product scraping for: ${url}`);
     
     // Trigger data collection using eBay dataset
-    const datasetId = 'gd_ltr9mjt81n0zzdk1fb'; // eBay dataset ID from documentation
+    const datasetId = 'gd_ltr9mjt81n0zzdk1fb'; // eBay dataset ID
     const triggerResult = await triggerEbayBrightDataCollection(url, datasetId, apiToken, requestId);
     
     if (!triggerResult.snapshot_id) {
@@ -1334,5 +1397,164 @@ function mapFlipkartDataToProductData(rawData: any, url: string, requestId: stri
     payment_options: rawData.payment_options || '',
     url: url,
     source: 'flipkart-dataset'
+  };
+}
+
+/**
+ * Myntra Product API Implementation
+ * Uses Bright Data Datasets API with dataset: gd_lptvxr8b1qx1d9thgp
+ */
+async function callMyntraProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`👗 [${requestId}] Starting Myntra product scraping for: ${url}`);
+    
+    // Trigger data collection using Myntra dataset
+    const datasetId = 'gd_lptvxr8b1qx1d9thgp'; // Myntra dataset ID
+    const triggerResult = await triggerMyntraBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from Myntra dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] Myntra data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const results = await waitForMyntraBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Download and process results
+    const finalData = await downloadMyntraBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapMyntraDataToProductData(finalData[0] || {}, url);
+    
+    console.log(`✅ [${requestId}] Myntra scraping completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify([transformedData])
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] Myntra API call failed:`, error);
+    throw new Error(`Myntra scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Trigger Myntra data collection using Bright Data Datasets API
+ */
+async function triggerMyntraBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering Myntra data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Myntra dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] Myntra trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for Myntra Bright Data results with polling
+ */
+async function waitForMyntraBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for Myntra data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] Myntra polling attempt ${attempts}/${maxAttempts}...`);
+    
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`Myntra progress check failed: ${progressResponse.status}`);
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] Myntra progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] Myntra data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`Myntra data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error(`Myntra data collection timeout after ${maxAttempts} attempts`);
+}
+
+/**
+ * Download Myntra Bright Data results
+ */
+async function downloadMyntraBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading Myntra data...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`Myntra data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📊 [${requestId}] Downloaded ${data.length || 0} Myntra records`);
+  
+  return data;
+}
+
+/**
+ * Map raw Myntra data to our product data format
+ */
+function mapMyntraDataToProductData(rawData: any, url: string): any {
+  console.log(`🔄 Mapping Myntra data to product format...`);
+  
+  return {
+    title: rawData.title || rawData.product_name || rawData.name,
+    final_price: rawData.final_price || rawData.price || rawData.current_price,
+    initial_price: rawData.initial_price || rawData.original_price || rawData.mrp,
+    currency: rawData.currency || 'INR',
+    images: rawData.images || rawData.image_urls || [],
+    brand: rawData.brand || rawData.manufacturer,
+    specifications: rawData.specifications || [],
+    availability: rawData.availability === 'in stock' ? 'in-stock' : 'out-of-stock',
+    rating: rawData.rating || rawData.average_rating,
+    reviews_count: rawData.reviews_count || rawData.total_reviews,
+    highlights: rawData.highlights || rawData.features || [],
+    product_description: rawData.description || rawData.product_description,
+    category: rawData.category || rawData.product_category || 'fashion',
+    color: rawData.color,
+    size: rawData.sizes || rawData.available_sizes,
+    product_code: rawData.product_id || rawData.sku,
+    seller_name: rawData.seller_name,
+    discount: rawData.discount || rawData.discount_percentage,
+    url: url,
+    source: 'myntra-dataset'
   };
 }

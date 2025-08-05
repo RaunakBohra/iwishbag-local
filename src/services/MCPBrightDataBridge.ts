@@ -126,7 +126,7 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Call the actual Bright Data MCP tool via Cloudflare Workers
+   * Call the actual Bright Data MCP tool via Cloudflare Workers with polling support
    */
   private async callMCPTool(toolName: string, args: any): Promise<any> {
     const startTime = Date.now();
@@ -148,7 +148,7 @@ class MCPBrightDataBridge {
       };
       console.log(`📤 Request body:`, JSON.stringify(requestBody, null, 2));
       
-      console.log(`📡 Making HTTP request...`);
+      console.log(`📡 Making initial HTTP request...`);
       const response = await fetch(cloudflareWorkerUrl, {
         method: 'POST',
         headers: {
@@ -159,7 +159,7 @@ class MCPBrightDataBridge {
       
       const duration = Date.now() - startTime;
       console.log(`📶 Response status: ${response.status} ${response.statusText}`);
-      console.log(`⏱️ Request duration: ${duration}ms`);
+      console.log(`⏱️ Initial request duration: ${duration}ms`);
       
       // Log response headers
       const responseHeaders: Record<string, string> = {};
@@ -192,6 +192,7 @@ class MCPBrightDataBridge {
       throw error;
     }
   }
+
   
   // All mock data removed - real data only approach
   /**
