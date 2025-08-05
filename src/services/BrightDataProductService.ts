@@ -1413,7 +1413,7 @@ class BrightDataProductService {
       case 'flipkart_product':
         return await mcpBrightDataBridge.scrapeFlipkartProduct(params.url, params);
       case 'toysrus_product':
-        return await mcpBrightDataBridge.scrapeToysRUsProduct(params.url, params);
+        return await mcpBrightDataBridge.scrapeToysrusProduct(params.url, params);
       case 'carters_product':
         return await mcpBrightDataBridge.scrapeCartersProduct(params.url, params);
       case 'prada_product':
