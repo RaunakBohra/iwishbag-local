@@ -182,6 +182,9 @@ class BrightDataProductService {
         case 'hm':
           result = await this.scrapeHMProduct(url, options);
           break;
+        case 'asos':
+          result = await this.scrapeASOSProduct(url, options);
+          break;
         case 'flipkart':
           result = await this.scrapeFlipkartProduct(url, options);
           break;
@@ -516,6 +519,42 @@ class BrightDataProductService {
   }
 
   /**
+   * Scrape ASOS product using Bright Data MCP
+   */
+  private async scrapeASOSProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('asos_product', {
+        url,
+        include_specifications: true,
+        include_availability: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_category_tree: true,
+        include_variants: options.includeVariants !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'ASOS scraping failed');
+      }
+
+      const productData = this.normalizeASOSData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'ASOS scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
    * Scrape Flipkart product using Bright Data MCP
    */
   private async scrapeFlipkartProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
@@ -602,6 +641,8 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeTargetProduct(params.url, params);
       case 'hm_product':
         return await mcpBrightDataBridge.scrapeHMProduct(params.url, params);
+      case 'asos_product':
+        return await mcpBrightDataBridge.scrapeASOSProduct(params.url, params);
       case 'flipkart_product':
         return await mcpBrightDataBridge.scrapeFlipkartProduct(params.url, params);
       case 'scrape_as_markdown':
@@ -630,6 +671,7 @@ class BrightDataProductService {
     if (urlLower.includes('myntra.com')) return 'myntra';
     if (urlLower.includes('target.com')) return 'target';
     if (urlLower.includes('hm.com')) return 'hm';
+    if (urlLower.includes('asos.com')) return 'asos';
     if (urlLower.includes('flipkart.com')) return 'flipkart';
     
     return null;
@@ -661,9 +703,16 @@ class BrightDataProductService {
     
     // H&M country detection (pattern: en_{country_code})
     if (urlLower.includes('hm.com')) {
-      const hmCountryMatch = urlLower.match(/\/en_([a-z]{2})\//);
+      // Fix: Remove trailing slash requirement to match real URLs like /en_in/productpage
+      const hmCountryMatch = urlLower.match(/\/en_([a-z]{2})/);
       if (hmCountryMatch) {
         return hmCountryMatch[1].toUpperCase();
+      }
+      
+      // Alternative pattern for non-English locales (e.g., de_de, fr_fr)
+      const hmLocaleMatch = urlLower.match(/\/([a-z]{2})_([a-z]{2})/);
+      if (hmLocaleMatch) {
+        return hmLocaleMatch[2].toUpperCase(); // Return country code (second part)
       }
       // Fallback for H&M URLs without clear country pattern
       if (urlLower.includes('hm.com/en_us/')) return 'US';
@@ -681,6 +730,29 @@ class BrightDataProductService {
       if (urlLower.includes('hm.com/no_no/')) return 'NO';
       if (urlLower.includes('hm.com/fi_fi/')) return 'FI';
       return 'SE'; // H&M default (Swedish company)
+    }
+    
+    // ASOS country detection (pattern: /country-code/)
+    if (urlLower.includes('asos.com')) {
+      // ASOS URLs like: https://www.asos.com/us/, https://www.asos.com/fr/, etc.
+      const asosCountryMatch = urlLower.match(/asos\.com\/([a-z]{2})\//);
+      if (asosCountryMatch) {
+        return asosCountryMatch[1].toUpperCase();
+      }
+      
+      // Fallback patterns for ASOS regional URLs
+      if (urlLower.includes('/us/')) return 'US';
+      if (urlLower.includes('/gb/')) return 'GB';
+      if (urlLower.includes('/fr/')) return 'FR';
+      if (urlLower.includes('/de/')) return 'DE';
+      if (urlLower.includes('/es/')) return 'ES';
+      if (urlLower.includes('/it/')) return 'IT';
+      if (urlLower.includes('/au/')) return 'AU';
+      if (urlLower.includes('/ca/')) return 'CA';
+      if (urlLower.includes('/nl/')) return 'NL';
+      if (urlLower.includes('/se/')) return 'SE';
+      if (urlLower.includes('/dk/')) return 'DK';
+      return 'GB'; // ASOS default (UK-based company)
     }
     
     // Zara country detection
@@ -1475,6 +1547,147 @@ class BrightDataProductService {
     }
   }
 
+  /**
+   * Normalize ASOS product data to our standard format
+   */
+  private normalizeASOSData(rawData: any, url: string): ProductData {
+    try {
+      // Detect country and currency from URL
+      const detectedCountry = this.detectCountryFromUrl(url);
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Handle ASOS's comprehensive response format
+      const finalPrice = rawData.price || rawData.final_price || rawData.current_price;
+      const initialPrice = rawData.original_price || rawData.initial_price;
+      
+      // Safely parse images and limit to first 8 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.image)) {
+          images = rawData.image.filter(Boolean).slice(0, 8);
+        } else if (Array.isArray(rawData.image_urls)) {
+          images = rawData.image_urls.filter(Boolean).slice(0, 8);
+        } else if (Array.isArray(rawData.images)) {
+          images = rawData.images.filter(Boolean).slice(0, 8);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse ASOS images:', imgError);
+        images = [];
+      }
+
+      // ASOS doesn't typically have weight in clothing, but estimate based on category
+      let weight: number | undefined;
+      try {
+        // Estimate weight based on ASOS product category and type
+        weight = this.estimateASOSWeight(rawData.category || '', rawData.name || '');
+      } catch (weightError) {
+        console.warn('Failed to estimate ASOS weight:', weightError);
+      }
+
+      // Extract brand (typically ASOS or the specific brand)
+      const brand = rawData.brand || 'ASOS';
+
+      // Determine category from ASOS's category information
+      let category = 'fashion'; // Default for ASOS (primarily fashion)
+      try {
+        if (rawData.breadcrumbs && Array.isArray(rawData.breadcrumbs)) {
+          // Use the most specific category from the breadcrumbs
+          const specificCategory = rawData.breadcrumbs[rawData.breadcrumbs.length - 1];
+          if (specificCategory) {
+            category = this.mapASOSCategory(specificCategory);
+          }
+        } else if (rawData.category) {
+          category = this.mapASOSCategory(rawData.category);
+        }
+      } catch (categoryError) {
+        console.warn('Failed to map ASOS category:', categoryError);
+      }
+
+      // Handle availability status
+      let availability = 'unknown';
+      try {
+        if (rawData.availability) {
+          if (rawData.availability === 'in stock' || rawData.availability === 'available' || rawData.availability === 'In Stock') {
+            availability = 'in-stock';
+          } else if (rawData.availability === 'out of stock' || rawData.availability === 'Out of Stock') {
+            availability = 'out-of-stock';
+          }
+        }
+      } catch (availError) {
+        console.warn('Failed to parse ASOS availability:', availError);
+      }
+
+      // Build description from available data
+      let description = '';
+      try {
+        const descriptionParts = [
+          rawData.description,
+          rawData.product_details,
+          rawData.about_me,
+          rawData.look_after_me && `Care: ${rawData.look_after_me}`,
+          rawData.size_fit && `Size & Fit: ${rawData.size_fit}`
+        ].filter(Boolean);
+        
+        description = descriptionParts.join('\n\n');
+      } catch (descError) {
+        console.warn('Failed to build ASOS description:', descError);
+        description = rawData.description || rawData.product_details || rawData.about_me || '';
+      }
+
+      // Handle variants (sizes, colors)
+      let variants: any[] = [];
+      try {
+        if (rawData.color && Array.isArray(rawData.color)) {
+          variants.push(...rawData.color.map((color: string) => ({ type: 'color', value: color })));
+        }
+        if (rawData.possible_sizes) {
+          // Handle both array and string formats for sizes
+          let sizes: string[] = [];
+          if (Array.isArray(rawData.possible_sizes)) {
+            sizes = rawData.possible_sizes;
+          } else if (typeof rawData.possible_sizes === 'string') {
+            sizes = [rawData.possible_sizes];
+          }
+          variants.push(...sizes.map((size: string) => ({ type: 'size', value: size })));
+        }
+      } catch (variantError) {
+        console.warn('Failed to parse ASOS variants:', variantError);
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: rawData.name || rawData.product_name || rawData.title || `ASOS Product ${rawData.product_id || ''}`,
+        price: this.parsePrice(finalPrice) || 0,
+        currency: rawData.currency || detectedCurrency,
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: category,
+        availability: availability,
+        description: description.substring(0, 1000), // Limit description length
+        variants: variants
+      };
+
+    } catch (error) {
+      console.error('Error normalizing ASOS data:', error);
+      // Detect country and currency for fallback
+      const detectedCountry = this.detectCountryFromUrl(url);
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Return minimal safe data structure
+      return {
+        title: rawData?.name || rawData?.product_name || rawData?.title || 'Unknown ASOS Product',
+        price: this.parsePrice(rawData?.price || rawData?.final_price) || 0,
+        currency: rawData?.currency || detectedCurrency,
+        category: 'fashion',
+        availability: 'unknown',
+        images: [],
+        variants: [],
+        brand: rawData?.brand || 'ASOS'
+      };
+    }
+  }
+
   private normalizeFlipkartData(rawData: any): ProductData {
     try {
       // Handle Flipkart's response format from our custom scraper
@@ -1819,6 +2032,101 @@ class BrightDataProductService {
     }
     
     // Default to fashion for H&M (primarily a fashion retailer)
+    return 'fashion';
+  }
+
+  /**
+   * Estimate ASOS product weight based on category and product name
+   */
+  private estimateASOSWeight(category: string, productName: string): number | undefined {
+    const categoryLower = category.toLowerCase();
+    const nameLower = productName.toLowerCase();
+    
+    // ASOS weight estimates in kg (international market standard)
+    
+    // Clothing categories
+    if (categoryLower.includes('dress') || nameLower.includes('dress')) {
+      return 0.4; // Dresses
+    }
+    
+    if (categoryLower.includes('shirt') || categoryLower.includes('top') || nameLower.includes('shirt') || nameLower.includes('top')) {
+      return 0.2; // Light tops
+    }
+    
+    if (categoryLower.includes('jean') || categoryLower.includes('pant') || categoryLower.includes('trouser') || 
+        nameLower.includes('jean') || nameLower.includes('pant') || nameLower.includes('trouser')) {
+      return 0.5; // Jeans/pants
+    }
+    
+    if (categoryLower.includes('jacket') || categoryLower.includes('coat') || categoryLower.includes('blazer') ||
+        nameLower.includes('jacket') || nameLower.includes('coat') || nameLower.includes('blazer')) {
+      return 0.8; // Outerwear
+    }
+    
+    if (categoryLower.includes('sweater') || categoryLower.includes('jumper') || categoryLower.includes('cardigan') ||
+        nameLower.includes('sweater') || nameLower.includes('jumper') || nameLower.includes('cardigan')) {
+      return 0.4; // Knitwear
+    }
+    
+    if (categoryLower.includes('underwear') || categoryLower.includes('lingerie') || categoryLower.includes('brief') ||
+        nameLower.includes('underwear') || nameLower.includes('lingerie') || nameLower.includes('brief')) {
+      return 0.1; // Underwear
+    }
+    
+    // Shoes and accessories
+    if (categoryLower.includes('shoe') || categoryLower.includes('boot') || categoryLower.includes('sneaker') ||
+        nameLower.includes('shoe') || nameLower.includes('boot') || nameLower.includes('sneaker')) {
+      return 0.8; // Footwear
+    }
+    
+    if (categoryLower.includes('bag') || categoryLower.includes('backpack') || categoryLower.includes('purse') ||
+        nameLower.includes('bag') || nameLower.includes('backpack') || nameLower.includes('purse')) {
+      return 0.3; // Bags
+    }
+    
+    if (categoryLower.includes('jewelry') || categoryLower.includes('watch') || categoryLower.includes('accessory') ||
+        nameLower.includes('jewelry') || nameLower.includes('watch') || nameLower.includes('necklace')) {
+      return 0.05; // Light accessories
+    }
+    
+    // Default for fashion items
+    return 0.3;
+  }
+
+  /**
+   * Map ASOS category to our standardized categories
+   */
+  private mapASOSCategory(asosCategory: string): string {
+    const categoryLower = asosCategory.toLowerCase();
+    
+    // Fashion categories (ASOS is primarily fashion)
+    if (categoryLower.includes('dress') || categoryLower.includes('top') || categoryLower.includes('shirt') ||
+        categoryLower.includes('jean') || categoryLower.includes('pant') || categoryLower.includes('skirt') ||
+        categoryLower.includes('jacket') || categoryLower.includes('coat') || categoryLower.includes('sweater') ||
+        categoryLower.includes('blouse') || categoryLower.includes('clothing')) {
+      return 'fashion';
+    }
+    
+    // Footwear
+    if (categoryLower.includes('shoe') || categoryLower.includes('boot') || categoryLower.includes('sneaker') ||
+        categoryLower.includes('sandal') || categoryLower.includes('heel') || categoryLower.includes('footwear')) {
+      return 'footwear';
+    }
+    
+    // Beauty
+    if (categoryLower.includes('beauty') || categoryLower.includes('makeup') || categoryLower.includes('skincare') ||
+        categoryLower.includes('fragrance') || categoryLower.includes('perfume') || categoryLower.includes('cosmetic')) {
+      return 'beauty';
+    }
+    
+    // Accessories (jewelry, bags, watches, etc.)
+    if (categoryLower.includes('bag') || categoryLower.includes('jewelry') || categoryLower.includes('watch') ||
+        categoryLower.includes('belt') || categoryLower.includes('hat') || categoryLower.includes('scarf') ||
+        categoryLower.includes('accessory') || categoryLower.includes('sunglasses')) {
+      return 'fashion'; // Accessories are part of fashion
+    }
+    
+    // Default to fashion for ASOS (primarily a fashion retailer)
     return 'fashion';
   }
 

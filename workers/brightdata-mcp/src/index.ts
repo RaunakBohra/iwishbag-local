@@ -56,6 +56,7 @@ export default {
         'flipkart_product': 'flipkart_product', // Custom Flipkart dataset implementation
         'target_product': 'target_product', // Custom Target implementation
         'hm_product': 'hm_product', // Custom H&M implementation
+        'asos_product': 'asos_product', // Custom ASOS implementation
         'bestbuy_product': 'web_data_bestbuy_products',
         'ebay_product': 'web_data_ebay_product', 
         'walmart_product': 'web_data_walmart_product',
@@ -100,6 +101,28 @@ export default {
         
         return new Response(
           JSON.stringify(hmResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle ASOS with custom implementation
+      if (tool === 'asos_product') {
+        console.log(`👗 [${requestId}] Using custom ASOS implementation`);
+        const asosApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const asosResult = await callASOSProductAPI(args?.url, asosApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] ASOS request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(asosResult),
           {
             headers: {
               ...corsHeaders,
@@ -371,7 +394,7 @@ function getBrightDataAPIEndpoint(toolName: string): string {
 function getDatasetId(toolName: string): string | null {
   const datasetIds: Record<string, string> = {
     'web_data_amazon_product': 'gd_l7q7zkd11qzin7vg6', // Example dataset ID
-    'flipkart_product': 'REPLACE_WITH_REAL_FLIPKART_DATASET_ID', // TODO: Replace with actual Flipkart dataset ID
+    // 'flipkart_product': Uses DCA API with collector c_mdy5p87619oyypd0k3
     'web_data_ebay_product': 'your_ebay_dataset_id',
     'web_data_walmart_product': 'your_walmart_dataset_id',
     'web_data_bestbuy_products': 'your_bestbuy_dataset_id',
@@ -702,28 +725,185 @@ function mapHMDataToProductData(rawData: any, url: string): any {
 }
 
 /**
+ * ASOS Product API Implementation
+ * Uses Bright Data Datasets API with dataset: gd_ldbg7we91cp53nr2z4
+ */
+async function callASOSProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`👗 [${requestId}] Starting ASOS product scraping for: ${url}`);
+    
+    // Trigger data collection using ASOS dataset
+    const datasetId = 'gd_ldbg7we91cp53nr2z4'; // ASOS dataset ID from documentation
+    const triggerResult = await triggerASOSBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from ASOS dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] ASOS data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const results = await waitForASOSBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Download and process results
+    const finalData = await downloadASOSBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapASOSDataToProductData(finalData[0] || {}, url);
+    
+    console.log(`✅ [${requestId}] ASOS scraping completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify([transformedData])
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] ASOS API call failed:`, error);
+    throw new Error(`ASOS scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Trigger ASOS data collection using Bright Data Datasets API
+ */
+async function triggerASOSBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering ASOS data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ASOS dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] ASOS trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for ASOS Bright Data results with polling
+ */
+async function waitForASOSBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for ASOS data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] ASOS polling attempt ${attempts}/${maxAttempts}...`);
+    
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`ASOS progress check failed: ${progressResponse.status}`);
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] ASOS progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] ASOS data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`ASOS data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error(`ASOS data collection timeout after ${maxAttempts} attempts`);
+}
+
+/**
+ * Download ASOS Bright Data results
+ */
+async function downloadASOSBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading ASOS data...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`ASOS data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📊 [${requestId}] Downloaded ${data.length || 0} ASOS records`);
+  
+  return data;
+}
+
+/**
+ * Map raw ASOS data to our product data format
+ */
+function mapASOSDataToProductData(rawData: any, url: string): any {
+  console.log(`🔄 Mapping ASOS data to product format...`);
+  
+  return {
+    title: rawData.name || rawData.product_name || rawData.title,
+    final_price: rawData.price || rawData.final_price || rawData.current_price,
+    initial_price: rawData.original_price || rawData.initial_price,
+    currency: rawData.currency || 'USD',
+    images: rawData.image || rawData.image_urls || rawData.images || [],
+    brand: rawData.brand || 'ASOS',
+    specifications: rawData.specifications || [],
+    availability: rawData.availability === 'in stock' ? 'in-stock' : 'out-of-stock',
+    rating: rawData.rating || rawData.average_rating,
+    reviews_count: rawData.reviews_count || rawData.total_reviews,
+    highlights: rawData.highlights || rawData.features || [],
+    product_description: rawData.description || rawData.product_details || rawData.about_me,
+    category: rawData.category || rawData.product_category,
+    color: rawData.color,
+    size: rawData.possible_sizes,
+    product_code: rawData.product_id,
+    seller_name: rawData.seller_name,
+    material: rawData.about_me,
+    care_instructions: rawData.look_after_me,
+    size_fit: rawData.size_fit,
+    discount: rawData.discount,
+    county_of_origin: rawData.county_of_origin,
+    category_tree: rawData.breadcrumbs || [],
+    url: url,
+    source: 'asos-dataset'
+  };
+}
+
+/**
  * Flipkart Product API Implementation
- * Uses Bright Data Datasets API with Flipkart custom dataset (AI-generated parser)
+ * Uses Bright Data DCA API with real collector: c_mdy5p87619oyypd0k3
  */
 async function callFlipkartProductAPI(url: string, apiToken: string, requestId: string) {
   try {
     console.log(`🛒 [${requestId}] Starting Flipkart product scraping for: ${url}`);
     
-    // Trigger data collection using Flipkart dataset
-    const datasetId = 'REPLACE_WITH_REAL_FLIPKART_DATASET_ID'; // TODO: Replace with actual Flipkart dataset ID from Bright Data dashboard
-    const triggerResult = await triggerFlipkartBrightDataCollection(url, datasetId, apiToken, requestId);
+    // Use DCA API with the real collector
+    const collectorId = 'c_mdy5p87619oyypd0k3';
+    const triggerResult = await triggerFlipkartDCACollection(url, collectorId, apiToken, requestId);
     
-    if (!triggerResult.snapshot_id) {
-      throw new Error('No snapshot_id received from Flipkart dataset trigger');
-    }
+    console.log(`📋 [${requestId}] Flipkart DCA collection triggered`);
     
-    console.log(`📋 [${requestId}] Flipkart data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
-    
-    // Wait for results with polling
-    const results = await waitForFlipkartBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
-    
-    // Download and process results
-    const finalData = await downloadFlipkartBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    // Wait for results and download
+    const finalData = await waitAndDownloadFlipkartDCAResults(triggerResult, apiToken, requestId);
     
     // Transform data to our expected format
     const transformedData = mapFlipkartDataToProductData(finalData[0] || {}, url, requestId);
@@ -743,12 +923,12 @@ async function callFlipkartProductAPI(url: string, apiToken: string, requestId: 
 }
 
 /**
- * Trigger Flipkart data collection using Bright Data Datasets API
+ * Trigger Flipkart data collection using Bright Data DCA API
  */
-async function triggerFlipkartBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
-  console.log(`📤 [${requestId}] Triggering Flipkart data collection...`);
+async function triggerFlipkartDCACollection(url: string, collectorId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering Flipkart DCA collection...`);
   
-  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+  const response = await fetch(`https://api.brightdata.com/dca/trigger?queue_next=1&collector=${collectorId}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiToken}`,
@@ -759,76 +939,87 @@ async function triggerFlipkartBrightDataCollection(url: string, datasetId: strin
   
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Flipkart dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+    throw new Error(`Flipkart DCA trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
   
   const result = await response.json();
-  console.log(`📋 [${requestId}] Flipkart trigger response:`, result);
+  console.log(`📋 [${requestId}] DCA trigger response:`, result);
   
   return result;
 }
 
 /**
- * Wait for Flipkart Bright Data results with polling
+ * Wait for and download Flipkart DCA collection results
+ * Simplified approach - DCA often returns results directly or needs simpler polling
  */
-async function waitForFlipkartBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for Flipkart data collection...`);
+async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Processing Flipkart DCA results...`);
+  console.log(`📋 [${requestId}] Trigger result keys:`, Object.keys(triggerResult));
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  // Check if results are returned directly
+  if (triggerResult && Array.isArray(triggerResult)) {
+    console.log(`📥 [${requestId}] Got direct array results: ${triggerResult.length} records`);
+    return triggerResult;
+  }
+  
+  if (triggerResult.data && Array.isArray(triggerResult.data) && triggerResult.data.length > 0) {
+    console.log(`📥 [${requestId}] Got immediate DCA results: ${triggerResult.data.length} records`);
+    return triggerResult.data;
+  }
+  
+  // Check for direct data properties
+  if (triggerResult.product_title || triggerResult.current_price) {
+    console.log(`📥 [${requestId}] Got single product result directly`);
+    return [triggerResult];
+  }
+  
+  // If we have an ID, try a simpler polling approach
+  const resultId = triggerResult.response_id || triggerResult.id || triggerResult.request_id || triggerResult.collection_id;
+  
+  if (!resultId) {
+    console.log(`⚠️ [${requestId}] No result ID found, trying to use trigger result as-is`);
+    // Sometimes DCA returns the data directly in an unexpected format
+    return [triggerResult];
+  }
+  
+  console.log(`🔍 [${requestId}] Polling for results with ID: ${resultId}`);
+  
+  // Simplified polling - just try the most common DCA endpoints
+  const maxAttempts = 20; // Reduce attempts for faster timeout
   let attempts = 0;
   
   while (attempts < maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] Flipkart polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] DCA polling attempt ${attempts}/${maxAttempts}...`);
     
-    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
-      headers: {
-        'Authorization': `Bearer ${apiToken}`
+    try {
+      // Try the most common DCA result endpoint
+      const resultResponse = await fetch(`https://api.brightdata.com/dca/results/${resultId}`, {
+        headers: { 'Authorization': `Bearer ${apiToken}` }
+      });
+      
+      if (resultResponse.ok) {
+        const data = await resultResponse.json();
+        console.log(`📡 [${requestId}] DCA response status: ${resultResponse.status}, data type: ${typeof data}, length: ${Array.isArray(data) ? data.length : 'N/A'}`);
+        
+        if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
+          console.log(`📥 [${requestId}] Downloaded DCA results successfully`);
+          return Array.isArray(data) ? data : [data];
+        }
+      } else {
+        console.log(`⚠️ [${requestId}] DCA polling response: ${resultResponse.status} ${resultResponse.statusText}`);
       }
-    });
-    
-    if (!progressResponse.ok) {
-      throw new Error(`Flipkart progress check failed: ${progressResponse.status}`);
+    } catch (error) {
+      console.log(`⚠️ [${requestId}] DCA polling error:`, error);
     }
     
-    const progressResult = await progressResponse.json();
-    console.log(`📊 [${requestId}] Flipkart progress status: ${progressResult.status}`);
-    
-    if (progressResult.status === 'ready') {
-      console.log(`✅ [${requestId}] Flipkart data ready!`);
-      return progressResult;
-    } else if (progressResult.status === 'failed') {
-      throw new Error(`Flipkart data collection failed: ${progressResult.error || 'Unknown error'}`);
-    }
-    
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait 3 seconds before next attempt (longer intervals)
+    await new Promise(resolve => setTimeout(resolve, 3000));
   }
   
-  throw new Error('Flipkart data collection timeout - data not ready within 60 seconds');
+  throw new Error(`Flipkart DCA collection timeout after ${maxAttempts} attempts - no results received`);
 }
 
-/**
- * Download Flipkart Bright Data results
- */
-async function downloadFlipkartBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`📥 [${requestId}] Downloading Flipkart results...`);
-  
-  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
-    headers: {
-      'Authorization': `Bearer ${apiToken}`
-    }
-  });
-  
-  if (!dataResponse.ok) {
-    throw new Error(`Flipkart data download failed: ${dataResponse.status}`);
-  }
-  
-  const data = await dataResponse.json();
-  console.log(`📥 [${requestId}] Downloaded ${data.length || 0} Flipkart records`);
-  
-  return data;
-}
 
 /**
  * Map Flipkart data to our expected product data format
@@ -837,38 +1028,53 @@ async function downloadFlipkartBrightDataResults(snapshotId: string, apiToken: s
 function mapFlipkartDataToProductData(rawData: any, url: string, requestId: string): any {
   console.log(`🔄 [${requestId}] Mapping Flipkart data to product format...`);
   
-  // Clean price data - remove ₹ symbol and commas, convert to number
+  // Clean price data - handle duplicates and extract first valid price
   let current_price_number = 0;
   let original_price_number = 0;
+  let clean_current_price = '';
+  let clean_original_price = '';
   
   if (rawData.current_price) {
-    current_price_number = parseFloat(rawData.current_price.replace(/₹|,/g, '')) || 0;
+    // Extract first price from potentially duplicated string like "₹23,999₹23,999₹260₹284"
+    const priceMatches = rawData.current_price.match(/₹[\d,]+/g);
+    if (priceMatches && priceMatches.length > 0) {
+      clean_current_price = priceMatches[0];
+      current_price_number = parseFloat(clean_current_price.replace(/₹|,/g, '')) || 0;
+    }
   }
   
   if (rawData.original_price) {
-    original_price_number = parseFloat(rawData.original_price.replace(/₹|,/g, '')) || 0;
+    // Extract first price from potentially duplicated string
+    const priceMatches = rawData.original_price.match(/₹[\d,]+/g);
+    if (priceMatches && priceMatches.length > 0) {
+      clean_original_price = priceMatches[0];
+      original_price_number = parseFloat(clean_original_price.replace(/₹|,/g, '')) || 0;
+    }
   }
   
-  // Fix image URLs - handle relative URLs
-  let main_image = rawData.main_image;
-  if (main_image && !main_image.startsWith('http')) {
-    main_image = 'https://rukminim1.flixcart.com' + main_image;
-  }
-  
-  // Process image gallery
+  // Fix image URLs - prefer gallery images over main_image for better quality
   let images = [];
+  let main_image = '';
+  
   if (rawData.image_gallery && Array.isArray(rawData.image_gallery)) {
     images = rawData.image_gallery.map((img: string) => {
       if (img && !img.startsWith('http')) {
-        return 'https://rukminim1.flixcart.com' + img;
+        return img.startsWith('//') ? 'https:' + img : 'https://rukminim1.flixcart.com' + img;
       }
       return img;
     }).filter(Boolean);
+    
+    // Use first gallery image as main image (usually higher quality)
+    main_image = images[0] || rawData.main_image;
   }
   
-  // Add main image to gallery if not already there
-  if (main_image && !images.includes(main_image)) {
-    images.unshift(main_image);
+  // Fallback to main_image if no gallery
+  if (!main_image && rawData.main_image) {
+    main_image = rawData.main_image;
+    if (!main_image.startsWith('http')) {
+      main_image = main_image.startsWith('//') ? 'https:' + main_image : 'https://rukminim1.flixcart.com' + main_image;
+    }
+    images = [main_image];
   }
   
   // Extract weight from specifications
@@ -891,11 +1097,18 @@ function mapFlipkartDataToProductData(rawData: any, url: string, requestId: stri
     });
   }
   
+  // Clean discount percentage - extract first valid percentage
+  let clean_discount = '';
+  if (rawData.discount_percentage) {
+    const discountMatch = rawData.discount_percentage.match(/\d+%\s*off/);
+    clean_discount = discountMatch ? discountMatch[0] : rawData.discount_percentage;
+  }
+
   return {
     title: rawData.product_title || rawData.title || 'Flipkart Product',
-    final_price: rawData.current_price || `₹${current_price_number}`,
+    final_price: clean_current_price || `₹${current_price_number}`,
     price: current_price_number,
-    initial_price: rawData.original_price || `₹${original_price_number}`,
+    initial_price: clean_original_price || `₹${original_price_number}`,
     currency: 'INR',
     images: images,
     main_image: main_image,
@@ -904,13 +1117,21 @@ function mapFlipkartDataToProductData(rawData: any, url: string, requestId: stri
     availability: rawData.delivery_date ? 'in-stock' : 'unknown',
     weight: weight_kg,
     rating: rawData.rating || 0,
-    reviews_count: rawData.review_count || rawData.rating_count || 0,
+    reviews_count: (() => {
+      if (rawData.review_count) return rawData.review_count;
+      if (rawData.rating_count && typeof rawData.rating_count === 'string') {
+        // Extract first number from complex strings like "40,354 Ratings & 1,979 Reviews(40,354)(297)(816)"
+        const countMatch = rawData.rating_count.match(/(\d+(?:,\d+)*)/);
+        return countMatch ? parseInt(countMatch[1].replace(/,/g, '')) : 0;
+      }
+      return 0;
+    })(),
     highlights: rawData.color_variants || [],
-    product_description: rawData.specifications?.features || '',
-    category: rawData.specifications?.type || 'general',
+    product_description: rawData.specifications?.features || rawData.return_policy || '',
+    category: rawData.specifications?.type || 'electronics',
     seller_name: rawData.seller_name || '',
     seller_rating: rawData.seller_rating || 0,
-    discount_percentage: rawData.discount_percentage || '',
+    discount_percentage: clean_discount,
     delivery_date: rawData.delivery_date || '',
     return_policy: rawData.return_policy || '',
     payment_options: rawData.payment_options || '',

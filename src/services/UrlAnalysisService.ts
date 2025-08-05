@@ -214,8 +214,13 @@ class UrlAnalysisService {
       const urlObj = new URL(url);
       const domain = urlObj.hostname.replace('www.', '').toLowerCase();
       
-      // Get suggested country from domain
-      const suggestedCountry = DOMAIN_COUNTRY_MAP[domain] || null;
+      // Enhanced country detection with URL pattern analysis
+      let suggestedCountry = this.detectCountryFromUrl(url, domain);
+      
+      // Fallback to domain mapping if URL pattern detection fails
+      if (!suggestedCountry) {
+        suggestedCountry = DOMAIN_COUNTRY_MAP[domain] || null;
+      }
       
       // Detect category
       const category = this.detectCategory(url, domain);
@@ -237,6 +242,95 @@ class UrlAnalysisService {
         category: null
       };
     }
+  }
+
+  /**
+   * Enhanced country detection from URL patterns
+   */
+  private detectCountryFromUrl(url: string, domain: string): string | null {
+    const urlLower = url.toLowerCase();
+
+    // H&M country detection (pattern: en_{country_code})
+    if (domain.includes('hm.com')) {
+      // Primary pattern: /en_{country_code}/ (e.g., /en_in/, /en_us/, /en_gb/)
+      const hmCountryMatch = urlLower.match(/\/en_([a-z]{2})/);
+      if (hmCountryMatch) {
+        return hmCountryMatch[1].toUpperCase();
+      }
+      
+      // Alternative pattern for non-English locales (e.g., /de_de/, /fr_fr/)
+      const hmLocaleMatch = urlLower.match(/\/([a-z]{2})_([a-z]{2})/);
+      if (hmLocaleMatch) {
+        return hmLocaleMatch[2].toUpperCase(); // Return country code (second part)
+      }
+      
+      // Default to Sweden if no pattern matches (H&M headquarters)
+      return 'SE';
+    }
+
+    // ASOS country detection (pattern: /country-code/)
+    if (domain.includes('asos.com')) {
+      // ASOS URLs like: https://www.asos.com/us/, https://www.asos.com/fr/, etc.
+      const asosCountryMatch = urlLower.match(/asos\.com\/([a-z]{2})\//);
+      if (asosCountryMatch) {
+        return asosCountryMatch[1].toUpperCase();
+      }
+      
+      // Fallback patterns for ASOS regional URLs
+      if (urlLower.includes('/us/')) return 'US';
+      if (urlLower.includes('/gb/')) return 'GB';
+      if (urlLower.includes('/fr/')) return 'FR';
+      if (urlLower.includes('/de/')) return 'DE';
+      if (urlLower.includes('/es/')) return 'ES';
+      if (urlLower.includes('/it/')) return 'IT';
+      if (urlLower.includes('/au/')) return 'AU';
+      if (urlLower.includes('/ca/')) return 'CA';
+      if (urlLower.includes('/nl/')) return 'NL';
+      if (urlLower.includes('/se/')) return 'SE';
+      if (urlLower.includes('/dk/')) return 'DK';
+      return 'GB'; // ASOS default (UK-based company)
+    }
+
+    // Amazon country detection (existing logic from BrightDataProductService)
+    if (domain.includes('amazon.')) {
+      // Amazon regional patterns like /dp/, /gp/product/, etc.
+      const domainParts = domain.split('.');
+      const tld = domainParts[domainParts.length - 1];
+      
+      // Map common Amazon TLDs to countries
+      const amazonTldMap: Record<string, string> = {
+        'com': 'US',
+        'co.uk': 'GB', 
+        'ca': 'CA',
+        'de': 'DE',
+        'fr': 'FR',
+        'es': 'ES',
+        'it': 'IT',
+        'co.jp': 'JP',
+        'in': 'IN',
+        'com.au': 'AU',
+        'ae': 'AE',
+        'sa': 'SA',
+        'com.br': 'BR',
+        'com.mx': 'MX',
+        'sg': 'SG',
+        'nl': 'NL'
+      };
+
+      // Handle multi-part TLDs
+      const fullTld = domainParts.slice(1).join('.');
+      if (amazonTldMap[fullTld]) {
+        return amazonTldMap[fullTld];
+      }
+      if (amazonTldMap[tld]) {
+        return amazonTldMap[tld];
+      }
+    }
+
+    // Future: Add other platform-specific URL pattern detection here
+    // e.g., Zara, Nike, Adidas regional URL patterns
+    
+    return null;
   }
   
   /**

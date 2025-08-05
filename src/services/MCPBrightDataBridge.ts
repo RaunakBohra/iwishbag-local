@@ -512,6 +512,41 @@ class MCPBrightDataBridge {
   }
 
   /**
+   * Scrape ASOS product data using dedicated Bright Data MCP tool
+   */
+  async scrapeASOSProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      const result = await this.callMCPTool('asos_product', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `ASOS scraping warning: ${productData.warning}`
+          };
+        }
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No product data received from ASOS'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'ASOS scraping failed'
+      };
+    }
+  }
+
+  /**
    * Scrape Flipkart product data using proper Bright Data dataset API
    */
   async scrapeFlipkartProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
