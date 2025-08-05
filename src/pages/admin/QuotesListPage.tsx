@@ -3,16 +3,22 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CompactQuoteListItem } from '@/components/admin/CompactQuoteListItem';
 import { CompactQuoteMetrics } from '@/components/admin/CompactQuoteMetrics';
+import { BatchProcessingModal } from '@/components/admin/BatchProcessingModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
+import { Search, Plus, RefreshCw, Clock, AlertTriangle, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useBatchProcessing } from '@/hooks/useBatchProcessing';
 
 const QuotesListPage: React.FC = () => {
   const navigate = useNavigate();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  
+  // Batch processing hook
+  const batchProcessing = useBatchProcessing();
 
   // Fetch all quotes without any status filtering
   const { data: quotes = [], isLoading, refetch } = useQuery({
@@ -91,6 +97,40 @@ const QuotesListPage: React.FC = () => {
     totalValue: safeQuotes.reduce((sum, q) => sum + (q.final_total_usd || 0), 0),
   };
 
+  // Count quotes that need batch processing
+  const draftPendingQuotes = safeQuotes.filter(q => 
+    (q.status === 'draft' || q.status === 'pending') &&
+    q.items && 
+    Array.isArray(q.items) &&
+    q.items.some((item: any) => 
+      item.url && 
+      item.url.trim() !== '' &&
+      (!item.name || !item.costprice_origin)
+    )
+  );
+
+  // Debug logging for batch processing (can be removed in production)
+  console.log('🔍 Batch Processing:', {
+    totalQuotes: safeQuotes.length,
+    draftPendingCount: safeQuotes.filter(q => q.status === 'draft' || q.status === 'pending').length,
+    quotesNeedingProcessing: draftPendingQuotes.length
+  });
+
+  const handleBatchProcessing = async () => {
+    setShowBatchModal(true);
+    if (!batchProcessing.isProcessing) {
+      await batchProcessing.startProcessing();
+    }
+  };
+
+  const handleCloseBatchModal = () => {
+    if (!batchProcessing.isProcessing) {
+      setShowBatchModal(false);
+      // Refresh quotes after processing to show updated statuses
+      refetch();
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Header */}
@@ -125,6 +165,19 @@ const QuotesListPage: React.FC = () => {
                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
+              <Button
+                onClick={handleBatchProcessing}
+                disabled={draftPendingQuotes.length === 0 || batchProcessing.isProcessing}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Zap className={`w-4 h-4 mr-2 ${batchProcessing.isProcessing ? 'animate-spin' : ''}`} />
+                Process All Drafts
+                {draftPendingQuotes.length > 0 && (
+                  <span className="ml-2 px-2 py-1 bg-white bg-opacity-20 rounded-full text-xs">
+                    {draftPendingQuotes.length}
+                  </span>
+                )}
+              </Button>
               <Button onClick={() => navigate('/quote')}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Quote
@@ -158,6 +211,18 @@ const QuotesListPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Batch Processing Modal */}
+      <BatchProcessingModal
+        isOpen={showBatchModal}
+        onClose={handleCloseBatchModal}
+        isProcessing={batchProcessing.isProcessing}
+        progress={batchProcessing.progress}
+        results={batchProcessing.results}
+        onStart={batchProcessing.startProcessing}
+        onCancel={batchProcessing.cancelProcessing}
+        canStart={draftPendingQuotes.length > 0}
+      />
     </div>
   );
 };

@@ -58,6 +58,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { currencyService } from '@/services/CurrencyService';
+import { autoSaveService } from '@/services/AutoSaveService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
 import { QuoteDetailsAnalysis } from '@/components/quotes-v2/QuoteDetailsAnalysis';
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
@@ -205,6 +206,33 @@ const QuoteCalculatorV2: React.FC = () => {
   const [originCountry, setOriginCountry] = useState('US');
   const [originState, setOriginState] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('NP');
+  const [userOverrodeDestination, setUserOverrodeDestination] = useState(false);
+  const [quoteLoadingComplete, setQuoteLoadingComplete] = useState(false);
+  
+  // Debug: Track destination country changes
+  const setDestinationCountryWithDebug = (newCountry: string, source: string = 'unknown') => {
+    console.log('🔍 [DEBUG] destinationCountry changing:', {
+      from: destinationCountry,
+      to: newCountry,
+      source,
+      timestamp: new Date().toISOString(),
+      isEditMode,
+      quoteLoadingComplete,
+      userOverrodeDestination
+    });
+    setDestinationCountry(newCountry);
+    
+    // Track if this was a user override
+    if (source === 'user') {
+      setUserOverrodeDestination(true);
+      console.log('👤 [User Override] User manually changed destination - protecting from auto-changes');
+    }
+  };
+  
+  // User dropdown selection handler
+  const handleUserDestinationChange = (newCountry: string) => {
+    setDestinationCountryWithDebug(newCountry, 'user');
+  };
   
   // Get dynamic currency and weight units based on origin country
   const { currency: originCurrency, weightUnit } = useCountryUnit(originCountry);
@@ -297,19 +325,55 @@ const QuoteCalculatorV2: React.FC = () => {
   useEffect(() => {
     if (quoteId) {
       loadExistingQuote(quoteId);
+    } else {
+      // For new quotes, immediately mark loading as complete
+      setQuoteLoadingComplete(true);
     }
   }, [quoteId]);
 
+  // Debug: Log destination country state changes
+  useEffect(() => {
+    console.log('🔍 [State Debug] destinationCountry state changed:', {
+      destinationCountry,
+      isEditMode,
+      quoteLoadingComplete,
+      userOverrodeDestination,
+      timestamp: new Date().toISOString()
+    });
+  }, [destinationCountry, isEditMode, quoteLoadingComplete, userOverrodeDestination]);
+
   // Auto-calculate on changes (but not during initial quote loading)
   useEffect(() => {
-    if (!loadingQuote && items.some(item => item.name && item.unit_price_usd > 0)) {
+    const hasValidItems = items.some(item => item.name && item.unit_price_usd > 0);
+    console.log('🔍 [DEBUG] Auto-calculate useEffect triggered:', {
+      loadingQuote,
+      hasValidItems,
+      itemsCount: items.length,
+      isEditMode,
+      currentCalculationResult: !!calculationResult
+    });
+    
+    // In edit mode, be more conservative about auto-calculation
+    // Only auto-calculate for new quotes or when items actually change in a meaningful way
+    if (!loadingQuote && hasValidItems && !isEditMode) {
+      console.log('✅ [DEBUG] Auto-calculate: Will call calculateQuote in 50ms (new quote)');
       // Add small delay to ensure state is fully updated, especially after updateItem calls
       const timeoutId = setTimeout(() => {
         calculateQuote();
       }, 50);
       return () => clearTimeout(timeoutId);
+    } else {
+      console.log('❌ [DEBUG] Auto-calculate: Skipped', {
+        reason: loadingQuote 
+          ? 'still loading' 
+          : !hasValidItems 
+          ? 'no valid items' 
+          : isEditMode 
+          ? 'edit mode - preserving existing calculation'
+          : 'unknown'
+      });
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote, isEditMode]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -408,10 +472,31 @@ const QuoteCalculatorV2: React.FC = () => {
 
     console.log('🔄 [Address Sync] Syncing delivery address to destination fields:', address);
 
-    // Set country first
+    // Set country first - with user override protection
     const country = address.destination_country || address.country;
-    if (country && country !== destinationCountry) {
-      setDestinationCountry(country);
+    const shouldSkipSync = isEditMode || !quoteLoadingComplete || userOverrodeDestination;
+    
+    console.log('🔍 [Address Sync DEBUG]:', {
+      country,
+      currentDestination: destinationCountry,
+      isEditMode,
+      quoteLoadingComplete,
+      userOverrodeDestination,
+      shouldSkip: shouldSkipSync,
+      willSetCountry: country && country !== destinationCountry && !shouldSkipSync
+    });
+    
+    if (country && country !== destinationCountry && !shouldSkipSync) {
+      console.log('🔄 [Address Sync] Setting destination country to:', country);
+      setDestinationCountryWithDebug(country, 'address-sync');
+    } else if (isEditMode) {
+      console.log('⏭️ [Address Sync] Skipping country sync - in edit mode');
+    } else if (!quoteLoadingComplete) {
+      console.log('⏭️ [Address Sync] Skipping country sync - quote still loading');
+    } else if (userOverrodeDestination) {
+      console.log('👤 [Address Sync] Skipping country sync - user manually selected destination');
+    } else {
+      console.log('⏭️ [Address Sync] Skipping - no change needed');
     }
 
     // Map address components to destination address object
@@ -485,6 +570,12 @@ const QuoteCalculatorV2: React.FC = () => {
 
       if (quote) {
         // Set edit mode
+        console.log('🔍 [DEBUG] loadExistingQuote - setting edit mode:', {
+          quoteId: quote.id,
+          status: quote.status,
+          hasCalculationData: !!quote.calculation_data,
+          calculationDataKeys: quote.calculation_data ? Object.keys(quote.calculation_data) : null
+        });
         setIsEditMode(true);
         setCurrentQuoteStatus(quote.status || 'draft');
         setEmailSent(quote.email_sent || false);
@@ -498,9 +589,22 @@ const QuoteCalculatorV2: React.FC = () => {
         setCustomerName(quote.customer_name || '');
         setCustomerPhone(quote.customer_phone || '');
         setOriginCountry(quote.origin_country || 'US');
-        setDestinationCountry(quote.destination_country || 'NP');
+        console.log('🔍 [DEBUG] loadExistingQuote - setting destinationCountry from DB:', {
+          fromDB: quote.destination_country,
+          current: destinationCountry
+        });
+        setDestinationCountryWithDebug(quote.destination_country || 'NP', 'database-load');
+        // Reset user override flag when loading from database
+        setUserOverrodeDestination(false);
         setCustomerCurrency(quote.customer_currency || 'USD');
         setAdminNotes(quote.admin_notes || '');
+        
+        // Load shipping method from database
+        console.log('🔍 [DEBUG] loadExistingQuote - setting shipping method from DB:', {
+          fromDB: quote.shipping_method,
+          current: shippingMethod
+        });
+        setShippingMethod(quote.shipping_method || 'standard');
 
         // Map items - convert from V2 format to calculator format
         if (quote.items && Array.isArray(quote.items)) {
@@ -527,7 +631,19 @@ const QuoteCalculatorV2: React.FC = () => {
 
         // Set calculation result if available
         if (quote.calculation_data) {
+          console.log('🔍 [DEBUG] loadExistingQuote - setting calculation result:', {
+            hasCalculationSteps: !!(quote.calculation_data.calculation_steps),
+            calculationKeys: Object.keys(quote.calculation_data)
+          });
           setCalculationResult(quote.calculation_data);
+          
+          // Sync shipping method with calculation results (even in edit mode)
+          console.log('🎯 [DEBUG] loadExistingQuote - syncing shipping method with calculation data');
+          setTimeout(() => {
+            syncShippingMethodFromCalculation(quote.calculation_data);
+          }, 100); // Small delay to ensure state updates are complete
+        } else {
+          console.log('⚠️ [DEBUG] loadExistingQuote - no calculation data found');
         }
         
         // Load discount codes if available
@@ -561,6 +677,10 @@ const QuoteCalculatorV2: React.FC = () => {
           title: 'Quote Loaded',
           description: `Editing quote ${quote.quote_number || id.slice(-8)}`
         });
+        
+        // Mark quote loading as complete - this prevents Address Sync from overriding user selections
+        console.log('✅ [DEBUG] Quote loading complete - Address Sync protection enabled');
+        setQuoteLoadingComplete(true);
       }
     } catch (error) {
       console.error('Error loading quote:', error);
@@ -571,6 +691,8 @@ const QuoteCalculatorV2: React.FC = () => {
       });
     } finally {
       setLoadingQuote(false);
+      // Also set complete flag on error to prevent stuck state
+      setQuoteLoadingComplete(true);
     }
   };
 
@@ -619,6 +741,23 @@ const QuoteCalculatorV2: React.FC = () => {
         price: item.unit_price_usd, 
         weight: item.weight_kg 
       })));
+      
+      // Auto-save field changes with debouncing (2-second delay)
+      // Only save if we have a quote ID (not for new unsaved quotes)
+      if (quoteId) {
+        console.log('💾 Scheduling debounced auto-save for field change:', field);
+        autoSaveService.autoSaveQuoteItems(
+          quoteId,
+          updatedItems,
+          {
+            debounceMs: 2000, // 2-second debounce for field changes
+            showToast: false, // Don't show toast for individual field changes
+            description: `${field} field change`
+          }
+        );
+      } else {
+        console.log('⏭️ Skipping auto-save - no quote ID (new quote)');
+      }
       
       return updatedItems;
     });
@@ -740,7 +879,40 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
+  // Sync shipping method dropdown with calculation results
+  const syncShippingMethodFromCalculation = (calculationResult: any) => {
+    if (calculationResult?.route_calculations?.delivery_option_used?.id) {
+      const usedShippingMethodId = calculationResult.route_calculations.delivery_option_used.id;
+      const usedShippingMethodName = calculationResult.route_calculations.delivery_option_used.name;
+      
+      console.log(`🎯 [Shipping Sync] Auto-selecting cheapest shipping method:`, {
+        id: usedShippingMethodId,
+        name: usedShippingMethodName,
+        previousSelection: shippingMethod
+      });
+      
+      setShippingMethod(usedShippingMethodId);
+      
+      // Show user feedback about auto-selection
+      if (usedShippingMethodId !== shippingMethod) {
+        toast({
+          title: "✈️ Shipping Method Updated",
+          description: `Auto-selected cheapest option: ${usedShippingMethodName}`,
+          duration: 3000
+        });
+      }
+    }
+  };
+
   const calculateQuote = async () => {
+    console.log('🔍 [DEBUG] calculateQuote called with items:', {
+      totalItems: items.length,
+      itemsWithNames: items.filter(item => item.name).length,
+      itemsWithPrices: items.filter(item => item.unit_price_usd > 0).length,
+      isEditMode,
+      currentCalculationResult: !!calculationResult
+    });
+
     setCalculating(true);
     try {
       // Filter valid items and map to new interface
@@ -750,7 +922,22 @@ const QuoteCalculatorV2: React.FC = () => {
         weight_kg: item.weight_kg || 0
       }));
       
+      console.log('🔍 [DEBUG] calculateQuote valid items check:', {
+        validItemsCount: validItems.length,
+        validItems: validItems.map(item => ({ 
+          name: item.name, 
+          unit_price_usd: item.unit_price_usd,
+          costprice_origin: item.costprice_origin,
+          weight_kg: item.weight_kg
+        })),
+        originCountry,
+        destinationCountry,
+        customerEmail,
+        customerName
+      });
+      
       if (validItems.length === 0) {
+        console.log('❌ [DEBUG] calculateQuote - clearing calculation result (no valid items)');
         setCalculationResult(null);
         return;
       }
@@ -770,6 +957,14 @@ const QuoteCalculatorV2: React.FC = () => {
           customerId = customerEmail;
         }
       }
+
+      console.log('🚀 [DEBUG] About to call simplifiedQuoteCalculator.calculate with:', {
+        validItemsCount: validItems.length,
+        originCountry,
+        destinationCountry,
+        customerEmail,
+        shippingMethod
+      });
 
       const result = await simplifiedQuoteCalculator.calculate({
         items: validItems,
@@ -807,17 +1002,27 @@ const QuoteCalculatorV2: React.FC = () => {
         is_first_order: false // Could be enhanced later with first-order detection
       });
 
+      console.log('✅ [DEBUG] simplifiedQuoteCalculator.calculate completed:', {
+        resultExists: !!result,
+        resultKeys: result ? Object.keys(result) : null,
+        hasCalculationSteps: !!(result?.calculation_steps),
+        calculationStepsKeys: result?.calculation_steps ? Object.keys(result.calculation_steps) : null
+      });
+
       setCalculationResult(result);
       setShippingError(null); // Clear any previous shipping errors
       
-      // Auto-update shipping method dropdown to reflect the actual shipping option used
-      if (result.route_calculations?.delivery_option_used?.id) {
-        const usedShippingMethodId = result.route_calculations.delivery_option_used.id;
-        console.log(`🎯 [Auto-Select] Setting shipping method to: ${usedShippingMethodId} (${result.route_calculations.delivery_option_used.name})`);
-        setShippingMethod(usedShippingMethodId);
-      }
+      // Sync shipping method dropdown with calculation results
+      syncShippingMethodFromCalculation(result);
     } catch (error) {
-      console.error('Calculation error:', error);
+      console.error('❌ [DEBUG] Calculation error details:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : null,
+        originCountry,
+        destinationCountry,
+        validItemsCount: items.filter(item => item.name && item.unit_price_usd > 0).length
+      });
       
       // Check if it's a shipping route error
       if (error instanceof Error && error.message.includes('No shipping route configured')) {
@@ -831,7 +1036,7 @@ const QuoteCalculatorV2: React.FC = () => {
         setShippingError(null);
         toast({
           title: 'Calculation Error',
-          description: 'Failed to calculate quote',
+          description: `Failed to calculate quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
           variant: 'destructive'
         });
       }
@@ -841,7 +1046,18 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
   const saveQuote = async () => {
+    console.log('🔍 [DEBUG] saveQuote called with state:', {
+      isEditMode,
+      quoteId,
+      customerEmail,
+      hasCalculationResult: !!calculationResult,
+      hasCalculationSteps: !!(calculationResult && calculationResult.calculation_steps),
+      calculationResultType: typeof calculationResult,
+      calculationResultKeys: calculationResult ? Object.keys(calculationResult) : null
+    });
+
     if (!customerEmail) {
+      console.log('❌ [DEBUG] Save failed - no customer email');
       toast({
         title: 'Missing Information',
         description: 'Please enter customer email',
@@ -850,7 +1066,18 @@ const QuoteCalculatorV2: React.FC = () => {
       return;
     }
 
-    if (!calculationResult || !calculationResult.calculation_steps) {
+    // For new quotes, require calculation before saving
+    // For existing quotes (edit mode), allow field updates without recalculation
+    const needsCalculation = !isEditMode && (!calculationResult || !calculationResult.calculation_steps);
+    console.log('🔍 [DEBUG] Calculation check:', {
+      isEditMode,
+      needsCalculation,
+      hasCalculationResult: !!calculationResult,
+      hasCalculationSteps: !!(calculationResult && calculationResult.calculation_steps)
+    });
+
+    if (needsCalculation) {
+      console.log('❌ [DEBUG] Save blocked - calculation required for new quote');
       toast({
         title: 'No Calculation',
         description: 'Please calculate the quote first',
@@ -859,13 +1086,15 @@ const QuoteCalculatorV2: React.FC = () => {
       return;
     }
 
+    console.log('✅ [DEBUG] Save validation passed, proceeding...');
+
     setLoading(true);
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Prepare quote data
-      const quoteData = {
+      // Prepare base quote data (always included)
+      const baseQuoteData = {
         customer_email: customerEmail,
         customer_name: customerName,
         customer_phone: customerPhone,
@@ -878,19 +1107,49 @@ const QuoteCalculatorV2: React.FC = () => {
           weight: item.weight_kg,
           customer_notes: item.notes
         })),
-        calculation_data: calculationResult,
-        total_usd: calculationResult.calculation_steps?.total_usd || 0,
-        total_customer_currency: calculationResult.calculation_steps?.total_customer_currency || 0,
         customer_currency: customerCurrency,
         admin_notes: adminNotes,
-        status: isEditMode ? 'calculated' : 'draft', // Update status when editing
         discount_codes: discountCodes.length > 0 ? discountCodes : null,
-        calculated_at: new Date().toISOString(),
       };
+
+      // Add calculation data only if available (for new quotes or when recalculated)
+      const quoteData = calculationResult && calculationResult.calculation_steps ? {
+        ...baseQuoteData,
+        calculation_data: calculationResult,
+        total_usd: calculationResult.calculation_steps.total_usd || 0,
+        total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+        status: 'calculated',
+        calculated_at: new Date().toISOString(),
+      } : {
+        ...baseQuoteData,
+        // For field-only updates, preserve existing status or set to draft
+        status: isEditMode ? currentQuoteStatus : 'draft',
+      };
+
+      console.log('🔍 [DEBUG] Quote data being saved:', {
+        origin_country: quoteData.origin_country,
+        destination_country: quoteData.destination_country,
+        customer_name: quoteData.customer_name,
+        customer_email: quoteData.customer_email,
+        admin_notes: quoteData.admin_notes,
+        itemsCount: quoteData.items.length,
+        hasCalculation: !!(calculationResult && calculationResult.calculation_steps)
+      });
 
       let result;
       if (isEditMode && quoteId) {
         // Update existing quote
+        console.log('🔍 [DEBUG] Updating quote in database:', {
+          quoteId,
+          updateData: {
+            origin_country: quoteData.origin_country,
+            destination_country: quoteData.destination_country,
+            customer_name: quoteData.customer_name,
+            customer_email: quoteData.customer_email,
+            admin_notes: quoteData.admin_notes
+          }
+        });
+        
         const { data, error } = await supabase
           .from('quotes_v2')
           .update(quoteData)
@@ -898,12 +1157,29 @@ const QuoteCalculatorV2: React.FC = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [DEBUG] Database update error:', error);
+          throw error;
+        }
+        
+        console.log('✅ [DEBUG] Database update successful:', {
+          returnedData: {
+            origin_country: data.origin_country,
+            destination_country: data.destination_country,
+            customer_name: data.customer_name,
+            updated_at: data.updated_at
+          }
+        });
+        
         result = data;
         
+        // Show different success messages based on what was updated
+        const hasCalculation = calculationResult && calculationResult.calculation_steps;
         toast({
           title: 'Success',
-          description: 'Quote updated successfully'
+          description: hasCalculation 
+            ? 'Quote updated successfully with new calculation' 
+            : 'Quote fields updated successfully'
         });
       } else {
         // Create new quote
@@ -1133,6 +1409,19 @@ const QuoteCalculatorV2: React.FC = () => {
           {isEditMode && quoteId && (
             <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
           )}
+          
+          {/* DEBUG UI - Remove after fixing */}
+          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+            <div className="font-semibold text-yellow-800 mb-1">DEBUG INFO:</div>
+            <div className="space-y-1 text-yellow-700">
+              <div>isEditMode: <span className={isEditMode ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{String(isEditMode)}</span></div>
+              <div>quoteId: <span className="font-mono">{quoteId || 'null'}</span></div>
+              <div>calculationResult: <span className={calculationResult ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{calculationResult ? 'EXISTS' : 'NULL'}</span></div>
+              <div>calculationSteps: <span className={calculationResult?.calculation_steps ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{calculationResult?.calculation_steps ? 'EXISTS' : 'NULL'}</span></div>
+              <div>itemsCount: {items.length}</div>
+              <div>validItemsCount: {items.filter(item => item.name && item.unit_price_usd > 0).length}</div>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {/* Informational badges */}
@@ -1449,11 +1738,21 @@ const QuoteCalculatorV2: React.FC = () => {
 
                 {/* Destination Column */}
                 <div>
-                  <Label className="text-xs font-medium text-gray-600">Destination</Label>
+                  <Label className="text-xs font-medium text-gray-600">
+                    Destination 
+                    <span className="text-xs text-gray-400 ml-1">
+                      (Current: {destinationCountry}
+                      {userOverrodeDestination && <span className="text-blue-600 font-semibold"> - User Selected</span>})
+                    </span>
+                  </Label>
                   <div className="space-y-2">
-                    <Select value={destinationCountry} onValueChange={setDestinationCountry}>
+                    <Select 
+                      value={destinationCountry} 
+                      onValueChange={handleUserDestinationChange}
+                      key={`destination-${destinationCountry}`} // Force re-render when value changes
+                    >
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
+                        <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="IN">🇮🇳 India</SelectItem>
@@ -1508,14 +1807,24 @@ const QuoteCalculatorV2: React.FC = () => {
                 <div>
                   <Label className="text-xs font-medium text-gray-600">
                     Shipping
-                    {calculationResult?.route_calculations?.delivery_option_used && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Used in calculation
-                      </span>
-                    )}
+                    <span className="text-xs text-gray-400 ml-1">
+                      (Current: {shippingMethod}
+                      {calculationResult?.route_calculations?.delivery_option_used?.id && 
+                       calculationResult.route_calculations.delivery_option_used.id === shippingMethod && (
+                        <span className="text-green-600 font-semibold"> - Auto-Selected ✓</span>
+                      )}
+                      {calculationResult?.route_calculations?.delivery_option_used?.id && 
+                       calculationResult.route_calculations.delivery_option_used.id !== shippingMethod && (
+                        <span className="text-orange-600 font-semibold"> - Manual Override</span>
+                      )})
+                    </span>
                   </Label>
                   <div className="space-y-2">
-                    <Select value={shippingMethod} onValueChange={(value: any) => setShippingMethod(value)}>
+                    <Select 
+                      value={shippingMethod} 
+                      onValueChange={(value: any) => setShippingMethod(value)}
+                      key={`shipping-${shippingMethod}`} // Force re-render when value changes
+                    >
                       <SelectTrigger className={`h-8 text-xs ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
                           ? 'border-green-500 bg-green-50' 
@@ -1840,58 +2149,85 @@ const QuoteCalculatorV2: React.FC = () => {
                             showFetchButton={true}
                             onDataFetched={(data) => {
                               try {
+                                // Find current item state to ensure we have latest values
+                                const currentItem = items.find(i => i.id === item.id);
+                                
                                 // Auto-fill product data from scraping
                                 console.log('🤖 Auto-filling scraped data:', data);
                                 console.log('🎯 Current item before update:', { 
                                   id: item.id, 
-                                  name: item.name, 
-                                  price: item.unit_price_usd, 
-                                  weight: item.weight_kg 
+                                  name: currentItem?.name || item.name, 
+                                  price: currentItem?.unit_price_usd || item.unit_price_usd, 
+                                  weight: currentItem?.weight_kg || item.weight_kg 
                                 });
                                 
                                 const updatedFields: string[] = [];
                                 
-                                // Update product name
-                                if (data.productName && typeof data.productName === 'string' && data.productName.trim()) {
-                                  console.log('🎯 About to update product name:', data.productName, 'for item:', item.id);
+                                // Update product name (ALWAYS overwrite if new data is available and useful)
+                                if (data.productName && 
+                                    typeof data.productName === 'string' && 
+                                    data.productName.trim() &&
+                                    data.productName.trim() !== 'Unknown Product') {
+                                  const newName = data.productName.trim();
+                                  console.log('🎯 Overwriting product name:', {
+                                    old: currentItem?.name || item.name, 
+                                    new: newName, 
+                                    itemId: item.id
+                                  });
                                   flushSync(() => {
-                                    updateItem(item.id, 'name', data.productName.trim());
+                                    updateItem(item.id, 'name', newName);
                                   });
                                   updatedFields.push('name');
-                                  console.log('✅ Updated product name:', data.productName);
+                                  console.log('✅ Product name overwritten successfully');
+                                } else if (data.productName === 'Unknown Product') {
+                                  console.log('⚠️ Skipping product name update - generic fallback value');
                                 }
                                 
-                                // Update price with validation
+                                // Update price with validation (ALWAYS overwrite if new data is valid)
                                 if (data.price && typeof data.price === 'number' && data.price > 0 && isFinite(data.price)) {
-                                  console.log('🎯 About to update price:', data.price, 'for item:', item.id);
+                                  console.log('🎯 Overwriting price:', {
+                                    old: currentItem?.unit_price_usd || item.unit_price_usd, 
+                                    new: data.price, 
+                                    itemId: item.id
+                                  });
                                   flushSync(() => {
                                     updateItem(item.id, 'unit_price_usd', data.price);
                                   });
                                   updatedFields.push('price');
-                                  console.log('✅ Updated price:', data.price);
+                                  console.log('✅ Price overwritten successfully');
                                 } else if (data.price) {
-                                  console.warn('⚠️ Invalid price data:', data.price);
+                                  console.warn('⚠️ Invalid price data, not overwriting:', data.price);
                                 }
                                 
-                                // Update weight with validation
+                                // Update weight with validation (ALWAYS overwrite if new data is valid)
                                 if (data.weight && typeof data.weight === 'number' && data.weight > 0 && isFinite(data.weight)) {
-                                  console.log('🎯 About to update weight:', data.weight, 'for item:', item.id);
+                                  console.log('🎯 Overwriting weight:', {
+                                    old: currentItem?.weight_kg || item.weight_kg, 
+                                    new: data.weight, 
+                                    itemId: item.id
+                                  });
                                   flushSync(() => {
                                     updateItem(item.id, 'weight_kg', data.weight);
                                   });
                                   updatedFields.push('weight');
-                                  console.log('✅ Updated weight:', data.weight);
+                                  console.log('✅ Weight overwritten successfully');
                                 } else if (data.weight) {
-                                  console.warn('⚠️ Invalid weight data:', data.weight);
+                                  console.warn('⚠️ Invalid weight data, not overwriting:', data.weight);
                                 }
                                 
-                                // Update category
+                                // Update category (always useful)
                                 if (data.category && typeof data.category === 'string' && data.category.trim()) {
+                                  const newCategory = data.category.trim();
+                                  console.log('🎯 Overwriting category:', {
+                                    old: currentItem?.category || item.category,
+                                    new: newCategory,
+                                    itemId: item.id
+                                  });
                                   flushSync(() => {
-                                    updateItem(item.id, 'category', data.category.trim());
+                                    updateItem(item.id, 'category', newCategory);
                                   });
                                   updatedFields.push('category');
-                                  console.log('✅ Updated category:', data.category);
+                                  console.log('✅ Category overwritten successfully');
                                 }
                                 
                                 // Log brand information (not stored in QuoteItem)
@@ -1935,17 +2271,51 @@ const QuoteCalculatorV2: React.FC = () => {
                                   }
                                 }
                                 
-                                // Show success toast with detailed feedback
+                                // Auto-save scraped data immediately to database
                                 if (updatedFields.length > 0) {
-                                  toast({
-                                    title: "🎉 Product Data Auto-Filled",
-                                    description: `Successfully populated: ${updatedFields.join(', ')}`,
-                                    duration: 4000,
+                                  console.log('💾 Auto-saving scraped data to database immediately...');
+                                  
+                                  // Get current items state for saving
+                                  const currentItems = items;
+                                  
+                                  // Immediate save since this is scraped data (critical)
+                                  autoSaveService.immediatelyAutoSaveQuoteItems(
+                                    quoteId!, 
+                                    currentItems, 
+                                    { 
+                                      showToast: false, // We'll show our own toast below
+                                      description: 'scraped product data'
+                                    }
+                                  ).then((success) => {
+                                    if (success) {
+                                      console.log('✅ Scraped data auto-saved successfully');
+                                      toast({
+                                        title: "🔄 Product Data Overwritten & Saved",
+                                        description: `Successfully updated and saved: ${updatedFields.join(', ')} (existing values were replaced)`,
+                                        duration: 4000,
+                                      });
+                                    } else {
+                                      console.error('❌ Failed to auto-save scraped data');
+                                      toast({
+                                        title: "🔄 Product Data Overwritten",
+                                        description: `Updated: ${updatedFields.join(', ')} (existing values were replaced). Warning: Auto-save failed.`,
+                                        duration: 6000,
+                                        variant: "destructive"
+                                      });
+                                    }
+                                  }).catch((error) => {
+                                    console.error('❌ Auto-save error:', error);
+                                    toast({
+                                      title: "🔄 Product Data Overwritten", 
+                                      description: `Updated: ${updatedFields.join(', ')}. Warning: Save failed, changes may be lost.`,
+                                      duration: 6000,
+                                      variant: "destructive"
+                                    });
                                   });
                                 } else {
                                   toast({
-                                    title: "⚠️ Limited Data Retrieved",
-                                    description: "Product scraped but no fields could be auto-filled. Please check manually.",
+                                    title: "⚠️ No Valid Data Found",
+                                    description: "Scraping completed but no valid data was available for updating fields.",
                                     duration: 3000,
                                     variant: "default"
                                   });

@@ -81,13 +81,21 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
         autoFillData: productScraping.autoFillData
       });
       
-      if (productScraping.shouldAutoFill && productScraping.autoFillData) {
-        console.log('🎯 Calling onDataFetched with:', productScraping.autoFillData);
+      // Call onDataFetched if we have any scraped data, even if incomplete
+      // This allows partial updates (e.g., just weight or category)
+      if (productScraping.autoFillData && 
+          (productScraping.shouldAutoFill || 
+           productScraping.autoFillData.weight || 
+           productScraping.autoFillData.category ||
+           (productScraping.autoFillData.productName && productScraping.autoFillData.productName !== 'Unknown Product') ||
+           (productScraping.autoFillData.price && productScraping.autoFillData.price > 0))) {
+        console.log('🎯 Calling onDataFetched with partial/complete data:', productScraping.autoFillData);
         onDataFetched(productScraping.autoFillData);
       } else {
-        console.log('⚠️ Not calling onDataFetched:', {
+        console.log('⚠️ Not calling onDataFetched - no useful data found:', {
           shouldAutoFill: productScraping.shouldAutoFill,
-          hasData: !!productScraping.autoFillData
+          hasData: !!productScraping.autoFillData,
+          dataContent: productScraping.autoFillData
         });
       }
     } catch (error) {

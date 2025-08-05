@@ -118,6 +118,7 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
 
   /**
    * Auto-fill data preparation - memoized to prevent infinite re-renders
+   * Allow auto-fill if we have any useful data, not just complete data
    */
   const shouldAutoFill = isScraped && productData !== null && !error;
   
@@ -134,6 +135,13 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
     };
     
     console.log('🎯 useProductScraping autoFillData prepared:', data);
+    console.log('🔍 shouldAutoFill calculation:', {
+      isScraped,
+      productDataExists: productData !== null,
+      hasError: !!error,
+      shouldAutoFill
+    });
+    
     return data;
   }, [productData, isScraped, error]);
 

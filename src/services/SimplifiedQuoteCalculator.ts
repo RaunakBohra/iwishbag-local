@@ -542,7 +542,8 @@ class SimplifiedQuoteCalculator {
 
     try {
       // Convert items to origin currency first
-      const itemsOriginCurrency = await this.convertToOriginCurrency(finalItemsSubtotal, input.origin_country);
+      // finalItemsSubtotal is already in origin currency from user input, no conversion needed
+      const itemsOriginCurrency = finalItemsSubtotal;
       
       // Get dynamic calculations from shipping routes
       const dynamicShipping = new DynamicShippingService();
