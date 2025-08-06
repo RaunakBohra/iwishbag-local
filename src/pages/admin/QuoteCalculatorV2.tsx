@@ -588,6 +588,7 @@ const QuoteCalculatorV2: React.FC = () => {
     fetchDynamicShippingMethods();
   }, [originCountry, destinationCountry]);
 
+
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
       const { data: docs, error } = await supabase
@@ -1730,6 +1731,23 @@ const QuoteCalculatorV2: React.FC = () => {
     ? dynamicShippingMethods 
     : simplifiedQuoteCalculator.getShippingMethods();
 
+  // Ensure shipping method is always valid when shipping methods are available
+  useEffect(() => {
+    if (shippingMethods.length > 0) {
+      // Check if current shipping method exists in available options
+      const currentMethodExists = shippingMethods.some(method => method.value === shippingMethod);
+      
+      if (!shippingMethod || !currentMethodExists) {
+        // Prefer 'standard' if available, otherwise select the first option
+        const standardOption = shippingMethods.find(method => method.value === 'standard');
+        const selectedMethod = standardOption ? 'standard' : shippingMethods[0].value;
+        
+        console.log(`🎯 [Shipping Init] Ensuring valid shipping method: ${selectedMethod}`);
+        setShippingMethod(selectedMethod);
+      }
+    }
+  }, [shippingMethods, shippingMethod]);
+
   // Show loading state when loading existing quote
   if (loadingQuote) {
     return (
@@ -2301,15 +2319,15 @@ const QuoteCalculatorV2: React.FC = () => {
                     <Truck className="h-3 w-3 text-blue-600" />
                     International Shipping
                     {calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod && (
-                      <span className="text-xs text-blue-600 ml-1">(Auto)</span>
+                      <span className="text-xs text-blue-600 ml-1">(Auto-selected)</span>
                     )}
                   </Label>
                   <div className="space-y-2">
-
+                    {shippingMethods.length > 0 ? (
                     <Select 
                       value={shippingMethod} 
                       onValueChange={(value: any) => setShippingMethod(value)}
-                      key={`shipping-${shippingMethod}`}
+                      key={`shipping-select-${shippingMethods.length}-${shippingMethod}`}
                     >
                       <SelectTrigger className={`h-10 text-sm ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
@@ -2321,16 +2339,16 @@ const QuoteCalculatorV2: React.FC = () => {
                       <SelectContent>
                         {shippingMethods.map(method => (
                           <SelectItem key={method.value} value={method.value}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{method.label}</span>
-                              <span className="text-xs text-gray-500">
-                                {currencySymbol}{method.rate}/{weightUnit}
-                              </span>
-                            </div>
+                            {method.label} - {currencySymbol}{method.rate}/{weightUnit}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    ) : (
+                      <div className="h-10 px-3 rounded-lg border border-gray-300 bg-gray-50 flex items-center text-sm text-gray-500">
+                        Loading shipping methods...
+                      </div>
+                    )}
                     
                     {/* Nepal Delivery Method - moved from destination */}
                     {selectedNCMBranch && destinationCountry === 'NP' && (
