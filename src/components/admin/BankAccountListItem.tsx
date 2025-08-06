@@ -98,8 +98,10 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
               <span className="truncate">{account.account_number}</span>
             </span>
             {account.branch_name && (
-              <span className="text-gray-500 hidden sm:inline">•</span>
-              <span className="text-gray-500 truncate">{account.branch_name}</span>
+              <>
+                <span className="text-gray-500 hidden sm:inline">•</span>
+                <span className="text-gray-500 truncate">{account.branch_name}</span>
+              </>
             )}
           </div>
 

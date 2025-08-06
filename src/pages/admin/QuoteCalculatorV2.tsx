@@ -2976,7 +2976,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="grid grid-cols-[80px_1px_100px_1px_1fr_1px_2fr] gap-4 p-4 bg-gray-50/50 rounded-lg border border-gray-200">
                     {/* Quantity Column - FIRST for better UX flow */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 h-16 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Quantity</div>
                       </div>
@@ -2985,7 +2985,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
@@ -2993,7 +2993,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
                     {/* Price Column - SECOND */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 h-16 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Price</div>
                       </div>
@@ -3004,19 +3004,19 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={item.unit_price_usd || ''}
                         onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
                         placeholder="25.99"
-                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
                     {/* Separator */}
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
-                    {/* Weight Column */}
-                    <div className="space-y-2">
+                    {/* Weight Column - Clean Horizontal Layout */}
+                    <div className="space-y-2 h-16 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Weight</div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Input
                           type="number"
                           min="0"
@@ -3024,123 +3024,80 @@ const QuoteCalculatorV2: React.FC = () => {
                           value={item.weight_kg || ''}
                           onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                           placeholder="0.5"
-                          className="h-10 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          className="h-8 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                         <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          if (item.name || item.category) {
-                            const loadingKey = `weight-${item.id}`;
-                            setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
-                            try {
-                              const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                product_name: item.name || '',
-                                destination_country: destinationCountry,
-                                category: item.category || 'general'
-                              });
-                              if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
-                                updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
-                                updateItem(item.id, 'ai_weight_suggestion', {
-                                  weight: suggestion.suggested_weight_kg,
-                                  confidence: suggestion.weight_confidence || 0
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            if (item.name || item.category) {
+                              const loadingKey = `weight-${item.id}`;
+                              setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
+                              try {
+                                const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                  product_name: item.name || '',
+                                  destination_country: destinationCountry,
+                                  category: item.category || 'general'
                                 });
-                                toast({
-                                  title: "⚖️ Weight Estimated",
-                                  description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} based on product analysis (${Math.round((suggestion.weight_confidence || 0) * 100)}% confidence)`,
-                                  duration: 4000,
-                                });
-                              } else {
+                                if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+                                  updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                                  updateItem(item.id, 'ai_weight_suggestion', {
+                                    weight: suggestion.suggested_weight_kg,
+                                    confidence: suggestion.weight_confidence || 0
+                                  });
+                                  toast({
+                                    title: "Weight Estimated",
+                                    description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} (${Math.round((suggestion.weight_confidence || 0) * 100)}% confidence)`,
+                                    duration: 4000,
+                                  });
+                                } else {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Weight Estimation Failed",
+                                    description: "No weight data available for this product type.",
+                                  });
+                                }
+                              } catch (error) {
+                                console.error('Weight estimation error:', error);
                                 toast({
                                   variant: "destructive",
-                                  title: "Weight Estimation Failed",
-                                  description: "No weight data available for this product type.",
+                                  title: "Estimation Failed",
+                                  description: "Unable to estimate weight. Please enter manually.",
                                 });
+                              } finally {
+                                setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
                               }
-                            } catch (error) {
-                              console.error('Weight estimation error:', error);
-                              toast({
-                                variant: "destructive",
-                                title: "Estimation Failed",
-                                description: "Unable to estimate weight. Please enter manually.",
-                              });
-                            } finally {
-                              setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
                             }
-                          }
-                        }}
-                        className={`h-10 px-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 ${
-                          item.ai_weight_suggestion ? 'min-w-fit' : 'w-10 p-0'
-                        }`}
-                        disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
-                        title={item.ai_weight_suggestion 
-                          ? `AI Estimated: ${item.ai_weight_suggestion.weight}${weightUnit} (${Math.round(item.ai_weight_suggestion.confidence * 100)}% confidence)`
-                          : "Get AI weight estimate"
-                        }
-                      >
-                        <div className="flex items-center gap-1">
+                          }}
+                          className="h-8 w-8 p-0 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                          disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
+                          title="Get AI weight estimate"
+                        >
                           <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
-                          {item.ai_weight_suggestion && (
-                            <span className="text-xs font-medium">
-                              {item.ai_weight_suggestion.weight}{weightUnit} {Math.round(item.ai_weight_suggestion.confidence * 100)}%
-                            </span>
-                          )}
-                        </div>
-                      </Button>
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => setVolumetricModalOpen(item.id)}
-                          className="h-10 w-10 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
+                          className="h-8 w-8 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
                           title="Set Dimensions"
                         >
-                          <Ruler className="w-4 h-4" />
+                          <Ruler className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
-                    
-                    {/* Dimensions info when set */}
-                    {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
-                          const { length, width, height, unit = 'cm' } = item.dimensions;
-                          let l = length, w = width, h = height;
-                          if (unit === 'in') {
-                            l *= 2.54; w *= 2.54; h *= 2.54;
-                          }
-                          const volume = l * w * h;
-                          const divisor = item.volumetric_divisor || 5000;
-                          const volumetricWeightPerItem = volume / divisor;
-                          const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                          const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                          const isVolumetric = volumetricWeight > actualWeight;
-                          
-                          return (
-                            <div className="mt-1 flex justify-center">
-                              <div 
-                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
-                                  isVolumetric 
-                                    ? 'bg-orange-50 text-orange-700 border-orange-200' 
-                                    : 'bg-gray-50 text-gray-600 border-gray-200'
-                                }`}
-                                title={`Dimensions: ${length}×${width}×${height} ${unit} | Volumetric: ${volumetricWeight.toFixed(1)}${weightUnit} | Actual: ${actualWeight.toFixed(1)}${weightUnit} | Using: ${Math.max(actualWeight, volumetricWeight).toFixed(1)}${weightUnit} ${isVolumetric ? '(volumetric)' : '(actual)'}`}
-                              >
-                                <span className="text-xs">{isVolumetric ? '📦' : '⚖️'}</span>
-                                <span>{Math.max(actualWeight, volumetricWeight).toFixed(1)}{weightUnit}</span>
-                              </div>
-                            </div>
-                          );
-                        })()}
 
                     {/* Separator */}
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
                     {/* HSN & Category Column */}
-                    <div className="space-y-2 min-w-0">
+                    <div className="space-y-2 h-16 flex flex-col justify-between min-w-0">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">HSN / Category</div>
                       </div>
-                      <div className="w-full overflow-hidden">
+                      <div className="w-full overflow-hidden h-8">
                         <CompactHSNSearch
                           control={null}
                           index={0}
@@ -3169,7 +3126,73 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 </div>
 
-
+                {/* Dynamic Information Panel - Shows calculations when available */}
+                {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
+                  const { length, width, height, unit = 'cm' } = item.dimensions;
+                  let l = length, w = width, h = height;
+                  if (unit === 'in') {
+                    l *= 2.54; w *= 2.54; h *= 2.54;
+                  }
+                  const volume = l * w * h;
+                  const divisor = item.volumetric_divisor || 5000;
+                  const volumetricWeightPerItem = volume / divisor;
+                  const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                  const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                  const isVolumetric = volumetricWeight > actualWeight;
+                  const chargeableWeight = Math.max(actualWeight, volumetricWeight);
+                  
+                  return (
+                    <div className="mt-4 p-4 rounded-lg border border-blue-100 bg-blue-50/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span className="text-sm">📦</span>
+                        </div>
+                        <h6 className="text-sm font-semibold text-blue-900">Shipping Weight Calculation</h6>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                          <span className="text-gray-600">Dimensions:</span>
+                          <span className="font-medium text-gray-900">{length} × {width} × {height} {unit}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                          <span className="text-gray-600">Volumetric:</span>
+                          <span className="font-medium text-gray-900">{volumetricWeight.toFixed(2)}{weightUnit}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                          <span className="text-gray-600">Actual:</span>
+                          <span className="font-medium text-gray-900">{actualWeight.toFixed(2)}{weightUnit}</span>
+                        </div>
+                      </div>
+                      
+                      <div className={`mt-3 p-3 rounded-lg border-2 ${
+                        isVolumetric 
+                          ? 'bg-orange-50 border-orange-200' 
+                          : 'bg-green-50 border-green-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className={`font-medium ${
+                            isVolumetric ? 'text-orange-800' : 'text-green-800'
+                          }`}>
+                            Chargeable Weight:
+                          </span>
+                          <span className={`text-lg font-bold ${
+                            isVolumetric ? 'text-orange-900' : 'text-green-900'
+                          }`}>
+                            {chargeableWeight.toFixed(2)}{weightUnit} {isVolumetric ? '(volumetric)' : '(actual)'}
+                          </span>
+                        </div>
+                        {isVolumetric && (
+                          <p className="text-xs text-orange-700 mt-1">
+                            Using volumetric weight because it's higher than actual weight
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Advanced Options - Collapsible */}
                 <div className="border-t pt-4">
