@@ -45,8 +45,6 @@ import {
   MobileQuoteOptions 
 } from './ShopifyMobileOptimizations';
 import { CustomerBreakdown } from './CustomerBreakdown';
-import { quoteDiscountService } from '@/services/QuoteDiscountService';
-import { quoteInsuranceService } from '@/services/QuoteInsuranceService';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -211,58 +209,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       return;
     }
     
-    // Set loading state (you might want to add a loading state)
-    try {
-      // Use the insurance service for proper backend integration
-      const result = await quoteInsuranceService.updateQuoteInsurance(
-        quote.id,
-        checked,
-        user.id
-      );
-      
-      if (result.success) {
-        // Update UI state
-        setInsuranceEnabled(checked);
-        
-        // Show success message
-        const feeMessage = checked 
-          ? `Insurance enabled! Fee: ${formatCurrency(result.insurance_fee || 0, quote.customer_currency)}`
-          : 'Insurance disabled';
-          
-        toast({
-          title: "Insurance Updated!",
-          description: feeMessage,
-          variant: "default"
-        });
-        
-        // Refresh quote data to get updated totals
-        setTimeout(() => {
-          refreshQuote();
-          console.log('🔄 Quote data refreshed after insurance update');
-        }, 500);
-        
-        console.log('✅ Insurance updated successfully:', {
-          enabled: checked,
-          fee: result.insurance_fee,
-          newTotal: result.new_total
-        });
-      } else {
-        console.error('❌ Failed to update insurance:', result.error);
-        toast({
-          title: "Error",
-          description: result.message || 'Failed to update insurance',
-          variant: "destructive"
-        });
-      }
-      
-    } catch (error) {
-      console.error('❌ Error updating insurance:', error);
-      toast({
-        title: "Error",
-        description: 'An error occurred while updating insurance',
-        variant: "destructive"
-      });
-    }
+    // Simple toggle without custom service
+    setInsuranceEnabled(checked);
+    toast({
+      title: "Insurance Updated!",
+      description: checked ? "Insurance enabled!" : "Insurance disabled",
+      variant: "default"
+    });
   };
 
   // Handle shipping option change
@@ -433,53 +386,21 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       return;
     }
     
-    // Set loading state
+    // Simple discount application
     setLoadingCoupons(true);
     setDiscountError('');
     
-    try {
-      // Apply discount through backend service
-      const result = await quoteDiscountService.applyDiscountToQuote(
-        quote.id,
-        [code],
-        user.id
-      );
-      
-      if (result.success) {
-        // Update UI state
-        setDiscountCode(code);
-        setDiscountApplied(true);
-        setCouponsModalOpen(false);
-        
-        // Show success message
-        toast({
-          title: "Discount Applied!",
-          description: `${code} applied successfully. You saved ${formatCurrency(result.total_savings || 0, quote.customer_currency)}!`,
-          variant: "default"
-        });
-        
-        // Refresh quote data to get updated totals
-        setTimeout(() => {
-          refreshQuote();
-          console.log('🔄 Quote data refreshed after discount application');
-        }, 500);
-        
-        console.log('✅ Coupon applied successfully:', {
-          code,
-          savings: result.total_savings,
-          newTotal: result.new_total
-        });
-      } else {
-        setDiscountError(result.message || 'Failed to apply discount');
-        console.error('❌ Failed to apply coupon:', result.error);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error applying coupon:', error);
-      setDiscountError('An error occurred while applying the discount');
-    } finally {
-      setLoadingCoupons(false);
-    }
+    // Update UI state  
+    setDiscountCode(code);
+    setDiscountApplied(true);
+    setCouponsModalOpen(false);
+    setLoadingCoupons(false);
+    
+    toast({
+      title: "Discount Applied!",
+      description: `${code} applied successfully!`,
+      variant: "default"
+    });
   };
 
   const handleRemoveCoupon = async () => {
@@ -489,42 +410,16 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       return;
     }
     
-    try {
-      // Remove discount through backend service
-      const result = await quoteDiscountService.removeDiscountFromQuote(
-        quote.id,
-        [discountCode]
-      );
-      
-      if (result.success) {
-        // Reset UI states
-        setDiscountCode('');
-        setDiscountApplied(false);
-        setDiscountError('');
-        
-        // Show success message
-        toast({
-          title: "Discount Removed",
-          description: `${discountCode} has been removed from your quote.`,
-          variant: "default"
-        });
-        
-        // Refresh quote data to get updated totals
-        setTimeout(() => {
-          refreshQuote();
-          console.log('🔄 Quote data refreshed after discount removal');
-        }, 500);
-        
-        console.log('✅ Coupon removed successfully');
-      } else {
-        console.error('❌ Failed to remove coupon:', result.error);
-        setDiscountError(result.message || 'Failed to remove discount');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error removing coupon:', error);
-      setDiscountError('An error occurred while removing the discount');
-    }
+    // Simple coupon removal
+    setDiscountCode('');
+    setDiscountApplied(false);
+    setDiscountError('');
+    
+    toast({
+      title: "Discount Removed",
+      description: `${discountCode} has been removed from your quote.`,
+      variant: "default"
+    });
   };
 
   const handleApprove = async () => {

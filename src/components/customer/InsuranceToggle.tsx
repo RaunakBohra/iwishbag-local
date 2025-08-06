@@ -32,36 +32,27 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
   const routeInsuranceConfig: RouteInsuranceOptions | null =
     selectedShippingOption?.insurance_options || null;
 
-  // Calculate total amount for insurance calculation (match backend exactly)
-  // Backend uses v_quote.total_usd, so we use the quote's total value
-  const totalAmount = quote.total_usd || 0;
+  // Calculate items total for insurance calculation
+  const itemsTotal =
+    quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
 
-  // Calculate insurance cost (match backend RPC function exactly)
+  // Calculate insurance cost
   const calculateInsuranceCost = (): number => {
-    // Backend RPC formula: GREATEST(v_coverage_amount * 1.5 / 100, 2) in origin currency
-    // Calculate in USD first, then convert to origin currency like backend
-    const insuranceUSD = Math.max(2, totalAmount * 0.015); // 1.5% like backend
-    
-    // Convert to origin currency using exchange rate (like backend does)
-    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
-    const originCurrency = quote.origin_country === 'US' ? 'USD' : 
-                          quote.origin_country === 'IN' ? 'INR' :
-                          quote.origin_country === 'NP' ? 'NPR' : 'USD';
-    
-    if (originCurrency === 'USD') {
-      return insuranceUSD;
-    } else {
-      // Convert from USD to origin currency
-      return insuranceUSD * exchangeRate;
+    if (!routeInsuranceConfig || !routeInsuranceConfig.available) {
+      // Fallback to legacy calculation
+      return itemsTotal * 0.005; // 0.5% of items
     }
+
+    const coveragePercentage = routeInsuranceConfig.coverage_percentage || 1.5;
+    const calculatedCost = itemsTotal * (coveragePercentage / 100);
+    const minFee = routeInsuranceConfig.min_fee || 0;
+    const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
+
+    return Math.max(minFee, Math.min(maxCoverage, calculatedCost));
   };
 
   const insuranceCost = calculateInsuranceCost();
-  // Use origin currency like backend RPC function (not customer destination currency)
-  const originCurrency = quote.origin_country === 'US' ? 'USD' : 
-                         quote.origin_country === 'IN' ? 'INR' :
-                         quote.origin_country === 'NP' ? 'NPR' : 'USD';
-  const currencySymbol = currencyService.getCurrencySymbol(originCurrency);
+  const currencySymbol = currencyService.getCurrencySymbol(quote.currency);
 
   // Get insurance description
   const getInsuranceDescription = (): string => {
@@ -74,11 +65,11 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
   // Get coverage details
   const getCoverageDetails = (): string => {
     if (!routeInsuranceConfig) {
-      return `Covers up to ${currencySymbol}${totalAmount.toFixed(2)} (full order value)`;
+      return `Covers up to ${currencySymbol}${itemsTotal.toFixed(2)} (full item value)`;
     }
 
     const maxCoverage = routeInsuranceConfig.max_coverage;
-    const actualCoverage = Math.min(totalAmount, maxCoverage);
+    const actualCoverage = Math.min(itemsTotal, maxCoverage);
 
     return `Covers up to ${currencySymbol}${actualCoverage.toFixed(2)}`;
   };

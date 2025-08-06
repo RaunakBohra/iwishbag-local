@@ -588,22 +588,28 @@ class SimplifiedQuoteCalculator {
       }
     }
 
-    // Step 6: Calculate insurance - SAME FORMULA AS BACKEND RPC
+    // Step 6: Calculate insurance dynamically
     let insuranceAmount = 0;
-    let insurancePercentage = 1.5; // Backend default
+    let insurancePercentage = 0;
     
-    if (input.insurance_enabled !== false) {
-      // Backend RPC uses: v_coverage_amount := COALESCE(v_quote.total_usd, 0);
-      // So calculate total_usd equivalent first
-      const totalUsdEquivalent = finalItemsSubtotal + originSalesTax + finalShippingCost;
+    if (input.insurance_enabled !== false && routeCalculations && routeCalculations.insurance.available) {
+      // Use dynamic insurance from shipping route (only if enabled)
+      insuranceAmount = routeCalculations.insurance.amount;
+      insurancePercentage = routeCalculations.insurance.percentage;
       
-      // Backend RPC formula: GREATEST(v_coverage_amount * 1.5 / 100, 2)
-      insuranceAmount = Math.max(2, totalUsdEquivalent * 0.015); // 1.5%
-      
-      console.log(`🛡️ [Insurance] Total USD: $${totalUsdEquivalent.toFixed(2)}, Rate: 1.5%, Amount: $${insuranceAmount.toFixed(2)}`);
-    } else {
+      console.log(`🛡️ [Dynamic Insurance] Enabled - Percentage: ${insurancePercentage}%, Amount: ${insuranceAmount}`);
+    } else if (input.insurance_enabled === false) {
+      // Insurance explicitly disabled by user
       insuranceAmount = 0;
-      console.log(`🛡️ [Insurance Disabled] Amount: $0`);
+      insurancePercentage = 0;
+        
+      console.log(`🛡️ [Insurance Disabled] User disabled insurance, Amount: $0`);
+    } else {
+      // No insurance available - set to 0
+      insuranceAmount = 0;
+      insurancePercentage = 0;
+        
+      console.log(`🛡️ [No Insurance] Route has no insurance configuration, Amount: $0`);
     }
 
     // Step 7: Calculate CIF (Cost + Insurance + Freight) 
