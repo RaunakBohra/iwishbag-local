@@ -76,7 +76,8 @@ import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { DiscountEligibilityNotification } from '@/components/quotes-v2/DiscountEligibilityNotification';
 import { DiscountPreviewPanel } from '@/components/quotes-v2/DiscountPreviewPanel';
 import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview';
-import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligibilityChecker';
+import { SmartSavingsWidget } from '@/components/quotes-v2/SmartSavingsWidget';
+import { AdminDiscountControls } from '@/components/quotes-v2/AdminDiscountControls';
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
 import { CompactHSNSearch } from '@/components/forms/quote-form-fields/CompactHSNSearch';
@@ -3281,24 +3282,23 @@ const QuoteCalculatorV2: React.FC = () => {
                   />
                 </div>
 
-                {/* Discount Eligibility Checker */}
-                {customerEmail && calculationResult && (
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-semibold text-blue-900">Discount Opportunities</h4>
-                    <DiscountEligibilityChecker
-                      customerId={customerEmail}
-                      orderTotal={
-                        calculationResult?.calculation_steps?.subtotal || 
-                        calculationResult?.calculation_steps?.items_subtotal ||
-                        items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
-                        0
-                      }
-                      countryCode={destinationCountry}
-                      isFirstOrder={false} // Could be determined from customer data
-                      hasAccount={!!customerEmail}
-                      className="border-blue-200"
-                    />
-                  </div>
+                {/* Smart Savings Widget */}
+                {calculationResult && (
+                  <SmartSavingsWidget
+                    customerId={customerEmail}
+                    orderTotal={
+                      calculationResult?.calculation_steps?.subtotal || 
+                      calculationResult?.calculation_steps?.items_subtotal ||
+                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                      0
+                    }
+                    countryCode={destinationCountry}
+                    originCurrency={customerCurrency}
+                    onDiscountApplied={(discount) => {
+                      console.log('Discount applied:', discount);
+                      // Handle discount application
+                    }}
+                  />
                 )}
 
                 {/* Applied Discounts Summary */}

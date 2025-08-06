@@ -8,10 +8,11 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 
 interface VATResult {
   percentage: number;
-  source: 'shipping_route' | 'country_settings' | 'fallback';
+  source: 'shipping_route' | 'shipping_route_calculated' | 'country_settings' | 'fallback';
   confidence: number;
   route?: string;
 }
@@ -63,19 +64,31 @@ class VATService {
         };
       }
 
-      // Priority 1: Check shipping routes for route-specific VAT (disabled until column exists)
-      // TODO: Re-enable when shipping_routes.vat_percentage column is available
-      console.log(`[VATService] Skipping shipping routes VAT lookup - column doesn't exist yet`);
-      
-      // Skip shipping routes check for now
-      if (false) {
-        console.log(
-          `[VATService] Using shipping route VAT: ${originCountry}→${destinationCountry} = 0%`,
-        );
+      // Priority 1: Check shipping routes for route-specific VAT
+      // FEATURE REQUEST: Add vat_percentage column to shipping_routes table for route-specific VAT rates
+      // For now, we'll check if the route exists and use a calculated VAT based on route characteristics
+      const { data: shippingRoute } = await supabase
+        .from('shipping_routes')
+        .select('*')
+        .eq('origin_country', originCountry)
+        .eq('destination_country', destinationCountry)
+        .eq('is_active', true)
+        .single();
+
+      if (shippingRoute) {
+        // For now, apply standard international trade VAT logic based on route
+        // This can be enhanced when vat_percentage column is added
+        const routeBasedVAT = this.calculateRouteBasedVAT(originCountry, destinationCountry, shippingRoute);
+        
+        logger.info(`VAT calculated from shipping route data`, {
+          route: `${originCountry}→${destinationCountry}`,
+          vatPercentage: routeBasedVAT
+        });
+
         return {
-          percentage: 0,
-          source: 'shipping_route',
-          confidence: 0.95,
+          percentage: routeBasedVAT,
+          source: 'shipping_route_calculated',
+          confidence: 0.85,
           route: `${originCountry}→${destinationCountry}`,
         };
       }
@@ -100,9 +113,10 @@ class VATService {
       }
 
       // Priority 3: Final fallback (0%)
-      console.warn(
-        `[VATService] No VAT data found for ${originCountry}→${destinationCountry}, using 0% fallback`,
-      );
+      logger.warn('No VAT data found, using fallback', {
+        route: `${originCountry}→${destinationCountry}`,
+        fallbackVAT: 0
+      });
       return {
         percentage: 0,
         source: 'fallback',
@@ -249,6 +263,58 @@ class VATService {
       size: this.cache.size,
       keys: Array.from(this.cache.keys()),
     };
+  }
+
+  /**
+   * Calculate VAT based on shipping route characteristics
+   * This is a temporary implementation until vat_percentage column is added
+   */
+  private calculateRouteBasedVAT(originCountry: string, destinationCountry: string, shippingRoute: any): number {
+    // Define VAT rates for common international trade scenarios
+    const vatRates = {
+      // EU to EU - standard VAT applies
+      'EU_TO_EU': 20,
+      // US to anywhere - no federal VAT, but destination may have sales tax
+      'US_OUTBOUND': 0,
+      // China outbound - export VAT rebate typically applies
+      'CN_OUTBOUND': 0,
+      // India outbound - IGST applies for exports
+      'IN_OUTBOUND': 0,
+      // Into EU - VAT based on destination
+      'INTO_EU': 20,
+      // Standard international trade
+      'INTERNATIONAL': 0,
+    };
+
+    // EU countries for reference
+    const euCountries = ['DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'IE', 'FI', 'PT', 'GR', 'LU', 'SI', 'SK', 'EE', 'LV', 'LT', 'CY', 'MT', 'CZ', 'HU', 'PL', 'BG', 'RO', 'HR', 'SE', 'DK'];
+    
+    const isOriginEU = euCountries.includes(originCountry);
+    const isDestinationEU = euCountries.includes(destinationCountry);
+
+    // Apply VAT logic based on route characteristics
+    if (isOriginEU && isDestinationEU) {
+      return vatRates.EU_TO_EU;
+    }
+    
+    if (originCountry === 'US') {
+      return vatRates.US_OUTBOUND;
+    }
+    
+    if (originCountry === 'CN') {
+      return vatRates.CN_OUTBOUND;
+    }
+    
+    if (originCountry === 'IN') {
+      return vatRates.IN_OUTBOUND;
+    }
+    
+    if (isDestinationEU) {
+      return vatRates.INTO_EU;
+    }
+
+    // Default for international trade
+    return vatRates.INTERNATIONAL;
   }
 }
 

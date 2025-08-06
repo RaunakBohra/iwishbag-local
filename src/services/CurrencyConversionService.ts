@@ -1,4 +1,5 @@
 
+import { logger } from '@/utils/logger';
 
 interface MinimumValuationConversion {
   usdAmount: number;
@@ -178,7 +179,7 @@ class CurrencyConversionService {
       // Fallback to hardcoded rates
       return this.getFallbackRateData(fromCurrency, toCurrency);
     } catch (error) {
-      console.error('Exchange rate fetch error:', error);
+      logger.error('Exchange rate fetch error:', error);
       return this.getFallbackRateData(fromCurrency, toCurrency);
     }
   }
@@ -229,14 +230,58 @@ class CurrencyConversionService {
     fromCurrency: string,
     toCurrency: string,
   ): Promise<CurrencyRate | null> {
-    // TODO: Implement external API integration
-    // This could integrate with services like:
-    // - exchangerate-api.com
-    // - fixer.io
-    // - currencylayer.com
+    try {
+      // Using exchangerate-api.com (free tier: 1500 requests/month)
+      const API_URL = `https://api.exchangerate-api.com/v4/latest/${fromCurrency}`;
+      
+      const response = await fetch(API_URL, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'iwishBag-Currency-Service/1.0'
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Currency API error: ${response.status} ${response.statusText}`);
+      }
 
-    console.log('Real-time API rates not implemented yet, using database/fallback');
-    return null;
+      const data = await response.json();
+      
+      if (!data.rates || !data.rates[toCurrency]) {
+        logger.warn('Currency rate not found in API response', { 
+          fromCurrency, 
+          toCurrency, 
+          availableRates: Object.keys(data.rates || {}).length 
+        });
+        return null;
+      }
+
+      const rate = parseFloat(data.rates[toCurrency]);
+      const timestamp = new Date(data.date || Date.now());
+
+      logger.info('Successfully fetched currency rate from API', {
+        fromCurrency,
+        toCurrency,
+        rate,
+        timestamp: timestamp.toISOString()
+      });
+
+      return {
+        fromCurrency,
+        toCurrency,
+        rate,
+        timestamp,
+        source: 'api',
+      };
+    } catch (error) {
+      logger.warn('Real-time currency API failed, falling back to database/hardcoded rates', { 
+        fromCurrency, 
+        toCurrency, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      return null; // This will trigger database/fallback logic
+    }
   }
 
   /**
@@ -258,7 +303,7 @@ class CurrencyConversionService {
 
       return data.currency;
     } catch (error) {
-      console.error('Currency lookup error:', error);
+      logger.error('Currency lookup error:', error);
       return this.getCurrencyCodeFallback(countryCode);
     }
   }
