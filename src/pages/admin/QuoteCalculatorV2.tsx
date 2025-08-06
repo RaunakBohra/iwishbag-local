@@ -44,7 +44,10 @@ import {
   CheckCircle,
   EyeOff,
   Settings,
-  Scale
+  Scale,
+  Truck,
+  CreditCard,
+  Shield
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
@@ -2019,48 +2022,58 @@ const QuoteCalculatorV2: React.FC = () => {
             </div>
           )}
 
-          {/* Route Info - Compact Professional Design */}
+          {/* Route & Shipping - Professional International Design */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Route & Shipping</CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  <Globe className="h-3 w-3 mr-1" />
-                  Configuration
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg text-gray-900">Route Configuration</CardTitle>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-xs px-2 py-1">
+                  Required
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+              {/* Compact 4-Column Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Origin Column */}
                 <div>
-                  <Label className="text-xs font-medium text-gray-600">Origin</Label>
+                  <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-blue-600" />
+                    Origin
+                  </Label>
                   <div className="space-y-2">
                     <Select value={originCountry} onValueChange={setOriginCountry} disabled={loadingCountries}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder={loadingCountries ? "Loading..." : "Select origin"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {loadingCountries ? (
-                          <SelectItem value="loading" disabled>Loading countries...</SelectItem>
-                        ) : sortedCountries.length > 0 ? (
-                          sortedCountries.map((country) => (
-                            <SelectItem key={country.code} value={country.code}>
-                              {formatCountryDisplay(country, true)}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-countries" disabled>No countries available</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder={loadingCountries ? "Loading..." : "Origin country"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {loadingCountries ? (
+                            <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                          ) : sortedCountries.length > 0 ? (
+                            sortedCountries.map((country) => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {formatCountryDisplay(country, true)}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     {originCountry === 'US' && (
                       <Select value={originState} onValueChange={setOriginState}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="State" />
-                        </SelectTrigger>
+                            </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">No tax</SelectItem>
+                          <SelectItem value="none">No tax (0%)</SelectItem>
                           {simplifiedQuoteCalculator.getUSStates().map(state => (
                             <SelectItem key={state.code} value={state.code}>
                               {state.code} - {state.rate}%
@@ -2074,33 +2087,33 @@ const QuoteCalculatorV2: React.FC = () => {
 
                 {/* Destination Column */}
                 <div>
-                  <Label className="text-xs font-medium text-gray-600">
-                    Destination 
-                    <span className="text-xs text-gray-400 ml-1">
-                      (Current: {destinationCountry}
-                      {userOverrodeDestination && <span className="text-blue-600 font-semibold"> - User Selected</span>})
-                    </span>
+                  <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-green-600" />
+                    Destination
+                    {userOverrodeDestination && (
+                      <span className="text-xs text-blue-600 font-medium ml-1">Manual</span>
+                    )}
                   </Label>
                   <div className="space-y-2">
                     <Select 
                       value={destinationCountry} 
                       onValueChange={handleUserDestinationChange}
-                      key={`destination-${destinationCountry}`} // Force re-render when value changes
+                      key={`destination-${destinationCountry}`}
                     >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select destination" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="IN">🇮🇳 India</SelectItem>
-                        <SelectItem value="NP">🇳🇵 Nepal</SelectItem>
-                        <SelectItem value="US">🇺🇸 US</SelectItem>
-                        <SelectItem value="CA">🇨🇦 Canada</SelectItem>
-                        <SelectItem value="GB">🇬🇧 UK</SelectItem>
-                        <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Destination" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="IN">India</SelectItem>
+                          <SelectItem value="NP">Nepal</SelectItem>
+                          <SelectItem value="US">United States</SelectItem>
+                          <SelectItem value="CA">Canada</SelectItem>
+                          <SelectItem value="GB">United Kingdom</SelectItem>
+                          <SelectItem value="AU">Australia</SelectItem>
                       </SelectContent>
                     </Select>
                     
-                    {/* Location/Service selector based on destination */}
+                    {/* Compact location selectors */}
                     {destinationCountry === 'IN' && (
                       <Input
                         type="text"
@@ -2114,7 +2127,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         }}
                         className={`h-8 text-xs ${
                           destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
-                            ? 'border-orange-300' 
+                            ? 'border-amber-300' 
                             : destinationPincode 
                               ? 'border-green-300' 
                               : ''
@@ -2123,16 +2136,11 @@ const QuoteCalculatorV2: React.FC = () => {
                     )}
                     
                     {destinationCountry === 'NP' ? (
-                      /* Nepal - Show NCM Branch Configuration */
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-800 mb-1 block">
-                          Nepal Shipping Configuration
+                        <Label className="text-xs font-medium text-gray-600 mb-1 block">
+                          NCM Branch
+                          <span className="text-xs text-gray-500 ml-1 font-normal">(Location in Nepal)</span>
                         </Label>
-                        <div>
-                          <Label className="text-xs font-medium text-gray-700 mb-1 block">
-                            NCM Branch
-                            <span className="text-xs text-gray-500 ml-1 font-normal">(Package delivery location in Nepal)</span>
-                          </Label>
                           
                           {/* Professional Searchable Combobox */}
                           <Popover open={ncmComboboxOpen} onOpenChange={setNCMComboboxOpen}>
@@ -2287,128 +2295,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               </Command>
                             </PopoverContent>
                           </Popover>
-                          {selectedNCMBranch && (
-                            <div className="mt-1 space-y-1">
-                              <div className="text-xs text-green-700 bg-green-100 p-2 rounded flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Selected: <span className="font-medium ml-1">{selectedNCMBranch.name}</span> 
-                                  <span className="text-green-600 ml-1">({selectedNCMBranch.district})</span>
-                                </div>
-                                
-                                {/* Confidence indicators */}
-                                {isAutoSelected && branchMapping && (
-                                  <div className="flex items-center gap-1">
-                                    {branchMapping.confidence === 'high' && (
-                                      <Badge variant="default" className="text-xs h-4 bg-green-500 text-white">
-                                        ✓ Auto-matched
-                                      </Badge>
-                                    )}
-                                    {branchMapping.confidence === 'medium' && (
-                                      <Badge variant="secondary" className="text-xs h-4 bg-yellow-500 text-white">
-                                        ~ Suggested
-                                      </Badge>
-                                    )}
-                                    {branchMapping.confidence === 'low' && (
-                                      <Badge variant="outline" className="text-xs h-4">
-                                        ? Fallback
-                                      </Badge>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {userOverrodeNCMBranch && (
-                                  <Badge variant="outline" className="text-xs h-4 border-blue-300 text-blue-700">
-                                    👤 Manual
-                                  </Badge>
-                                )}
-                              </div>
-                              
-                              {/* Match reason for auto-selected branches */}
-                              {isAutoSelected && branchMapping && (
-                                <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                                  <span className="text-gray-500">Reason:</span> {branchMapping.matchReason}
-                                </div>
-                              )}
-                              
-                              {/* Show suggestions if available */}
-                              {suggestedNCMBranches.length > 0 && !isAutoSelected && (
-                                <div className="text-xs">
-                                  <div className="text-gray-600 mb-2 font-medium">
-                                    {suggestedNCMBranches.length > 1 && 
-                                     suggestedNCMBranches.every(s => s.matchType === 'exact_district')
-                                      ? `Multiple branches found in district (${suggestedNCMBranches.length}):`
-                                      : 'Suggested branches:'}
-                                  </div>
-                                  <div className="space-y-1">
-                                    {suggestedNCMBranches.slice(0, 3).map((suggestion, index) => (
-                                      <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded border hover:bg-gray-100 transition-colors">
-                                        <div className="flex flex-col">
-                                          <span className="text-gray-900 font-medium">
-                                            {suggestion.branch.district} ({suggestion.branch.name})
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            {suggestion.matchReason}
-                                          </span>
-                                          {suggestion.branch.coveredAreas && suggestion.branch.coveredAreas.length > 0 && (
-                                            <span className="text-xs text-blue-600">
-                                              Covers: {suggestion.branch.coveredAreas.slice(0, 2).join(', ')}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <Button 
-                                          size="sm"
-                                          variant="outline"
-                                          className="text-xs h-6 px-2 cursor-pointer hover:bg-blue-50"
-                                          onClick={() => {
-                                            setSelectedNCMBranch(suggestion.branch);
-                                            setBranchMapping(suggestion);
-                                            setIsAutoSelected(true);
-                                            setSuggestedNCMBranches([]);
-                                          }}
-                                        >
-                                          Select
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Delivery Method - Only show when branch is selected */}
-                        {selectedNCMBranch && (
-                          <div className="mt-2">
-                            <Label className="text-xs font-medium text-gray-700 mb-1 block">
-                              Delivery Method
-                            </Label>
-                            <Select 
-                              value={ncmServiceType} 
-                              onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
-                              disabled={loadingNCMRates}
-                            >
-                              <SelectTrigger className="h-8 text-xs bg-white border-green-300">
-                                <SelectValue placeholder="Select delivery method" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pickup">
-                                  <div className="flex items-center gap-2">
-                                    <span>Door Delivery</span>
-                                    <span className="text-xs text-gray-500">(Faster)</span>
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="collect">
-                                  <div className="flex items-center gap-2">
-                                    <span>Branch Pickup</span>
-                                    <span className="text-xs text-gray-500">(Lower cost)</span>
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                        
                       </div>
                     ) : (!destinationPincode && destinationCountry !== 'IN') ? (
                       /* Other countries - Show Urban/Rural dropdown */
@@ -2428,92 +2315,86 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Shipping Column - Redesigned */}
-                <div className="space-y-3">
-                  {/* Shipping Method Header */}
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      🚚 Shipping Method
-                    </Label>
-                    {calculationResult?.route_calculations?.delivery_option_used?.id && (
-                      <div className="flex items-center gap-1">
-                        {calculationResult.route_calculations.delivery_option_used.id === shippingMethod ? (
-                          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
-                            ✓ Auto-Selected
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full font-medium">
-                            ⚠ Manual Override
-                          </span>
-                        )}
-                      </div>
+                {/* Shipping Column */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
+                    <Truck className="h-3 w-3 text-blue-600" />
+                    International Shipping
+                    {calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod && (
+                      <span className="text-xs text-green-600 ml-1">(Auto)</span>
                     )}
-                  </div>
+                  </Label>
+                  <div className="space-y-2">
 
-                  {/* Primary Shipping Selector */}
-                  <div className="relative">
                     <Select 
                       value={shippingMethod} 
                       onValueChange={(value: any) => setShippingMethod(value)}
                       key={`shipping-${shippingMethod}`}
                     >
-                      <SelectTrigger className={`h-10 text-sm font-medium transition-all ${
+                      <SelectTrigger className={`h-9 text-sm ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
-                          ? 'border-green-500 bg-green-50/50 shadow-sm' 
-                          : 'border-gray-300 hover:border-gray-400'
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-gray-300'
                       }`}>
-                        <SelectValue placeholder="Choose shipping method" />
+                        <SelectValue placeholder="Shipping method" />
                       </SelectTrigger>
-                      <SelectContent className="max-w-md">
+                      <SelectContent>
                         {shippingMethods.map(method => (
-                          <SelectItem key={method.value} value={method.value} className="cursor-pointer">
-                            <div className="flex items-center justify-between w-full py-1">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-gray-900">
-                                  {method.label}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {currencySymbol}{method.rate}/{weightUnit}
-                                  {dynamicShippingMethods.length > 0 && method.delivery_days && (
-                                    <span className="ml-1">• {method.delivery_days}</span>
-                                  )}
-                                </span>
-                              </div>
-                              {calculationResult?.route_calculations?.delivery_option_used?.id === method.value && (
-                                <span className="ml-3 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">
-                                  ✓ Used
-                                </span>
-                              )}
+                          <SelectItem key={method.value} value={method.value}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{method.label}</span>
+                              <span className="text-xs text-gray-500">
+                                {currencySymbol}{method.rate}/{weightUnit}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                    
+                    {/* Nepal Delivery Method - moved from destination */}
+                    {selectedNCMBranch && destinationCountry === 'NP' && (
+                      <Select 
+                        value={ncmServiceType} 
+                        onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
+                        disabled={loadingNCMRates}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Delivery method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pickup">Door Delivery</SelectItem>
+                          <SelectItem value="collect">Branch Pickup</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
 
                   {/* Country-Specific Service Options */}
                   {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                      <Label className="text-xs font-medium text-blue-800 mb-2 block">
-                        🇮🇳 India Service Type
-                      </Label>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-4 w-4 rounded bg-blue-200 flex items-center justify-center">
+                          <Truck className="h-3 w-3 text-blue-700" />
+                        </div>
+                        <Label className="text-sm font-medium text-blue-800">India Service Type</Label>
+                      </div>
                       <Select 
                         value={delhiveryServiceType} 
                         onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
                         disabled={loadingServices}
                       >
-                        <SelectTrigger className="h-9 text-sm bg-white border-blue-300">
+                        <SelectTrigger className="h-10 text-sm bg-white border-blue-300">
                           <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableServices.map((service) => (
                             <SelectItem key={service.value} value={service.value}>
                               <div className="flex items-center gap-2">
-                                <span>
-                                  {service.value === 'standard' && '📦'}
-                                  {service.value === 'express' && '⚡'}
-                                  {service.value === 'same_day' && '🚀'}
-                                </span>
+                                <div className="h-4 w-4 rounded bg-gray-100 flex items-center justify-center">
+                                  {service.value === 'standard' && <Package className="h-3 w-3 text-gray-600" />}
+                                  {service.value === 'express' && <Clock className="h-3 w-3 text-blue-600" />}
+                                  {service.value === 'same_day' && <CheckCircle className="h-3 w-3 text-green-600" />}
+                                </div>
                                 <span>{service.label}</span>
                               </div>
                             </SelectItem>
@@ -2522,26 +2403,26 @@ const QuoteCalculatorV2: React.FC = () => {
                       </Select>
                     </div>
                   )}
-
+                  </div>
                 </div>
 
-                {/* Payment & Options Column - Redesigned */}
-                <div className="space-y-4">
-                  {/* Payment Gateway */}
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-2">
-                      💳 Payment Gateway
-                    </Label>
+                {/* Payment Column */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
+                    <CreditCard className="h-3 w-3 text-green-600" />
+                    Payment
+                  </Label>
+                  <div className="space-y-2">
                     <Select value={paymentGateway} onValueChange={setPaymentGateway}>
-                      <SelectTrigger className="h-10 text-sm font-medium border-gray-300 hover:border-gray-400 transition-colors">
-                        <SelectValue placeholder="Select payment method" />
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Payment gateway" />
                       </SelectTrigger>
                       <SelectContent>
                         {simplifiedQuoteCalculator.getPaymentGateways().map(gateway => (
-                          <SelectItem key={gateway.value} value={gateway.value} className="cursor-pointer">
-                            <div className="flex items-center justify-between w-full py-1">
-                              <span className="font-medium">{gateway.label}</span>
-                              <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
+                          <SelectItem key={gateway.value} value={gateway.value}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{gateway.label}</span>
+                              <span className="text-xs text-gray-500">
                                 {gateway.fees.percentage}%
                               </span>
                             </div>
@@ -2549,53 +2430,20 @@ const QuoteCalculatorV2: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
 
-                  {/* Insurance Section */}
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <Label className="text-sm font-semibold text-blue-800 flex items-center gap-2">
-                          🛡️ Shipping Insurance
-                        </Label>
-                        {calculationResult?.route_calculations?.insurance?.available && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            {calculationResult.route_calculations.insurance.percentage}% of shipment value
-                          </p>
-                        )}
-                      </div>
+                    {/* Insurance Toggle */}
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                        <Shield className="h-3 w-3 text-blue-600" />
+                        Insurance
+                      </Label>
                       <Switch
                         checked={insuranceEnabled}
                         onCheckedChange={setInsuranceEnabled}
                         disabled={!calculationResult?.route_calculations?.insurance?.available}
-                        className="data-[state=checked]:bg-blue-600"
+                        className="data-[state=checked]:bg-blue-600 scale-75"
                       />
                     </div>
-                    
-                    {calculationResult?.route_calculations?.insurance?.available ? (
-                      <div className="space-y-1">
-                        {insuranceEnabled && (
-                          <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
-                            <div className="flex justify-between items-center">
-                              <span>Coverage:</span>
-                              <span className="font-medium">
-                                {calculationResult.route_calculations.insurance.percentage}% 
-                                (Min: ${calculationResult.route_calculations.insurance.min_fee})
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {!insuranceEnabled && (
-                          <p className="text-xs text-gray-500 italic">
-                            Insurance disabled - shipment not covered
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                        Insurance not available for this route
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

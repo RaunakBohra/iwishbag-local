@@ -351,7 +351,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                         {item.url && (
                           <div>
                             <span className="text-gray-500 font-medium block mb-1">Product URL</span>
-                            <p className="break-words overflow-hidden">
+                            <p className="break-words">
                               <a 
                                 href={item.url} 
                                 target="_blank" 

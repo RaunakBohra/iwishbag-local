@@ -53,8 +53,10 @@ export interface StatusConfig {
   
   // Payment-specific properties
   paymentType?: 'prepaid' | 'cod' | 'partial' | 'mixed';
-  requiresPaymentBefore?: 'shipping' | 'processing' | 'never';
-  minimumPaymentPercentage?: number; // For partial payments (0-100)
+  paymentRequiredBefore?: 'never' | 'processing' | 'shipping' | 'completion'; // Updated name to match form
+  requiresPaymentBefore?: 'shipping' | 'processing' | 'never'; // Backward compatibility
+  minPaymentPercentage?: number; // For partial payments (0-100) - Form field name
+  minimumPaymentPercentage?: number; // Backward compatibility
   paymentMilestones?: {
     percentage: number;
     label: string;
@@ -65,9 +67,12 @@ export interface StatusConfig {
   isCODStatus?: boolean;
   codCollectionRequired?: boolean;
   codRemittanceTracking?: boolean;
+  allowCOD?: boolean; // Enable cash on delivery for this status
+  codFeeRequired?: boolean; // Charge additional fee for COD orders  
+  codVerificationRequired?: boolean; // Require phone verification for COD orders
   
   // Payment validation function name (will be resolved at runtime)
-  paymentValidationRule?: 'full_payment' | 'partial_payment' | 'cod_allowed' | 'custom';
+  paymentValidationRule?: 'none' | 'standard' | 'strict' | 'automatic' | 'full_payment' | 'partial_payment' | 'cod_allowed' | 'custom';
 }
 
 export interface StatusWorkflow {
