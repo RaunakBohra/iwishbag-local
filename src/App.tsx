@@ -75,7 +75,7 @@ const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes
 const StatusManagementPage = React.lazy(() => import('@/pages/admin/StatusManagement'));
 const SupportTicketsPage = React.lazy(() => import('@/pages/admin/SupportTickets'));
 const AutoAssignmentPage = React.lazy(() => import('@/pages/admin/AutoAssignment'));
-const EnhancedCustomerManagementPage = React.lazy(() => import('@/components/admin/EnhancedCustomerManagementPage'));
+const EnhancedCustomerManagementPage = React.lazy(() => import('@/components/admin/SimpleCustomerManagement'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
 const CountrySettings = React.lazy(() => import('@/components/admin/CountrySettings'));
 const BankAccountSettings = React.lazy(() => import('@/components/admin/BankAccountSettings'));
