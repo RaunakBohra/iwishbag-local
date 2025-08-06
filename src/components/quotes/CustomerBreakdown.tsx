@@ -20,12 +20,14 @@ interface CustomerBreakdownProps {
   quote: any;
   formatCurrency: (amount: number, currency: string) => string;
   className?: string;
+  displayCurrency?: string; // Override currency for display
 }
 
 export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   quote,
   formatCurrency,
-  className = ""
+  className = "",
+  displayCurrency
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -41,7 +43,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
 
   const calc = quote.calculation_data;
   const steps = calc.calculation_steps || {};
-  const currency = quote.customer_currency || 'USD';
+  const currency = displayCurrency || quote.customer_currency || 'USD';
 
   // Helper function to get country-specific tax name
   const getLocalTaxName = (countryCode: string) => {

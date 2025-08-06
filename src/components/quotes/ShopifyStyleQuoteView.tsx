@@ -128,6 +128,76 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     staleTime: 0, // Always refetch for real-time updates
     gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  // Fetch current user profile for currency preferences
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('preferred_display_currency, country')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Determine display currency: Priority 1: User profile preference, Priority 2: Quote currency
+  const getDisplayCurrency = useCallback(() => {
+    // For authenticated users, check profile preference first
+    if (user?.id && userProfile?.preferred_display_currency) {
+      return userProfile.preferred_display_currency;
+    }
+    // Fall back to quote's stored currency
+    return quote?.customer_currency || 'USD';
+  }, [user?.id, userProfile?.preferred_display_currency, quote?.customer_currency]);
+
+  const displayCurrency = getDisplayCurrency();
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount; // Return original amount if conversion fails
+    }
+  }, []);
+
+  // Enhanced formatCurrency function that handles currency conversion
+  const formatDisplayCurrency = useCallback(async (amount: number, sourceCurrency?: string) => {
+    const fromCurrency = sourceCurrency || quote?.customer_currency || 'USD';
+    
+    if (fromCurrency === displayCurrency) {
+      return formatCurrency(amount, displayCurrency);
+    }
+    
+    try {
+      const convertedAmount = await convertCurrency(amount, fromCurrency, displayCurrency);
+      return formatCurrency(convertedAmount, displayCurrency);
+    } catch (error) {
+      console.warn('Currency formatting failed, using original:', error);
+      return formatCurrency(amount, fromCurrency);
+    }
+  }, [quote?.customer_currency, displayCurrency, convertCurrency]);
+
+  // State to hold converted amounts for display
+  const [convertedAmounts, setConvertedAmounts] = useState<{
+    total: string;
+    itemsConverted: boolean;
+  }>({
+    total: '',
+    itemsConverted: false
+  });
+
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [questionType, setQuestionType] = useState('');
@@ -152,6 +222,41 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [couponsModalOpen, setCouponsModalOpen] = useState(false);
   const [availableShippingOptions, setAvailableShippingOptions] = useState<any[]>([]);
   const [selectedShipping, setSelectedShipping] = useState('');
+
+  // Convert currency amounts when quote or display currency changes
+  useEffect(() => {
+    if (!quote || !displayCurrency) return;
+    
+    const convertAmounts = async () => {
+      try {
+        const quoteCurrency = quote.customer_currency || 'USD';
+        const quoteTotal = quote.total_customer_currency || quote.total_usd;
+        
+        if (quoteCurrency === displayCurrency) {
+          setConvertedAmounts({
+            total: formatCurrency(quoteTotal, displayCurrency),
+            itemsConverted: true
+          });
+          return;
+        }
+
+        const convertedTotal = await convertCurrency(quoteTotal, quoteCurrency, displayCurrency);
+        setConvertedAmounts({
+          total: formatCurrency(convertedTotal, displayCurrency),
+          itemsConverted: true
+        });
+      } catch (error) {
+        console.warn('Failed to convert currency amounts:', error);
+        // Fallback to original currency
+        setConvertedAmounts({
+          total: formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency || 'USD'),
+          itemsConverted: false
+        });
+      }
+    };
+
+    convertAmounts();
+  }, [quote, displayCurrency, convertCurrency]);
 
   // Fetch shipping options
   useEffect(() => {
@@ -970,6 +1075,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             <CustomerBreakdown 
               quote={quote}
               formatCurrency={formatCurrency}
+              displayCurrency={displayCurrency}
             />
           </div>
 
@@ -1232,7 +1338,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             <div className="text-center p-6 bg-green-50 rounded-lg">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
               <div className="text-2xl font-bold text-green-900 mb-1">
-                {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                {convertedAmounts.total || formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
               </div>
               <div className="text-sm text-green-700">
                 Quote #{quote.quote_number || quote.id.slice(0, 8)}
