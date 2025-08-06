@@ -365,7 +365,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                 value={item.name}
                 onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                 placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                className="h-10 text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="h-10 border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 text-sm text-gray-900 font-normal"
               />
             </div>
 
@@ -431,7 +431,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                     min="1"
                     value={item.quantity}
                     onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                    className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200"
                   />
                 </div>
 
@@ -449,7 +449,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                     value={item.unit_price_usd || ''}
                     onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
                     placeholder="25.99"
-                    className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 text-sm text-gray-900 font-normal"
                   />
                 </div>
 
@@ -468,7 +468,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                       value={item.weight_kg || ''}
                       onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || 0)}
                       placeholder="0.5"
-                      className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 flex-1"
+                      className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 flex-1 text-sm text-gray-900 font-normal"
                     />
                     <span className="text-xs text-gray-500 font-medium min-w-[16px]">kg</span>
                   </div>
@@ -487,11 +487,11 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                       variant="outline"
                       onClick={() => handleWeightEstimate(item)}
                       disabled={!item.name || smartFeatureLoading[`weight-${item.id}`]}
-                      className="h-8 px-2 text-xs bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"
+                      className="h-8 px-2 text-xs bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100 hover:border-teal-300"
                       title="AI weight estimate"
                     >
                       {smartFeatureLoading[`weight-${item.id}`] ? (
-                        <div className="animate-spin w-3 h-3 border border-purple-600 border-t-transparent rounded-full"></div>
+                        <div className="animate-spin w-3 h-3 border border-teal-600 border-t-transparent rounded-full"></div>
                       ) : (
                         <Brain className="w-3 h-3" />
                       )}
@@ -512,10 +512,10 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
 
             {/* AI Suggestions Display */}
             {item.aiSuggestions && Object.keys(item.aiSuggestions).length > 0 && (
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
+              <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800">AI Suggestions</span>
+                  <Sparkles className="h-4 w-4 text-teal-600" />
+                  <span className="text-sm font-medium text-teal-800">AI Suggestions</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(item.aiSuggestions).map(([type, value]) => (
@@ -524,7 +524,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => applySuggestion(item, type, value)}
-                      className="h-7 px-2 text-xs bg-white/50 border-purple-300 text-purple-700 hover:bg-white"
+                      className="h-7 px-2 text-xs bg-white/50 border-teal-300 text-teal-700 hover:bg-white"
                     >
                       {getSuggestionIcon(type)}
                       <span className="ml-1 capitalize">{type}: {value}</span>
@@ -619,7 +619,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                         value={item.discount_percentage || ''}
                         onChange={(e) => updateItem(item.id, 'discount_percentage', parseFloat(e.target.value) || 0)}
                         placeholder="10"
-                        className="h-8 text-xs"
+                        className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200"
                       />
                     ) : (
                       <Input
@@ -629,7 +629,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                         value={item.discount_amount || ''}
                         onChange={(e) => updateItem(item.id, 'discount_amount', parseFloat(e.target.value) || 0)}
                         placeholder="5.00"
-                        className="h-8 text-xs"
+                        className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200"
                       />
                     )}
                     
@@ -646,7 +646,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                     value={item.notes || ''}
                     onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
                     placeholder="Any special notes about this item..."
-                    className="w-full h-16 px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                    className="w-full h-16 px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-teal-500 focus:ring-1 focus:ring-teal-200 resize-none"
                   />
                 </div>
               </div>

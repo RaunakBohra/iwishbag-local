@@ -149,7 +149,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
         }
         return `Actual weight: ${totalActual}kg`;
       })(),
-      color: (inputs.total_volumetric_weight_kg || 0) > (inputs.total_weight_kg || 0) ? 'text-orange-600' : 'text-purple-600'
+      color: (inputs.total_volumetric_weight_kg || 0) > (inputs.total_weight_kg || 0) ? 'text-orange-600' : 'text-blue-600'
     },
     // Row 2: Costs & Final Totals
     {
@@ -162,15 +162,44 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: DollarSign,
       title: 'Taxes',
-      value: `${rates.local_tax_percentage || 0}% ${taxInfo.local_tax_name}`,
-      subtitle: `${formatCurrency(totalTaxAmount)} tax`,
+      value: (() => {
+        const customsPercentage = rates.customs_percentage || 0;
+        const localTaxPercentage = rates.local_tax_percentage || 0;
+        
+        if (customsPercentage > 0 && localTaxPercentage > 0) {
+          return `${customsPercentage}% + ${localTaxPercentage}% ${taxInfo.local_tax_name}`;
+        } else if (customsPercentage > 0) {
+          return `${customsPercentage}% Customs Duty`;
+        } else if (localTaxPercentage > 0) {
+          return `${localTaxPercentage}% ${taxInfo.local_tax_name}`;
+        } else {
+          return 'No taxes applied';
+        }
+      })(),
+      subtitle: (() => {
+        const customsDuty = steps.customs_duty || 0;
+        const localTax = totalTaxAmount || 0;
+        const totalTaxes = customsDuty + localTax;
+        
+        if (customsDuty > 0 && localTax > 0) {
+          return `${formatCurrency(customsDuty)} customs + ${formatCurrency(localTax)} ${taxInfo.local_tax_name.toLowerCase()} = ${formatCurrency(totalTaxes)} total`;
+        } else if (customsDuty > 0) {
+          return `${formatCurrency(customsDuty)} customs duty`;
+        } else if (localTax > 0) {
+          return `${formatCurrency(localTax)} ${taxInfo.local_tax_name.toLowerCase()}`;
+        } else {
+          return 'No tax amount';
+        }
+      })(),
       color: 'text-orange-600'
     },
     {
       icon: DollarSign,
       title: 'Total',
-      value: `${formatCurrency(finalTotalUSD)} ${originCurrency}`,
-      subtitle: customerCurrency !== originCurrency ? `Customer pays: ${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
+      value: customerCurrency !== originCurrency 
+        ? `${formatCurrency(finalTotalUSD)} ${originCurrency} / ${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}`
+        : `${formatCurrency(finalTotalUSD)} ${originCurrency}`,
+      subtitle: customerCurrency !== originCurrency ? 'Origin pricing / Customer pays' : 'Final amount',
       color: 'text-green-600'
     }
   ];
@@ -376,10 +405,56 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           )}
                           
                           {/* Category */}
-                          {item.category && (
+                          {(item.category || item.main_category || item.sub_category || item.hsn_category || item.hsn_display_name || item.display_name) && (
                             <div>
                               <span className="text-sm font-medium text-gray-700">Category</span>
-                              <p className="text-sm">{item.category}</p>
+                              <p className="text-sm">
+                                {(() => {
+                                  // Debug: log the item to see what fields are available
+                                  console.log('Item data for category display:', {
+                                    hsn_code: item.hsn_code,
+                                    category: item.category,
+                                    main_category: item.main_category,
+                                    sub_category: item.sub_category,
+                                    hsn_category: item.hsn_category,
+                                    hsn_display_name: item.hsn_display_name,
+                                    display_name: item.display_name,
+                                    all_keys: Object.keys(item)
+                                  });
+                                  
+                                  // Try to get HSN-specific category information first
+                                  if (item.hsn_display_name) {
+                                    return item.hsn_display_name;
+                                  }
+                                  
+                                  if (item.display_name && item.display_name !== item.name) {
+                                    return item.display_name;
+                                  }
+                                  
+                                  if (item.hsn_category) {
+                                    return item.hsn_category;
+                                  }
+                                  
+                                  // Try to reconstruct from HSN code if available
+                                  if (item.hsn_code === '1701') {
+                                    return 'Sugar / Sweeteners';
+                                  }
+                                  
+                                  // Fall back to main/sub category logic
+                                  const mainCategory = item.main_category || item.category;
+                                  const subCategory = item.sub_category;
+                                  
+                                  if (mainCategory && subCategory) {
+                                    return `${mainCategory} / ${subCategory}`;
+                                  } else if (mainCategory) {
+                                    return mainCategory;
+                                  } else if (subCategory) {
+                                    return subCategory;
+                                  } else {
+                                    return item.category;
+                                  }
+                                })()}
+                              </p>
                             </div>
                           )}
                           
@@ -483,9 +558,9 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                     ) : (
                       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                         <div className="flex items-center gap-1 mb-1">
-                          <span className="text-xs font-medium text-gray-400">Volumetric Weight</span>
+                          <span className="text-xs font-medium text-gray-500">Volumetric Weight</span>
                         </div>
-                        <span className="text-sm text-gray-400">Not calculated</span>
+                        <span className="text-sm text-gray-500">Not calculated</span>
                       </div>
                     )}
                   </div>

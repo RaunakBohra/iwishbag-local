@@ -82,6 +82,7 @@ const BankAccountSettings = React.lazy(() => import('@/components/admin/BankAcco
 const SystemSettings = React.lazy(() => import('@/components/admin/SystemSettings'));
 const TestEmail = React.lazy(() => import('@/pages/TestEmail'));
 const TestSES = React.lazy(() => import('@/pages/TestSES'));
+const DiscountSystemTest = React.lazy(() => import('@/components/test/DiscountSystemTest').then((m) => ({ default: m.DiscountSystemTest })));
 const PayUDebugPage = React.lazy(() =>
   import('@/pages/admin/PayUDebugPage').then((m) => ({
     default: m.PayUDebugPage,
@@ -198,6 +199,7 @@ const router = createBrowserRouter([
           { path: 'system-settings', element: <SystemSettings /> },
           { path: 'test-email', element: <TestEmail /> },
           { path: 'test-ses', element: <TestSES /> },
+          { path: 'test-discount', element: <DiscountSystemTest /> },
           {
             path: 'payment-management',
             element: (

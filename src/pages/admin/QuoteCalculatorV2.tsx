@@ -1778,7 +1778,7 @@ const QuoteCalculatorV2: React.FC = () => {
             }
           </p>
           {isEditMode && quoteId && (
-            <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
+            <p className="text-xs text-gray-500 mt-1">ID: {quoteId}</p>
           )}
           
         </div>
@@ -1809,7 +1809,7 @@ const QuoteCalculatorV2: React.FC = () => {
             <div className="flex items-center gap-2 border-l pl-4">
               {/* Status dropdown */}
               <Select value={currentQuoteStatus} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1945,11 +1945,11 @@ const QuoteCalculatorV2: React.FC = () => {
 
               {/* Phone */}
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Phone className="h-3 w-3 text-purple-600" />
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Phone className="h-3 w-3 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">Phone</div>
+                  <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Phone</div>
                   <div className="text-sm text-gray-800 truncate">
                     {customerPhone || 'Not provided'}
                   </div>
@@ -1959,8 +1959,8 @@ const QuoteCalculatorV2: React.FC = () => {
               {/* Delivery Address - Compact */}
               {deliveryAddress ? (
                 <div className="flex items-center gap-1">
-                  <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center relative">
-                    <MapPin className="h-3 w-3 text-teal-600" />
+                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center relative">
+                    <MapPin className="h-3 w-3 text-blue-600" />
                     {deliveryAddress.is_default && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
                         <CheckCircle className="h-2 w-2 text-white" />
@@ -1968,7 +1968,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-teal-700 uppercase tracking-wide">Address</div>
+                    <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Address</div>
                     {(() => {
                       const addressDisplay = getAddressDisplay(deliveryAddress, showAddressDetails);
                       return addressDisplay.isMultiline ? (
@@ -2001,7 +2001,7 @@ const QuoteCalculatorV2: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                    <MapPin className="h-3 w-3 text-gray-400" />
+                    <MapPin className="h-3 w-3 text-gray-500" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Address</div>
@@ -2023,20 +2023,20 @@ const QuoteCalculatorV2: React.FC = () => {
                   placeholder="Customer Name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                  className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                 />
                 <Input
                   type="email"
                   placeholder="Email Address"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                  className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                 />
                 <Input
                   placeholder="Phone Number"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                  className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                 />
               </div>
             </div>
@@ -2055,7 +2055,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="space-y-2">
                     <Select value={originCountry} onValueChange={setOriginCountry} disabled={loadingCountries}>
-                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                         <SelectValue placeholder={loadingCountries ? "Loading..." : "Origin country"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -2074,7 +2074,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       </Select>
                     {originCountry === 'US' && (
                       <Select value={originState} onValueChange={setOriginState}>
-                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                           <SelectValue placeholder="State" />
                             </SelectTrigger>
                         <SelectContent>
@@ -2105,7 +2105,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       onValueChange={handleUserDestinationChange}
                       key={`destination-${destinationCountry}`}
                     >
-                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                         <SelectValue placeholder="Destination" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2149,7 +2149,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={ncmComboboxOpen}
-                                className="w-full h-10 justify-between text-sm border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 text-left"
+                                className="w-full h-10 justify-between text-sm border-gray-300 hover:border-gray-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0 text-left text-gray-900 hover:text-gray-900 font-normal hover:bg-white"
                                 disabled={loadingNCMBranches || availableNCMBranches.length === 0}
                               >
                                 <span className="truncate">
@@ -2300,7 +2300,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     ) : (!destinationPincode && destinationCountry !== 'IN') ? (
                       /* Other countries - Show Urban/Rural dropdown */
                       <Select value={destinationState} onValueChange={setDestinationState}>
-                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                           <SelectValue placeholder="Location" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2331,9 +2331,9 @@ const QuoteCalculatorV2: React.FC = () => {
                       onValueChange={(value: any) => setShippingMethod(value)}
                       key={`shipping-select-${shippingMethods.length}-${shippingMethod}`}
                     >
-                      <SelectTrigger className={`h-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 ${
+                      <SelectTrigger className={`h-10 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0 ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
-                          ? 'border-blue-500 bg-blue-50' 
+                          ? 'border-teal-500 bg-teal-50' 
                           : 'border-gray-300'
                       }`}>
                         <SelectValue placeholder="Select shipping method" />
@@ -2359,7 +2359,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
                         disabled={loadingNCMRates}
                       >
-                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                           <SelectValue placeholder="Delivery method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2383,7 +2383,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
                         disabled={loadingServices}
                       >
-                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                        <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                           <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2414,7 +2414,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="space-y-2">
                     <Select value={paymentGateway} onValueChange={setPaymentGateway}>
-                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                      <SelectTrigger className="h-10 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                         <SelectValue placeholder="Payment gateway" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2433,7 +2433,7 @@ const QuoteCalculatorV2: React.FC = () => {
 
                     {/* Insurance Toggle */}
                     <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-gray-50/50">
-                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      <Label className="text-sm font-normal text-gray-900 flex items-center gap-1">
                         <Shield className="h-3 w-3 text-blue-600" />
                         Insurance
                       </Label>
@@ -2559,7 +2559,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           }
                         }
                       }}
-                      className="text-sm h-8 px-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
+                      className="text-sm h-8 px-3 bg-gradient-to-r from-teal-50 to-blue-50 border-teal-200 text-teal-700 hover:from-teal-100 hover:to-blue-100"
                       disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
                     >
                       <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
@@ -2570,7 +2570,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-500 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -2817,7 +2817,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={item.name}
                         onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                         placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                        className="h-10 text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                        className="h-10 text-sm font-medium border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                       />
                     </div>
                   </div>
@@ -2839,7 +2839,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                       />
                     </div>
 
@@ -2858,7 +2858,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={item.unit_price_usd || ''}
                         onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
                         placeholder="25.99"
-                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                       />
                     </div>
 
@@ -2878,7 +2878,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           value={item.weight_kg || ''}
                           onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                           placeholder="0.5"
-                          className="h-10 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                          className="h-10 text-center text-sm font-medium flex-1 border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
                         />
                         <Button
                           type="button"
@@ -3059,14 +3059,10 @@ const QuoteCalculatorV2: React.FC = () => {
                     className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Advanced Options</span>
+                      <Tag className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-normal text-gray-900">Item Discounts</span>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <span>Discounts</span>
-                        <span>•</span>
-                        <span>Dimensions</span>
-                        <span>•</span>
-                        <span>Settings</span>
+                        <span>Per-item pricing adjustments</span>
                       </div>
                     </div>
                     <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform group-hover:text-gray-700 ${
@@ -3337,6 +3333,10 @@ const QuoteCalculatorV2: React.FC = () => {
               {/* Admin Discount Controls - Modern Interface */}
               <AdminDiscountControls 
                 currencySymbol={currencySymbol}
+                customerId={customerEmail} // Use email as customer identifier
+                quoteId={quoteId}
+                orderTotal={calculationResult?.calculation_steps?.total_usd || calculationResult?.total || 0}
+                countryCode={destinationCountry}
                 onDiscountChange={(discounts) => {
                   // Handle discount changes from the new component
                   const orderDiscounts = discounts.filter(d => d.type === 'order' && d.applied);

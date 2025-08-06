@@ -29,7 +29,7 @@ const ValidatedInput = React.forwardRef<HTMLInputElement, ValidatedInputProps>(
               ? 'border-red-300 ring-1 ring-red-200' 
               : showSuccess 
                 ? 'border-green-300 ring-1 ring-green-200'
-                : 'border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200',
+                : 'border-gray-300 hover:border-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-200',
             
             // Add padding for validation icon
             showValidationIcon ? 'pr-10' : '',

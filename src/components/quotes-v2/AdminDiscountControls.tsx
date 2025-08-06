@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { DiscountService, type ApplicableDiscount } from '@/services/DiscountService';
 import { 
   Settings,
   Percent,
@@ -28,12 +29,20 @@ interface AdminDiscountControlsProps {
   currencySymbol?: string;
   onDiscountChange?: (discounts: DiscountItem[]) => void;
   className?: string;
+  customerId?: string;
+  quoteId?: string;
+  orderTotal?: number;
+  countryCode?: string;
 }
 
 export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
   currencySymbol = '$',
   onDiscountChange,
-  className
+  className,
+  customerId,
+  quoteId,
+  orderTotal = 0,
+  countryCode
 }) => {
   const [discounts, setDiscounts] = useState<DiscountItem[]>([]);
   const [newDiscount, setNewDiscount] = useState({
@@ -42,35 +51,81 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
     value: 0
   });
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  
+  const discountService = DiscountService.getInstance();
 
   const discountTypeOptions = [
     { value: 'order', label: 'Order Total', icon: Package },
     { value: 'shipping', label: 'Shipping', icon: Truck }
   ];
 
-  const addDiscount = () => {
+  const addDiscount = async () => {
     if (newDiscount.value <= 0) return;
-
-    const discount: DiscountItem = {
-      id: Date.now().toString(),
-      type: newDiscount.type,
-      method: newDiscount.method,
-      value: newDiscount.value,
-      label: getDiscountLabel(newDiscount),
-      applied: true
-    };
-
-    const updatedDiscounts = [...discounts, discount];
-    setDiscounts(updatedDiscounts);
-    onDiscountChange?.(updatedDiscounts);
     
-    // Reset form
-    setNewDiscount({
-      type: 'order',
-      method: 'percentage',
-      value: 0
-    });
-    setShowAddForm(false);
+    setIsApplying(true);
+    
+    try {
+      const discount: DiscountItem = {
+        id: Date.now().toString(),
+        type: newDiscount.type,
+        method: newDiscount.method,
+        value: newDiscount.value,
+        label: getDiscountLabel(newDiscount),
+        applied: true
+      };
+
+      // For admin discounts, we create a manual discount that doesn't require validation
+      // but should be tracked if we have customer and quote info
+      if (customerId && quoteId && orderTotal > 0) {
+        try {
+          // Create an ApplicableDiscount for tracking
+          const trackingDiscount: ApplicableDiscount = {
+            discount_source: 'code', // Use 'code' for admin override
+            discount_type: newDiscount.method === 'percentage' ? 'percentage' : 'fixed_amount',
+            discount_value: newDiscount.value,
+            discount_amount: newDiscount.method === 'percentage' 
+              ? (orderTotal * (newDiscount.value / 100))
+              : Math.min(newDiscount.value, orderTotal),
+            applies_to: newDiscount.type === 'shipping' ? 'shipping' : 'total',
+            is_stackable: true,
+            description: `Admin Override: ${getDiscountLabel(newDiscount)}`,
+            priority: 0 // High priority for admin discounts
+          };
+          
+          // Track the usage (optional - won't fail if it doesn't work)
+          await discountService.recordDiscountUsage(
+            customerId,
+            [trackingDiscount],
+            quoteId,
+            undefined, // orderId
+            orderTotal,
+            currencySymbol === '$' ? 'USD' : 'USD' // Default to USD for now
+          );
+          
+          console.log('Admin discount tracked successfully');
+        } catch (trackingError) {
+          console.warn('Failed to track admin discount usage:', trackingError);
+          // Don't fail the discount application if tracking fails
+        }
+      }
+
+      const updatedDiscounts = [...discounts, discount];
+      setDiscounts(updatedDiscounts);
+      onDiscountChange?.(updatedDiscounts);
+      
+      // Reset form
+      setNewDiscount({
+        type: 'order',
+        method: 'percentage',
+        value: 0
+      });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Error adding admin discount:', error);
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   const removeDiscount = (id: string) => {
@@ -179,7 +234,7 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
                   setNewDiscount(prev => ({ ...prev, type: value }))
                 }
               >
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -204,7 +259,7 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
                   }));
                 }}
               >
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
+                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,14 +299,28 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
                   value: parseFloat(e.target.value) || 0 
                 }))}
                 placeholder={newDiscount.method === 'percentage' ? '10' : '5.00'}
-                className="h-9 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                className="h-9 text-sm border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500 focus:ring-offset-0"
               />
             )}
 
             <div className="flex gap-2">
-              <Button onClick={addDiscount} size="sm" className="flex-1">
-                <Plus className="w-3 h-3 mr-1" />
-                Add Discount
+              <Button 
+                onClick={addDiscount} 
+                size="sm" 
+                className="flex-1"
+                disabled={isApplying}
+              >
+                {isApplying ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1" />
+                    Applying...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add Discount
+                  </>
+                )}
               </Button>
               <Button 
                 onClick={() => setShowAddForm(false)} 
