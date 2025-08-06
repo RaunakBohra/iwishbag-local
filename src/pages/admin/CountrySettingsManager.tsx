@@ -383,7 +383,7 @@ const CountrySettingsManager: React.FC = () => {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingCountry ? 'Edit Country Configuration' : 'Add New Country'}
@@ -396,7 +396,7 @@ const CountrySettingsManager: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="country-form" onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="country_code">Country Code *</Label>
@@ -577,24 +577,24 @@ const CountrySettingsManager: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setShowEditModal(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingCountry ? 'Update' : 'Create'} Country
-              </Button>
-            </DialogFooter>
           </form>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setShowEditModal(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="country-form">
+              {editingCountry ? 'Update' : 'Create'} Country
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

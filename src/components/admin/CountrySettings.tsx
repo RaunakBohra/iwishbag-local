@@ -359,7 +359,7 @@ const CountrySettings = () => {
           if (!open) handleCancelClick();
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingCountry ? 'Edit Country' : 'Add New Country'}

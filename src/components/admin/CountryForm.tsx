@@ -179,8 +179,8 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
   };
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="flex flex-col h-full">
+      <form id="country-form" onSubmit={handleSubmit} className="space-y-8 flex-1 overflow-y-auto">
         {/* Basic Information */}
         <div className="space-y-4">
           <div className="border-b border-gray-200 pb-3">
@@ -591,22 +591,22 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
             priority, unless manually overridden.
           </div>
         </div>
-
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-          <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">
-            {editingCountry ? 'Update Country' : 'Create Country'}
-          </Button>
-        </div>
       </form>
+
+      {/* Form Actions */}
+      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 mt-4 flex-shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </Button>
+        <Button type="submit" form="country-form" className="bg-teal-600 hover:bg-teal-700 text-white">
+          {editingCountry ? 'Update Country' : 'Create Country'}
+        </Button>
+      </div>
     </div>
   );
 };
