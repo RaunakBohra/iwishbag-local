@@ -43,52 +43,64 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   const steps = calc.calculation_steps || {};
   const currency = quote.customer_currency || 'USD';
 
-  // Essential breakdown items (always visible)
+  // Helper function to get country-specific tax name
+  const getLocalTaxName = (countryCode: string) => {
+    const taxNames: { [key: string]: string } = {
+      'NP': 'Local Tax (VAT)',
+      'IN': 'Local Tax (GST)', 
+      'US': 'Sales Tax',
+      'CA': 'Local Tax (GST/HST)',
+      'AU': 'Local Tax (GST)',
+      'GB': 'Local Tax (VAT)',
+      'DE': 'Local Tax (VAT)',
+      'FR': 'Local Tax (VAT)',
+      'IT': 'Local Tax (VAT)',
+      'ES': 'Local Tax (VAT)',
+      'NL': 'Local Tax (VAT)',
+      'BE': 'Local Tax (VAT)',
+      'SE': 'Local Tax (VAT)',
+      'NO': 'Local Tax (VAT)',
+      'DK': 'Local Tax (VAT)',
+      'FI': 'Local Tax (VAT)'
+    };
+    return taxNames[countryCode] || 'Local Tax';
+  };
+
+  // Essential breakdown items (always visible) - 4 Main Categories
   const essentialItems = [
     {
-      label: 'Products',
-      amount: steps.items_subtotal || 0,
-      icon: <Package className="w-4 h-4" />,
-      savings: steps.item_discounts || 0
+      label: 'Items',
+      amount: steps.discounted_items_subtotal || steps.items_subtotal || 0,
+      icon: <Package className="w-4 h-4" />
     },
     {
       label: 'Shipping',
-      amount: steps.discounted_shipping_cost || steps.shipping_cost || 0,
-      icon: <Truck className="w-4 h-4" />,
-      savings: steps.shipping_discount_amount || 0,
-      originalAmount: steps.shipping_cost
+      amount: (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
+              (steps.insurance_amount || 0) + 
+              (steps.discounted_delivery || steps.domestic_delivery || 0),
+      icon: <Truck className="w-4 h-4" />
     },
     {
-      label: 'Insurance',
-      amount: steps.insurance_amount || 0,
-      icon: <Shield className="w-4 h-4" />,
-      optional: true
-    },
-    {
-      label: 'Duties & Taxes',
-      amount: (steps.discounted_customs_duty || steps.customs_duty || 0) + (steps.discounted_tax_amount || steps.local_tax_amount || 0),
-      icon: <Globe className="w-4 h-4" />,
-      savings: (steps.customs_discount_amount || 0) + (steps.tax_discount_amount || 0),
-      originalAmount: (steps.customs_duty || 0) + (steps.local_tax_amount || 0)
+      label: 'Taxes',
+      amount: (steps.discounted_customs_duty || steps.customs_duty || 0) + 
+              (steps.discounted_tax_amount || steps.local_tax_amount || 0),
+      icon: <Globe className="w-4 h-4" />
     },
     {
       label: 'Service Fees',
-      amount: (steps.discounted_handling_fee || steps.handling_fee || 0) + (steps.discounted_delivery || steps.domestic_delivery || 0),
-      icon: <Calculator className="w-4 h-4" />,
-      savings: (steps.handling_discount_amount || 0) + (steps.delivery_discount_amount || 0),
-      originalAmount: (steps.handling_fee || 0) + (steps.domestic_delivery || 0)
-    },
-    {
-      label: 'Payment Processing',
-      amount: steps.payment_gateway_fee || 0,
-      icon: <CreditCard className="w-4 h-4" />
+      amount: (steps.discounted_handling_fee || steps.handling_fee || 0) + 
+              (steps.payment_gateway_fee || 0),
+      icon: <Calculator className="w-4 h-4" />
     }
   ];
 
-  // Detailed breakdown items (shown when expanded)
+  // Detailed breakdown items (shown when expanded) with country-specific tax names
+  const destinationCountry = quote.destination_country || calc.inputs?.destination_country || 'US';
+  const localTaxName = getLocalTaxName(destinationCountry);
+  
   const detailedItems = [
     {
-      section: 'Product Details',
+      section: 'Items',
       items: [
         { label: 'Items Subtotal', amount: steps.items_subtotal || 0 },
         ...(steps.item_discounts > 0 ? [{ label: 'Item Discounts', amount: -(steps.item_discounts || 0), isDiscount: true }] : []),
@@ -107,19 +119,19 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       ]
     },
     {
-      section: 'Duties & Taxes',
+      section: 'Taxes & Duties',
       items: [
         ...(steps.customs_duty > 0 ? [{ label: 'Import Duties', amount: steps.customs_duty || 0 }] : []),
         ...(steps.customs_discount_amount > 0 ? [{ label: 'Customs Savings', amount: -(steps.customs_discount_amount || 0), isDiscount: true }] : []),
-        ...(steps.local_tax_amount > 0 ? [{ label: 'Local Tax (GST/VAT)', amount: steps.local_tax_amount || 0 }] : []),
-        ...(steps.tax_discount_amount > 0 ? [{ label: 'Tax Savings', amount: -(steps.tax_discount_amount || 0), isDiscount: true }] : []),
-        ...(steps.handling_fee > 0 ? [{ label: 'Handling Fee', amount: steps.handling_fee || 0 }] : []),
-        ...(steps.handling_discount_amount > 0 ? [{ label: 'Handling Savings', amount: -(steps.handling_discount_amount || 0), isDiscount: true }] : [])
+        ...(steps.local_tax_amount > 0 ? [{ label: localTaxName, amount: steps.local_tax_amount || 0 }] : []),
+        ...(steps.tax_discount_amount > 0 ? [{ label: 'Tax Savings', amount: -(steps.tax_discount_amount || 0), isDiscount: true }] : [])
       ]
     },
     {
-      section: 'Payment Processing',
+      section: 'Service Fees',
       items: [
+        ...(steps.handling_fee > 0 ? [{ label: 'Handling Fee', amount: steps.handling_fee || 0 }] : []),
+        ...(steps.handling_discount_amount > 0 ? [{ label: 'Handling Savings', amount: -(steps.handling_discount_amount || 0), isDiscount: true }] : []),
         { label: 'Payment Gateway Fee', amount: steps.payment_gateway_fee || 0, description: '2.9% + $0.30 processing fee' }
       ]
     },
@@ -159,62 +171,24 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Essential Breakdown (Always Visible) */}
+          {/* Essential Breakdown (Always Visible) - Clean & Simple */}
           <div className="space-y-3">
             {essentialItems.map((item, index) => {
               if (item.optional && item.amount === 0) return null;
               
               return (
-                <div key={index} className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <span className="text-blue-600 mr-3">{item.icon}</span>
-                      <span className="text-muted-foreground">{item.label}</span>
-                    </div>
-                    <div className="text-right">
-                      {item.savings > 0 && item.originalAmount ? (
-                        <div className="space-y-1">
-                          <span className="text-sm text-muted-foreground line-through">
-                            {formatCurrency(item.originalAmount, currency)}
-                          </span>
-                          <div className="font-medium">
-                            {formatCurrency(item.amount, currency)}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="font-medium">
-                          {formatCurrency(item.amount, currency)}
-                        </span>
-                      )}
-                    </div>
+                <div key={index} className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <span className="text-blue-600 mr-3">{item.icon}</span>
+                    <span className="text-muted-foreground">{item.label}</span>
                   </div>
-                  {item.savings > 0 && (
-                    <div className="flex justify-end">
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                        Saved {formatCurrency(item.savings, currency)}
-                      </Badge>
-                    </div>
-                  )}
+                  <span className="font-medium">
+                    {formatCurrency(item.amount, currency)}
+                  </span>
                 </div>
               );
             })}
           </div>
-
-          {/* Savings */}
-          {totalSavings > 0 && (
-            <>
-              <Separator />
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <Tag className="w-4 h-4 text-green-600 mr-2" />
-                  <span className="text-green-800 font-medium">Total Savings</span>
-                </div>
-                <span className="text-green-800 font-semibold">
-                  -{formatCurrency(totalSavings, currency)}
-                </span>
-              </div>
-            </>
-          )}
 
           <Separator />
 
@@ -263,6 +237,24 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Total Savings Summary (in details only) */}
+                {totalSavings > 0 && (
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Tag className="w-5 h-5 text-green-600 mr-2" />
+                        <span className="text-green-800 font-semibold text-lg">Total Savings</span>
+                      </div>
+                      <span className="text-green-800 font-bold text-lg">
+                        -{formatCurrency(totalSavings, currency)}
+                      </span>
+                    </div>
+                    <p className="text-green-700 text-sm mt-2">
+                      You saved {formatCurrency(totalSavings, currency)} on this quote through various discounts and optimizations!
+                    </p>
+                  </div>
+                )}
 
                 {/* Additional Details */}
                 <div className="p-3 bg-blue-50 rounded-lg">

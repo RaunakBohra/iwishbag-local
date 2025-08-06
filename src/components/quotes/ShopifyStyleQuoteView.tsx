@@ -8,7 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   CheckCircle, 
   Package, 
@@ -22,7 +26,10 @@ import {
   Heart,
   ArrowLeft,
   Lock,
-  CreditCard
+  CreditCard,
+  Tag,
+  Zap,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
@@ -37,8 +44,9 @@ import {
   MobileProgress,
   MobileQuoteOptions 
 } from './ShopifyMobileOptimizations';
-import { QuoteOptionsSelector } from './QuoteOptionsSelector';
 import { CustomerBreakdown } from './CustomerBreakdown';
+import { quoteDiscountService } from '@/services/QuoteDiscountService';
+import { quoteInsuranceService } from '@/services/QuoteInsuranceService';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -139,6 +147,52 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
+  const [insuranceEnabled, setInsuranceEnabled] = useState(quote?.insurance_required || false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const [couponsModalOpen, setCouponsModalOpen] = useState(false);
+  const [availableShippingOptions, setAvailableShippingOptions] = useState<any[]>([]);
+  const [selectedShipping, setSelectedShipping] = useState('');
+
+  // Fetch shipping options
+  useEffect(() => {
+    const fetchShippingOptions = async () => {
+      if (!quote) return;
+      
+      try {
+        console.log('🚚 Fetching shipping options for:', quote.origin_country, '→', quote.destination_country);
+        const { data, error } = await supabase
+          .from('shipping_routes')
+          .select('delivery_options')
+          .eq('origin_country', quote.origin_country)
+          .eq('destination_country', quote.destination_country)
+          .eq('is_active', true)
+          .single();
+          
+        if (!error && data?.delivery_options) {
+          const activeOptions = data.delivery_options.filter((opt: any) => opt.active);
+          console.log('✅ Found shipping options:', activeOptions.length, activeOptions);
+          setAvailableShippingOptions(activeOptions);
+          
+          // Set the currently selected option
+          const routeCalculations = quote.calculation_data?.route_calculations;
+          const currentlySelected = routeCalculations?.delivery_option_used?.id;
+          if (currentlySelected) {
+            setSelectedShipping(currentlySelected);
+          } else if (activeOptions.length > 0) {
+            setSelectedShipping(activeOptions[0].id);
+          }
+        } else {
+          console.warn('❌ No shipping options found:', error);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching shipping options:', err);
+      }
+    };
+    
+    fetchShippingOptions();
+  }, [quote]);
 
   // React Query handles data fetching automatically
 
@@ -147,6 +201,331 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     console.log('🔄 Refreshing quote data...');
     refetchQuote();
   }, [refetchQuote]);
+
+  // Handle insurance toggle with full backend integration
+  const handleInsuranceToggle = async (checked: boolean) => {
+    console.log('🚪️ Toggling insurance:', checked);
+    
+    if (!user || !quote) {
+      console.error('❌ Unable to toggle insurance - missing user or quote data');
+      return;
+    }
+    
+    // Set loading state (you might want to add a loading state)
+    try {
+      // Use the insurance service for proper backend integration
+      const result = await quoteInsuranceService.updateQuoteInsurance(
+        quote.id,
+        checked,
+        user.id
+      );
+      
+      if (result.success) {
+        // Update UI state
+        setInsuranceEnabled(checked);
+        
+        // Show success message
+        const feeMessage = checked 
+          ? `Insurance enabled! Fee: ${formatCurrency(result.insurance_fee || 0, quote.customer_currency)}`
+          : 'Insurance disabled';
+          
+        toast({
+          title: "Insurance Updated!",
+          description: feeMessage,
+          variant: "default"
+        });
+        
+        // Refresh quote data to get updated totals
+        setTimeout(() => {
+          refreshQuote();
+          console.log('🔄 Quote data refreshed after insurance update');
+        }, 500);
+        
+        console.log('✅ Insurance updated successfully:', {
+          enabled: checked,
+          fee: result.insurance_fee,
+          newTotal: result.new_total
+        });
+      } else {
+        console.error('❌ Failed to update insurance:', result.error);
+        toast({
+          title: "Error",
+          description: result.message || 'Failed to update insurance',
+          variant: "destructive"
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error updating insurance:', error);
+      toast({
+        title: "Error",
+        description: 'An error occurred while updating insurance',
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle shipping option change
+  const handleShippingChange = async (shippingId: string) => {
+    const selectedOption = availableShippingOptions.find(opt => opt.id === shippingId);
+    if (!selectedOption) return;
+
+    setSelectedShipping(shippingId);
+    
+    try {
+      // Update the delivery option in route calculations
+      const routeCalculations = quote.calculation_data?.route_calculations || {};
+      const newRouteCalc = {
+        ...routeCalculations,
+        delivery_option_used: {
+          id: selectedOption.id,
+          name: selectedOption.name,
+          carrier: selectedOption.carrier,
+          price_per_kg: selectedOption.price,
+          delivery_days: `${selectedOption.min_days}-${selectedOption.max_days}`
+        }
+      };
+      
+      const updateData = {
+        calculation_data: {
+          ...quote.calculation_data,
+          route_calculations: newRouteCalc
+        },
+        shipping_method: shippingId
+      };
+      
+      // Save to database
+      await supabase
+        .from('quotes_v2')
+        .update(updateData)
+        .eq('id', quote.id);
+        
+      console.log('✅ Shipping option updated in database');
+      
+      // Refresh quote data to get updated totals
+      setTimeout(() => {
+        refreshQuote();
+        console.log('🔄 Quote data refreshed');
+      }, 500);
+    } catch (error) {
+      console.error('❌ Failed to update shipping option:', error);
+    }
+  };
+
+  // Available coupons for this order - fetch real data from database
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+
+  const fetchAvailableCoupons = async () => {
+    if (!quote || !user) return [];
+    
+    setLoadingCoupons(true);
+    try {
+      const orderTotal = quote.total_customer_currency || quote.total_usd;
+      const handlingFee = quote.calculation_data?.calculation_steps?.handling_fee || 0;
+      
+      const { data, error } = await supabase.rpc('calculate_applicable_discounts', {
+        p_customer_id: user.id,
+        p_quote_total: orderTotal,
+        p_handling_fee: handlingFee,
+        p_payment_method: 'card', // Default payment method
+        p_country_code: quote.destination_country
+      });
+
+      if (error) {
+        console.error('❌ Failed to fetch coupons:', error);
+        return [];
+      }
+
+      console.log('🎫 Raw coupon data from DB:', data);
+      
+      const coupons = (data || []).map((discount: any) => {
+        const title = getDiscountTitle(discount.discount_code, discount.discount_type);
+        const discountDisplay = discount.discount_type === 'percentage' ? `${discount.value}% off` : `$${discount.value} off`;
+        
+        console.log('🏷️ Processing coupon:', {
+          code: discount.discount_code,
+          originalType: discount.discount_type,
+          generatedTitle: title,
+          discountDisplay
+        });
+        
+        return {
+          code: discount.discount_code,
+          name: title,
+          discount: discountDisplay,
+          description: getDiscountDescription(discount.discount_code),
+          savings: discount.discount_amount,
+          applicable_amount: discount.applicable_amount,
+          priority: discount.priority,
+          type: discount.discount_type
+        };
+      });
+
+      setAvailableCoupons(coupons);
+      return coupons;
+    } catch (error) {
+      console.error('❌ Error fetching coupons:', error);
+      return [];
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  const getDiscountTitle = (code: string, type: string) => {
+    const titles: { [key: string]: string } = {
+      'FIRST_TIME_FEES_50': 'First Time Customer Discount',
+      'CUSTOMS_WAIVER_1000': 'Free Customs Duty',
+      'NO_HANDLING_500': 'Free Handling',
+      'BULK_HANDLING_25': 'Bulk Order Discount',
+      'PREMIUM_ALL_FEES': 'Premium Order Benefits',
+      'PLUS_CUSTOMS_50': 'Plus Member Savings',
+      'WELCOME10': 'Welcome Offer',
+      'BULK15': 'Bulk Purchase Discount',
+      'TEST20': 'Limited Time Offer',
+      'SAVE25': 'Save $25 Off',
+      'DASHAIN2025': 'Festival Special Offer',
+      'INDIA_SHIP_10': 'India Shipping Discount'
+    };
+    return titles[code] || `${type === 'percentage' ? 'Percentage' : 'Fixed Amount'} Discount`;
+  };
+
+  const getDiscountDescription = (code: string) => {
+    const descriptions: { [key: string]: string } = {
+      'FIRST_TIME_FEES_50': 'Special welcome offer for new customers',
+      'CUSTOMS_WAIVER_1000': 'No customs duty on orders above $1000',
+      'NO_HANDLING_500': 'No handling fee for orders over $500',
+      'BULK_HANDLING_25': 'Save on handling for bulk orders (10+ items)',
+      'PREMIUM_ALL_FEES': 'All fees waived for premium orders ($2000+)',
+      'PLUS_CUSTOMS_50': 'Exclusive savings for Plus members',
+      'WELCOME10': 'Welcome discount for new customers',
+      'BULK15': 'Save on bulk orders (5+ items)',
+      'TEST20': 'Limited time special offer',
+      'SAVE25': 'Instant savings on your order',
+      'DASHAIN2025': 'Celebrate the festival with savings',
+      'INDIA_SHIP_10': 'Special discount for Indian deliveries'
+    };
+    return descriptions[code] || 'Special discount for your order';
+  };
+
+  // Fetch coupons when quote changes
+  useEffect(() => {
+    fetchAvailableCoupons();
+  }, [quote, user]);
+
+  // Handle discount code application
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) {
+      setCouponsModalOpen(true);
+      setDiscountError('');
+      return;
+    }
+
+    // Use the backend service to apply the manually entered code
+    await handleSelectCoupon(discountCode.toUpperCase());
+  };
+
+  const handleSelectCoupon = async (code: string) => {
+    console.log('🏷️ Applying coupon:', code);
+    
+    if (!user || !quote) {
+      setDiscountError('Unable to apply coupon - missing user or quote data');
+      return;
+    }
+    
+    // Set loading state
+    setLoadingCoupons(true);
+    setDiscountError('');
+    
+    try {
+      // Apply discount through backend service
+      const result = await quoteDiscountService.applyDiscountToQuote(
+        quote.id,
+        [code],
+        user.id
+      );
+      
+      if (result.success) {
+        // Update UI state
+        setDiscountCode(code);
+        setDiscountApplied(true);
+        setCouponsModalOpen(false);
+        
+        // Show success message
+        toast({
+          title: "Discount Applied!",
+          description: `${code} applied successfully. You saved ${formatCurrency(result.total_savings || 0, quote.customer_currency)}!`,
+          variant: "default"
+        });
+        
+        // Refresh quote data to get updated totals
+        setTimeout(() => {
+          refreshQuote();
+          console.log('🔄 Quote data refreshed after discount application');
+        }, 500);
+        
+        console.log('✅ Coupon applied successfully:', {
+          code,
+          savings: result.total_savings,
+          newTotal: result.new_total
+        });
+      } else {
+        setDiscountError(result.message || 'Failed to apply discount');
+        console.error('❌ Failed to apply coupon:', result.error);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error applying coupon:', error);
+      setDiscountError('An error occurred while applying the discount');
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    console.log('🗑️ Removing applied coupon:', discountCode);
+    
+    if (!quote || !discountCode) {
+      return;
+    }
+    
+    try {
+      // Remove discount through backend service
+      const result = await quoteDiscountService.removeDiscountFromQuote(
+        quote.id,
+        [discountCode]
+      );
+      
+      if (result.success) {
+        // Reset UI states
+        setDiscountCode('');
+        setDiscountApplied(false);
+        setDiscountError('');
+        
+        // Show success message
+        toast({
+          title: "Discount Removed",
+          description: `${discountCode} has been removed from your quote.`,
+          variant: "default"
+        });
+        
+        // Refresh quote data to get updated totals
+        setTimeout(() => {
+          refreshQuote();
+          console.log('🔄 Quote data refreshed after discount removal');
+        }, 500);
+        
+        console.log('✅ Coupon removed successfully');
+      } else {
+        console.error('❌ Failed to remove coupon:', result.error);
+        setDiscountError(result.message || 'Failed to remove discount');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error removing coupon:', error);
+      setDiscountError('An error occurred while removing the discount');
+    }
+  };
 
   const handleApprove = async () => {
     try {
@@ -428,92 +807,112 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Product Details & Options */}
           <div className="lg:col-span-2 hidden md:block">
-            {/* Product Summary */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  {/* Product Image */}
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                    {items[0]?.images?.[0] ? (
-                      <img 
-                        src={items[0].images[0]} 
-                        alt={items[0].name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="w-8 h-8 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold mb-2">
-                      {items.length > 1 
-                        ? `${items[0]?.name} + ${items.length - 1} more item${items.length > 2 ? 's' : ''}`
-                        : items[0]?.name || 'Your Items'
-                      }
-                    </h3>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                      <span>{items.length} item{items.length !== 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span>
-                        {items.reduce((sum, item) => sum + (item.weight || 0), 0).toFixed(2)}kg total
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center text-green-600">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        <span className="text-sm font-medium">All items verified</span>
-                      </div>
-                      <div className="flex items-center text-blue-600">
-                        <Truck className="w-4 h-4 mr-1" />
-                        <span className="text-sm font-medium">Express shipping</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Delivery Estimate */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-muted-foreground">
-                      <Truck className="w-4 h-4 mr-2" />
-                      <span className="text-sm">Estimated delivery</span>
-                    </div>
-                    <span className="font-medium">
-                      {(() => {
-                        // Get selected shipping option from admin settings
-                        const adminShippingOptions = quote.calculation_data?.shipping_options || [];
-                        const selectedOption = adminShippingOptions.find((opt: any) => opt.id === quoteOptions.shipping) || 
-                          { min_days: 12, max_days: 15 }; // fallback
-
-                        const minDate = new Date(Date.now() + selectedOption.min_days * 24 * 60 * 60 * 1000);
-                        const maxDate = new Date(Date.now() + selectedOption.max_days * 24 * 60 * 60 * 1000);
-                        
-                        return `${minDate.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })} - ${maxDate.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}`;
-                      })()}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* What's Included */}
+            {/* Your Order - Enhanced as Main Product Display */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg">What's included</CardTitle>
+                <CardTitle className="text-lg">Your Order</CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Visual Header with Item Images and Stats */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
+                  <div className="flex items-start gap-4 mb-4">
+                    {/* Compact Item Images */}
+                    <div className="flex gap-2">
+                      {items.slice(0, 3).map((item: any, index: number) => (
+                        <div key={index} className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                          {item.images?.[0] ? (
+                            <img 
+                              src={item.images[0]} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {items.length > 3 && (
+                        <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-600">+{items.length - 3}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="flex-1">
+                      <div className="mb-2">
+                        <h3 className="font-semibold text-lg mb-1">
+                          {items.length > 1 ? (
+                            <>
+                              <span>{items[0]?.name}</span>
+                              <span className="text-gray-600"> + {items.length - 1} more</span>
+                            </>
+                          ) : (
+                            <span>{items[0]?.name}</span>
+                          )}
+                        </h3>
+                        <div className="text-sm text-muted-foreground">
+                          {items.length} item{items.length !== 1 ? 's' : ''} • {items.reduce((sum, item) => sum + (item.weight || 0), 0).toFixed(2)}kg total
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center text-green-600">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <span className="text-sm font-medium">All items verified</span>
+                        </div>
+                        <div className="flex items-center text-blue-600">
+                          <Truck className="w-4 h-4 mr-1" />
+                          <span className="text-sm font-medium">Express shipping</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">
+                          Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
+                          <span className="text-blue-700 ml-2">
+                            → {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Estimate */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-muted-foreground">
+                        <Truck className="w-4 h-4 mr-2" />
+                        <span className="text-sm font-medium">Estimated delivery</span>
+                      </div>
+                      <span className="font-semibold text-blue-700">
+                        {(() => {
+                          // Get selected shipping option from route calculations
+                          const routeCalculations = quote.calculation_data?.route_calculations;
+                          const deliveryOption = routeCalculations?.delivery_option_used;
+                          
+                          if (deliveryOption?.delivery_days) {
+                            const [minDays, maxDays] = deliveryOption.delivery_days.split('-').map(d => parseInt(d.trim()));
+                            const minDate = new Date(Date.now() + minDays * 24 * 60 * 60 * 1000);
+                            const maxDate = new Date(Date.now() + maxDays * 24 * 60 * 60 * 1000);
+                            
+                            return `${minDate.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })} - ${maxDate.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })} (${deliveryOption.delivery_days} days)`;
+                          }
+                          return 'To be confirmed';
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Item Details */}
                 <div className="space-y-3">
                   {items.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -531,9 +930,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        {item.product_url ? (
+                        {item.url ? (
                           <a 
-                            href={item.product_url} 
+                            href={item.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
@@ -548,7 +947,20 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <span>•</span>
                           <span>{item.weight || 0}kg</span>
                           <span>•</span>
-                          <span>{formatCurrency(item.costprice_origin, quote.customer_currency)}</span>
+                          <span className="font-medium">
+                            {formatCurrency(item.costprice_origin, quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
+                            {(() => {
+                              // Calculate proportional quote price for this item
+                              const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
+                              const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
+                              const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
+                              return (
+                                <span className="text-blue-700 ml-2">
+                                  → {formatCurrency(itemQuotePrice, quote.customer_currency)}
+                                </span>
+                              );
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -570,15 +982,106 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               </CardContent>
             </Card>
 
-            {/* Quote Options - Shipping, Insurance, Discounts */}
-            <QuoteOptionsSelector
-              quote={quote}
-              breakdown={breakdown}
-              onOptionsChange={setQuoteOptions}
-              formatCurrency={formatCurrency}
-              className="mb-6"
-              onQuoteUpdate={refreshQuote}
-            />
+
+            {/* Shipping Options */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-blue-600" />
+                  Choose Your Shipping Speed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {availableShippingOptions.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-sm text-gray-600">Loading shipping options...</span>
+                  </div>
+                ) : (
+                  <RadioGroup value={selectedShipping} onValueChange={handleShippingChange}>
+                    <div className="space-y-3">
+                      {availableShippingOptions.map((option: any) => {
+                        const isSelected = selectedShipping === option.id;
+                        const currentlyUsed = quote.calculation_data?.route_calculations?.delivery_option_used?.id === option.id;
+                        const baseShippingCost = quote.calculation_data?.calculation_steps?.shipping_cost || 0;
+                        const adjustmentCost = currentlyUsed ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
+                        
+                        return (
+                          <div key={option.id} className="relative">
+                            <div className={`flex items-center space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-300'
+                            }`}>
+                              <RadioGroupItem value={option.id} id={option.id} />
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="text-blue-600">
+                                  {option.carrier === 'FedEx' || option.carrier === 'fedex' || option.carrier === 'JE' ? (
+                                    <Zap className="w-5 h-5" />
+                                  ) : option.carrier === 'DHL' || option.carrier === 'dhl' ? (
+                                    <Truck className="w-5 h-5" />
+                                  ) : (
+                                    <Package className="w-5 h-5" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <Label htmlFor={option.id} className="font-medium cursor-pointer">
+                                      {option.name || `${option.carrier || 'Standard'} Shipping`}
+                                    </Label>
+                                    {isSelected && (
+                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                                        Selected
+                                      </Badge>
+                                    )}
+                                    {currentlyUsed && !isSelected && (
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                        Current
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {option.carrier || 'Standard'} - {option.min_days}-{option.max_days} days delivery
+                                  </p>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{option.min_days}-{option.max_days} days</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Package className="w-3 h-3" />
+                                      <span>{option.carrier || 'Standard'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold">
+                                    {adjustmentCost === 0 ? (
+                                      <span className="text-green-600">FREE</span>
+                                    ) : adjustmentCost > 0 ? (
+                                      <span>+{formatCurrency(adjustmentCost, quote.customer_currency)}</span>
+                                    ) : (
+                                      <span className="text-green-600">-{formatCurrency(Math.abs(adjustmentCost), quote.customer_currency)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </RadioGroup>
+                )}
+                
+                {/* Shipping Benefits */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="text-sm text-blue-600">
+                    ✓ Tracking included • ✓ Insurance available • ✓ Secure packaging
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Pricing Breakdown */}
             <CustomerBreakdown 
@@ -657,6 +1160,94 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         ({daysLeft} day{daysLeft !== 1 ? 's' : ''} left)
                       </div>
                     )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Package Insurance */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center">
+                        <Shield className="w-4 h-4 text-green-600 mr-3" />
+                        <div>
+                          <div className="font-medium text-sm">Package Insurance</div>
+                          <div className="text-xs text-muted-foreground">
+                            Coverage up to {formatCurrency(quote?.total_usd || 0, 'USD')}
+                          </div>
+                          {insuranceEnabled && (
+                            <div className="text-xs text-green-600 font-medium">
+                              +{formatCurrency(breakdown.insurance || 0, quote.customer_currency)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={insuranceEnabled}
+                        onCheckedChange={handleInsuranceToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Discount Code */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Tag className="w-4 h-4 text-purple-600 mr-2" />
+                        <Label className="font-medium text-sm">Discount Code</Label>
+                      </div>
+                      {discountApplied && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveCoupon}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                          className={`flex-1 text-sm ${discountError ? 'border-red-300' : ''} ${discountApplied ? 'bg-green-50 border-green-300' : ''}`}
+                          disabled={discountApplied}
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleApplyDiscount}
+                          disabled={discountApplied}
+                          className="px-3"
+                        >
+                          {discountCode.trim() ? 'Apply' : 'Show Coupons'}
+                        </Button>
+                      </div>
+                      
+                      {discountError && (
+                        <p className="text-xs text-red-600">{discountError}</p>
+                      )}
+                      {discountApplied && (
+                        <div className="bg-green-50 border border-green-200 rounded p-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-green-700 flex items-center">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              <strong>{discountCode}</strong> applied successfully
+                            </p>
+                            <span className="text-xs text-green-600 font-medium">
+                              {(() => {
+                                const appliedCoupon = availableCoupons.find(c => c.code === discountCode);
+                                return appliedCoupon ? `Save ${formatCurrency(appliedCoupon.savings, quote.customer_currency)}` : '';
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <Separator />
@@ -909,6 +1500,116 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Submit Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coupons Modal - Professional Design */}
+      <Dialog open={couponsModalOpen} onOpenChange={setCouponsModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Available Discount Codes
+            </DialogTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              Select a discount code to apply to your order
+            </p>
+          </DialogHeader>
+          
+          {loadingCoupons ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600 text-sm">Loading available discounts...</span>
+            </div>
+          ) : availableCoupons.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
+                <Tag className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="font-medium text-gray-900 mb-1">No discount codes available</h3>
+              <p className="text-gray-600 text-sm">
+                No applicable discount codes for this order
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableCoupons.map((coupon, index) => (
+                <div 
+                  key={coupon.code} 
+                  className="group border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+                  onClick={() => handleSelectCoupon(coupon.code)}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {/* Discount badge */}
+                        <div className="flex-shrink-0">
+                          <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-sm font-medium">
+                            {coupon.discount}
+                          </div>
+                        </div>
+                        
+                        {/* Coupon details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                              {coupon.name}
+                            </h4>
+                            {index === 0 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                Recommended
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                            {coupon.description}
+                          </p>
+                          <div className="flex items-center space-x-4">
+                            <code className="inline-flex items-center px-2 py-1 rounded text-xs font-mono bg-gray-100 text-gray-800 border">
+                              {coupon.code}
+                            </code>
+                            <span className="text-sm font-medium text-green-600">
+                              Save {formatCurrency(coupon.savings, quote.customer_currency)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Apply button */}
+                      <div className="flex-shrink-0 ml-4">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectCoupon(coupon.code);
+                          }}
+                        >
+                          Apply Code
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t pt-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {availableCoupons.length > 0 && (
+                  <span>{availableCoupons.length} discount{availableCoupons.length !== 1 ? 's' : ''} available</span>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setCouponsModalOpen(false)}
+                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              >
+                Close
               </Button>
             </div>
           </div>
