@@ -72,19 +72,68 @@ const AddressCard = ({
         <div className="space-y-1 ml-10">
           {isNepal ? (
             <>
+              {/* Nepal address format: Street → Ward → Municipality → District → Province */}
+              {(() => {
+                const addressParts = address.address_line1?.split(',') || [];
+                const municipality = addressParts[0]?.trim();
+                const streetAndRest = addressParts.slice(1);
+                
+                const cleanStreetParts = streetAndRest
+                  .map(part => part.trim())
+                  .filter((part, index, arr) => {
+                    return part.length > 0 && arr.indexOf(part) === index;
+                  });
+                
+                return (
+                  <>
+                    {/* Street/Area and Ward first */}
+                    {cleanStreetParts.length > 0 && (
+                      <BodySmall className="text-gray-700 font-medium">
+                        {cleanStreetParts.join(', ')}
+                      </BodySmall>
+                    )}
+                    
+                    {/* Municipality second */}
+                    {municipality && (
+                      <BodySmall className="text-gray-600">
+                        {municipality}
+                      </BodySmall>
+                    )}
+                    
+                    {/* Additional address line */}
+                    {address.address_line2 && (
+                      <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
+                    )}
+                    
+                    {/* District and Province */}
+                    <BodySmall className="text-gray-600">
+                      {address.city} District, {stateName}
+                    </BodySmall>
+                    
+                    {/* Country and Postal Code */}
+                    <BodySmall className="text-gray-600">
+                      {countryName} {address.postal_code && `- ${address.postal_code}`}
+                    </BodySmall>
+                  </>
+                );
+              })()}
+            </>
+          ) : address.destination_country === 'IN' ? (
+            <>
+              {/* India address format: Street → Area → City PIN → State → Country */}
               <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
               {address.address_line2 && (
                 <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
               )}
               <BodySmall className="text-gray-600">
-                {address.city} District, {stateName}
+                {address.city} {address.postal_code}
               </BodySmall>
-              <BodySmall className="text-gray-600">
-                {countryName} {address.postal_code && `- ${address.postal_code}`}
-              </BodySmall>
+              <BodySmall className="text-gray-600">{stateName}</BodySmall>
+              <BodySmall className="text-gray-600">{countryName}</BodySmall>
             </>
           ) : (
             <>
+              {/* International address format: Street → City, State PostalCode → Country */}
               <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
               {address.address_line2 && (
                 <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>

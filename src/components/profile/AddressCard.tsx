@@ -45,13 +45,62 @@ export const AddressCard = ({
   
   // Format compact address string
   const formatCompactAddress = () => {
-    const parts = [];
-    if (address.address_line1) parts.push(address.address_line1);
-    if (address.city) parts.push(address.city);
-    if (stateName) parts.push(stateName);
-    if (address.postal_code) parts.push(address.postal_code);
-    if (countryName) parts.push(countryName);
-    return parts.join(', ');
+    if (isNepal) {
+      // Nepal compact format: Street/Ward, Municipality, District, Province
+      const parts = [];
+      const addressParts = address.address_line1?.split(',') || [];
+      
+      // Get municipality (first part) and street/ward (remaining parts)
+      const municipality = addressParts[0]?.trim();
+      const streetAndWard = addressParts.slice(1)
+        .map(part => part.trim())
+        .filter((part, index, arr) => part.length > 0 && arr.indexOf(part) === index)
+        .join(', ');
+      
+      // Add street/ward first (most specific)
+      if (streetAndWard) parts.push(streetAndWard);
+      
+      // Add municipality
+      if (municipality) parts.push(municipality);
+      
+      // Add district with "District" label  
+      if (address.city) parts.push(`${address.city} District`);
+      
+      // Add province
+      if (stateName) parts.push(stateName);
+      
+      // Add country and postal code
+      if (countryName) parts.push(countryName);
+      if (address.postal_code) parts.push(address.postal_code);
+      
+      return parts.join(', ');
+    } else if (address.destination_country === 'IN') {
+      // India compact format: Street, City PIN, State, Country
+      const parts = [];
+      if (address.address_line1) parts.push(address.address_line1);
+      if (address.city && address.postal_code) {
+        parts.push(`${address.city} ${address.postal_code}`);
+      } else if (address.city) {
+        parts.push(address.city);
+      }
+      if (stateName) parts.push(stateName);
+      if (countryName) parts.push(countryName);
+      return parts.join(', ');
+    } else {
+      // International compact format: Street, City State PostalCode, Country
+      const parts = [];
+      if (address.address_line1) parts.push(address.address_line1);
+      
+      // Combine city, state, and postal code on one line for international
+      const cityLine = [];
+      if (address.city) cityLine.push(address.city);
+      if (stateName) cityLine.push(stateName);
+      if (address.postal_code) cityLine.push(address.postal_code);
+      if (cityLine.length > 0) parts.push(cityLine.join(', '));
+      
+      if (countryName) parts.push(countryName);
+      return parts.join(', ');
+    }
   };
   
   const baseClassName = compact 
@@ -161,19 +210,73 @@ export const AddressCard = ({
           <div className="space-y-1 ml-10">
             {isNepal ? (
               <>
+                {/* Nepal address format: Street → Ward → Municipality → District → Province */}
+                {(() => {
+                  // Extract and parse Nepal address components correctly
+                  const addressParts = address.address_line1?.split(',') || [];
+                  
+                  // The address_line1 contains: "Municipality, Street/Area, Ward X"
+                  // We need to reorder to: "Street/Area, Ward X" → "Municipality"
+                  const municipality = addressParts[0]?.trim(); // Municipality (first part)
+                  const streetAndRest = addressParts.slice(1); // Street, Ward, etc.
+                  
+                  // Clean up street/area and ward parts (remove duplicates)
+                  const cleanStreetParts = streetAndRest
+                    .map(part => part.trim())
+                    .filter((part, index, arr) => {
+                      return part.length > 0 && arr.indexOf(part) === index;
+                    });
+                  
+                  return (
+                    <>
+                      {/* Line 1: Street/Area and Ward (most specific first) */}
+                      {cleanStreetParts.length > 0 && (
+                        <BodySmall className="text-gray-700 font-medium">
+                          {cleanStreetParts.join(', ')}
+                        </BodySmall>
+                      )}
+                      
+                      {/* Line 2: Municipality */}
+                      {municipality && (
+                        <BodySmall className="text-gray-600">
+                          {municipality}
+                        </BodySmall>
+                      )}
+                      
+                      {/* Line 3: Additional address line (if any) */}
+                      {address.address_line2 && (
+                        <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
+                      )}
+                      
+                      {/* Line 4: District and Province */}
+                      <BodySmall className="text-gray-600">
+                        {address.city} District, {stateName}
+                      </BodySmall>
+                      
+                      {/* Line 5: Country and Postal Code */}
+                      <BodySmall className="text-gray-600">
+                        {countryName} {address.postal_code && `- ${address.postal_code}`}
+                      </BodySmall>
+                    </>
+                  );
+                })()}
+              </>
+            ) : address.destination_country === 'IN' ? (
+              <>
+                {/* India address format: Street → Area → City PIN → State → Country */}
                 <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
                 {address.address_line2 && (
                   <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
                 )}
                 <BodySmall className="text-gray-600">
-                  {address.city} District, {stateName}
+                  {address.city} {address.postal_code}
                 </BodySmall>
-                <BodySmall className="text-gray-600">
-                  {countryName} {address.postal_code && `- ${address.postal_code}`}
-                </BodySmall>
+                <BodySmall className="text-gray-600">{stateName}</BodySmall>
+                <BodySmall className="text-gray-600">{countryName}</BodySmall>
               </>
             ) : (
               <>
+                {/* International address format: Street → City, State PostalCode → Country */}
                 <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
                 {address.address_line2 && (
                   <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>

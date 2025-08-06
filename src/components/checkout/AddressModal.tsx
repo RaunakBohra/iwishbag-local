@@ -61,8 +61,26 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   const [selectedProvince, setSelectedProvince] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedMunicipality, setSelectedMunicipality] = useState('');
-  const [formData, setFormData] = useState<AddressFormData>(
-    initialData || {
+  // Helper function to clean duplicate address text
+  const cleanAddressText = (text: string): string => {
+    if (!text) return text;
+    const parts = text.split(',').map(part => part.trim());
+    const uniqueParts = parts.filter((part, index, arr) => {
+      return part.length > 0 && arr.indexOf(part) === index;
+    });
+    return uniqueParts.join(', ');
+  };
+
+  const [formData, setFormData] = useState<AddressFormData>(() => {
+    if (initialData) {
+      // Clean up any duplicate text in existing address data
+      return {
+        ...initialData,
+        address_line1: cleanAddressText(initialData.address_line1 || ''),
+        address_line2: cleanAddressText(initialData.address_line2 || ''),
+      };
+    }
+    return {
       address_line1: '',
       address_line2: '',
       city: '',
@@ -74,8 +92,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       phone: '',
       is_default: false,
       save_to_profile: !isGuest,
-    },
-  );
+    };
+  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -128,7 +146,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       console.log('🏔️ [AddressModal] Initializing Nepal address fields:', {
         province: formData.state_province_region,
         district: formData.district,
-        municipality: formData.city
+        city: formData.city
       });
 
       // Step 1: Set province (this will trigger district loading)
@@ -154,17 +172,17 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     }
   }, [initialData, isNepal, formData.district, districts, selectedDistrict]);
 
-  // Initialize municipality after municipalities are loaded  
+  // Initialize city after cities are loaded  
   useEffect(() => {
     if (initialData && isNepal && formData.city && municipalities.length > 0 && !selectedMunicipality) {
-      const municipalityExists = municipalities.find(m => m.name === formData.city);
-      console.log('🏔️ [AddressModal] Setting municipality:', {
-        municipalityName: formData.city,
-        found: !!municipalityExists,
-        availableMunicipalities: municipalities.length
+      const cityExists = municipalities.find(m => m.name === formData.city);
+      console.log('🏔️ [AddressModal] Setting city:', {
+        cityName: formData.city,
+        found: !!cityExists,
+        availableCities: municipalities.length
       });
       
-      if (municipalityExists) {
+      if (cityExists) {
         setSelectedMunicipality(formData.city);
       }
     }
@@ -180,7 +198,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       newErrors.address_line1 = 'Street address is required';
     }
     if (!formData.city?.trim()) {
-      newErrors.city = isNepal ? 'Municipality is required' : 'City is required';
+      newErrors.city = 'City is required';
     }
     if (isNepal && !formData.district?.trim()) {
       newErrors.district = 'District is required';
@@ -222,6 +240,11 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   };
 
   const handleInputChange = (field: keyof AddressFormData, value: string | boolean) => {
+    // Clean up duplicate text for address fields
+    if (typeof value === 'string' && (field === 'address_line1' || field === 'address_line2')) {
+      value = cleanAddressText(value);
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -310,7 +333,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             {/* Nepal-specific address hierarchy OR standard city/state */}
             {isNepal ? (
               <>
-                {/* Nepal Address Hierarchy: Province → District → Municipality */}
+                {/* Nepal Address Hierarchy: Province → District → City */}
                 
                 {/* Province and District Row */}
                 <div className="grid grid-cols-2 gap-4">
@@ -381,10 +404,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   </div>
                 </div>
 
-                {/* Municipality Row */}
+                {/* City Row */}
                 <div className="space-y-2">
-                  <Label htmlFor="municipality" className="text-sm font-medium text-gray-700">
-                    Municipality <span className="text-red-500">*</span>
+                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                    City <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={selectedMunicipality}
@@ -401,8 +424,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                         !selectedDistrict 
                           ? "Select district first" 
                           : municipalities.length === 0 
-                            ? "Loading municipalities..." 
-                            : "Select municipality"
+                            ? "Loading cities..." 
+                            : "Select city"
                       } />
                     </SelectTrigger>
                     <SelectContent>

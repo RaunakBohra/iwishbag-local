@@ -418,22 +418,22 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     }
   }, [address, selectedCountry, districts, selectedDistrict]);
 
-  // Initialize Nepal municipality selection from existing address (CRITICAL FIX)
+  // Initialize Nepal city selection from existing address (CRITICAL FIX)
   useEffect(() => {
     if (address && selectedCountry === 'NP' && address.address_line1 && municipalities.length > 0 && !selectedMunicipality) {
-      // Parse municipality from address_line1 (first part before comma)
+      // Parse city from address_line1 (first part before comma)
       const parts = address.address_line1.split(',').map(p => p.trim());
-      const municipalityName = parts[0];
+      const cityName = parts[0];
       
-      const municipalityExists = municipalities.find(m => m.name === municipalityName);
-      console.log('🏔️ [AddressForm] Initializing municipality from existing address:', {
+      const cityExists = municipalities.find(m => m.name === cityName);
+      console.log('🏔️ [AddressForm] Initializing city from existing address:', {
         addressLine1: address.address_line1,
-        extractedMunicipality: municipalityName,
-        found: !!municipalityExists
+        extractedCity: cityName,
+        found: !!cityExists
       });
       
-      if (municipalityExists) {
-        setSelectedMunicipality(municipalityName);
+      if (cityExists) {
+        setSelectedMunicipality(cityName);
       }
     }
   }, [address, selectedCountry, municipalities, selectedMunicipality]);
@@ -514,10 +514,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       // Build payload with special handling for Nepal
       let finalAddress1 = values.address_line1;
       
-      // For Nepal, if we have street/area data (when municipalities dropdown is shown), append it
-      if (isNepal && municipalities.length > 0 && area) {
-        finalAddress1 = `${values.address_line1}, ${area}`;
-      }
+      // For Nepal, the address_line1 already contains the complete address 
+      // (municipality + area + ward) from the input handlers, so no need to append area again
+      // The triplication bug was here - we were double-appending the area!
       
       // Handle postal code based on country requirements
       let postalCodeValue: string | null;
@@ -846,7 +845,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           {/* Address - Adaptive for Nepal */}
           {isNepal ? (
             <>
-              {/* Nepal Address Hierarchy: Province → District → Municipality → Street/Ward → Landmark */}
+              {/* Nepal Address Hierarchy: Province → District → City → Street/Ward → Landmark */}
               
               {/* Province and District Row */}
               <div className="grid grid-cols-2 gap-4">
@@ -930,10 +929,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 />
               </div>
               
-              {/* Municipality dropdown (when available) OR Manual input when none */}
+              {/* City dropdown (when available) OR Manual input when none */}
               {selectedDistrict && (
                 <FormItem>
-                  <FormLabel className="text-sm text-gray-600">Municipality/City</FormLabel>
+                  <FormLabel className="text-sm text-gray-600">City</FormLabel>
                   {municipalities.length > 0 ? (
                     /* Show dropdown when municipalities are available */
                     <Select
@@ -951,7 +950,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         <ValidatedSelectTrigger 
                           validationStatus={municipalityStatus}
                         >
-                          <SelectValue placeholder="Select municipality" />
+                          <SelectValue placeholder="Select city" />
                         </ValidatedSelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -982,7 +981,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                           const currentWard = wardNumber || '';
                           form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
                         }}
-                        placeholder="Enter municipality/city name"
+                        placeholder="Enter city name"
                         disabled={addressMutation.isPending}
                         validationStatus={municipalityStatus}
                       />

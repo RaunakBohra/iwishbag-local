@@ -154,7 +154,6 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
     <div className="flex gap-3 items-center">
       <div className="flex-1">
         <div className="flex items-center gap-3 p-3 rounded-lg border bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
-          <ExternalLink className="w-4 h-4 text-gray-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             {value ? (
               <a

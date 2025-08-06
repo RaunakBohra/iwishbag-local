@@ -153,7 +153,7 @@ export class NepalAddressService {
   }
 
   /**
-   * Get municipalities for a district
+   * Get cities for a district
    */
   static getMunicipalitiesForDistrict(districtCode: string): Municipality[] {
     return this.NEPAL_MUNICIPALITIES.filter(municipality => municipality.district === districtCode);
@@ -222,7 +222,7 @@ export class NepalAddressService {
     const area = address.address_line1.replace(/Ward \d+,?\s*/i, '').trim();
     
     return {
-      municipality: address.city,
+      city: address.city,
       ward,
       area,
       landmark: address.address_line2 || '',

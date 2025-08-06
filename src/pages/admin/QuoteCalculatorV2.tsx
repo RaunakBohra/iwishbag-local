@@ -99,6 +99,11 @@ interface QuoteItem {
   // Product images from scraping
   images?: string[]; // Array of image URLs
   main_image?: string; // Primary product image
+  // AI weight suggestion data
+  ai_weight_suggestion?: {
+    weight: number;
+    confidence: number;
+  };
   // Optional volumetric weight fields
   dimensions?: {
     length: number;
@@ -350,6 +355,57 @@ const QuoteCalculatorV2: React.FC = () => {
       setQuoteLoadingComplete(true);
     }
   }, [quoteId]);
+
+  // Auto-populate AI suggestions for items with names but no AI data
+  useEffect(() => {
+    if (!quoteLoadingComplete) return;
+    
+    const autoPopulateAISuggestions = async () => {
+      const itemsNeedingAI = items.filter(item => 
+        item.name && 
+        item.category && 
+        !item.ai_weight_suggestion &&
+        !smartFeatureLoading[`weight-${item.id}`]
+      );
+
+      if (itemsNeedingAI.length === 0) return;
+
+      console.log('🤖 Auto-populating AI suggestions for', itemsNeedingAI.length, 'items');
+
+      for (const item of itemsNeedingAI) {
+        try {
+          const suggestion = await productIntelligenceService.getSmartSuggestions({
+            product_name: item.name,
+            destination_country: destinationCountry,
+            category: item.category
+          });
+
+          if (suggestion?.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+            // Update item with AI suggestion
+            setItems(prev => prev.map(prevItem => 
+              prevItem.id === item.id
+                ? {
+                    ...prevItem,
+                    ai_weight_suggestion: {
+                      weight: suggestion.suggested_weight_kg,
+                      confidence: suggestion.weight_confidence || 0.75
+                    }
+                  }
+                : prevItem
+            ));
+            console.log('✅ Auto-populated AI suggestion for:', item.name, suggestion.suggested_weight_kg);
+          }
+        } catch (error) {
+          console.error('❌ Auto AI suggestion failed for:', item.name, error);
+        }
+        
+        // Small delay to avoid overwhelming the service
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    };
+
+    autoPopulateAISuggestions();
+  }, [items, quoteLoadingComplete, destinationCountry]);
 
   // Debug: Log destination country state changes
   useEffect(() => {
@@ -2592,11 +2648,8 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900">
-                        {item.name || `Item ${index + 1}`}
+                        Item {index + 1}
                       </h4>
-                      {item.name && (
-                        <p className="text-sm text-gray-500">Item {index + 1}</p>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2683,8 +2736,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Product Input Section */}
                 <div className="space-y-3">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <ExternalLink className="w-4 h-4 text-gray-500" />
+                    <div className="mb-2">
                       <Label className="text-sm font-medium text-gray-700">Product URL</Label>
                     </div>
                     <EditableUrlInput
@@ -2862,8 +2914,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                   
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Package className="w-4 h-4 text-gray-500" />
+                    <div className="mb-2">
                       <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
                     </div>
                     <Input
@@ -2878,7 +2929,6 @@ const QuoteCalculatorV2: React.FC = () => {
                   {item.images && item.images.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <Eye className="w-4 h-4 text-gray-500" />
                         <Label className="text-sm font-medium text-gray-700">Product Images</Label>
                         <Badge variant="secondary" className="text-xs">
                           {item.images.length} image{item.images.length > 1 ? 's' : ''}
@@ -2922,59 +2972,54 @@ const QuoteCalculatorV2: React.FC = () => {
                   )}
                 </div>
 
-                {/* Essential Details - Large, prominent row */}
-                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg border">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900">
-                      {currencySymbol}{item.unit_price_usd?.toFixed(2) || '0.00'}
+                {/* Compact Single-Line Layout: Price | Quantity | Weight | HSN */}
+                <div className="grid gap-3 p-3 bg-gray-50/50 rounded-lg border" style={{gridTemplateColumns: '20% 15% 25% 40%'}}>
+                  {/* Price */}
+                  <div className="space-y-1">
+                    <div className="text-center">
+                      <div className="text-md font-semibold text-gray-900">
+                        {currencySymbol}{item.unit_price_usd?.toFixed(2) || '0.00'}
+                      </div>
+                      <div className="text-xs text-gray-500">Price</div>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Unit Price ({originCurrency})
-                    </div>
-                    <div className="mt-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price_usd}
-                        onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                        className="h-8 text-center text-sm font-medium w-24"
-                      />
-                    </div>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unit_price_usd || ''}
+                      onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                      placeholder="25.99"
+                      className="h-7 text-center text-sm font-medium"
+                    />
                   </div>
-                  
-                  <div className="h-16 w-px bg-gray-300"></div>
-                  
-                  <div className="text-center">
-                    <div className="text-2xl font-semibold text-gray-900">
-                      {item.quantity || 1}
+
+                  {/* Quantity */}
+                  <div className="space-y-1">
+                    <div className="text-center">
+                      <div className="text-md font-semibold text-gray-900">
+                        {item.quantity || 1}
+                      </div>
+                      <div className="text-xs text-gray-500">Qty</div>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Quantity
-                    </div>
-                    <div className="mt-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="h-8 text-center text-sm font-medium w-20"
-                      />
-                    </div>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      className="h-7 text-center text-sm font-medium"
+                    />
                   </div>
-                  
-                  <div className="h-16 w-px bg-gray-300"></div>
-                  
-                  <div className="text-center">
-                    <div className="text-2xl font-semibold text-gray-900">
-                      {item.weight_kg?.toFixed(2) || '0.00'}
-                      <span className="text-sm text-gray-500 ml-1">{weightUnit}</span>
+
+                  {/* Weight with AI + Dimensions */}
+                  <div className="space-y-1">
+                    <div className="text-center">
+                      <div className="text-md font-semibold text-gray-900">
+                        {item.weight_kg?.toFixed(2) || '0.00'}
+                        <span className="text-xs text-gray-500 ml-1">{weightUnit}</span>
+                      </div>
+                      <div className="text-xs text-gray-500">Weight</div>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Weight
-                    </div>
-                    <div className="mt-2 flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <Input
                         type="number"
                         min="0"
@@ -2982,7 +3027,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={item.weight_kg || ''}
                         onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                         placeholder="0.5"
-                        className="h-8 text-center text-sm font-medium w-20"
+                        className="h-7 text-center text-sm font-medium flex-1"
                       />
                       <Button
                         type="button"
@@ -3000,6 +3045,10 @@ const QuoteCalculatorV2: React.FC = () => {
                               });
                               if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
                                 updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                                updateItem(item.id, 'ai_weight_suggestion', {
+                                  weight: suggestion.suggested_weight_kg,
+                                  confidence: suggestion.weight_confidence || 0
+                                });
                                 toast({
                                   title: "⚖️ Weight Estimated",
                                   description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} based on product analysis (${Math.round((suggestion.weight_confidence || 0) * 100)}% confidence)`,
@@ -3024,54 +3073,102 @@ const QuoteCalculatorV2: React.FC = () => {
                             }
                           }
                         }}
-                        className="h-8 w-8 p-0 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                        className={`h-7 px-1 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 ${
+                          item.ai_weight_suggestion ? 'min-w-fit' : 'w-7 p-0'
+                        }`}
                         disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
+                        title={item.ai_weight_suggestion 
+                          ? `AI Estimated: ${item.ai_weight_suggestion.weight}${weightUnit} (${Math.round(item.ai_weight_suggestion.confidence * 100)}% confidence)`
+                          : "Get AI weight estimate"
+                        }
                       >
-                        <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                        <div className="flex items-center gap-1">
+                          <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                          {item.ai_weight_suggestion && (
+                            <span className="text-xs font-medium">
+                              {item.ai_weight_suggestion.weight}{weightUnit} {Math.round(item.ai_weight_suggestion.confidence * 100)}%
+                            </span>
+                          )}
+                        </div>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setVolumetricModalOpen(item.id)}
+                        className="h-7 w-7 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
+                        title="Dimensions"
+                      >
+                        <Ruler className="w-3 h-3" />
                       </Button>
                     </div>
+                    
+                    {/* Compact dimensions display */}
+                    {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
+                      const { length, width, height, unit = 'cm' } = item.dimensions;
+                      let l = length, w = width, h = height;
+                      if (unit === 'in') {
+                        l *= 2.54; w *= 2.54; h *= 2.54;
+                      }
+                      const volume = l * w * h;
+                      const divisor = item.volumetric_divisor || 5000;
+                      const volumetricWeightPerItem = volume / divisor;
+                      const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                      const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                      const isVolumetric = volumetricWeight > actualWeight;
+                      
+                      return (
+                        <div className="mt-1 text-center">
+                          <div className="text-xs text-gray-500 leading-tight">
+                            {length}×{width}×{height}{unit}
+                          </div>
+                          <div className={`text-xs font-medium leading-tight ${
+                            isVolumetric ? 'text-orange-600' : 'text-gray-600'
+                          }`}>
+                            {Math.max(actualWeight, volumetricWeight).toFixed(1)}{weightUnit}
+                            {isVolumetric && ' (vol)'}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
-                </div>
 
-                {/* HSN Classification - Compact single line */}
-                {item.name && item.unit_price_usd > 0 && (
-                  <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Tag className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-blue-900">HSN:</span>
-                      <span className="font-mono text-blue-800">
-                        {item.hsn_code || 'Not set'}
-                      </span>
-                      <span className="text-gray-400">|</span>
-                      <span className="text-blue-700">
-                        {item.category || 'No category'}
-                      </span>
+                  {/* HSN Classification */}
+                  <div className="space-y-1 min-w-0">
+                    <div className="text-center">
+                      <div className="text-md font-semibold text-blue-900 truncate" title={item.hsn_code || 'No HSN'}>
+                        {item.hsn_code || 'No HSN'}
+                      </div>
+                      <div className="text-xs text-gray-500">HSN / Category</div>
                     </div>
-                    <div className="ml-auto">
+                    <div className="w-full overflow-hidden">
                       <CompactHSNSearch
                         control={null}
                         index={0}
                         setValue={(name: string, value: any) => {
                           if (name.includes('hsnCode') || name === 'hsnCode') {
                             updateItem(item.id, 'hsn_code', value);
-                          } else if (name.includes('category') || name === 'category') {
+                          }
+                          if (name.includes('category') || name === 'category') {
                             updateItem(item.id, 'category', value);
                           }
+                          if (name.includes('useHsnRates') || name === 'useHsnRates') {
+                            updateItem(item.id, 'use_hsn_rates', value);
+                          }
                         }}
-                        countryCode={destinationCountry}
+                        currentValues={{
+                          hsnCode: item.hsn_code || '',
+                          category: item.category || '',
+                          useHsnRates: item.use_hsn_rates || false
+                        }}
                         productName={item.name}
-                        currentCategory={item.category}
-                        currentHSN={item.hsn_code}
-                        onSelection={(data) => handleHSNSelection(item.id, data)}
-                        currentUseHSNRates={item.use_hsn_rates}
-                        currentValuationPreference={item.valuation_preference}
-                        onHSNRateToggle={(useHSNRates) => updateItem(item.id, 'use_hsn_rates', useHSNRates)}
-                        onValuationChange={(preference) => updateItem(item.id, 'valuation_preference', preference)}
-                        getHSNInfo={(hsnCode, countryCode) => simplifiedQuoteCalculator.getHSNInfo(hsnCode, countryCode)}
+                        productPrice={item.unit_price_usd}
+                        destinationCountry={destinationCountry}
+                        className="h-7 w-full"
                       />
                     </div>
                   </div>
-                )}
+                </div>
 
 
 
@@ -3172,51 +3269,6 @@ const QuoteCalculatorV2: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* Dimensions Section */}
-                      <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/30">
-                        <div className="flex items-center justify-between mb-3">
-                          <h6 className="text-sm font-semibold text-blue-800 flex items-center gap-2">
-                            <Ruler className="w-4 h-4" />
-                            Dimensions & Volumetric Weight
-                          </h6>
-                          <button
-                            type="button"
-                            onClick={() => setVolumetricModalOpen(item.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                          >
-                            <Ruler className="w-3 h-3" />
-                            Set Dimensions
-                          </button>
-                        </div>
-                        
-                        {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 ? (() => {
-                          const { length, width, height, unit = 'cm' } = item.dimensions;
-                          let l = length, w = width, h = height;
-                          if (unit === 'in') {
-                            l *= 2.54; w *= 2.54; h *= 2.54;
-                          }
-                          const volume = l * w * h;
-                          const divisor = item.volumetric_divisor || 5000;
-                          const volumetricWeightPerItem = volume / divisor;
-                          const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                          const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                          const isVolumetric = volumetricWeight > actualWeight;
-                          
-                          return (
-                            <div className="space-y-2">
-                              <p className="text-blue-700 font-medium text-sm">📦 {length} × {width} × {height} {unit}</p>
-                              <p className={`text-sm font-medium ${
-                                isVolumetric ? 'text-orange-600' : 'text-green-600'
-                              }`}>
-                                Chargeable Weight: {Math.max(actualWeight, volumetricWeight).toFixed(3)}{weightUnit}
-                                {isVolumetric && ' (volumetric weight applies)'}
-                              </p>
-                            </div>
-                          );
-                        })() : (
-                          <p className="text-sm text-gray-500">No dimensions set - using actual weight only</p>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
