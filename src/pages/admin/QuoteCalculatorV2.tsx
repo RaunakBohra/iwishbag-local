@@ -3339,7 +3339,7 @@ const QuoteCalculatorV2: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Manual Discount (Admin Override) */}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Manual Discount (Admin)</h4>
+                  <h4 className="text-base font-medium text-gray-700">Manual Discount (Admin)</h4>
                   <div className="flex gap-2">
                     <Select value={orderDiscountType} onValueChange={(value: any) => setOrderDiscountType(value)}>
                       <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
@@ -3358,6 +3358,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       onChange={(e) => setOrderDiscountValue(parseFloat(e.target.value) || 0)}
                       placeholder="0"
                       disabled={!!orderDiscountCode} // Disable if coupon is applied
+                      className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                     />
                   </div>
                   {orderDiscountCode && (
@@ -3373,7 +3374,7 @@ const QuoteCalculatorV2: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Shipping Discount */}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Shipping Discount</h4>
+                  <h4 className="text-base font-medium text-gray-700">Shipping Discount</h4>
                   <div className="flex gap-2">
                     <Select value={shippingDiscountType} onValueChange={(value: any) => setShippingDiscountType(value)}>
                       <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
@@ -3393,6 +3394,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={shippingDiscountValue}
                         onChange={(e) => setShippingDiscountValue(parseFloat(e.target.value) || 0)}
                         placeholder="0"
+                        className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                       />
                     )}
                   </div>

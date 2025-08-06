@@ -214,7 +214,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             </div>
             {calc.route_calculations ? (
               <div className="text-sm text-gray-600 mt-2">
-                <div className="font-mono bg-white p-2 rounded border text-xs">
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm">
                   <div className="mb-1">
                     <strong>Dynamic Route Calculation:</strong>
                   </div>
@@ -290,7 +290,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               {calc.route_calculations?.insurance ? (
                 <div className="text-sm text-gray-600 mt-2">
-                  <div className="font-mono bg-white p-2 rounded border text-xs">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm">
                     <div className="mb-1">
                       <strong>Dynamic Route Insurance:</strong>
                     </div>
@@ -378,7 +378,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               {calc.route_calculations?.handling ? (
                 <div className="text-sm text-gray-600 mt-2">
-                  <div className="font-mono bg-white p-2 rounded border text-xs">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm">
                     <div className="mb-1">
                       <strong>Dynamic Route Handling:</strong>
                     </div>
