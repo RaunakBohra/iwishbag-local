@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
+import { logger } from '@/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -201,7 +202,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .order('created_at', { ascending: false });
 
       if (ledgerError) {
-        console.error('Error fetching payment ledger:', ledgerError);
+        logger.error('Error fetching payment ledger:', ledgerError);
         // Table might not exist or have different structure
       }
 
@@ -214,7 +215,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .order('created_at', { ascending: false });
 
       if (transactionError) {
-        console.error('Error fetching payment transactions:', transactionError);
+        logger.error('Error fetching payment transactions:', transactionError);
       }
 
       console.log('Payment ledger data:', ledgerData);
@@ -310,7 +311,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   const { data: paymentLinks, isLoading: linksLoading } = useQuery<PaymentLink[]>({
     queryKey: ['payment-links', quote.id],
     queryFn: async () => {
-      console.log('🔍 [UnifiedPaymentModal] Fetching payment links for quote:', quote.id);
+      logger.debug(quote.id);
 
       const { data, error } = await supabase
         .from('payment_links')
@@ -319,11 +320,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching payment links:', error);
+        logger.error('❌ Error fetching payment links:', error);
         return [];
       }
 
-      console.log('✅ Payment links fetched:', data?.length || 0, 'links found');
+      logger.info(data?.length || 0, 'links found');
       console.log('📋 Payment links data:', data);
 
       return data || [];
@@ -571,7 +572,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       // Switch to history tab
       setActiveTab('history');
     } catch (error) {
-      console.error('Error recording payment:', error);
+      logger.error('Error recording payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to record payment';
       toast({
         title: 'Error',
@@ -656,7 +657,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       // Switch to history tab
       setActiveTab('history');
     } catch (error) {
-      console.error('Error verifying payment:', error);
+      logger.error('Error verifying payment:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to verify payment';
       toast({
         title: 'Error',
@@ -723,7 +724,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['payment-proofs', quote.id] });
     } catch (error) {
-      console.error('Error rejecting proof:', error);
+      logger.error('Error rejecting proof:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to reject proof';
       toast({
         title: 'Error',
@@ -797,7 +798,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
         description: 'Payment history exported to CSV.',
       });
     } catch (error) {
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
       toast({
         title: 'Export Failed',
         description: 'Failed to export payment history.',

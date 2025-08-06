@@ -5,7 +5,9 @@
  */
 
 import { ProductData, FetchResult } from './ProductDataFetchService';
-import { urlAnalysisService } from './UrlAnalysisService';
+import { urlAnalysisService } from '
+import { logger } from '@/utils/logger';
+./UrlAnalysisService';
 
 export interface BrightDataConfig {
   apiToken: string;
@@ -603,7 +605,7 @@ class BrightDataProductService {
       return result;
 
     } catch (error) {
-      console.error('Bright Data fetch error:', error);
+      logger.error('Bright Data fetch error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -1717,7 +1719,7 @@ class BrightDataProductService {
           images = rawData.images.filter(Boolean).slice(0, 8);
         }
       } catch (imgError) {
-        console.warn('Failed to parse eBay images:', imgError);
+        logger.warn('Failed to parse eBay images:', imgError);
         images = [];
       }
 
@@ -1733,7 +1735,7 @@ class BrightDataProductService {
           }
         }
       } catch (brandError) {
-        console.warn('Failed to extract eBay brand:', brandError);
+        logger.warn('Failed to extract eBay brand:', brandError);
       }
 
       // Determine category from eBay's root category or breadcrumbs
@@ -1751,7 +1753,7 @@ class BrightDataProductService {
           category = this.inferCategory(rawData.title || '');
         }
       } catch (categoryError) {
-        console.warn('Failed to map eBay category:', categoryError);
+        logger.warn('Failed to map eBay category:', categoryError);
       }
 
       // Handle availability status based on condition and count
@@ -1765,7 +1767,7 @@ class BrightDataProductService {
           }
         }
       } catch (availError) {
-        console.warn('Failed to parse eBay availability:', availError);
+        logger.warn('Failed to parse eBay availability:', availError);
       }
 
       // Build comprehensive description from seller description
@@ -1775,7 +1777,7 @@ class BrightDataProductService {
                      rawData.description_from_the_seller_parsed || 
                      `eBay ${rawData.condition || ''} condition item from ${rawData.seller_name || 'seller'}`;
       } catch (descError) {
-        console.warn('Failed to build eBay description:', descError);
+        logger.warn('Failed to build eBay description:', descError);
         description = rawData.title || 'eBay Product';
       }
 
@@ -1784,7 +1786,7 @@ class BrightDataProductService {
       try {
         weight = this.estimateEbayWeight(category, rawData.title || '');
       } catch (weightError) {
-        console.warn('Failed to estimate eBay weight:', weightError);
+        logger.warn('Failed to estimate eBay weight:', weightError);
       }
 
       // Handle variants from tags
@@ -1796,7 +1798,7 @@ class BrightDataProductService {
             .map((tag: string) => ({ type: 'feature', value: tag }));
         }
       } catch (variantError) {
-        console.warn('Failed to parse eBay variants:', variantError);
+        logger.warn('Failed to parse eBay variants:', variantError);
       }
 
       // Return normalized data with safe fallbacks
@@ -1823,7 +1825,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing eBay data:', error);
+      logger.error('Error normalizing eBay data:', error);
       // Detect country and currency for fallback
       const detectedCountry = url ? this.detectCountryFromUrl(url) : 'US';
       const detectedCurrency = this.getCountryCurrency(detectedCountry);
@@ -1901,7 +1903,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Walmart data:', error);
+      logger.error('Error normalizing Walmart data:', error);
       return {
         title: rawData.product_name || rawData.title || 'Walmart Product',
         price: 0,
@@ -2020,7 +2022,7 @@ class BrightDataProductService {
           }
         }
       } catch (imgError) {
-        console.warn('Failed to parse Best Buy images:', imgError);
+        logger.warn('Failed to parse Best Buy images:', imgError);
         images = [];
       }
 
@@ -2029,7 +2031,7 @@ class BrightDataProductService {
       try {
         weight = this.extractWeightFromBestBuySpecs(rawData.product_specifications, url);
       } catch (weightError) {
-        console.warn('Failed to extract weight from Best Buy specifications:', weightError);
+        logger.warn('Failed to extract weight from Best Buy specifications:', weightError);
       }
 
       // Extract brand from specifications or fallback to manual extraction
@@ -2044,7 +2046,7 @@ class BrightDataProductService {
         // Fallback to model extraction or title parsing
         brand = brand || rawData.model || this.extractBrandFromTitle(rawData.title || '');
       } catch (brandError) {
-        console.warn('Failed to extract brand from Best Buy data:', brandError);
+        logger.warn('Failed to extract brand from Best Buy data:', brandError);
       }
 
       // Determine category from breadcrumbs or root_category
@@ -2060,7 +2062,7 @@ class BrightDataProductService {
           category = this.mapBestBuyCategory(rawData.root_category);
         }
       } catch (categoryError) {
-        console.warn('Failed to extract category from Best Buy data:', categoryError);
+        logger.warn('Failed to extract category from Best Buy data:', categoryError);
       }
 
       // Parse availability from availability array
@@ -2071,7 +2073,7 @@ class BrightDataProductService {
           availability = rawData.availability.length > 0 ? 'in-stock' : 'out-of-stock';
         }
       } catch (availError) {
-        console.warn('Failed to parse Best Buy availability:', availError);
+        logger.warn('Failed to parse Best Buy availability:', availError);
       }
 
       // Extract product highlights for description
@@ -2093,7 +2095,7 @@ class BrightDataProductService {
           }
         }
       } catch (highlightError) {
-        console.warn('Failed to extract highlights from Best Buy data:', highlightError);
+        logger.warn('Failed to extract highlights from Best Buy data:', highlightError);
       }
 
       // Build product variants from variations
@@ -2113,7 +2115,7 @@ class BrightDataProductService {
           }
         }
       } catch (variantError) {
-        console.warn('Failed to extract variants from Best Buy data:', variantError);
+        logger.warn('Failed to extract variants from Best Buy data:', variantError);
       }
 
       // Calculate discount percentage if both prices available
@@ -2128,7 +2130,7 @@ class BrightDataProductService {
           }
         }
       } catch (discountError) {
-        console.warn('Failed to calculate Best Buy discount:', discountError);
+        logger.warn('Failed to calculate Best Buy discount:', discountError);
       }
 
       // Return normalized data with safe fallbacks
@@ -2146,7 +2148,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Best Buy data:', error);
+      logger.error('Error normalizing Best Buy data:', error);
       // Return minimal safe data structure
       return {
         title: rawData?.title || 'Unknown Best Buy Product',
@@ -2220,7 +2222,7 @@ class BrightDataProductService {
         url: aeProduct.url || url
       };
     } catch (error) {
-      console.error('Error normalizing AE data:', error);
+      logger.error('Error normalizing AE data:', error);
       // Return minimal data structure with what we can safely extract
       return {
         title: rawData?.product_name || 'Unknown Product',
@@ -2337,7 +2339,7 @@ class BrightDataProductService {
           images = rawData.images.slice(0, 5);
         }
       } catch (imgError) {
-        console.warn('Failed to parse Myntra images:', imgError);
+        logger.warn('Failed to parse Myntra images:', imgError);
         images = [];
       }
 
@@ -2366,7 +2368,7 @@ class BrightDataProductService {
           }
         }
       } catch (weightError) {
-        console.warn('Failed to extract weight from Myntra specifications:', weightError);
+        logger.warn('Failed to extract weight from Myntra specifications:', weightError);
       }
 
       // Extract brand from title or seller (safely)
@@ -2385,7 +2387,7 @@ class BrightDataProductService {
           }
         }
       } catch (variantError) {
-        console.warn('Failed to extract variants from Myntra data:', variantError);
+        logger.warn('Failed to extract variants from Myntra data:', variantError);
       }
 
       // Combine title and description for a complete product name (safely)
@@ -2413,7 +2415,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Myntra data:', error);
+      logger.error('Error normalizing Myntra data:', error);
       // Return minimal safe data structure
       return {
         title: rawData?.title || 'Unknown Product',
@@ -2447,7 +2449,7 @@ class BrightDataProductService {
           images = Array.from(uniqueImages).slice(0, 8);
         }
       } catch (imgError) {
-        console.warn('Failed to parse Target images:', imgError);
+        logger.warn('Failed to parse Target images:', imgError);
         images = [];
       }
 
@@ -2461,7 +2463,7 @@ class BrightDataProductService {
           weight = this.parseWeight(rawData.weight, url);
         }
       } catch (weightError) {
-        console.warn('Failed to extract weight from Target specifications:', weightError);
+        logger.warn('Failed to extract weight from Target specifications:', weightError);
       }
 
       // Extract brand from specifications or fallback to manual extraction
@@ -2477,7 +2479,7 @@ class BrightDataProductService {
         // Fallback to brand field or title parsing
         brand = brand || rawData.brand || this.extractBrandFromTitle(rawData.title || '');
       } catch (brandError) {
-        console.warn('Failed to extract brand from Target data:', brandError);
+        logger.warn('Failed to extract brand from Target data:', brandError);
       }
 
       // Determine category from breadcrumbs or category field
@@ -2493,7 +2495,7 @@ class BrightDataProductService {
           category = this.mapTargetCategory(rawData.category);
         }
       } catch (categoryError) {
-        console.warn('Failed to extract category from Target data:', categoryError);
+        logger.warn('Failed to extract category from Target data:', categoryError);
       }
 
       // Parse availability 
@@ -2505,7 +2507,7 @@ class BrightDataProductService {
                         availStr.includes('out of stock') ? 'out-of-stock' : 'unknown';
         }
       } catch (availError) {
-        console.warn('Failed to parse Target availability:', availError);
+        logger.warn('Failed to parse Target availability:', availError);
       }
 
       // Extract product highlights for description
@@ -2521,7 +2523,7 @@ class BrightDataProductService {
           }
         }
       } catch (highlightError) {
-        console.warn('Failed to extract highlights from Target data:', highlightError);
+        logger.warn('Failed to extract highlights from Target data:', highlightError);
       }
 
       // Build product variants from variations
@@ -2541,7 +2543,7 @@ class BrightDataProductService {
           }
         }
       } catch (variantError) {
-        console.warn('Failed to extract variants from Target data:', variantError);
+        logger.warn('Failed to extract variants from Target data:', variantError);
       }
 
       // Calculate discount percentage if both prices available
@@ -2556,7 +2558,7 @@ class BrightDataProductService {
           }
         }
       } catch (discountError) {
-        console.warn('Failed to calculate Target discount:', discountError);
+        logger.warn('Failed to calculate Target discount:', discountError);
       }
 
       // Return normalized data with safe fallbacks
@@ -2574,7 +2576,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Target data:', error);
+      logger.error('Error normalizing Target data:', error);
       // Return minimal safe data structure
       return {
         title: rawData?.title || 'Unknown Target Product',
@@ -2614,7 +2616,7 @@ class BrightDataProductService {
             .slice(0, 8);
         }
       } catch (imgError) {
-        console.warn('Failed to parse H&M images:', imgError);
+        logger.warn('Failed to parse H&M images:', imgError);
         images = [];
       }
 
@@ -2624,7 +2626,7 @@ class BrightDataProductService {
         // Estimate weight based on H&M product category and size
         weight = this.estimateHMWeight(rawData.category || '', rawData.size || '', rawData.product_name || '');
       } catch (weightError) {
-        console.warn('Failed to estimate H&M weight:', weightError);
+        logger.warn('Failed to estimate H&M weight:', weightError);
       }
 
       // Extract brand (always H&M for H&M products)
@@ -2643,7 +2645,7 @@ class BrightDataProductService {
           category = this.mapHMCategory(rawData.category);
         }
       } catch (categoryError) {
-        console.warn('Failed to extract category from H&M data:', categoryError);
+        logger.warn('Failed to extract category from H&M data:', categoryError);
       }
 
       // Parse availability from in_stock boolean
@@ -2653,7 +2655,7 @@ class BrightDataProductService {
           availability = rawData.in_stock ? 'in-stock' : 'out-of-stock';
         }
       } catch (availError) {
-        console.warn('Failed to parse H&M availability:', availError);
+        logger.warn('Failed to parse H&M availability:', availError);
       }
 
       // Build product description from H&M data
@@ -2685,7 +2687,7 @@ class BrightDataProductService {
           });
         }
       } catch (variantError) {
-        console.warn('Failed to extract variants from H&M data:', variantError);
+        logger.warn('Failed to extract variants from H&M data:', variantError);
       }
 
       // Calculate discount percentage if both prices available
@@ -2700,7 +2702,7 @@ class BrightDataProductService {
           }
         }
       } catch (discountError) {
-        console.warn('Failed to calculate H&M discount:', discountError);
+        logger.warn('Failed to calculate H&M discount:', discountError);
       }
 
       // Return normalized data with safe fallbacks
@@ -2718,7 +2720,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing H&M data:', error);
+      logger.error('Error normalizing H&M data:', error);
       // Detect country and currency for fallback
       const detectedCountry = this.detectCountryFromUrl(url);
       const detectedCurrency = this.getCountryCurrency(detectedCountry);
@@ -2761,7 +2763,7 @@ class BrightDataProductService {
           images = rawData.images.filter(Boolean).slice(0, 8);
         }
       } catch (imgError) {
-        console.warn('Failed to parse ASOS images:', imgError);
+        logger.warn('Failed to parse ASOS images:', imgError);
         images = [];
       }
 
@@ -2771,7 +2773,7 @@ class BrightDataProductService {
         // Estimate weight based on ASOS product category and type
         weight = this.estimateASOSWeight(rawData.category || '', rawData.name || '');
       } catch (weightError) {
-        console.warn('Failed to estimate ASOS weight:', weightError);
+        logger.warn('Failed to estimate ASOS weight:', weightError);
       }
 
       // Extract brand (typically ASOS or the specific brand)
@@ -2790,7 +2792,7 @@ class BrightDataProductService {
           category = this.mapASOSCategory(rawData.category);
         }
       } catch (categoryError) {
-        console.warn('Failed to map ASOS category:', categoryError);
+        logger.warn('Failed to map ASOS category:', categoryError);
       }
 
       // Handle availability status
@@ -2804,7 +2806,7 @@ class BrightDataProductService {
           }
         }
       } catch (availError) {
-        console.warn('Failed to parse ASOS availability:', availError);
+        logger.warn('Failed to parse ASOS availability:', availError);
       }
 
       // Build description from available data
@@ -2820,7 +2822,7 @@ class BrightDataProductService {
         
         description = descriptionParts.join('\n\n');
       } catch (descError) {
-        console.warn('Failed to build ASOS description:', descError);
+        logger.warn('Failed to build ASOS description:', descError);
         description = rawData.description || rawData.product_details || rawData.about_me || '';
       }
 
@@ -2841,7 +2843,7 @@ class BrightDataProductService {
           variants.push(...sizes.map((size: string) => ({ type: 'size', value: size })));
         }
       } catch (variantError) {
-        console.warn('Failed to parse ASOS variants:', variantError);
+        logger.warn('Failed to parse ASOS variants:', variantError);
       }
 
       // Return normalized data with safe fallbacks
@@ -2859,7 +2861,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing ASOS data:', error);
+      logger.error('Error normalizing ASOS data:', error);
       // Detect country and currency for fallback
       const detectedCountry = this.detectCountryFromUrl(url);
       const detectedCurrency = this.getCountryCurrency(detectedCountry);
@@ -2907,7 +2909,7 @@ class BrightDataProductService {
           }
         }
       } catch (weightError) {
-        console.warn('Failed to extract weight from Flipkart specifications:', weightError);
+        logger.warn('Failed to extract weight from Flipkart specifications:', weightError);
       }
 
       // Extract category from URL or fallback to general
@@ -2937,7 +2939,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Flipkart data:', error);
+      logger.error('Error normalizing Flipkart data:', error);
       return {
         title: rawData?.title || 'Unknown Product',
         price: 0,
@@ -3049,7 +3051,7 @@ class BrightDataProductService {
           }
         }
       } catch (error) {
-        console.warn('Failed to estimate weight from dimensions:', error);
+        logger.warn('Failed to estimate weight from dimensions:', error);
       }
     }
     
@@ -3338,7 +3340,7 @@ class BrightDataProductService {
           images = rawData.images.filter(Boolean).slice(0, 8);
         }
       } catch (imgError) {
-        console.warn('Failed to parse Etsy images:', imgError);
+        logger.warn('Failed to parse Etsy images:', imgError);
         images = [];
       }
 
@@ -3354,7 +3356,7 @@ class BrightDataProductService {
           category = this.mapEtsyCategory(rawData.root_category);
         }
       } catch (categoryError) {
-        console.warn('Failed to map Etsy category:', categoryError);
+        logger.warn('Failed to map Etsy category:', categoryError);
       }
 
       // Estimate weight based on category and product details
@@ -3362,7 +3364,7 @@ class BrightDataProductService {
       try {
         weight = this.estimateEtsyWeight(category, title, rawData.specifications || []);
       } catch (weightError) {
-        console.warn('Failed to estimate Etsy weight:', weightError);
+        logger.warn('Failed to estimate Etsy weight:', weightError);
       }
 
       // Handle availability (Etsy products are usually available unless explicitly stated)
@@ -3388,7 +3390,7 @@ class BrightDataProductService {
         
         description = descriptionParts.join('\n\n');
       } catch (descError) {
-        console.warn('Failed to build Etsy description:', descError);
+        logger.warn('Failed to build Etsy description:', descError);
         description = title;
       }
 
@@ -3410,7 +3412,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Etsy data:', error);
+      logger.error('Error normalizing Etsy data:', error);
       // Return minimal safe data structure
       return {
         title: rawData.title || 'Etsy Product',
@@ -3517,7 +3519,7 @@ class BrightDataProductService {
         }
       }
     } catch (specError) {
-      console.warn('Failed to extract weight from Etsy specifications:', specError);
+      logger.warn('Failed to extract weight from Etsy specifications:', specError);
     }
     
     // Category-based estimates (in kg)
@@ -3629,7 +3631,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Zara data:', error);
+      logger.error('Error normalizing Zara data:', error);
       return {
         title: rawData.product_name || 'Zara Product',
         price: rawData.price || 0,
@@ -3748,7 +3750,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing LEGO data:', error);
+      logger.error('Error normalizing LEGO data:', error);
       return {
         title: rawData.product_name || 'LEGO Set',
         price: rawData.final_price || rawData.initial_price || 0,
@@ -3852,7 +3854,7 @@ class BrightDataProductService {
       };
 
     } catch (error) {
-      console.error('Error normalizing Hermes data:', error);
+      logger.error('Error normalizing Hermes data:', error);
       return {
         title: rawData.product_name || 'Hermès Product',
         price: 0,
@@ -4296,7 +4298,7 @@ class BrightDataProductService {
       const { AIProductEnhancer } = await import('./MCPBrightDataBridge');
       return await AIProductEnhancer.enhanceProductData(productData, url);
     } catch (error) {
-      console.error('AI enhancement failed:', error);
+      logger.error('AI enhancement failed:', error);
       return productData;
     }
   }
@@ -4372,7 +4374,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Toys"R"Us data:', error);
+      logger.error('Error normalizing Toys"R"Us data:', error);
       return {
         title: rawData.product_name || 'Toys"R"Us Product',
         price: 0,
@@ -4443,7 +4445,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Carter\'s data:', error);
+      logger.error('Error normalizing Carter\'s data:', error);
       return {
         title: rawData.product_name || 'Carter\'s Product',
         price: 0,
@@ -4510,7 +4512,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Prada data:', error);
+      logger.error('Error normalizing Prada data:', error);
       return {
         title: rawData.product_name || 'Prada Product',
         price: 0,
@@ -4587,7 +4589,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing YSL data:', error);
+      logger.error('Error normalizing YSL data:', error);
       return {
         title: rawData.product_name || 'YSL Product',
         price: 0,
@@ -4661,7 +4663,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Balenciaga data:', error);
+      logger.error('Error normalizing Balenciaga data:', error);
       return {
         title: rawData.product_name || 'Balenciaga Product',
         price: 0,
@@ -4725,7 +4727,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Dior data:', error);
+      logger.error('Error normalizing Dior data:', error);
       return {
         title: rawData.product_name || 'Dior Product',
         price: 0,
@@ -4787,7 +4789,7 @@ class BrightDataProductService {
         url
       };
     } catch (error) {
-      console.error('Error normalizing Chanel data:', error);
+      logger.error('Error normalizing Chanel data:', error);
       return {
         title: rawData.product_name || 'Chanel Product',
         price: 0,

@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedConfigService } from './UnifiedConfigurationService';
-import { logger } from '@/lib/logger';
+import { logger } from '@/utils/logger';
 
 // Edge API URL - can be configured via environment variable
 const EDGE_API_URL = import.meta.env.VITE_EDGE_API_URL || 'https://iwishbag-edge-api.rnkbohra.workers.dev';
@@ -88,7 +88,7 @@ class CurrencyService {
       try {
         localStorage.removeItem(key);
       } catch (error) {
-        console.warn(`Failed to remove ${key} from localStorage:`, error);
+        logger.warn(`Failed to remove ${key} from localStorage:`, error);
       }
     });
     
@@ -155,7 +155,7 @@ class CurrencyService {
         }
       }
     } catch (error) {
-      console.warn(`[CurrencyService] Storage cache error for ${key}:`, error);
+      logger.warn(`[CurrencyService] Storage cache error for ${key}:`, error);
     }
 
     // Tier 4: Database/API call
@@ -186,7 +186,7 @@ class CurrencyService {
         source: 'database'
       }));
     } catch (error) {
-      console.warn(`[CurrencyService] Failed to cache in localStorage:`, error);
+      logger.warn(`[CurrencyService] Failed to cache in localStorage:`, error);
     }
   }
 
@@ -216,7 +216,7 @@ class CurrencyService {
       try {
         localStorage.removeItem(key);
       } catch (error) {
-        console.warn(`Failed to cleanup ${key}:`, error);
+        logger.warn(`Failed to cleanup ${key}:`, error);
       }
     });
     
@@ -248,12 +248,12 @@ class CurrencyService {
             .order('name');
 
           if (error) {
-            console.error('[CurrencyService] Database error:', error);
+            logger.error('[CurrencyService] Database error:', error);
             throw new Error(error.message);
           }
 
           if (!countries || countries.length === 0) {
-            console.warn('No countries found in country_settings, using fallback currencies');
+            logger.warn('No countries found in country_settings, using fallback currencies');
             return this.getFallbackCurrencies();
           }
 
@@ -297,7 +297,7 @@ class CurrencyService {
 
           return currencies;
         } catch (error) {
-          console.error('Error in getAllCurrencies:', error);
+          logger.error('Error in getAllCurrencies:', error);
           return this.getFallbackCurrencies();
         }
       },
@@ -345,7 +345,7 @@ class CurrencyService {
       const allCountries = await unifiedConfigService.getAllCountries();
 
       if (!allCountries || Object.keys(allCountries).length === 0) {
-        console.warn('No countries found in unified config, using fallback mapping');
+        logger.warn('No countries found in unified config, using fallback mapping');
         return this.getFallbackCountryCurrencyMap();
       }
 
@@ -361,7 +361,7 @@ class CurrencyService {
 
       return map;
     } catch (error) {
-      console.error('Error in getCountryCurrencyMap:', error);
+      logger.error('Error in getCountryCurrencyMap:', error);
       return this.getFallbackCountryCurrencyMap();
     }
   }
@@ -418,12 +418,12 @@ class CurrencyService {
         .single();
 
       if (error) {
-        console.error(`[CURRENCY SERVICE] Error fetching country settings for ${countryCode}:`, error);
+        logger.error(`[CURRENCY SERVICE] Error fetching country settings for ${countryCode}:`, error);
         return null;
       }
 
       if (!data) {
-        console.warn(`[CURRENCY SERVICE] No country settings found for ${countryCode}`);
+        logger.warn(`[CURRENCY SERVICE] No country settings found for ${countryCode}`);
         return null;
       }
 
@@ -446,7 +446,7 @@ class CurrencyService {
         symbol_space: data.symbol_space,
       };
     } catch (error) {
-      console.error(`[CURRENCY SERVICE] Exception getting country settings for ${countryCode}:`, error);
+      logger.error(`[CURRENCY SERVICE] Exception getting country settings for ${countryCode}:`, error);
       return null;
     }
   }
@@ -559,7 +559,7 @@ class CurrencyService {
         }
       }
     } catch (error) {
-      console.error('Error fetching decimal places from unified config:', error);
+      logger.error('Error fetching decimal places from unified config:', error);
     }
 
     return this.getCurrencyDecimalPlacesSync(currencyCode);
@@ -655,7 +655,7 @@ class CurrencyService {
         }
       }
     } catch (error) {
-      console.error('Error fetching country for currency from unified config:', error);
+      logger.error('Error fetching country for currency from unified config:', error);
     }
 
     // Fallback to hardcoded mapping
@@ -717,7 +717,7 @@ class CurrencyService {
         }
       }
     } catch (error) {
-      console.error('Error fetching minimum payment amount from unified config:', error);
+      logger.error('Error fetching minimum payment amount from unified config:', error);
     }
 
     // Fallback to hardcoded values
@@ -892,7 +892,7 @@ class CurrencyService {
           ]);
 
           if (!originConfig || !destConfig) {
-            console.warn(
+            logger.warn(
               `[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`,
             );
             // Fallback to default exchange rate (1.0 for same currency, or common rates)
@@ -910,7 +910,7 @@ class CurrencyService {
             };
             const fallbackKey = `${originCountry}_${destinationCountry}`;
             const fallbackRate = fallbackRates[fallbackKey] || 1.0;
-            console.warn(
+            logger.warn(
               `[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`,
             );
             return fallbackRate;
@@ -933,7 +933,7 @@ class CurrencyService {
 
           return crossRate;
         } catch (error) {
-          console.error(
+          logger.error(
             `[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`,
             error,
           );
@@ -979,7 +979,7 @@ class CurrencyService {
 
           return await this.getExchangeRate(fromCountry, toCountry);
         } catch (error) {
-          console.error(
+          logger.error(
             `[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`,
             error,
           );
@@ -1026,7 +1026,7 @@ class CurrencyService {
     // Preload after a short delay to not block initial app rendering
     setTimeout(() => {
       this.preloadEssentials().catch(error => {
-        console.warn('[CurrencyService] Essential data preload failed:', error);
+        logger.warn('[CurrencyService] Essential data preload failed:', error);
       });
     }, 2000);
   }
@@ -1073,7 +1073,7 @@ class CurrencyService {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
-        console.warn(`[CurrencyService] Failed to warm ${origin}→${dest}:`, error);
+        logger.warn(`[CurrencyService] Failed to warm ${origin}→${dest}:`, error);
       }
     }
 

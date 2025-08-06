@@ -61,6 +61,7 @@ import { checkoutSessionService } from '@/services/CheckoutSessionService';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { formatBankDetailsForEmail } from '@/lib/bankDetailsFormatter';
 import { AddressModal } from '@/components/checkout/AddressModal';
+import { logger } from '@/utils/logger';
 
 type QuoteType = Tables<'quotes'>;
 
@@ -135,8 +136,8 @@ export default function Checkout() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
-  // Debug log on component mount
-  console.log('💳 CHECKOUT PAGE LOADED:', {
+  // Log checkout page initialization for debugging
+  logger.debug('Checkout page loaded:', {
     user: user ? { id: user.id, email: user.email, is_anonymous: user.is_anonymous } : null,
     searchParams: Object.fromEntries(searchParams.entries()),
     url: window.location.href,
@@ -161,8 +162,8 @@ export default function Checkout() {
   const guestQuoteId = searchParams.get('quote');
   const isGuestCheckout = !!guestQuoteId;
 
-  // DEBUG: Log authentication and checkout state
-  console.log('🔍 CHECKOUT DEBUG:', {
+  // Log authentication and checkout state
+  logger.debug('Checkout debug info:', {
     user: user
       ? {
           id: user.id,

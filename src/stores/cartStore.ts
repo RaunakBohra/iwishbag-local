@@ -297,16 +297,16 @@ export const useCartStore = create<CartStore>()(
               throw quotesError;
             }
 
-            // 🚨 DEBUG: Log cart data to check loaded fields
-            console.log(
-              '🔍 [CartStore] Cart quotes loaded:',
-              cartQuotes?.slice(0, 1).map((q) => ({
+            // Log cart data to check loaded fields
+            logger.debug('[CartStore] Cart quotes loaded:', {
+              count: cartQuotes?.length || 0,
+              sample: cartQuotes?.slice(0, 1).map((q) => ({
                 id: q.id,
                 final_total_usd: q.final_total_usd,
                 origin_country: q.origin_country,
                 destination_country: q.destination_country,
               })),
-            );
+            });
 
             // cartQuotes is already filtered server-side
 
@@ -418,8 +418,8 @@ export const useCartStore = create<CartStore>()(
                 updatedAt: new Date(quote.updated_at),
               };
 
-              // 🚨 DEBUG: Log currency conversion details
-              console.log('🔍 [CartStore] Converting quote to cart item:', {
+              // Log currency conversion details for debugging
+              logger.debug('[CartStore] Converting quote to cart item:', {
                 quoteId: quote.id,
                 rawQuote: {
                   final_total_usd: quote.final_total_usd,
@@ -462,8 +462,8 @@ export const useCartStore = create<CartStore>()(
               isInitialized: true,
             });
 
-            // 🚨 DEBUG: Log final cart state after successful load
-            console.log('🔍 [CartStore] Cart state updated after load:', {
+            // Log final cart state after successful load
+            logger.debug('[CartStore] Cart state updated after load:', {
               cartItemsCount: cartItems.length,
               isLoading: false,
               hasLoadedFromServer: true,

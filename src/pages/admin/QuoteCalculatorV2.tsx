@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/utils/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -222,7 +223,7 @@ const QuoteCalculatorV2: React.FC = () => {
   
   // Debug: Track destination country changes
   const setDestinationCountryWithDebug = (newCountry: string, source: string = 'unknown') => {
-    console.log('🔍 [DEBUG] destinationCountry changing:', {
+    logger.debug({
       from: destinationCountry,
       to: newCountry,
       source,
@@ -397,10 +398,10 @@ const QuoteCalculatorV2: React.FC = () => {
                   }
                 : prevItem
             ));
-            console.log('✅ Auto-populated AI suggestion for:', item.name, suggestion.suggested_weight_kg);
+            logger.info(item.name, suggestion.suggested_weight_kg);
           }
         } catch (error) {
-          console.error('❌ Auto AI suggestion failed for:', item.name, error);
+          logger.error('❌ Auto AI suggestion failed for:', item.name, error);
         }
         
         // Small delay to avoid overwhelming the service
@@ -413,7 +414,7 @@ const QuoteCalculatorV2: React.FC = () => {
 
   // Debug: Log destination country state changes
   useEffect(() => {
-    console.log('🔍 [State Debug] destinationCountry state changed:', {
+    logger.debug({
       destinationCountry,
       isEditMode,
       quoteLoadingComplete,
@@ -435,7 +436,7 @@ const QuoteCalculatorV2: React.FC = () => {
   // Auto-calculate on changes (but not during initial quote loading)
   useEffect(() => {
     const hasValidItems = items.some(item => item.name && item.unit_price_usd > 0);
-    console.log('🔍 [DEBUG] Auto-calculate useEffect triggered:', {
+    logger.debug({
       loadingQuote,
       hasValidItems,
       itemsCount: items.length,
@@ -446,14 +447,14 @@ const QuoteCalculatorV2: React.FC = () => {
     // In edit mode, be more conservative about auto-calculation
     // Only auto-calculate for new quotes or when items actually change in a meaningful way
     if (!loadingQuote && hasValidItems && !isEditMode) {
-      console.log('✅ [DEBUG] Auto-calculate: Will call calculateQuote in 50ms (new quote)');
+      logger.info();
       // Add small delay to ensure state is fully updated, especially after updateItem calls
       const timeoutId = setTimeout(() => {
         calculateQuote();
       }, 50);
       return () => clearTimeout(timeoutId);
     } else {
-      console.log('❌ [DEBUG] Auto-calculate: Skipped', {
+      logger.error({
         reason: loadingQuote 
           ? 'still loading' 
           : !hasValidItems 
@@ -536,7 +537,7 @@ const QuoteCalculatorV2: React.FC = () => {
             }
           }
         } catch (error) {
-          console.error('❌ [Real-time] Error getting suggestions:', error);
+          logger.error('❌ [Real-time] Error getting suggestions:', error);
         }
       }
     }, 1500); // 1.5 second debounce for real-time input
@@ -558,7 +559,7 @@ const QuoteCalculatorV2: React.FC = () => {
           setDynamicShippingMethods(deliveryOptions);
           setShippingError(null);
           
-          console.log(`✅ [QuoteCalculator] Loaded ${deliveryOptions.length} delivery options for ${originCountry} → ${destinationCountry}`);
+          logger.info();
           
           // Auto-select shipping method intelligently
           if (deliveryOptions.length > 0) {
@@ -575,7 +576,7 @@ const QuoteCalculatorV2: React.FC = () => {
             }
           }
         } catch (error) {
-          console.error('Error fetching dynamic shipping methods:', error);
+          logger.error('Error fetching dynamic shipping methods:', error);
           setDynamicShippingMethods([]);
           setShippingError(`No shipping route configured for ${originCountry} → ${destinationCountry}`);
         }
@@ -600,7 +601,7 @@ const QuoteCalculatorV2: React.FC = () => {
       if (error) throw error;
       setDocuments(docs || []);
     } catch (error) {
-      console.error('Error loading documents:', error);
+      logger.error('Error loading documents:', error);
     }
   };
 
@@ -614,7 +615,7 @@ const QuoteCalculatorV2: React.FC = () => {
     const country = address.destination_country || address.country;
     const shouldSkipSync = isEditMode || !quoteLoadingComplete || userOverrodeDestination;
     
-    console.log('🔍 [Address Sync DEBUG]:', {
+    logger.debug({
       country,
       currentDestination: destinationCountry,
       isEditMode,
@@ -661,7 +662,7 @@ const QuoteCalculatorV2: React.FC = () => {
           fetchAvailableServices(pincode);
         }, 100); // Small delay to ensure state is updated
       } else if (pincode) {
-        console.log('⚠️ [Address Sync] Invalid India pincode format:', pincode);
+        logger.warn(pincode);
         setDestinationPincode(pincode); // Set anyway for manual correction
       }
     } else if (country === 'NP') {
@@ -674,7 +675,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }
       
       // Debug: Log all address fields for Nepal
-      console.log('🔍 [Address Sync DEBUG] Nepal address fields:', {
+      logger.debug({
         city: address.city,
         state_province_region: address.state_province_region,
         address_line1: address.address_line1,
@@ -701,7 +702,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }
     }
 
-    console.log('✅ [Address Sync] Address synchronization completed');
+    logger.info();
   };
 
   const loadExistingQuote = async (id: string) => {
@@ -717,7 +718,7 @@ const QuoteCalculatorV2: React.FC = () => {
 
       if (quote) {
         // Set edit mode
-        console.log('🔍 [DEBUG] loadExistingQuote - setting edit mode:', {
+        logger.debug({
           quoteId: quote.id,
           status: quote.status,
           hasCalculationData: !!quote.calculation_data,
@@ -736,7 +737,7 @@ const QuoteCalculatorV2: React.FC = () => {
         setCustomerName(quote.customer_name || '');
         setCustomerPhone(quote.customer_phone || '');
         setOriginCountry(quote.origin_country || 'US');
-        console.log('🔍 [DEBUG] loadExistingQuote - setting destinationCountry from DB:', {
+        logger.debug({
           fromDB: quote.destination_country,
           current: destinationCountry
         });
@@ -747,7 +748,7 @@ const QuoteCalculatorV2: React.FC = () => {
         setAdminNotes(quote.admin_notes || '');
         
         // Load shipping method from database
-        console.log('🔍 [DEBUG] loadExistingQuote - setting shipping method from DB:', {
+        logger.debug({
           fromDB: quote.shipping_method,
           current: shippingMethod
         });
@@ -787,7 +788,7 @@ const QuoteCalculatorV2: React.FC = () => {
 
         // Set calculation result if available
         if (quote.calculation_data) {
-          console.log('🔍 [DEBUG] loadExistingQuote - setting calculation result:', {
+          logger.debug({
             hasCalculationSteps: !!(quote.calculation_data.calculation_steps),
             calculationKeys: Object.keys(quote.calculation_data)
           });
@@ -799,7 +800,7 @@ const QuoteCalculatorV2: React.FC = () => {
             syncShippingMethodFromCalculation(quote.calculation_data);
           }, 100); // Small delay to ensure state updates are complete
         } else {
-          console.log('⚠️ [DEBUG] loadExistingQuote - no calculation data found');
+          logger.warn();
         }
         
         // Load discount codes if available
@@ -825,7 +826,7 @@ const QuoteCalculatorV2: React.FC = () => {
               await syncDeliveryAddressToDestination(address);
             }
           } catch (addressError) {
-            console.error('Error loading delivery address:', addressError);
+            logger.error('Error loading delivery address:', addressError);
           }
         }
 
@@ -835,11 +836,11 @@ const QuoteCalculatorV2: React.FC = () => {
         });
         
         // Mark quote loading as complete - this prevents Address Sync from overriding user selections
-        console.log('✅ [DEBUG] Quote loading complete - Address Sync protection enabled');
+        logger.info();
         setQuoteLoadingComplete(true);
       }
     } catch (error) {
-      console.error('Error loading quote:', error);
+      logger.error('Error loading quote:', error);
       toast({
         title: 'Error Loading Quote',
         description: 'Failed to load the quote data',
@@ -953,13 +954,13 @@ const QuoteCalculatorV2: React.FC = () => {
 
     setLoadingServices(true);
     try {
-      console.log('🔍 [UI] Fetching available services for pincode:', pincode);
+      logger.debug(pincode);
       
       // Calculate approximate weight from items
       const totalWeight = items.reduce((sum, item) => sum + (item.weight || 1), 0);
       
       const services = await delhiveryService.getAvailableServices(pincode, totalWeight);
-      console.log('✅ [UI] Available services:', services);
+      logger.info(services);
       
       setAvailableServices(services);
       
@@ -969,7 +970,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('❌ [UI] Failed to fetch available services:', error);
+      logger.error('❌ [UI] Failed to fetch available services:', error);
       setAvailableServices([]);
     } finally {
       setLoadingServices(false);
@@ -1002,10 +1003,10 @@ const QuoteCalculatorV2: React.FC = () => {
       
       setAvailableNCMBranches(sortedBranches);
       
-      console.log(`✅ [UI] Loaded and sorted ${sortedBranches.length} NCM branches (A→Z)`);
+      logger.info();
       
     } catch (error) {
-      console.error('❌ [UI] Failed to load NCM branches:', error);
+      logger.error('❌ [UI] Failed to load NCM branches:', error);
       setAvailableNCMBranches([]);
     } finally {
       setLoadingNCMBranches(false);
@@ -1108,7 +1109,7 @@ const QuoteCalculatorV2: React.FC = () => {
       });
 
       // Check if NCM branches are available first
-      console.log('🔍 [Smart Mapping] Checking NCM branches availability:', {
+      logger.debug({
         availableNCMBranchesCount: availableNCMBranches.length,
         loadingNCMBranches,
         destinationCountry
@@ -1118,7 +1119,7 @@ const QuoteCalculatorV2: React.FC = () => {
       const mapping = await smartNCMBranchMapper.findBestMatch(addressInput);
       
       if (mapping) {
-        console.log(`✅ [Smart Mapping] Found match: ${mapping.branch.name} (${mapping.confidence}, ${mapping.matchReason})`);
+        logger.info();
         
         // Update states
         setBranchMapping(mapping);
@@ -1132,7 +1133,7 @@ const QuoteCalculatorV2: React.FC = () => {
         
         console.log(`ℹ️ [Smart Mapping] Auto-selected ${mapping.branch.name} with ${suggestions.length} alternatives`);
       } else {
-        console.log('🔍 [Smart Mapping] No single match found - checking for district branches');
+        logger.debug();
         setBranchMapping(null);
         setIsAutoSelected(false);
         
@@ -1150,12 +1151,12 @@ const QuoteCalculatorV2: React.FC = () => {
           if (suggestions.length > 0) {
             console.log(`💡 [Smart Mapping] No district match, showing ${suggestions.length} general suggestions`);
           } else {
-            console.log('🔍 [Smart Mapping] No suggestions found either. Address input was:', addressInput);
+            logger.debug(addressInput);
           }
         }
       }
     } catch (error) {
-      console.error('❌ [Smart Mapping] Error in smart mapping:', error);
+      logger.error('❌ [Smart Mapping] Error in smart mapping:', error);
       setBranchMapping(null);
       setIsAutoSelected(false);
       setSuggestedNCMBranches([]);
@@ -1187,10 +1188,10 @@ const QuoteCalculatorV2: React.FC = () => {
       });
 
       setNCMRates(rates);
-      console.log('✅ [UI] NCM rates fetched:', rates);
+      logger.info(rates);
       
     } catch (error) {
-      console.error('❌ [UI] Failed to fetch NCM rates:', error);
+      logger.error('❌ [UI] Failed to fetch NCM rates:', error);
       setNCMRates(null);
     } finally {
       setLoadingNCMRates(false);
@@ -1217,7 +1218,7 @@ const QuoteCalculatorV2: React.FC = () => {
       // Check if the calculated method exists in available options
       const methodExists = currentShippingMethods.some(method => method.value === usedShippingMethodId);
       
-      console.log(`🔍 [Shipping Sync] Method validation:`, {
+      logger.debug({
         calculatedMethodId: usedShippingMethodId,
         availableOptions: currentShippingMethods.map(m => m.value),
         methodExists,
@@ -1236,7 +1237,7 @@ const QuoteCalculatorV2: React.FC = () => {
           });
         }
       } else {
-        console.warn(`⚠️ [Shipping Sync] Calculated method ${usedShippingMethodId} not found in available options. Using first available option.`);
+        logger.warn(`⚠️ [Shipping Sync] Calculated method ${usedShippingMethodId} not found in available options. Using first available option.`);
         
         // Fallback to first available option
         if (currentShippingMethods.length > 0) {
@@ -1249,7 +1250,7 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
   const calculateQuote = async () => {
-    console.log('🔍 [DEBUG] calculateQuote called with items:', {
+    logger.debug({
       totalItems: items.length,
       itemsWithNames: items.filter(item => item.name).length,
       itemsWithPrices: items.filter(item => item.unit_price_usd > 0).length,
@@ -1260,13 +1261,13 @@ const QuoteCalculatorV2: React.FC = () => {
     setCalculating(true);
     try {
       // Filter valid items and map to new interface
-      const validItems = items.filter(item => item.name && item.unit_price_usd > 0).map(item => ({
+      const validItems = items.filter(item => item.unit_price_usd > 0).map(item => ({
         ...item,
         costprice_origin: item.unit_price_usd, // Map unit_price_usd to costprice_origin
         weight_kg: item.weight_kg || 0
       }));
       
-      console.log('🔍 [DEBUG] calculateQuote valid items check:', {
+      logger.debug({
         validItemsCount: validItems.length,
         validItems: validItems.map(item => ({ 
           name: item.name, 
@@ -1281,7 +1282,7 @@ const QuoteCalculatorV2: React.FC = () => {
       });
       
       if (validItems.length === 0) {
-        console.log('❌ [DEBUG] calculateQuote - clearing calculation result (no valid items)');
+        logger.error();
         setCalculationResult(null);
         return;
       }
@@ -1347,7 +1348,7 @@ const QuoteCalculatorV2: React.FC = () => {
         insurance_enabled: insuranceEnabled // Insurance toggle
       });
 
-      console.log('✅ [DEBUG] simplifiedQuoteCalculator.calculate completed:', {
+      logger.info({
         resultExists: !!result,
         resultKeys: result ? Object.keys(result) : null,
         hasCalculationSteps: !!(result?.calculation_steps),
@@ -1366,7 +1367,7 @@ const QuoteCalculatorV2: React.FC = () => {
       // Sync shipping method dropdown with calculation results
       syncShippingMethodFromCalculation(result);
     } catch (error) {
-      console.error('❌ [DEBUG] Calculation error details:', {
+      logger.error('❌ [DEBUG] Calculation error details:', {
         error,
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorStack: error instanceof Error ? error.stack : null,
@@ -1397,7 +1398,7 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
   const saveQuote = async () => {
-    console.log('🔍 [DEBUG] saveQuote called with state:', {
+    logger.debug({
       isEditMode,
       quoteId,
       customerEmail,
@@ -1408,7 +1409,7 @@ const QuoteCalculatorV2: React.FC = () => {
     });
 
     if (!customerEmail) {
-      console.log('❌ [DEBUG] Save failed - no customer email');
+      logger.error();
       toast({
         title: 'Missing Information',
         description: 'Please enter customer email',
@@ -1420,7 +1421,7 @@ const QuoteCalculatorV2: React.FC = () => {
     // For new quotes, require calculation before saving
     // For existing quotes (edit mode), allow field updates without recalculation
     const needsCalculation = !isEditMode && (!calculationResult || !calculationResult.calculation_steps);
-    console.log('🔍 [DEBUG] Calculation check:', {
+    logger.debug({
       isEditMode,
       needsCalculation,
       hasCalculationResult: !!calculationResult,
@@ -1428,7 +1429,7 @@ const QuoteCalculatorV2: React.FC = () => {
     });
 
     if (needsCalculation) {
-      console.log('❌ [DEBUG] Save blocked - calculation required for new quote');
+      logger.error();
       toast({
         title: 'No Calculation',
         description: 'Please calculate the quote first',
@@ -1437,7 +1438,7 @@ const QuoteCalculatorV2: React.FC = () => {
       return;
     }
 
-    console.log('✅ [DEBUG] Save validation passed, proceeding...');
+    logger.info();
 
     setLoading(true);
     try {
@@ -1478,7 +1479,7 @@ const QuoteCalculatorV2: React.FC = () => {
         status: isEditMode ? currentQuoteStatus : 'draft',
       };
 
-      console.log('🔍 [DEBUG] Quote data being saved:', {
+      logger.debug({
         origin_country: quoteData.origin_country,
         destination_country: quoteData.destination_country,
         customer_name: quoteData.customer_name,
@@ -1491,7 +1492,7 @@ const QuoteCalculatorV2: React.FC = () => {
       let result;
       if (isEditMode && quoteId) {
         // Update existing quote
-        console.log('🔍 [DEBUG] Updating quote in database:', {
+        logger.debug({
           quoteId,
           updateData: {
             origin_country: quoteData.origin_country,
@@ -1510,11 +1511,11 @@ const QuoteCalculatorV2: React.FC = () => {
           .single();
 
         if (error) {
-          console.error('❌ [DEBUG] Database update error:', error);
+          logger.error('❌ [DEBUG] Database update error:', error);
           throw error;
         }
         
-        console.log('✅ [DEBUG] Database update successful:', {
+        logger.info({
           returnedData: {
             origin_country: data.origin_country,
             destination_country: data.destination_country,
@@ -1576,15 +1577,15 @@ const QuoteCalculatorV2: React.FC = () => {
           );
 
           if (!trackingResult.success) {
-            console.error('Failed to track coupon usage:', trackingResult.error);
+            logger.error('Failed to track coupon usage:', trackingResult.error);
           }
         } catch (trackingError) {
-          console.error('Error tracking coupon usage:', trackingError);
+          logger.error('Error tracking coupon usage:', trackingError);
           // Don't fail the quote save if tracking fails
         }
       }
     } catch (error) {
-      console.error('Save error:', error);
+      logger.error('Save error:', error);
       toast({
         title: 'Save Error',
         description: 'Failed to save quote',
@@ -1678,7 +1679,7 @@ const QuoteCalculatorV2: React.FC = () => {
       // Refresh quote data
       loadExistingQuote(quoteId);
     } catch (error) {
-      console.error('Error updating status:', error);
+      logger.error('Error updating status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update quote status',
@@ -2546,7 +2547,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               });
                             }
                           } catch (error) {
-                            console.error('Smart enhancement error:', error);
+                            logger.error('Smart enhancement error:', error);
                             toast({
                               variant: "destructive",
                               title: "Enhancement Failed",
@@ -2666,7 +2667,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'name', newName);
                                   updatedFields.push('name');
                                 } else {
-                                  console.log('⚠️ AUTO-FILL: Skipping product name - invalid or generic:', data.productName);
+                                  logger.warn(data.productName);
                                 }
                                 
                                 // Update price with validation (ALWAYS overwrite if new data is valid)
@@ -2679,7 +2680,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'unit_price_usd', data.price);
                                   updatedFields.push('price');
                                 } else {
-                                  console.log('⚠️ AUTO-FILL: Skipping price - invalid:', data.price);
+                                  logger.warn(data.price);
                                 }
                                 
                                 // Update weight with validation (ALWAYS overwrite if new data is valid)
@@ -2692,7 +2693,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'weight_kg', data.weight);
                                   updatedFields.push('weight');
                                 } else {
-                                  console.log('⚠️ AUTO-FILL: Skipping weight - invalid:', data.weight);
+                                  logger.warn(data.weight);
                                 }
                                 
                                 // Update category (always useful)
@@ -2706,7 +2707,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'category', newCategory);
                                   updatedFields.push('category');
                                 } else {
-                                  console.log('⚠️ AUTO-FILL: Skipping category - invalid:', data.category);
+                                  logger.warn(data.category);
                                 }
                                 
                                 // Update HSN code if available
@@ -2715,7 +2716,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'hsn_code', data.hsn.trim());
                                   updatedFields.push('HSN code');
                                 } else {
-                                  console.log('⚠️ AUTO-FILL: Skipping HSN - invalid:', data.hsn);
+                                  logger.warn(data.hsn);
                                 }
                                 
                                 // Log currency information (handled at quote level)
@@ -2737,9 +2738,9 @@ const QuoteCalculatorV2: React.FC = () => {
                                     updateItem(item.id, 'images', validImages);
                                     updateItem(item.id, 'main_image', validImages[0]); // First image as main
                                     updatedFields.push(`${validImages.length} image${validImages.length > 1 ? 's' : ''}`);
-                                    console.log('✅ Updated images:', validImages.length, 'valid images');
+                                    logger.info(validImages.length, 'valid images');
                                   } else {
-                                    console.warn('⚠️ No valid image URLs found in:', images);
+                                    logger.warn('⚠️ No valid image URLs found in:', images);
                                   }
                                 }
                                 
@@ -2760,14 +2761,14 @@ const QuoteCalculatorV2: React.FC = () => {
                                     }
                                   ).then((success) => {
                                     if (success) {
-                                      console.log('✅ Scraped data auto-saved successfully');
+                                      logger.info();
                                       toast({
                                         title: "🔄 Product Data Overwritten & Saved",
                                         description: `Successfully updated and saved: ${updatedFields.join(', ')} (existing values were replaced)`,
                                         duration: 4000,
                                       });
                                     } else {
-                                      console.error('❌ Failed to auto-save scraped data');
+                                      logger.error('❌ Failed to auto-save scraped data');
                                       toast({
                                         title: "🔄 Product Data Overwritten",
                                         description: `Updated: ${updatedFields.join(', ')} (existing values were replaced). Warning: Auto-save failed.`,
@@ -2776,7 +2777,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                       });
                                     }
                                   }).catch((error) => {
-                                    console.error('❌ Auto-save error:', error);
+                                    logger.error('❌ Auto-save error:', error);
                                     toast({
                                       title: "🔄 Product Data Overwritten", 
                                       description: `Updated: ${updatedFields.join(', ')}. Warning: Save failed, changes may be lost.`,
@@ -2794,7 +2795,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 }
                                 
                               } catch (error) {
-                                console.error('❌ Error during auto-fill:', error);
+                                logger.error('❌ Error during auto-fill:', error);
                                 toast({
                                   title: "❌ Auto-Fill Error",
                                   description: "Product data was retrieved but couldn't be populated due to an error.",
@@ -2911,7 +2912,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   });
                                 }
                               } catch (error) {
-                                console.error('Weight estimation error:', error);
+                                logger.error('Weight estimation error:', error);
                                 toast({
                                   variant: "destructive",
                                   title: "Estimation Failed",
@@ -3508,7 +3509,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 customer_name: customerName,
                 origin_country: originCountry,
                 destination_country: destinationCountry,
-                items: items.filter(item => item.name && item.unit_price_usd > 0),
+                items: items.filter(item => item.unit_price_usd > 0),
                 calculation_data: calculationResult,
                 total_usd: calculationResult.calculation_steps.total_usd || 0,
                 total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
@@ -3530,7 +3531,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 customer_name: customerName,
                 origin_country: originCountry,
                 destination_country: destinationCountry,
-                items: items.filter(item => item.name && item.unit_price_usd > 0),
+                items: items.filter(item => item.unit_price_usd > 0),
                 calculation_data: calculationResult,
                 total_usd: calculationResult.calculation_steps.total_usd || 0,
                 total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,

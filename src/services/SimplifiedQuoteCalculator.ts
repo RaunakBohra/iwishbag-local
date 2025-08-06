@@ -1,5 +1,6 @@
 import { currencyService } from './CurrencyService';
 import { DiscountService } from './DiscountService';
+import { logger } from '@/utils/logger';
 import { DiscountLoggingService } from './DiscountLoggingService';
 import { volumetricWeightService } from './VolumetricWeightService';
 import { delhiveryService, DelhiveryService } from './DelhiveryService';
@@ -304,7 +305,7 @@ class SimplifiedQuoteCalculator {
           return hsnData.customs_rate;
         }
       } catch (dbError) {
-        console.warn('Failed to fetch HSN rate from database:', dbError);
+        logger.warn('Failed to fetch HSN rate from database:', dbError);
       }
 
       // Fallback to hardcoded HSN rates
@@ -371,7 +372,7 @@ class SimplifiedQuoteCalculator {
           console.log(`💰 [Valuation] ${item.hsn_code}: product=${productPriceOrigin.toFixed(2)} ${input.origin_currency}, min=${minimumValuation.toFixed(2)} ${input.origin_currency} (from $${minimumValuationUSD.toFixed(2)} USD), using=${effectiveValue.toFixed(2)} ${input.origin_currency} (${valuationMethodUsed})`);
         }
       } catch (error) {
-        console.warn('Failed to fetch minimum valuation:', error);
+        logger.warn('Failed to fetch minimum valuation:', error);
       }
     }
 
@@ -386,7 +387,7 @@ class SimplifiedQuoteCalculator {
   async calculate(input: CalculationInput): Promise<CalculationResult> {
     
     // Debug: Log items with valuation preferences
-    console.log('🔍 [Calculator] Starting calculation with items:', input.items.map(item => ({
+    logger.debug(input.items.map(item => ({
       name: item.name,
       hsn_code: item.hsn_code,
       valuation_preference: item.valuation_preference || 'auto',
@@ -401,7 +402,7 @@ class SimplifiedQuoteCalculator {
     
     // Process each item for both pricing and valuation
     for (const item of input.items) {
-      console.log(`🔍 [Calculator] Processing item: ${item.name}, HSN: ${item.hsn_code}, valuation_preference: ${item.valuation_preference}`);
+      logger.debug();
       
       // Get valuation data (product price vs minimum valuation)
       const valuationData = await this.getItemValuationData(item, input.destination_country, input);
@@ -564,7 +565,7 @@ class SimplifiedQuoteCalculator {
       console.log(`🚢 [Dynamic Shipping] Base: ${routeCalculations.shipping.base_cost}, Per-kg: ${routeCalculations.shipping.per_kg_cost}, Cost%: ${routeCalculations.shipping.cost_percentage}, Total: ${baseShippingCost}`);
       
     } catch (error) {
-      console.warn('🚨 [Dynamic Shipping] Failed, using fallback:', error);
+      logger.warn('🚨 [Dynamic Shipping] Failed, using fallback:', error);
       
       // Fallback to hardcoded rates
       shippingRatePerKg = SHIPPING_RATES[shippingMethod];
@@ -628,7 +629,7 @@ class SimplifiedQuoteCalculator {
     // Debug: Log detailed valuation analysis for minimum valuation items
     const minimumValuationItems = valuationAnalysis.filter(item => item.minimum_valuation !== null);
     if (minimumValuationItems.length > 0) {
-      console.log(`🔍 [VALUATION DEBUG] Found ${minimumValuationItems.length} items with minimum valuations:`);
+      logger.debug();
       minimumValuationItems.forEach(item => {
         console.log(`  - ${item.item_name}: Product $${item.product_price.toFixed(2)} vs Min $${(item.minimum_valuation || 0).toFixed(2)} → Using $${item.effective_value.toFixed(2)} (${item.method_used})`);
       });
@@ -796,7 +797,7 @@ class SimplifiedQuoteCalculator {
           };
         }
       } catch (error) {
-        console.error('Error fetching component discounts:', error);
+        logger.error('Error fetching component discounts:', error);
       }
     }
 
@@ -875,13 +876,13 @@ class SimplifiedQuoteCalculator {
           console.log(`🚚 [Delhivery] Rate: ₹${deliveryRateINR} → $${domesticDelivery.toFixed(2)} USD`);
           
         } else {
-          console.log('⚠️ [Calculator] Invalid/missing pincode for Delhivery, using fallback rates');
+          logger.warn();
           // Fallback to fixed rates if no valid pincode
           const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
           domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
         }
       } catch (error) {
-        console.error('❌ [Delhivery] API error, using fallback rates:', error);
+        logger.error('❌ [Delhivery] API error, using fallback rates:', error);
         // Fallback to fixed rates on API failure
         const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
         domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
@@ -923,13 +924,13 @@ class SimplifiedQuoteCalculator {
           console.log(`🏔️ [NCM] Rate: ₨${deliveryRateNPR} → $${domesticDelivery.toFixed(2)} USD`);
           
         } else {
-          console.log('⚠️ [NCM] No suitable branches found, using fallback rates');
+          logger.warn();
           // Fallback to fixed rates if no branches found
           const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
           domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
         }
       } catch (error) {
-        console.error('❌ [NCM] API error, using fallback rates:', error);
+        logger.error('❌ [NCM] API error, using fallback rates:', error);
         // Fallback to fixed rates on API failure
         const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
         domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;

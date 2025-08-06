@@ -43,8 +43,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   if (!quote.calculation_data || !quote.calculation_data.calculation_steps) {
     return (
       <Card>
-        <CardContent className="pt-6">
-          <p className="text-gray-500 text-center">No calculation data available</p>
+        <CardContent className="p-6">
+          <p className="text-sm text-gray-600 text-center">No calculation data available</p>
         </CardContent>
       </Card>
     );
@@ -188,13 +188,13 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="p-6 space-y-6">
         {/* Warning for impossible scenarios */}
         {isImpossibleScenario && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-2 text-red-800">
               <Info className="w-4 h-4" />
-              <span className="font-semibold">Calculation Error Detected</span>
+              <span className="text-sm font-medium">Calculation Error Detected</span>
             </div>
             <p className="text-sm text-red-700 mt-1">
               Total amount ({formatCurrency(finalTotalUSD)}) is less than items cost ({formatCurrency(itemsSubtotal)}). 
@@ -213,8 +213,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   <span className="text-sm font-medium text-gray-700">{metric.title}</span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-lg font-bold">{metric.value}</p>
-                  <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                  <p className="text-xl font-semibold text-gray-900">{metric.value}</p>
+                  <p className="text-xs text-gray-600">{metric.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -229,8 +229,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   <span className="text-sm font-medium text-gray-700">{metric.title}</span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-lg font-bold">{metric.value}</p>
-                  <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                  <p className="text-xl font-semibold text-gray-900">{metric.value}</p>
+                  <p className="text-xs text-gray-600">{metric.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -239,7 +239,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
         {/* Enhanced Items Table */}
         <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5" />
             Items ({quote.items.length})
           </h3>
@@ -296,7 +296,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                             {item.volumetric_weight_kg && item.volumetric_weight_kg > itemWeight ? (
                               <>
                                 <span className="text-sm font-medium text-orange-600">{item.volumetric_weight_kg} kg</span>
-                                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                                <Badge variant="outline" className="text-sm bg-orange-50 text-orange-700 border-orange-200">
                                   Vol
                                 </Badge>
                               </>
@@ -304,7 +304,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                               <>
                                 <span className="text-sm">{itemWeight} kg</span>
                                 {item.volumetric_weight_kg && (
-                                  <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
+                                  <Badge variant="outline" className="text-sm bg-gray-50 text-gray-600 border-gray-200">
                                     Act
                                   </Badge>
                                 )}
@@ -324,7 +324,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
                       {/* Subtotal */}
                       <div className="col-span-2 text-right">
-                        <span className="text-sm font-bold">{formatCurrency(itemTotal)}</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(itemTotal)}</span>
                       </div>
 
                       {/* Actions */}
@@ -352,7 +352,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           {/* URL - show only domain */}
                           {item.url && (
                             <div>
-                              <span className="text-gray-500 font-medium">Source</span>
+                              <span className="text-sm font-medium text-gray-700">Source</span>
                               <p>
                                 <a 
                                   href={item.url} 
@@ -378,7 +378,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           {/* Category */}
                           {item.category && (
                             <div>
-                              <span className="text-gray-500 font-medium">Category</span>
+                              <span className="text-sm font-medium text-gray-700">Category</span>
                               <p className="text-sm">{item.category}</p>
                             </div>
                           )}
@@ -386,7 +386,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           {/* HSN Code */}
                           {item.hsn_code && (
                             <div>
-                              <span className="text-gray-500 font-medium">HSN Code</span>
+                              <span className="text-sm font-medium text-gray-700">HSN Code</span>
                               <p className="flex items-center gap-1 text-sm">
                                 <Tag className="w-3 h-3" />
                                 {item.hsn_code}
@@ -425,7 +425,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Applied Rates */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                <h4 className="text-base font-medium text-gray-700 flex items-center gap-2">
                   <DollarSign className="w-4 h-4" />
                   Applied Rates
                 </h4>
@@ -459,7 +459,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
               {/* Enhanced Weight Analysis */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                <h4 className="text-base font-medium text-gray-700 flex items-center gap-2">
                   <Scale className="w-4 h-4" />
                   Weight Analysis
                 </h4>
@@ -470,7 +470,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                       <div className="flex items-center gap-1 mb-1">
                         <span className="text-xs font-medium text-gray-600">Actual Weight</span>
                       </div>
-                      <span className="text-sm font-bold">{inputs.total_weight_kg || 0} kg</span>
+                      <span className="text-sm font-medium text-gray-900">{inputs.total_weight_kg || 0} kg</span>
                     </div>
                     
                     {inputs.total_volumetric_weight_kg ? (
@@ -478,7 +478,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                         <div className="flex items-center gap-1 mb-1">
                           <span className="text-xs font-medium text-orange-600">Volumetric Weight</span>
                         </div>
-                        <span className="text-sm font-bold text-orange-700">{inputs.total_volumetric_weight_kg} kg</span>
+                        <span className="text-sm font-medium text-orange-700">{inputs.total_volumetric_weight_kg} kg</span>
                       </div>
                     ) : (
                       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -506,7 +506,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           Chargeable Weight:
                         </span>
                       </div>
-                      <span className={`text-lg font-bold ${
+                      <span className={`text-lg font-semibold text-gray-900 ${
                         inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > (inputs.total_weight_kg || 0)
                           ? 'text-orange-800'
                           : 'text-blue-800'
@@ -525,7 +525,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
               {/* Country Configuration */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                <h4 className="text-base font-medium text-gray-700 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   Route Configuration
                 </h4>

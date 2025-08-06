@@ -6,6 +6,7 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { notificationService, NotificationService } from './NotificationService';
+import { logger } from '@/utils/logger';
 import * as Sentry from '@sentry/react';
 
 // ============================================================================
@@ -304,7 +305,7 @@ class UnifiedSupportEngine {
       });
 
       if (error) {
-        console.error('❌ Error creating ticket:', error);
+        logger.error('❌ Error creating ticket:', error);
         Sentry.captureException(error);
         return null;
       }
@@ -313,25 +314,25 @@ class UnifiedSupportEngine {
       const ticket = await this.getTicketById(data);
 
       if (ticket) {
-        console.log('✅ Ticket created successfully:', ticket.id);
+        logger.info(ticket.id);
         this.clearCache('tickets');
 
         // Send notifications (async, don't block)
         this.sendTicketNotifications(ticket, 'created').catch((err) => {
-          console.error('❌ Failed to send ticket creation notifications:', err);
+          logger.error('❌ Failed to send ticket creation notifications:', err);
           Sentry.captureException(err);
         });
 
         // Check for auto-assignment
         this.checkAutoAssignment(ticket).catch((err) => {
-          console.error('❌ Auto-assignment failed:', err);
+          logger.error('❌ Auto-assignment failed:', err);
           Sentry.captureException(err);
         });
       }
 
       return ticket;
     } catch (error) {
-      console.error('❌ Exception in createTicket:', error);
+      logger.error('❌ Exception in createTicket:', error);
       Sentry.captureException(error);
       return null;
     }
@@ -346,7 +347,7 @@ class UnifiedSupportEngine {
       const cached = this.getFromCache<SupportRecord>(cacheKey);
       if (cached) return cached;
 
-      console.log('🔍 Fetching ticket by ID:', ticketId);
+      logger.debug(ticketId);
 
       const { data, error } = await supabase
         .from('support_system')
@@ -372,17 +373,17 @@ class UnifiedSupportEngine {
         .single();
 
       if (error) {
-        console.error('❌ Error fetching ticket:', error);
+        logger.error('❌ Error fetching ticket:', error);
         return null;
       }
 
       const ticket = data as SupportRecord;
       this.setCache(cacheKey, ticket);
 
-      console.log('✅ Ticket fetched successfully:', ticket.id);
+      logger.info(ticket.id);
       return ticket;
     } catch (error) {
-      console.error('❌ Exception in getTicketById:', error);
+      logger.error('❌ Exception in getTicketById:', error);
       Sentry.captureException(error);
       return null;
     }
@@ -448,18 +449,18 @@ class UnifiedSupportEngine {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ Error fetching tickets:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
+        logger.error('❌ Error fetching tickets:', error);
+        logger.error('Error details:', JSON.stringify(error, null, 2));
         return [];
       }
 
       const tickets = data as SupportRecord[];
       this.setCache(cacheKey, tickets);
 
-      console.log(`✅ Fetched ${tickets.length} tickets`);
+      logger.info();
       return tickets;
     } catch (error) {
-      console.error('❌ Exception in getTickets:', error);
+      logger.error('❌ Exception in getTickets:', error);
       Sentry.captureException(error);
       return [];
     }
@@ -496,7 +497,7 @@ class UnifiedSupportEngine {
       // Validate status transition
       if (!this.isValidTransition(currentStatus, newStatus)) {
         const allowedTransitions = this.getAllowedTransitions(currentStatus);
-        console.warn(
+        logger.warn(
           `❌ Invalid status transition: ${currentStatus} → ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`,
         );
         throw new Error(
@@ -504,7 +505,7 @@ class UnifiedSupportEngine {
         );
       }
 
-      console.log(`✅ Valid status transition: ${currentStatus} → ${newStatus}`);
+      logger.info();
 
       // Use the database function for status update
       const { data, error } = await supabase.rpc('update_support_ticket_status', {
@@ -515,11 +516,11 @@ class UnifiedSupportEngine {
       });
 
       if (error) {
-        console.error('❌ Error updating ticket status:', error);
+        logger.error('❌ Error updating ticket status:', error);
         return false;
       }
 
-      console.log('✅ Ticket status updated successfully');
+      logger.info();
       this.clearCache('tickets');
 
       // Update SLA tracking
@@ -532,14 +533,14 @@ class UnifiedSupportEngine {
           new_status: newStatus,
           reason,
         }).catch((err) => {
-          console.error('❌ Failed to send status update notifications:', err);
+          logger.error('❌ Failed to send status update notifications:', err);
           Sentry.captureException(err);
         });
       }
 
       return true;
     } catch (error) {
-      console.error('❌ Exception in updateTicketStatus:', error);
+      logger.error('❌ Exception in updateTicketStatus:', error);
       Sentry.captureException(error);
       return false;
     }
@@ -576,7 +577,7 @@ class UnifiedSupportEngine {
       });
 
       if (error) {
-        console.error('❌ Error adding interaction:', error);
+        logger.error('❌ Error adding interaction:', error);
         return null;
       }
 
@@ -588,11 +589,11 @@ class UnifiedSupportEngine {
         .single();
 
       if (fetchError) {
-        console.error('❌ Error fetching interaction:', fetchError);
+        logger.error('❌ Error fetching interaction:', fetchError);
         return null;
       }
 
-      console.log('✅ Interaction added successfully:', interaction.id);
+      logger.info(interaction.id);
       this.clearCache('interactions');
 
       // Handle first response SLA
@@ -624,14 +625,14 @@ class UnifiedSupportEngine {
           interaction: interaction,
           is_customer_reply: ticket.user_id === user.id,
         }).catch((err) => {
-          console.error('❌ Failed to send reply notifications:', err);
+          logger.error('❌ Failed to send reply notifications:', err);
           Sentry.captureException(err);
         });
       }
 
       return interaction as SupportInteraction;
     } catch (error) {
-      console.error('❌ Exception in addInteraction:', error);
+      logger.error('❌ Exception in addInteraction:', error);
       Sentry.captureException(error);
       return null;
     }
@@ -655,17 +656,17 @@ class UnifiedSupportEngine {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('❌ Error fetching interactions:', error);
+        logger.error('❌ Error fetching interactions:', error);
         return [];
       }
 
       const interactions = data as SupportInteraction[];
       this.setCache(cacheKey, interactions);
 
-      console.log(`✅ Fetched ${interactions.length} interactions`);
+      logger.info();
       return interactions;
     } catch (error) {
-      console.error('❌ Exception in getTicketInteractions:', error);
+      logger.error('❌ Exception in getTicketInteractions:', error);
       Sentry.captureException(error);
       return [];
     }
@@ -717,7 +718,7 @@ class UnifiedSupportEngine {
         })
         .eq('id', ticketId);
     } catch (error) {
-      console.error('❌ Error updating SLA tracking:', error);
+      logger.error('❌ Error updating SLA tracking:', error);
       Sentry.captureException(error);
     }
   }
@@ -761,7 +762,7 @@ class UnifiedSupportEngine {
           .eq('id', ticketId);
       }
     } catch (error) {
-      console.error('❌ Error handling first response:', error);
+      logger.error('❌ Error handling first response:', error);
       Sentry.captureException(error);
     }
   }
@@ -775,7 +776,7 @@ class UnifiedSupportEngine {
     breachDuration: number,
   ): Promise<void> {
     try {
-      console.log(`⚠️ SLA breach detected: ${breachType} for ticket ${ticketId}`);
+      logger.warn();
 
       // Create a breach record in the unified system
       const {
@@ -801,12 +802,12 @@ class UnifiedSupportEngine {
           breach_type: breachType,
           breach_duration: breachDuration,
         }).catch((err) => {
-          console.error('❌ Failed to send SLA breach notifications:', err);
+          logger.error('❌ Failed to send SLA breach notifications:', err);
           Sentry.captureException(err);
         });
       }
     } catch (error) {
-      console.error('❌ Error logging SLA breach:', error);
+      logger.error('❌ Error logging SLA breach:', error);
       Sentry.captureException(error);
     }
   }
@@ -831,10 +832,10 @@ class UnifiedSupportEngine {
           'Automatically reopened - customer provided response',
         );
 
-        console.log('✅ Ticket automatically transitioned from pending to open');
+        logger.info();
       }
     } catch (error) {
-      console.error('❌ Error handling customer reply:', error);
+      logger.error('❌ Error handling customer reply:', error);
       // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
     }
   }
@@ -862,10 +863,10 @@ class UnifiedSupportEngine {
           `Automatically moved to in progress - agent provided response`,
         );
 
-        console.log('✅ Ticket automatically transitioned to in_progress');
+        logger.info();
       }
     } catch (error) {
-      console.error('❌ Error handling agent reply:', error);
+      logger.error('❌ Error handling agent reply:', error);
       // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
     }
   }
@@ -891,7 +892,7 @@ class UnifiedSupportEngine {
         .eq('is_active', true);
 
       if (error) {
-        console.error('❌ Error fetching assignment rules:', error);
+        logger.error('❌ Error fetching assignment rules:', error);
         return;
       }
 
@@ -943,7 +944,7 @@ class UnifiedSupportEngine {
         }
       }
     } catch (error) {
-      console.error('❌ Error in auto-assignment:', error);
+      logger.error('❌ Error in auto-assignment:', error);
       Sentry.captureException(error);
     }
   }
@@ -978,7 +979,7 @@ class UnifiedSupportEngine {
         .eq('id', ticketId);
 
       if (error) {
-        console.error('❌ Error assigning ticket:', error);
+        logger.error('❌ Error assigning ticket:', error);
         return false;
       }
 
@@ -1000,11 +1001,11 @@ class UnifiedSupportEngine {
         );
       }
 
-      console.log('✅ Ticket assigned successfully');
+      logger.info();
       this.clearCache('tickets');
       return true;
     } catch (error) {
-      console.error('❌ Exception in assignTicket:', error);
+      logger.error('❌ Exception in assignTicket:', error);
       Sentry.captureException(error);
       return false;
     }
@@ -1037,7 +1038,7 @@ class UnifiedSupportEngine {
 
       // Add more notification channels as needed (SMS, in-app, etc.)
     } catch (error) {
-      console.error('❌ Error sending notifications:', error);
+      logger.error('❌ Error sending notifications:', error);
       Sentry.captureException(error);
     }
   }
@@ -1056,7 +1057,7 @@ class UnifiedSupportEngine {
       // Convert SupportRecord to TicketWithDetails format
       const ticketWithDetails = await this.convertToTicketWithDetails(ticket);
       if (!ticketWithDetails) {
-        console.warn('⚠️ Could not convert ticket for notification:', ticket.id);
+        logger.warn('⚠️ Could not convert ticket for notification:', ticket.id);
         return;
       }
 
@@ -1085,9 +1086,9 @@ class UnifiedSupportEngine {
         additionalData,
       );
 
-      console.log('✅ Enhanced ticket email notification sent successfully');
+      logger.info();
     } catch (error) {
-      console.error('❌ Failed to send enhanced ticket email notification:', error);
+      logger.error('❌ Failed to send enhanced ticket email notification:', error);
       // Don't throw - email failures shouldn't break the ticket system
     }
   }
@@ -1129,7 +1130,7 @@ class UnifiedSupportEngine {
 
       return ticketWithDetails;
     } catch (error) {
-      console.error('❌ Error converting ticket for notifications:', error);
+      logger.error('❌ Error converting ticket for notifications:', error);
       return null;
     }
   }
@@ -1329,7 +1330,7 @@ class UnifiedSupportEngine {
 
       return { ...defaultPrefs, ...data.notification_prefs };
     } catch (error) {
-      console.error('❌ Error fetching notification preferences:', error);
+      logger.error('❌ Error fetching notification preferences:', error);
       return defaultPrefs;
     }
   }
@@ -1364,7 +1365,7 @@ class UnifiedSupportEngine {
         .eq('system_type', 'ticket');
 
       if (error) {
-        console.error('❌ Error fetching ticket stats:', error);
+        logger.error('❌ Error fetching ticket stats:', error);
         return {
           total: 0,
           open: 0,
@@ -1419,10 +1420,10 @@ class UnifiedSupportEngine {
         tickets.length > 0 ? (slaCompliantTickets / tickets.length) * 100 : 100;
 
       this.setCache(cacheKey, stats);
-      console.log('✅ Ticket stats calculated:', stats);
+      logger.info(stats);
       return stats;
     } catch (error) {
-      console.error('❌ Exception in getTicketStats:', error);
+      logger.error('❌ Exception in getTicketStats:', error);
       Sentry.captureException(error);
       return {
         total: 0,
