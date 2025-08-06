@@ -43,7 +43,8 @@ import {
   Mail,
   CheckCircle,
   EyeOff,
-  Settings
+  Settings,
+  Scale
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
@@ -3145,7 +3146,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="mt-4 p-4 rounded-lg border border-blue-100 bg-blue-50/30">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-sm">📦</span>
+                          <Scale className="w-3 h-3 text-blue-600" />
                         </div>
                         <h6 className="text-sm font-semibold text-blue-900">Shipping Weight Calculation</h6>
                       </div>

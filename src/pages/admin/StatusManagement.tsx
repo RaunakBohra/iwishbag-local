@@ -122,7 +122,6 @@ export default function StatusManagement() {
   const [localQuoteStatuses, setLocalQuoteStatuses] = useState<StatusConfig[]>([]);
   const [localOrderStatuses, setLocalOrderStatuses] = useState<StatusConfig[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { quoteStatuses, orderStatuses, isLoading, error, saveStatusSettings, refreshData } =
     useStatusManagement();
@@ -205,38 +204,10 @@ export default function StatusManagement() {
       setEditingStatus((prev) => (prev ? { ...prev, ...updates } : null));
     }
 
-    // Clear existing timeout
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-
-    // Set new timeout for auto-save
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const updatedQuoteStatuses =
-          category === 'quote'
-            ? localQuoteStatuses.map((s) => (s.id === statusId ? { ...s, ...updates } : s))
-            : localQuoteStatuses;
-        const updatedOrderStatuses =
-          category === 'order'
-            ? localOrderStatuses.map((s) => (s.id === statusId ? { ...s, ...updates } : s))
-            : localOrderStatuses;
-
-        await saveStatusSettings(updatedQuoteStatuses, updatedOrderStatuses);
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-      }
-    }, 2000); // 2 second debounce
+    // Auto-save functionality removed - changes are only saved when user clicks save button
   };
 
-  // Cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Auto-save functionality completely removed - only manual saves allowed
 
   const deleteStatus = (statusId: string, category: 'quote' | 'order') => {
     if (category === 'quote') {
@@ -249,23 +220,34 @@ export default function StatusManagement() {
   const moveStatus = (statusId: string, direction: 'up' | 'down', category: 'quote' | 'order') => {
     const statuses = category === 'quote' ? localQuoteStatuses : localOrderStatuses;
     const index = statuses.findIndex((s) => s.id === statusId);
+    
+    if (index === -1) return;
 
+    let newStatuses = [...statuses];
+    
     if (direction === 'up' && index > 0) {
-      const newStatuses = [...statuses];
+      // Swap with previous item
       [newStatuses[index], newStatuses[index - 1]] = [newStatuses[index - 1], newStatuses[index]];
-      if (category === 'quote') {
-        setLocalQuoteStatuses(newStatuses);
-      } else {
-        setLocalOrderStatuses(newStatuses);
-      }
+      
+      // Update order values
+      newStatuses[index].order = index + 1;
+      newStatuses[index - 1].order = index;
     } else if (direction === 'down' && index < statuses.length - 1) {
-      const newStatuses = [...statuses];
+      // Swap with next item
       [newStatuses[index], newStatuses[index + 1]] = [newStatuses[index + 1], newStatuses[index]];
-      if (category === 'quote') {
-        setLocalQuoteStatuses(newStatuses);
-      } else {
-        setLocalOrderStatuses(newStatuses);
-      }
+      
+      // Update order values
+      newStatuses[index].order = index + 1;
+      newStatuses[index + 1].order = index + 2;
+    } else {
+      return; // No movement possible
+    }
+    
+    // Update the state with reordered statuses
+    if (category === 'quote') {
+      setLocalQuoteStatuses(newStatuses);
+    } else {
+      setLocalOrderStatuses(newStatuses);
     }
   };
 
@@ -491,8 +473,12 @@ export default function StatusManagement() {
                 size="sm"
                 variant="outline"
                 onClick={() => moveStatus(status.id, 'up', category)}
-                disabled={status.order === 1}
-                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+                disabled={
+                  (category === 'quote' ? localQuoteStatuses : localOrderStatuses)
+                    .sort((a, b) => a.order - b.order)
+                    .findIndex(s => s.id === status.id) === 0
+                }
+                className="text-gray-700 border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowUp className="h-3 w-3" />
               </Button>
@@ -501,10 +487,12 @@ export default function StatusManagement() {
                 variant="outline"
                 onClick={() => moveStatus(status.id, 'down', category)}
                 disabled={
-                  status.order ===
-                  (category === 'quote' ? localQuoteStatuses.length : localOrderStatuses.length)
+                  (category === 'quote' ? localQuoteStatuses : localOrderStatuses)
+                    .sort((a, b) => a.order - b.order)
+                    .findIndex(s => s.id === status.id) === 
+                  (category === 'quote' ? localQuoteStatuses.length - 1 : localOrderStatuses.length - 1)
                 }
-                className="text-gray-700 border-gray-300 hover:bg-gray-50"
+                className="text-gray-700 border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowDown className="h-3 w-3" />
               </Button>
@@ -1360,12 +1348,12 @@ export default function StatusManagement() {
           </TabsContent>
         </Tabs>
 
-        {/* Auto-save indicator */}
-        <div className="mt-8 p-4 bg-teal-50 rounded-lg border border-teal-200">
+        {/* Manual save reminder */}
+        <div className="mt-8 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <div className="flex items-center">
-            <Zap className="h-4 w-4 text-teal-600 mr-2" />
-            <span className="text-sm text-teal-800">
-              Changes are auto-saved after 2 seconds. Use "Save All Changes" to save immediately.
+            <Save className="h-4 w-4 text-amber-600 mr-2" />
+            <span className="text-sm text-amber-800">
+              Remember to click "Save All Changes" to save your modifications.
             </span>
           </div>
         </div>

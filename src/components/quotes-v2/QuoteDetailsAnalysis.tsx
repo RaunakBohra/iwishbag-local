@@ -128,9 +128,28 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: Scale,
       title: 'Weight',
-      value: `${inputs.total_weight_kg || 0} kg`,
-      subtitle: `${inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg bill`,
-      color: 'text-purple-600'
+      value: (() => {
+        const totalActual = inputs.total_weight_kg || 0;
+        const totalVolumetric = inputs.total_volumetric_weight_kg || 0;
+        const totalChargeable = inputs.total_chargeable_weight_kg || totalActual;
+        
+        if (totalVolumetric > totalActual) {
+          return `${totalChargeable} kg (Vol)`;
+        }
+        return `${totalChargeable} kg`;
+      })(),
+      subtitle: (() => {
+        const totalActual = inputs.total_weight_kg || 0;
+        const totalVolumetric = inputs.total_volumetric_weight_kg || 0;
+        
+        if (totalVolumetric > totalActual) {
+          return `Volumetric: ${totalVolumetric}kg > Actual: ${totalActual}kg`;
+        } else if (totalVolumetric > 0) {
+          return `Actual: ${totalActual}kg > Volumetric: ${totalVolumetric}kg`;
+        }
+        return `Actual weight: ${totalActual}kg`;
+      })(),
+      color: (inputs.total_volumetric_weight_kg || 0) > (inputs.total_weight_kg || 0) ? 'text-orange-600' : 'text-purple-600'
     },
     // Row 2: Costs & Final Totals
     {
@@ -271,10 +290,36 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
                       {/* Weight */}
                       <div className="col-span-2 text-right">
-                        <span className="text-sm">{itemWeight} kg</span>
-                        {item.volumetric_weight_kg && item.volumetric_weight_kg > itemWeight && (
-                          <Badge variant="outline" className="ml-1 text-xs">Vol</Badge>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                          {/* Main weight display */}
+                          <div className="flex items-center gap-1">
+                            {item.volumetric_weight_kg && item.volumetric_weight_kg > itemWeight ? (
+                              <>
+                                <span className="text-sm font-medium text-orange-600">{item.volumetric_weight_kg} kg</span>
+                                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                                  Vol
+                                </Badge>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm">{itemWeight} kg</span>
+                                {item.volumetric_weight_kg && (
+                                  <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
+                                    Act
+                                  </Badge>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {/* Secondary weight info */}
+                          {item.volumetric_weight_kg && item.volumetric_weight_kg !== itemWeight && (
+                            <span className="text-xs text-gray-500">
+                              {item.volumetric_weight_kg > itemWeight 
+                                ? `Act: ${itemWeight}kg` 
+                                : `Vol: ${item.volumetric_weight_kg}kg`}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Subtotal */}
@@ -301,16 +346,18 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   {/* Expanded Item Details */}
                   {isExpanded && (
                     <div className="px-4 py-3 bg-gray-50 border-t">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="space-y-3 text-sm">
+                        {/* URL gets full width */}
                         {item.url && (
                           <div>
-                            <span className="text-gray-500 font-medium">Product URL</span>
-                            <p className="truncate">
+                            <span className="text-gray-500 font-medium block mb-1">Product URL</span>
+                            <p className="break-words overflow-hidden">
                               <a 
                                 href={item.url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
+                                className="text-blue-600 hover:underline text-sm"
+                                title={item.url}
                               >
                                 {item.url}
                               </a>
@@ -318,29 +365,32 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           </div>
                         )}
                         
-                        {item.category && (
-                          <div>
-                            <span className="text-gray-500 font-medium">Category</span>
-                            <p>{item.category}</p>
-                          </div>
-                        )}
-                        
-                        {item.hsn_code && (
-                          <div>
-                            <span className="text-gray-500 font-medium">HSN Code</span>
-                            <p className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" />
-                              {item.hsn_code}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {(item.notes || item.customer_notes) && (
-                          <div>
-                            <span className="text-gray-500 font-medium">Notes</span>
-                            <p>{item.notes || item.customer_notes}</p>
-                          </div>
-                        )}
+                        {/* Other fields in a grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {item.category && (
+                            <div>
+                              <span className="text-gray-500 font-medium">Category</span>
+                              <p>{item.category}</p>
+                            </div>
+                          )}
+                          
+                          {item.hsn_code && (
+                            <div>
+                              <span className="text-gray-500 font-medium">HSN Code</span>
+                              <p className="flex items-center gap-1">
+                                <Tag className="w-3 h-3" />
+                                {item.hsn_code}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {(item.notes || item.customer_notes) && (
+                            <div>
+                              <span className="text-gray-500 font-medium">Notes</span>
+                              <p>{item.notes || item.customer_notes}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -396,29 +446,68 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                 </div>
               </div>
 
-              {/* Weight Analysis */}
+              {/* Enhanced Weight Analysis */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-700 flex items-center gap-2">
                   <Scale className="w-4 h-4" />
                   Weight Analysis
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Total Physical Weight:</span>
-                    <span>{inputs.total_weight_kg || 0} kg</span>
-                  </div>
-                  {inputs.total_volumetric_weight_kg && (
-                    <div className="flex justify-between">
-                      <span>Total Volumetric Weight:</span>
-                      <span>{inputs.total_volumetric_weight_kg} kg</span>
+                <div className="space-y-3">
+                  {/* Weight Comparison */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-100 rounded-lg p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-xs font-medium text-gray-600">Actual Weight</span>
+                      </div>
+                      <span className="text-sm font-bold">{inputs.total_weight_kg || 0} kg</span>
                     </div>
-                  )}
-                  <div className="flex justify-between font-medium">
-                    <span>Chargeable Weight:</span>
-                    <span>{inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg</span>
+                    
+                    {inputs.total_volumetric_weight_kg ? (
+                      <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-medium text-orange-600">Volumetric Weight</span>
+                        </div>
+                        <span className="text-sm font-bold text-orange-700">{inputs.total_volumetric_weight_kg} kg</span>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-medium text-gray-400">Volumetric Weight</span>
+                        </div>
+                        <span className="text-sm text-gray-400">Not calculated</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    Chargeable weight is the higher of physical and volumetric weight
+
+                  {/* Chargeable Weight Result */}
+                  <div className={`rounded-lg p-3 border-2 ${
+                    inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > (inputs.total_weight_kg || 0)
+                      ? 'bg-orange-50 border-orange-200'
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${
+                          inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > (inputs.total_weight_kg || 0)
+                            ? 'text-orange-700'
+                            : 'text-blue-700'
+                        }`}>
+                          Chargeable Weight:
+                        </span>
+                      </div>
+                      <span className={`text-lg font-bold ${
+                        inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > (inputs.total_weight_kg || 0)
+                          ? 'text-orange-800'
+                          : 'text-blue-800'
+                      }`}>
+                        {inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > (inputs.total_weight_kg || 0)
+                        ? 'Using volumetric weight for shipping calculation (higher than actual)'
+                        : 'Using actual weight for shipping calculation'}
+                    </div>
                   </div>
                 </div>
               </div>
