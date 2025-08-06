@@ -29,6 +29,8 @@ interface MobileStickyBarProps {
   onReject: () => void;
   formatCurrency: (amount: number, currency: string) => string;
   adjustedTotal?: number;
+  displayCurrency?: string;
+  convertedTotal?: string;
 }
 
 export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
@@ -37,7 +39,9 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
   onRequestChanges,
   onReject,
   formatCurrency,
-  adjustedTotal
+  adjustedTotal,
+  displayCurrency,
+  convertedTotal
 }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl p-4 z-50 md:hidden">
@@ -45,14 +49,14 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
         {/* Price Summary */}
         <div className="text-center">
           <div className="text-2xl font-bold">
-            {formatCurrency(adjustedTotal || quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+            {convertedTotal || formatCurrency(adjustedTotal || quote.total_customer_currency || quote.total_usd, displayCurrency || quote.customer_currency)}
           </div>
-          {adjustedTotal && adjustedTotal !== (quote.total_customer_currency || quote.total_usd) && (
-            <div className="text-sm text-muted-foreground line-through">
-              Was: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+          {displayCurrency && displayCurrency !== quote.customer_currency && (
+            <div className="text-sm text-muted-foreground">
+              Original: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
             </div>
           )}
-          {quote.customer_currency !== 'USD' && (
+          {(displayCurrency || quote.customer_currency) !== 'USD' && (
             <div className="text-sm text-muted-foreground">
               ≈ {formatCurrency(adjustedTotal || quote.total_usd, 'USD')}
             </div>

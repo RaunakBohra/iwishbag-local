@@ -192,11 +192,35 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   // State to hold converted amounts for display
   const [convertedAmounts, setConvertedAmounts] = useState<{
     total: string;
+    totalNumeric: number;
     itemsConverted: boolean;
   }>({
     total: '',
+    totalNumeric: 0,
     itemsConverted: false
   });
+
+  // Helper function to format individual item quote price in display currency
+  const formatItemQuotePrice = useCallback(async (item: any, items: any[]) => {
+    try {
+      const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
+      const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
+      const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
+      
+      if (quote.customer_currency === displayCurrency) {
+        return formatCurrency(itemQuotePrice, displayCurrency);
+      }
+      
+      const convertedPrice = await convertCurrency(itemQuotePrice, quote.customer_currency || 'USD', displayCurrency);
+      return formatCurrency(convertedPrice, displayCurrency);
+    } catch (error) {
+      console.warn('Failed to convert item quote price:', error);
+      const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
+      const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
+      const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
+      return formatCurrency(itemQuotePrice, quote.customer_currency || 'USD');
+    }
+  }, [quote, displayCurrency, convertCurrency]);
 
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
@@ -235,6 +259,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         if (quoteCurrency === displayCurrency) {
           setConvertedAmounts({
             total: formatCurrency(quoteTotal, displayCurrency),
+            totalNumeric: quoteTotal,
             itemsConverted: true
           });
           return;
@@ -243,13 +268,16 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         const convertedTotal = await convertCurrency(quoteTotal, quoteCurrency, displayCurrency);
         setConvertedAmounts({
           total: formatCurrency(convertedTotal, displayCurrency),
+          totalNumeric: convertedTotal,
           itemsConverted: true
         });
       } catch (error) {
         console.warn('Failed to convert currency amounts:', error);
         // Fallback to original currency
+        const fallbackTotal = quote.total_customer_currency || quote.total_usd;
         setConvertedAmounts({
-          total: formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency || 'USD'),
+          total: formatCurrency(fallbackTotal, quote.customer_currency || 'USD'),
+          totalNumeric: fallbackTotal,
           itemsConverted: false
         });
       }
@@ -872,7 +900,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         <span className="font-medium">
                           Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
                           <span className="text-blue-700 ml-2">
-                            → {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                            → {convertedAmounts.total || formatCurrency(quote.total_customer_currency || quote.total_usd, displayCurrency)}
                           </span>
                         </span>
                       </div>
@@ -950,15 +978,27 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <span className="font-medium">
                             {formatCurrency(item.costprice_origin, quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
                             {(() => {
-                              // Calculate proportional quote price for this item
+                              // Calculate proportional quote price for this item using converted total
                               const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
                               const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
-                              const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
-                              return (
-                                <span className="text-blue-700 ml-2">
-                                  → {formatCurrency(itemQuotePrice, quote.customer_currency)}
-                                </span>
-                              );
+                              
+                              // Use converted total numeric value for accurate calculations
+                              if (convertedAmounts.totalNumeric > 0) {
+                                const itemQuotePrice = convertedAmounts.totalNumeric * itemProportion;
+                                return (
+                                  <span className="text-blue-700 ml-2">
+                                    → {formatCurrency(itemQuotePrice, displayCurrency)}
+                                  </span>
+                                );
+                              } else {
+                                // Fallback to original currency
+                                const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
+                                return (
+                                  <span className="text-blue-700 ml-2">
+                                    → {formatCurrency(itemQuotePrice, quote.customer_currency)}
+                                  </span>
+                                );
+                              }
                             })()}
                           </span>
                         </div>
@@ -1047,9 +1087,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                                     {adjustmentCost === 0 ? (
                                       <span className="text-green-600">FREE</span>
                                     ) : adjustmentCost > 0 ? (
-                                      <span>+{formatCurrency(adjustmentCost, quote.customer_currency)}</span>
+                                      <span>+{formatCurrency(adjustmentCost, displayCurrency)}</span>
                                     ) : (
-                                      <span className="text-green-600">-{formatCurrency(Math.abs(adjustmentCost), quote.customer_currency)}</span>
+                                      <span className="text-green-600">-{formatCurrency(Math.abs(adjustmentCost), displayCurrency)}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1091,17 +1131,17 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
                     <div className="text-3xl font-bold">
-                      {formatCurrency(
+                      {convertedAmounts.total || formatCurrency(
                         quoteOptions.adjustedTotal || quote.total_customer_currency || quote.total_usd, 
-                        quote.customer_currency
+                        displayCurrency
                       )}
                     </div>
-                    {(quoteOptions.adjustedTotal && quoteOptions.adjustedTotal !== (quote.total_customer_currency || quote.total_usd)) && (
-                      <div className="text-sm text-muted-foreground line-through">
+                    {displayCurrency !== quote.customer_currency && (
+                      <div className="text-sm text-muted-foreground">
                         Original: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
                       </div>
                     )}
-                    {quote.customer_currency !== 'USD' && (
+                    {displayCurrency !== 'USD' && (
                       <div className="text-sm text-muted-foreground">
                         ≈ {formatCurrency(quoteOptions.adjustedTotal || quote.total_usd, 'USD')}
                       </div>
@@ -1165,7 +1205,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           </div>
                           {insuranceEnabled && (
                             <div className="text-xs text-green-600 font-medium">
-                              +{formatCurrency(breakdown.insurance || 0, quote.customer_currency)}
+                              +{formatCurrency(breakdown.insurance || 0, displayCurrency)}
                             </div>
                           )}
                         </div>
@@ -1230,7 +1270,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             <span className="text-xs text-green-600 font-medium">
                               {(() => {
                                 const appliedCoupon = availableCoupons.find(c => c.code === discountCode);
-                                return appliedCoupon ? `Save ${formatCurrency(appliedCoupon.savings, quote.customer_currency)}` : '';
+                                return appliedCoupon ? `Save ${formatCurrency(appliedCoupon.savings, displayCurrency)}` : '';
                               })()}
                             </span>
                           </div>
@@ -1560,7 +1600,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                               {coupon.code}
                             </code>
                             <span className="text-sm font-medium text-green-600">
-                              Save {formatCurrency(coupon.savings, quote.customer_currency)}
+                              Save {formatCurrency(coupon.savings, displayCurrency)}
                             </span>
                           </div>
                         </div>
@@ -1613,6 +1653,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         onReject={() => setRejectModalOpen(true)}
         formatCurrency={formatCurrency}
         adjustedTotal={quoteOptions.adjustedTotal}
+        displayCurrency={displayCurrency}
+        convertedTotal={convertedAmounts.total}
       />
     </div>
   );
