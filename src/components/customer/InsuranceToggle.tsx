@@ -38,21 +38,30 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
 
   // Calculate insurance cost (match backend RPC function exactly)
   const calculateInsuranceCost = (): number => {
-    if (!routeInsuranceConfig || !routeInsuranceConfig.available) {
-      // Fallback to match backend: 1.5% of total, min 2.00
-      return Math.max(2, totalAmount * 0.015); // 1.5% like backend
+    // Backend RPC formula: GREATEST(v_coverage_amount * 1.5 / 100, 2) in origin currency
+    // Calculate in USD first, then convert to origin currency like backend
+    const insuranceUSD = Math.max(2, totalAmount * 0.015); // 1.5% like backend
+    
+    // Convert to origin currency using exchange rate (like backend does)
+    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
+    const originCurrency = quote.origin_country === 'US' ? 'USD' : 
+                          quote.origin_country === 'IN' ? 'INR' :
+                          quote.origin_country === 'NP' ? 'NPR' : 'USD';
+    
+    if (originCurrency === 'USD') {
+      return insuranceUSD;
+    } else {
+      // Convert from USD to origin currency
+      return insuranceUSD * exchangeRate;
     }
-
-    const coveragePercentage = routeInsuranceConfig.coverage_percentage || 1.5;
-    const calculatedCost = totalAmount * (coveragePercentage / 100);
-    const minFee = routeInsuranceConfig.min_fee || 2; // Match backend default of 2
-    const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
-
-    return Math.max(minFee, Math.min(maxCoverage, calculatedCost));
   };
 
   const insuranceCost = calculateInsuranceCost();
-  const currencySymbol = currencyService.getCurrencySymbol(quote.currency);
+  // Use origin currency like backend RPC function (not customer destination currency)
+  const originCurrency = quote.origin_country === 'US' ? 'USD' : 
+                         quote.origin_country === 'IN' ? 'INR' :
+                         quote.origin_country === 'NP' ? 'NPR' : 'USD';
+  const currencySymbol = currencyService.getCurrencySymbol(originCurrency);
 
   // Get insurance description
   const getInsuranceDescription = (): string => {
