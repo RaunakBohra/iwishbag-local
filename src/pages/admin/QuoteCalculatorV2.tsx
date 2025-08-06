@@ -2639,18 +2639,16 @@ const QuoteCalculatorV2: React.FC = () => {
           {/* Items - Each item as separate card */}
           {items.map((item, index) => (
             <Card key={item.id} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              {/* Clean Header */}
-              <CardHeader className="pb-3">
+              {/* Clean Professional Header */}
+              <CardHeader className="px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
                       {index + 1}
                     </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900">
-                        Item {index + 1}
-                      </h4>
-                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      Item {index + 1}
+                    </h4>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2732,17 +2730,16 @@ const QuoteCalculatorV2: React.FC = () => {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* Product Input Section */}
-                <div className="space-y-3">
-                  <div>
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-700">Product URL</Label>
-                    </div>
-                    <EditableUrlInput
-                      value={item.url}
-                      onChange={(value) => updateItem(item.id, 'url', value)}
-                      placeholder="https://www.amazon.com/product-link or any international store"
+              <CardContent className="p-6 space-y-5">
+                {/* Product URL Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Product URL
+                  </Label>
+                  <EditableUrlInput
+                    value={item.url}
+                    onChange={(value) => updateItem(item.id, 'url', value)}
+                    placeholder="https://www.amazon.com/product-link or any international store"
                       showFetchButton={true}
                       onDataFetched={(data) => {
                               try {
@@ -2913,17 +2910,18 @@ const QuoteCalculatorV2: React.FC = () => {
                     />
                   </div>
                   
-                  <div>
-                    <div className="mb-2">
-                      <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
-                    </div>
-                    <Input
-                      value={item.name}
-                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                      placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                      className="text-base font-medium"
-                    />
-                  </div>
+                {/* Product Name Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Product Name *
+                  </Label>
+                  <Input
+                    value={item.name}
+                    onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                    placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                    className="h-10 text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
 
                   {/* Product Images Section */}
                   {item.images && item.images.length > 0 && (
@@ -2970,66 +2968,65 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     </div>
                   )}
-                </div>
 
-                {/* Compact Single-Line Layout: Price | Quantity | Weight | HSN */}
-                <div className="grid gap-3 p-3 bg-gray-50/50 rounded-lg border" style={{gridTemplateColumns: '20% 15% 25% 40%'}}>
-                  {/* Price */}
-                  <div className="space-y-1">
-                    <div className="text-center">
-                      <div className="text-md font-semibold text-gray-900">
-                        {currencySymbol}{item.unit_price_usd?.toFixed(2) || '0.00'}
+                {/* Pricing & Details Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Pricing & Details
+                  </Label>
+                  <div className="grid grid-cols-[80px_1px_100px_1px_1fr_1px_2fr] gap-4 p-4 bg-gray-50/50 rounded-lg border border-gray-200">
+                    {/* Quantity Column - FIRST for better UX flow */}
+                    <div className="space-y-2">
+                      <div className="text-center">
+                        <div className="text-xs text-gray-500 font-medium">Quantity</div>
                       </div>
-                      <div className="text-xs text-gray-500">Price</div>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.unit_price_usd || ''}
-                      onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
-                      placeholder="25.99"
-                      className="h-7 text-center text-sm font-medium"
-                    />
-                  </div>
 
-                  {/* Quantity */}
-                  <div className="space-y-1">
-                    <div className="text-center">
-                      <div className="text-md font-semibold text-gray-900">
-                        {item.quantity || 1}
-                      </div>
-                      <div className="text-xs text-gray-500">Qty</div>
-                    </div>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                      className="h-7 text-center text-sm font-medium"
-                    />
-                  </div>
+                    {/* Separator */}
+                    <div className="w-px bg-gray-300 self-stretch"></div>
 
-                  {/* Weight with AI + Dimensions */}
-                  <div className="space-y-1">
-                    <div className="text-center">
-                      <div className="text-md font-semibold text-gray-900">
-                        {item.weight_kg?.toFixed(2) || '0.00'}
-                        <span className="text-xs text-gray-500 ml-1">{weightUnit}</span>
+                    {/* Price Column - SECOND */}
+                    <div className="space-y-2">
+                      <div className="text-center">
+                        <div className="text-xs text-gray-500 font-medium">Price</div>
                       </div>
-                      <div className="text-xs text-gray-500">Weight</div>
-                    </div>
-                    <div className="flex items-center gap-1">
                       <Input
                         type="number"
                         min="0"
-                        step="0.001"
-                        value={item.weight_kg || ''}
-                        onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
-                        placeholder="0.5"
-                        className="h-7 text-center text-sm font-medium flex-1"
+                        step="0.01"
+                        value={item.unit_price_usd || ''}
+                        onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                        placeholder="25.99"
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
-                      <Button
+                    </div>
+
+                    {/* Separator */}
+                    <div className="w-px bg-gray-300 self-stretch"></div>
+
+                    {/* Weight Column */}
+                    <div className="space-y-2">
+                      <div className="text-center">
+                        <div className="text-xs text-gray-500 font-medium">Weight</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          value={item.weight_kg || ''}
+                          onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
+                          placeholder="0.5"
+                          className="h-10 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                        <Button
                         type="button"
                         variant="outline"
                         size="sm"
@@ -3073,8 +3070,8 @@ const QuoteCalculatorV2: React.FC = () => {
                             }
                           }
                         }}
-                        className={`h-7 px-1 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 ${
-                          item.ai_weight_suggestion ? 'min-w-fit' : 'w-7 p-0'
+                        className={`h-10 px-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 ${
+                          item.ai_weight_suggestion ? 'min-w-fit' : 'w-10 p-0'
                         }`}
                         disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
                         title={item.ai_weight_suggestion 
@@ -3091,82 +3088,84 @@ const QuoteCalculatorV2: React.FC = () => {
                           )}
                         </div>
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setVolumetricModalOpen(item.id)}
-                        className="h-7 w-7 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
-                        title="Dimensions"
-                      >
-                        <Ruler className="w-3 h-3" />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setVolumetricModalOpen(item.id)}
+                          className="h-10 w-10 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
+                          title="Set Dimensions"
+                        >
+                          <Ruler className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                     
-                    {/* Compact dimensions display */}
+                    {/* Dimensions info when set */}
                     {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
-                      const { length, width, height, unit = 'cm' } = item.dimensions;
-                      let l = length, w = width, h = height;
-                      if (unit === 'in') {
-                        l *= 2.54; w *= 2.54; h *= 2.54;
-                      }
-                      const volume = l * w * h;
-                      const divisor = item.volumetric_divisor || 5000;
-                      const volumetricWeightPerItem = volume / divisor;
-                      const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                      const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                      const isVolumetric = volumetricWeight > actualWeight;
-                      
-                      return (
-                        <div className="mt-1 text-center">
-                          <div className="text-xs text-gray-500 leading-tight">
-                            {length}×{width}×{height}{unit}
-                          </div>
-                          <div className={`text-xs font-medium leading-tight ${
-                            isVolumetric ? 'text-orange-600' : 'text-gray-600'
-                          }`}>
-                            {Math.max(actualWeight, volumetricWeight).toFixed(1)}{weightUnit}
-                            {isVolumetric && ' (vol)'}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                          const { length, width, height, unit = 'cm' } = item.dimensions;
+                          let l = length, w = width, h = height;
+                          if (unit === 'in') {
+                            l *= 2.54; w *= 2.54; h *= 2.54;
+                          }
+                          const volume = l * w * h;
+                          const divisor = item.volumetric_divisor || 5000;
+                          const volumetricWeightPerItem = volume / divisor;
+                          const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                          const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                          const isVolumetric = volumetricWeight > actualWeight;
+                          
+                          return (
+                            <div className="mt-1 flex justify-center">
+                              <div 
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
+                                  isVolumetric 
+                                    ? 'bg-orange-50 text-orange-700 border-orange-200' 
+                                    : 'bg-gray-50 text-gray-600 border-gray-200'
+                                }`}
+                                title={`Dimensions: ${length}×${width}×${height} ${unit} | Volumetric: ${volumetricWeight.toFixed(1)}${weightUnit} | Actual: ${actualWeight.toFixed(1)}${weightUnit} | Using: ${Math.max(actualWeight, volumetricWeight).toFixed(1)}${weightUnit} ${isVolumetric ? '(volumetric)' : '(actual)'}`}
+                              >
+                                <span className="text-xs">{isVolumetric ? '📦' : '⚖️'}</span>
+                                <span>{Math.max(actualWeight, volumetricWeight).toFixed(1)}{weightUnit}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
-                  {/* HSN Classification */}
-                  <div className="space-y-1 min-w-0">
-                    <div className="text-center">
-                      <div className="text-md font-semibold text-blue-900 truncate" title={item.hsn_code || 'No HSN'}>
-                        {item.hsn_code || 'No HSN'}
+                    {/* Separator */}
+                    <div className="w-px bg-gray-300 self-stretch"></div>
+
+                    {/* HSN & Category Column */}
+                    <div className="space-y-2 min-w-0">
+                      <div className="text-center">
+                        <div className="text-xs text-gray-500 font-medium">HSN / Category</div>
                       </div>
-                      <div className="text-xs text-gray-500">HSN / Category</div>
-                    </div>
-                    <div className="w-full overflow-hidden">
-                      <CompactHSNSearch
-                        control={null}
-                        index={0}
-                        setValue={(name: string, value: any) => {
-                          if (name.includes('hsnCode') || name === 'hsnCode') {
-                            updateItem(item.id, 'hsn_code', value);
-                          }
-                          if (name.includes('category') || name === 'category') {
-                            updateItem(item.id, 'category', value);
-                          }
-                          if (name.includes('useHsnRates') || name === 'useHsnRates') {
-                            updateItem(item.id, 'use_hsn_rates', value);
-                          }
-                        }}
-                        currentValues={{
-                          hsnCode: item.hsn_code || '',
-                          category: item.category || '',
-                          useHsnRates: item.use_hsn_rates || false
-                        }}
-                        productName={item.name}
-                        productPrice={item.unit_price_usd}
-                        destinationCountry={destinationCountry}
-                        className="h-7 w-full"
-                      />
-                    </div>
+                      <div className="w-full overflow-hidden">
+                        <CompactHSNSearch
+                          control={null}
+                          index={0}
+                          setValue={(name: string, value: any) => {
+                            if (name.includes('hsnCode') || name === 'hsnCode') {
+                              updateItem(item.id, 'hsn_code', value);
+                            }
+                            if (name.includes('category') || name === 'category') {
+                              updateItem(item.id, 'category', value);
+                            }
+                            if (name.includes('useHsnRates') || name === 'useHsnRates') {
+                              updateItem(item.id, 'use_hsn_rates', value);
+                            }
+                          }}
+                          currentValues={{
+                            hsnCode: item.hsn_code || '',
+                            category: item.category || '',
+                            useHsnRates: item.use_hsn_rates || false
+                          }}
+                          productName={item.name}
+                          productPrice={item.unit_price_usd}
+                          destinationCountry={destinationCountry}
+                          className="h-10 w-full border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
                   </div>
                 </div>
 
@@ -3272,6 +3271,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
               </CardContent>
             </Card>
           ))}

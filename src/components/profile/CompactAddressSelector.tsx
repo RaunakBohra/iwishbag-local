@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ interface CompactAddressSelectorProps {
   onSelectAddress: (address: Tables<'delivery_addresses'>) => void;
   showAddButton?: boolean;
   className?: string;
+  autoSelectDefault?: boolean;
 }
 
 export function CompactAddressSelector({
@@ -24,6 +25,7 @@ export function CompactAddressSelector({
   onSelectAddress,
   showAddButton = true,
   className = '',
+  autoSelectDefault = true,
 }: CompactAddressSelectorProps) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,6 +60,15 @@ export function CompactAddressSelector({
     setEditingAddress(address);
     setDialogOpen(true);
   };
+
+  // Auto-select default address if no address is selected and autoSelectDefault is true
+  useEffect(() => {
+    if (autoSelectDefault && !selectedAddressId && addresses && addresses.length > 0) {
+      // Find default address or use the first one
+      const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0];
+      onSelectAddress(defaultAddress);
+    }
+  }, [addresses, selectedAddressId, autoSelectDefault, onSelectAddress]);
 
   if (isLoading) {
     return (

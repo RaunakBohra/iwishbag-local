@@ -8,7 +8,7 @@ import { StateProvinceService } from '@/services/StateProvinceService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, MoreVertical, MapPin, Phone, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, MapPin, Phone, CheckCircle, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddressForm } from './AddressForm';
 import { Tables } from '@/integrations/supabase/types';
@@ -35,13 +35,19 @@ const AddressCard = ({
   address,
   onEdit,
   onDelete,
+  onSetDefault,
   countries,
 }: {
   address: Tables<'delivery_addresses'>;
   onEdit: () => void;
   onDelete: () => void;
+  onSetDefault: (address: Tables<'delivery_addresses'>) => void;
   countries?: Array<{ code: string; name: string }>;
 }) => {
+  
+  const handleSetDefault = (addr: Tables<'delivery_addresses'>) => {
+    onSetDefault(addr);
+  };
   // Get country name from code
   const countryName = countries?.find(c => c.code === address.destination_country)?.name || address.destination_country;
   
@@ -52,24 +58,26 @@ const AddressCard = ({
   const isNepal = address.destination_country === 'NP';
   
   return (
-  <div className="border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors">
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
-            <MapPin className="h-4 w-4 text-teal-600" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Body className="font-semibold text-gray-900">{address.recipient_name}</Body>
-            {address.is_default && (
-              <Badge className="bg-green-50 text-green-700 border-green-200 text-xs">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Default
-              </Badge>
-            )}
-          </div>
-        </div>
-        <div className="space-y-1 ml-10">
+  <div className="border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors h-full flex flex-col w-full">
+    {/* Header with name */}
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+        <div className="w-2 h-2 rounded-full bg-teal-600"></div>
+      </div>
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Body className="font-semibold text-gray-900 truncate">{address.recipient_name}</Body>
+        {address.is_default && (
+          <Badge className="bg-green-50 text-green-700 border-green-200 text-xs flex-shrink-0">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Default
+          </Badge>
+        )}
+      </div>
+    </div>
+
+    {/* Address content - takes up remaining space */}
+    <div className="flex-1 mb-4">
+      <div className="space-y-1">
           {isNepal ? (
             <>
               {/* Nepal address format: Street → Ward → Municipality → District → Province */}
@@ -150,32 +158,42 @@ const AddressCard = ({
               {address.phone}
             </BodySmall>
           )}
-        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onEdit}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-        >
-          <Edit className="h-4 w-4 mr-1" />
-          Edit
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="p-2">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Delete</span>
+    </div>
+
+    {/* Actions at bottom */}
+    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onEdit}
+        className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+      >
+        <Edit className="h-4 w-4 mr-1" />
+        Edit
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="p-2">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {!address.is_default && (
+            <DropdownMenuItem 
+              onSelect={() => handleSetDefault(address)} 
+              className="text-green-600 focus:text-green-600"
+            >
+              <Star className="mr-2 h-4 w-4" />
+              <span>Set as Default</span>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          )}
+          <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
+            <Trash2 className="mr-2 h-4 w-4" />
+            <span>Delete</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   </div>
   );
@@ -228,6 +246,41 @@ export function AddressList() {
     },
   });
 
+  const setDefaultMutation = useMutation({
+    mutationFn: async (addressId: string) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      // First, unset all default flags for this user
+      await supabase
+        .from('delivery_addresses')
+        .update({ is_default: false })
+        .eq('user_id', user.id);
+      
+      // Then set the selected address as default
+      const { error } = await supabase
+        .from('delivery_addresses')
+        .update({ is_default: true })
+        .eq('id', addressId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
+      toast({ 
+        title: 'Default address updated',
+        description: 'This address is now your default shipping address.'
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error setting default address',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAdd = () => {
     setSelectedAddress(undefined);
     setDialogOpen(true);
@@ -241,6 +294,10 @@ export function AddressList() {
   const handleDelete = (address: Tables<'delivery_addresses'>) => {
     setSelectedAddress(address);
     setDeleteAlertOpen(true);
+  };
+
+  const handleSetDefault = (address: Tables<'delivery_addresses'>) => {
+    setDefaultMutation.mutate(address.id);
   };
 
   const confirmDelete = () => {
@@ -258,47 +315,60 @@ export function AddressList() {
             {addresses?.length || 0} saved {addresses?.length === 1 ? 'address' : 'addresses'}
           </BodySmall>
         </div>
-        <Button onClick={handleAdd} className="bg-teal-600 hover:bg-teal-700 text-white">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Address
-        </Button>
+        {(!addresses || addresses.length < 10) && (
+          <Button onClick={handleAdd} className="bg-teal-600 hover:bg-teal-700 text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Address
+          </Button>
+        )}
+        {addresses && addresses.length >= 10 && (
+          <BodySmall className="text-gray-500">
+            Maximum 10 addresses allowed
+          </BodySmall>
+        )}
       </div>
 
       {/* Address List */}
-      <div className="space-y-4">
-        {isLoading &&
-          Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-lg" />
-          ))}
-        {addresses && addresses.length > 0
-          ? addresses.map((address) => (
+      <div>
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 w-full rounded-lg" />
+            ))}
+          </div>
+        )}
+        {addresses && addresses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" style={{ gridAutoRows: '1fr' }}>
+            {addresses.map((address) => (
               <AddressCard
                 key={address.id}
                 address={address}
                 onEdit={() => handleEdit(address)}
                 onDelete={() => handleDelete(address)}
+                onSetDefault={handleSetDefault}
                 countries={countries}
               />
-            ))
-          : !isLoading && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="h-8 w-8 text-gray-400" />
-                </div>
-                <Body className="text-gray-600 mb-2">No addresses saved yet</Body>
-                <BodySmall className="text-gray-500 mb-4">
-                  Add your first shipping address to get started
-                </BodySmall>
-                <Button
-                  onClick={handleAdd}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Your First Address
-                </Button>
-              </div>
-            )}
+            ))}
+          </div>
+        ) : !isLoading ? (
+          <div className="text-center py-12 col-span-full">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <div className="w-4 h-4 rounded-full bg-gray-400"></div>
+            </div>
+            <Body className="text-gray-600 mb-2">No addresses saved yet</Body>
+            <BodySmall className="text-gray-500 mb-4">
+              Add your first shipping address to get started
+            </BodySmall>
+            <Button
+              onClick={handleAdd}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Address
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {/* Dialogs */}

@@ -40,6 +40,19 @@ interface QuoteBreakdownV2Props {
   quote: QuoteV2;
 }
 
+// Utility function to get customer currency from destination country  
+const getCustomerCurrency = (destinationCountry: string): string => {
+  const countryCurrencyMap: Record<string, string> = {
+    IN: 'INR',
+    NP: 'NPR',
+    US: 'USD', 
+    CA: 'CAD',
+    GB: 'GBP',
+    AU: 'AUD',
+  };
+  return countryCurrencyMap[destinationCountry] || 'USD';
+};
+
 export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => {
   if (!quote.calculation_data || !quote.calculation_data.calculation_steps) {
     return (
@@ -52,6 +65,19 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   }
 
   const calc = quote.calculation_data;
+  const customerCurrency = quote.customer_currency || calc.inputs?.customer_currency || getCustomerCurrency(quote.destination_country);
+  
+  // Calculate customer currency total if not available using exchange rate
+  const calculateCustomerTotal = () => {
+    const usdTotal = calc.calculation_steps?.total_usd || quote.final_total_usd || 0;
+    const existingCustomerTotal = calc.calculation_steps?.total_customer_currency || quote.total_customer_currency || 0;
+    
+    if (existingCustomerTotal) return existingCustomerTotal;
+    if (usdTotal && calc.exchange_rate?.rate) {
+      return usdTotal * calc.exchange_rate.rate;
+    }
+    return usdTotal; // Fallback to USD amount
+  };
   
   // Helper function to format amounts in origin currency
   const formatOriginAmount = (amount: number): string => {
@@ -560,19 +586,19 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-bold text-green-900 text-lg">Total Amount</p>
-                <p className="text-sm text-green-700">All costs included</p>
+                <p className="text-sm text-green-700">All costs included (Origin pricing above, customer pays below)</p>
               </div>
               <div className="text-right">
                 <p className="font-bold text-2xl text-green-900">
                   {currencyService.formatAmount(
-                    steps.total_origin_currency || steps.total_usd || quote.total_usd || 0,
+                    steps.total_origin_currency || steps.total_usd || quote.final_total_usd || 0,
                     calc.inputs?.origin_currency || 'USD'
                   )}
                 </p>
                 <p className="text-lg text-green-700">
                   {currencyService.formatAmount(
-                    steps.total_customer_currency || quote.total_customer_currency || 0, 
-                    quote.customer_currency
+                    calculateCustomerTotal(), 
+                    customerCurrency
                   )}
                 </p>
               </div>

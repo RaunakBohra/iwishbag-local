@@ -93,12 +93,12 @@ export const BankAccountSettings = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64" />
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="space-y-6">
             <Skeleton className="h-20 w-full rounded-lg bg-white" />
             <Skeleton className="h-20 w-full rounded-lg bg-white" />
@@ -113,7 +113,7 @@ export const BankAccountSettings = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
               <H1 className="text-2xl font-semibold text-gray-900 mb-2">Bank accounts</H1>
@@ -162,21 +162,21 @@ export const BankAccountSettings = () => {
           />
         ) : (
           <div className="space-y-6">
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="text-sm text-gray-500 mb-1">Total accounts</div>
-                <div className="text-2xl font-semibold text-gray-900">{bankAccounts.length}</div>
+            {/* Stats - More Compact */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">Total accounts</div>
+                <div className="text-xl font-semibold text-gray-900">{bankAccounts.length}</div>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="text-sm text-gray-500 mb-1">Active accounts</div>
-                <div className="text-2xl font-semibold text-gray-900">
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">Active accounts</div>
+                <div className="text-xl font-semibold text-green-600">
                   {bankAccounts.filter((acc) => acc.is_active).length}
                 </div>
               </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="text-sm text-gray-500 mb-1">Fallback accounts</div>
-                <div className="text-2xl font-semibold text-gray-900">
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">Fallback accounts</div>
+                <div className="text-xl font-semibold text-orange-600">
                   {bankAccounts.filter((acc) => acc.is_fallback).length}
                 </div>
               </div>
@@ -202,8 +202,8 @@ export const BankAccountSettings = () => {
               </div>
             )}
 
-            {/* Accounts List */}
-            <div className="space-y-3">
+            {/* Accounts List - Tighter Spacing */}
+            <div className="space-y-2">
               {filteredAccounts.map((account) => (
                 <BankAccountListItem
                   key={account.id}
@@ -213,16 +213,16 @@ export const BankAccountSettings = () => {
                 />
               ))}
               {filteredAccounts.length === 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                    <Building className="h-6 w-6 text-gray-400" />
+                <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                    <Building className="h-5 w-5 text-gray-400" />
                   </div>
-                  <Body className="text-gray-900 mb-2 font-medium">
+                  <Body className="text-gray-900 mb-1 font-medium">
                     {countryFilter === 'all'
                       ? 'No bank accounts'
                       : `No accounts for ${countryFilter === 'fallback' ? 'fallback' : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}`}
                   </Body>
-                  <BodySmall className="text-gray-500 mb-6 max-w-md mx-auto">
+                  <BodySmall className="text-gray-500 mb-4 max-w-md mx-auto">
                     {countryFilter === 'all'
                       ? 'Add your first bank account to get started with payment processing.'
                       : 'Add an account for this region to enable payment processing.'}

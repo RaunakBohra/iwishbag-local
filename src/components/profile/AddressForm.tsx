@@ -542,6 +542,14 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         is_default: values.is_default,
       };
 
+      // If setting this address as default, first unset all other defaults
+      if (values.is_default) {
+        await supabase
+          .from('delivery_addresses')
+          .update({ is_default: false })
+          .eq('user_id', user.id);
+      }
+
       if (address) {
         const { data, error } = await supabase
           .from('delivery_addresses')

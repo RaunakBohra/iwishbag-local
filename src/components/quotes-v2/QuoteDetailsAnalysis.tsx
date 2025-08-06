@@ -23,6 +23,19 @@ interface QuoteDetailsAnalysisProps {
   quote: any;
 }
 
+// Utility function to get customer currency from destination country
+const getCustomerCurrency = (destinationCountry: string): string => {
+  const countryCurrencyMap: Record<string, string> = {
+    IN: 'INR',
+    NP: 'NPR', 
+    US: 'USD',
+    CA: 'CAD',
+    GB: 'GBP',
+    AU: 'AUD',
+  };
+  return countryCurrencyMap[destinationCountry] || 'USD';
+};
+
 export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quote }) => {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showConfiguration, setShowConfiguration] = useState(false);
@@ -72,8 +85,15 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   const totalShippingCost = steps.shipping_cost || steps.discounted_shipping_cost || 0;
   const totalTaxAmount = steps.local_tax_amount || 0;
   const finalTotalUSD = steps.total_usd || quote.total_usd || 0;
-  const finalTotalCustomer = steps.total_customer_currency || quote.total_customer_currency || 0;
-  const customerCurrency = quote.customer_currency || 'USD';
+  
+  // Calculate customer currency amount if not available
+  let finalTotalCustomer = steps.total_customer_currency || quote.total_customer_currency || 0;
+  const customerCurrency = quote.customer_currency || calc.inputs?.customer_currency || getCustomerCurrency(quote.destination_country);
+  
+  // If we don't have customer currency amount but have exchange rate, calculate it
+  if (!finalTotalCustomer && finalTotalUSD && calc.exchange_rate?.rate) {
+    finalTotalCustomer = finalTotalUSD * calc.exchange_rate.rate;
+  }
 
   // Validation: Check for impossible scenarios
   const isImpossibleScenario = finalTotalUSD < itemsSubtotal && itemsSubtotal > 0;
@@ -131,7 +151,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
       icon: DollarSign,
       title: 'Total',
       value: `${formatCurrency(finalTotalUSD)} ${originCurrency}`,
-      subtitle: customerCurrency !== originCurrency ? `${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
+      subtitle: customerCurrency !== originCurrency ? `Customer pays: ${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
       color: 'text-green-600'
     }
   ];
