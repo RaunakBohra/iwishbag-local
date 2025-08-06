@@ -5,9 +5,8 @@
  */
 
 import { ProductData, FetchResult } from './ProductDataFetchService';
-import { urlAnalysisService } from '
+import { urlAnalysisService } from './UrlAnalysisService';
 import { logger } from '@/utils/logger';
-./UrlAnalysisService';
 
 export interface BrightDataConfig {
   apiToken: string;
