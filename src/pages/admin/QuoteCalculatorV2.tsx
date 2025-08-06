@@ -2125,7 +2125,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             setDestinationPincode(value);
                           }
                         }}
-                        className={`h-8 text-xs ${
+                        className={`h-10 text-xs ${
                           destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
                             ? 'border-amber-300' 
                             : destinationPincode 
@@ -2137,11 +2137,6 @@ const QuoteCalculatorV2: React.FC = () => {
                     
                     {destinationCountry === 'NP' ? (
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-600 mb-1 block">
-                          NCM Branch
-                          <span className="text-xs text-gray-500 ml-1 font-normal">(Location in Nepal)</span>
-                        </Label>
-                          
                           {/* Professional Searchable Combobox */}
                           <Popover open={ncmComboboxOpen} onOpenChange={setNCMComboboxOpen}>
                             <PopoverTrigger asChild>
@@ -2149,7 +2144,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 variant="outline"
                                 role="combobox"
                                 aria-expanded={ncmComboboxOpen}
-                                className="w-full h-8 justify-between text-xs border-gray-300 hover:border-gray-400 text-left"
+                                className="w-full h-10 justify-between text-xs border-gray-300 hover:border-gray-400 text-left"
                                 disabled={loadingNCMBranches || availableNCMBranches.length === 0}
                               >
                                 <span className="truncate">
@@ -2180,7 +2175,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               <Command>
                                 <CommandInput 
                                   placeholder="Search branches by district, name, or area..." 
-                                  className="h-9"
+                                  className="h-10"
                                 />
                                 <CommandEmpty>No branches found.</CommandEmpty>
                                 <CommandList className="max-h-64 overflow-y-auto">
@@ -3008,17 +3003,17 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                        <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-white/70 border border-blue-150">
                           <span className="text-gray-600">Dimensions:</span>
                           <span className="font-medium text-gray-900">{length} × {width} × {height} {unit}</span>
                         </div>
                         
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                        <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-white/70 border border-blue-150">
                           <span className="text-gray-600">Volumetric:</span>
                           <span className="font-medium text-gray-900">{volumetricWeight.toFixed(2)}{weightUnit}</span>
                         </div>
                         
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-blue-150">
+                        <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-white/70 border border-blue-150">
                           <span className="text-gray-600">Actual:</span>
                           <span className="font-medium text-gray-900">{actualWeight.toFixed(2)}{weightUnit}</span>
                         </div>

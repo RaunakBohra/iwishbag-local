@@ -253,7 +253,7 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
               role="combobox"
               aria-expanded={open}
               className={cn(
-                "flex-1 justify-between text-left font-normal min-w-0 sm:min-w-[300px] transition-all duration-200 relative",
+                "flex-1 justify-between text-left font-normal min-w-0 sm:min-w-[300px] transition-all duration-200 relative h-10",
                 hasSelection 
                   ? "border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm hover:from-blue-100 hover:to-indigo-100 border-l-4 border-l-blue-500" 
                   : "border-gray-300 bg-white hover:border-gray-400"
