@@ -233,7 +233,9 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                               <ChevronRight className="w-3 h-3" />
                             )}
                           </Button>
-                          <span className="font-medium text-sm">{item.name || 'Unnamed Item'}</span>
+                          <span className="font-medium text-sm truncate block" title={item.name || 'Unnamed Item'}>
+                            {item.name || 'Unnamed Item'}
+                          </span>
                         </div>
                       </div>
 

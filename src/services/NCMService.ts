@@ -191,14 +191,14 @@ class NCMService {
       
       // Transform raw branch data to our NCMBranch format
       const branches: NCMBranch[] = branchData.map((branchArray: any[]) => {
-        // NCM API returns arrays like: ["WALING", "WLNG", null, "WALING MUNICIPALITY", ...]
-        // We need to map this to our NCMBranch interface
+        // NCM API returns arrays like: ["POKHARA", "PKRA", null, "POKHARA LEKHNATH METROPOLITIAN CITY", "KASKI", "R07 - GANDAKI", ...]
+        // Array structure: [0]=Branch Name, [1]=Code, [2]=null, [3]=Municipality, [4]=District, [5]=Region
         return {
           name: branchArray[1] || branchArray[0], // Use code (index 1) or name (index 0)
           phone: '015199684', // Default NCM phone
           coveredAreas: [branchArray[3] || branchArray[0]], // Use municipality or name
-          district: branchArray[0] || 'Unknown',
-          region: 'Nepal'
+          district: branchArray[4] || branchArray[0] || 'Unknown', // FIXED: Use district from index 4
+          region: branchArray[5] || 'Nepal' // Use region from index 5
         };
       });
       

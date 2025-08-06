@@ -15,6 +15,7 @@ import { Loader2, MapPin, X } from 'lucide-react';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
 import { StateProvinceService } from '@/services/StateProvinceService';
+import { NepalAddressService } from '@/services/NepalAddressService';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { isValidPhone } from '@/lib/phoneUtils';
 
@@ -22,6 +23,7 @@ interface AddressFormData {
   address_line1: string;
   address_line2?: string;
   city: string;
+  district?: string; // NEW: District field for Nepal addresses
   state_province_region: string;
   postal_code: string;
   country: string;
@@ -52,11 +54,19 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   const { data: countries, isLoading: loadingCountries } = useShippingCountries();
   const [fieldLabels, setFieldLabels] = useState({ state: 'State/Province', postal: 'Postal Code' });
   const [stateProvinces, setStateProvinces] = useState(StateProvinceService.getStatesForCountry(initialData?.country || '') || null);
+  
+  // Nepal-specific state
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [municipalities, setMunicipalities] = useState<any[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedMunicipality, setSelectedMunicipality] = useState('');
   const [formData, setFormData] = useState<AddressFormData>(
     initialData || {
       address_line1: '',
       address_line2: '',
       city: '',
+      district: '', // Initialize district field
       state_province_region: '',
       postal_code: '',
       country: '',
@@ -69,6 +79,9 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Nepal detection
+  const isNepal = formData.country === 'NP';
+
   // Update field labels and states when country changes
   useEffect(() => {
     if (formData.country) {
@@ -77,8 +90,85 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       
       const states = StateProvinceService.getStatesForCountry(formData.country);
       setStateProvinces(states);
+      
+      // Reset Nepal-specific selections when country changes
+      if (!isNepal) {
+        setDistricts([]);
+        setMunicipalities([]);
+        setSelectedProvince('');
+        setSelectedDistrict('');
+        setSelectedMunicipality('');
+      }
     }
-  }, [formData.country]);
+  }, [formData.country, isNepal]);
+
+  // Load districts when province changes (Nepal)
+  useEffect(() => {
+    if (isNepal && selectedProvince) {
+      const provinceDistricts = NepalAddressService.getDistrictsForProvince(selectedProvince);
+      setDistricts(provinceDistricts);
+      setSelectedDistrict(''); // Reset district selection
+      setMunicipalities([]); // Reset municipalities
+      setSelectedMunicipality(''); // Reset municipality selection
+    }
+  }, [selectedProvince, isNepal]);
+
+  // Load municipalities when district changes (Nepal)
+  useEffect(() => {
+    if (isNepal && selectedDistrict) {
+      const districtMunicipalities = NepalAddressService.getMunicipalitiesForDistrict(selectedDistrict);
+      setMunicipalities(districtMunicipalities);
+      setSelectedMunicipality(''); // Reset municipality selection
+    }
+  }, [selectedDistrict, isNepal]);
+
+  // Initialize Nepal fields when editing existing address
+  useEffect(() => {
+    if (initialData && isNepal && formData.country === 'NP') {
+      console.log('🏔️ [AddressModal] Initializing Nepal address fields:', {
+        province: formData.state_province_region,
+        district: formData.district,
+        municipality: formData.city
+      });
+
+      // Step 1: Set province (this will trigger district loading)
+      if (formData.state_province_region && !selectedProvince) {
+        setSelectedProvince(formData.state_province_region);
+      }
+    }
+  }, [initialData, isNepal, formData.country, formData.state_province_region, selectedProvince]);
+
+  // Initialize district after districts are loaded
+  useEffect(() => {
+    if (initialData && isNepal && formData.district && districts.length > 0 && !selectedDistrict) {
+      const districtCode = NepalAddressService.getDistrictCodeByName(formData.district);
+      console.log('🏔️ [AddressModal] Setting district:', {
+        districtName: formData.district,
+        districtCode,
+        availableDistricts: districts.length
+      });
+      
+      if (districtCode) {
+        setSelectedDistrict(districtCode);
+      }
+    }
+  }, [initialData, isNepal, formData.district, districts, selectedDistrict]);
+
+  // Initialize municipality after municipalities are loaded  
+  useEffect(() => {
+    if (initialData && isNepal && formData.city && municipalities.length > 0 && !selectedMunicipality) {
+      const municipalityExists = municipalities.find(m => m.name === formData.city);
+      console.log('🏔️ [AddressModal] Setting municipality:', {
+        municipalityName: formData.city,
+        found: !!municipalityExists,
+        availableMunicipalities: municipalities.length
+      });
+      
+      if (municipalityExists) {
+        setSelectedMunicipality(formData.city);
+      }
+    }
+  }, [initialData, isNepal, formData.city, municipalities, selectedMunicipality]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -90,7 +180,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       newErrors.address_line1 = 'Street address is required';
     }
     if (!formData.city?.trim()) {
-      newErrors.city = 'City is required';
+      newErrors.city = isNepal ? 'Municipality is required' : 'City is required';
+    }
+    if (isNepal && !formData.district?.trim()) {
+      newErrors.district = 'District is required';
     }
     if (!formData.state_province_region?.trim()) {
       newErrors.state_province_region = 'State/Province is required';
@@ -214,57 +307,169 @@ export const AddressModal: React.FC<AddressModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-sm font-medium text-gray-700">
-                  City <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="New York"
-                  className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
-                />
-                {errors.city && <p className="text-sm text-red-600">{errors.city}</p>}
-              </div>
+            {/* Nepal-specific address hierarchy OR standard city/state */}
+            {isNepal ? (
+              <>
+                {/* Nepal Address Hierarchy: Province → District → Municipality */}
+                
+                {/* Province and District Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="province" className="text-sm font-medium text-gray-700">
+                      Province <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.state_province_region}
+                      onValueChange={(value) => {
+                        handleInputChange('state_province_region', value);
+                        setSelectedProvince(value);
+                      }}
+                    >
+                      <SelectTrigger
+                        className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                      >
+                        <SelectValue placeholder="Select province" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stateProvinces?.map((state) => (
+                          <SelectItem key={state.code} value={state.code}>
+                            {state.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.state_province_region && (
+                      <p className="text-sm text-red-600">{errors.state_province_region}</p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="state" className="text-sm font-medium text-gray-700">
-                  {fieldLabels.state} <span className="text-red-500">*</span>
-                </Label>
-                {stateProvinces ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="district" className="text-sm font-medium text-gray-700">
+                      District <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={selectedDistrict}
+                      onValueChange={(value) => {
+                        const districtName = NepalAddressService.getDistrictName(value) || value;
+                        handleInputChange('district', districtName);
+                        setSelectedDistrict(value);
+                      }}
+                      disabled={!selectedProvince}
+                    >
+                      <SelectTrigger
+                        className={`${errors.district ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                      >
+                        <SelectValue placeholder={
+                          !selectedProvince 
+                            ? "Select province first" 
+                            : districts.length === 0 
+                              ? "Loading districts..." 
+                              : "Select district"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {districts.map((district) => (
+                          <SelectItem key={district.code} value={district.code}>
+                            {district.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.district && (
+                      <p className="text-sm text-red-600">{errors.district}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Municipality Row */}
+                <div className="space-y-2">
+                  <Label htmlFor="municipality" className="text-sm font-medium text-gray-700">
+                    Municipality <span className="text-red-500">*</span>
+                  </Label>
                   <Select
-                    value={formData.state_province_region}
-                    onValueChange={(value) => handleInputChange('state_province_region', value)}
+                    value={selectedMunicipality}
+                    onValueChange={(value) => {
+                      handleInputChange('city', value);
+                      setSelectedMunicipality(value);
+                    }}
+                    disabled={!selectedDistrict}
                   >
                     <SelectTrigger
-                      className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                      className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                     >
-                      <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
+                      <SelectValue placeholder={
+                        !selectedDistrict 
+                          ? "Select district first" 
+                          : municipalities.length === 0 
+                            ? "Loading municipalities..." 
+                            : "Select municipality"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
-                      {stateProvinces.map((state) => (
-                        <SelectItem key={state.code} value={state.code}>
-                          {state.name}
+                      {municipalities.map((municipality, index) => (
+                        <SelectItem key={index} value={municipality.name}>
+                          {municipality.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                ) : (
+                  {errors.city && <p className="text-sm text-red-600">{errors.city}</p>}
+                </div>
+              </>
+            ) : (
+              /* Standard city/state layout for other countries */
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                    City <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="state"
-                    value={formData.state_province_region}
-                    onChange={(e) => handleInputChange('state_province_region', e.target.value)}
-                    placeholder={formData.country === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
-                    className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    placeholder="New York"
+                    className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                   />
-                )}
-                {errors.state_province_region && (
-                  <p className="text-sm text-red-600">{errors.state_province_region}</p>
-                )}
+                  {errors.city && <p className="text-sm text-red-600">{errors.city}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-sm font-medium text-gray-700">
+                    {fieldLabels.state} <span className="text-red-500">*</span>
+                  </Label>
+                  {stateProvinces ? (
+                    <Select
+                      value={formData.state_province_region}
+                      onValueChange={(value) => handleInputChange('state_province_region', value)}
+                    >
+                      <SelectTrigger
+                        className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                      >
+                        <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stateProvinces.map((state) => (
+                          <SelectItem key={state.code} value={state.code}>
+                            {state.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="state"
+                      value={formData.state_province_region}
+                      onChange={(e) => handleInputChange('state_province_region', e.target.value)}
+                      placeholder={formData.country === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
+                      className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                    />
+                  )}
+                  {errors.state_province_region && (
+                    <p className="text-sm text-red-600">{errors.state_province_region}</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">

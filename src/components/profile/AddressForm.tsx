@@ -401,6 +401,43 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     }
   }, [address, selectedCountry]);
 
+  // Initialize Nepal district selection from existing address (CRITICAL FIX)
+  useEffect(() => {
+    if (address && selectedCountry === 'NP' && address.city && districts.length > 0 && !selectedDistrict) {
+      // For Nepal, district name is stored in the city field
+      const districtCode = NepalAddressService.getDistrictCodeByName(address.city);
+      console.log('🏔️ [AddressForm] Initializing district from existing address:', {
+        storedInCityField: address.city,
+        districtCode,
+        availableDistricts: districts.length
+      });
+      
+      if (districtCode) {
+        setSelectedDistrict(districtCode);
+      }
+    }
+  }, [address, selectedCountry, districts, selectedDistrict]);
+
+  // Initialize Nepal municipality selection from existing address (CRITICAL FIX)
+  useEffect(() => {
+    if (address && selectedCountry === 'NP' && address.address_line1 && municipalities.length > 0 && !selectedMunicipality) {
+      // Parse municipality from address_line1 (first part before comma)
+      const parts = address.address_line1.split(',').map(p => p.trim());
+      const municipalityName = parts[0];
+      
+      const municipalityExists = municipalities.find(m => m.name === municipalityName);
+      console.log('🏔️ [AddressForm] Initializing municipality from existing address:', {
+        addressLine1: address.address_line1,
+        extractedMunicipality: municipalityName,
+        found: !!municipalityExists
+      });
+      
+      if (municipalityExists) {
+        setSelectedMunicipality(municipalityName);
+      }
+    }
+  }, [address, selectedCountry, municipalities, selectedMunicipality]);
+
   // Auto-detect country on component mount (only for new addresses)
   useEffect(() => {
     if (!address && countries && countries.length > 0) {

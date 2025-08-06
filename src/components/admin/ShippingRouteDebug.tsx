@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Bug, Package, Shield, Wrench, Ship, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Bug, Package, Shield, Wrench, Ship, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import type { RouteCalculations } from '@/services/DynamicShippingService';
 
 interface ShippingRouteDebugProps {
@@ -23,6 +23,7 @@ export function ShippingRouteDebug({
   fallbackUsed = false,
   className = ""
 }: ShippingRouteDebugProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const formatCurrency = (amount: number | null, currency = 'INR') => {
     if (amount === null || amount === undefined) return 'N/A';
@@ -33,25 +34,38 @@ export function ShippingRouteDebug({
 
   return (
     <Card className={`mt-4 ${className}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Bug className="w-4 h-4" />
-          Shipping Route Debug
-          {fallbackUsed && (
-            <Badge variant="destructive" className="text-xs">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              Fallback Used
-            </Badge>
-          )}
-          {routeCalculations && (
-            <Badge variant="default" className="text-xs">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Dynamic Route
-            </Badge>
-          )}
+      <CardHeader 
+        className="pb-3 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <CardTitle className="text-sm flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <Bug className="w-4 h-4" />
+            Shipping Route Debug
+            {fallbackUsed && (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Fallback Used
+              </Badge>
+            )}
+            {routeCalculations && (
+              <Badge variant="default" className="text-xs">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Dynamic Route
+              </Badge>
+            )}
+          </div>
+          <div className="flex-shrink-0">
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      {isExpanded && (
+        <CardContent className="space-y-4">
         {/* Route Info */}
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
           <div className="text-xs font-medium text-blue-800 mb-2 flex items-center gap-1">
@@ -188,7 +202,8 @@ export function ShippingRouteDebug({
             </div>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 }

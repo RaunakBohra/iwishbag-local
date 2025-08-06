@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,6 +53,7 @@ import { delhiveryService, type DelhiveryServiceOption } from '@/services/Delhiv
 import NCMService from '@/services/NCMService';
 import { EditableUrlInput } from '@/components/EditableUrlInput';
 import { ncmBranchMappingService } from '@/services/NCMBranchMappingService';
+import { smartNCMBranchMapper, type SmartBranchMapping } from '@/services/SmartNCMBranchMapper';
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
@@ -257,9 +259,16 @@ const QuoteCalculatorV2: React.FC = () => {
   const [destinationDistrict, setDestinationDistrict] = useState('');
   const [selectedNCMBranch, setSelectedNCMBranch] = useState<any>(null);
   const [availableNCMBranches, setAvailableNCMBranches] = useState<any[]>([]);
+  const [ncmComboboxOpen, setNCMComboboxOpen] = useState(false);
   const [loadingNCMBranches, setLoadingNCMBranches] = useState(false);
   const [ncmRates, setNCMRates] = useState<any>(null);
   const [loadingNCMRates, setLoadingNCMRates] = useState(false);
+  
+  // Smart NCM branch mapping states
+  const [branchMapping, setBranchMapping] = useState<SmartBranchMapping | null>(null);
+  const [suggestedNCMBranches, setSuggestedNCMBranches] = useState<SmartBranchMapping[]>([]);
+  const [isAutoSelected, setIsAutoSelected] = useState(false);
+  const [userOverrodeNCMBranch, setUserOverrodeNCMBranch] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [paymentGateway, setPaymentGateway] = useState('stripe');
   const [adminNotes, setAdminNotes] = useState('');
@@ -300,6 +309,16 @@ const QuoteCalculatorV2: React.FC = () => {
   
   // Volumetric weight modal state
   const [volumetricModalOpen, setVolumetricModalOpen] = useState<string | null>(null);
+  
+  // Advanced options state - track which items have expanded advanced options
+  const [advancedOptionsExpanded, setAdvancedOptionsExpanded] = useState<{ [itemId: string]: boolean }>({});
+  
+  const toggleAdvancedOptions = (itemId: string) => {
+    setAdvancedOptionsExpanded(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
 
   // Update customer currency when destination changes
   useEffect(() => {
@@ -417,6 +436,53 @@ const QuoteCalculatorV2: React.FC = () => {
       setNCMRates(null);
     }
   }, [selectedNCMBranch, destinationCountry]);
+
+  // Real-time NCM branch suggestion based on manual address input
+  useEffect(() => {
+    if (destinationCountry !== 'NP') return;
+    if (userOverrodeNCMBranch) return; // Don't interfere with manual selections
+    if (!destinationAddress.city && !destinationAddress.state) return;
+    
+    const timeoutId = setTimeout(async () => {
+      console.log('⏱️ [Real-time] Checking address input for NCM suggestions:', destinationAddress);
+      
+      const addressInput = {
+        // For manual destination address input in admin
+        city: destinationAddress.city,
+        district: destinationAddress.district || destinationAddress.city, // Fallback for older addresses
+        state: destinationAddress.state,
+        state_province_region: destinationAddress.state,
+        addressLine1: destinationAddress.line1,
+        addressLine2: destinationAddress.line2,
+        pincode: destinationAddress.pincode
+      };
+      
+      // Only suggest if no current selection or low confidence auto-selection
+      const shouldSuggest = !selectedNCMBranch || (branchMapping && branchMapping.confidence === 'low');
+      
+      if (shouldSuggest) {
+        try {
+          const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
+          if (suggestions.length > 0) {
+            console.log(`💡 [Real-time] Found ${suggestions.length} suggestions based on manual input`);
+            setSuggestedNCMBranches(suggestions);
+            
+            // Auto-select if high confidence and no current selection
+            if (!selectedNCMBranch && suggestions[0].confidence === 'high') {
+              console.log(`🎯 [Real-time] Auto-selecting high confidence suggestion: ${suggestions[0].branch.name}`);
+              setSelectedNCMBranch(suggestions[0].branch);
+              setBranchMapping(suggestions[0]);
+              setIsAutoSelected(true);
+            }
+          }
+        } catch (error) {
+          console.error('❌ [Real-time] Error getting suggestions:', error);
+        }
+      }
+    }, 1500); // 1.5 second debounce for real-time input
+    
+    return () => clearTimeout(timeoutId);
+  }, [destinationAddress.city, destinationAddress.state, destinationCountry, userOverrodeNCMBranch, selectedNCMBranch]);
 
   // Fetch dynamic shipping methods when origin/destination changes
   useEffect(() => {
@@ -538,24 +604,33 @@ const QuoteCalculatorV2: React.FC = () => {
         setDestinationPincode(pincode); // Set anyway for manual correction
       }
     } else if (country === 'NP') {
-      // Nepal: Map state/district to NCM branch
+      // Nepal: Smart mapping of address to NCM branch
       const state = address.state_province_region;
       if (state) {
         console.log('🏔️ [Address Sync] Setting Nepal district:', state);
         setDestinationDistrict(state);
         setDestinationState(state);
-        
-        // Try to find matching NCM branch
-        if (availableNCMBranches.length > 0) {
-          const matchingBranch = availableNCMBranches.find(branch => 
-            branch.district?.toLowerCase() === state.toLowerCase() ||
-            branch.name?.toLowerCase().includes(state.toLowerCase())
-          );
-          if (matchingBranch) {
-            console.log('🎯 [Address Sync] Found matching NCM branch:', matchingBranch.name);
-            setSelectedNCMBranch(matchingBranch);
-          }
-        }
+      }
+      
+      // Debug: Log all address fields for Nepal
+      console.log('🔍 [Address Sync DEBUG] Nepal address fields:', {
+        city: address.city,
+        state_province_region: address.state_province_region,
+        address_line1: address.address_line1,
+        address_line2: address.address_line2,
+        postal_code: address.postal_code,
+        destination_country: address.destination_country
+      });
+      
+      // Use smart mapper to find best NCM branch match
+      // Wait a bit if NCM branches are still loading
+      if (loadingNCMBranches) {
+        console.log('⏳ [Address Sync] NCM branches still loading, waiting...');
+        setTimeout(async () => {
+          await smartMapNCMBranch(address);
+        }, 1000);
+      } else {
+        await smartMapNCMBranch(address);
       }
     } else {
       // Other countries: Map state from address
@@ -637,8 +712,14 @@ const QuoteCalculatorV2: React.FC = () => {
             discount_type: item.discount_type || 'percentage',
             discount_percentage: item.discount_percentage || undefined,
             discount_amount: item.discount_amount || undefined,
-            // Valuation preference field - this was missing!
-            valuation_preference: item.valuation_preference || 'auto'
+            // Valuation preference field
+            valuation_preference: item.valuation_preference || 'auto',
+            // Image fields - these were missing!
+            images: item.images || undefined,
+            main_image: item.main_image || undefined,
+            // Dimension fields
+            dimensions: item.dimensions || undefined,
+            volumetric_divisor: item.volumetric_divisor || undefined
           }));
           setItems(mappedItems);
         }
@@ -846,15 +927,177 @@ const QuoteCalculatorV2: React.FC = () => {
       console.log('🏔️ [UI] Loading all NCM branches');
       
       const branches = await ncmBranchMappingService.getBranches();
-      setAvailableNCMBranches(branches);
       
-      console.log(`✅ [UI] Loaded ${branches.length} NCM branches`);
+      // Sort branches A→Z by district name, then by branch name
+      const sortedBranches = branches.sort((a, b) => {
+        // Primary sort: District name A→Z
+        const districtComparison = a.district.localeCompare(b.district);
+        if (districtComparison !== 0) {
+          return districtComparison;
+        }
+        // Secondary sort: Branch name A→Z for same districts
+        return a.name.localeCompare(b.name);
+      });
+      
+      setAvailableNCMBranches(sortedBranches);
+      
+      console.log(`✅ [UI] Loaded and sorted ${sortedBranches.length} NCM branches (A→Z)`);
       
     } catch (error) {
       console.error('❌ [UI] Failed to load NCM branches:', error);
       setAvailableNCMBranches([]);
     } finally {
       setLoadingNCMBranches(false);
+    }
+  };
+
+  // Get delivery time estimate for a branch
+  const getDeliveryEstimate = (branch: any) => {
+    const majorCities = ['KATHMANDU', 'POKHARA', 'CHITWAN', 'BIRATNAGAR', 'BIRGUNJ'];
+    const isMajorCity = majorCities.some(city => 
+      branch.district.toUpperCase().includes(city) || 
+      branch.name.toUpperCase().includes(city)
+    );
+    
+    if (isMajorCity) {
+      return ncmServiceType === 'pickup' ? '1-2 days' : '2-3 days';
+    } else {
+      return ncmServiceType === 'pickup' ? '2-4 days' : '3-5 days';
+    }
+  };
+
+  // Group branches by province for better organization
+  const groupBranchesByProvince = (branches: any[]) => {
+    const groups: Record<string, any[]> = {};
+    const majorCities = ['KATHMANDU', 'POKHARA', 'CHITWAN', 'BIRATNAGAR', 'BIRGUNJ'];
+    
+    // Create major cities group first
+    const majorCityBranches = branches.filter(branch => 
+      majorCities.some(city => 
+        branch.district.toUpperCase().includes(city) || 
+        branch.name.toUpperCase().includes(city)
+      )
+    );
+    
+    if (majorCityBranches.length > 0) {
+      groups['🏙️ Major Cities'] = majorCityBranches;
+    }
+    
+    // Group remaining branches by province/region
+    const remainingBranches = branches.filter(branch => 
+      !majorCityBranches.includes(branch)
+    );
+    
+    remainingBranches.forEach(branch => {
+      let provinceName = '🏔️ Other Areas';
+      
+      if (branch.region && branch.region !== 'Nepal') {
+        // Clean up region names for better display
+        const regionParts = branch.region.split(' - ');
+        if (regionParts.length > 1) {
+          provinceName = `🏔️ ${regionParts[1]} Province`;
+        } else {
+          provinceName = `🏔️ ${branch.region}`;
+        }
+      }
+      
+      if (!groups[provinceName]) {
+        groups[provinceName] = [];
+      }
+      groups[provinceName].push(branch);
+    });
+    
+    return groups;
+  };
+
+
+  // Smart NCM branch mapping based on address
+  const smartMapNCMBranch = async (address: any) => {
+    if (!address || destinationCountry !== 'NP') {
+      console.log('🧠 [Smart Mapping] Skipping - no address or not Nepal:', { address, destinationCountry });
+      return;
+    }
+
+    try {
+      console.log('🧠 [Smart Mapping] Starting smart NCM branch mapping for:', {
+        fullAddress: address,
+        rawCity: address.city,
+        rawState: address.state_province_region,
+        destination_country: address.destination_country
+      });
+      
+      // Prepare address input for smart mapper
+      const addressInput = {
+        // Use proper district field if available (new AddressModal), fallback to old mapping
+        city: address.city,
+        district: address.district || address.city, // NEW: Use district field or fallback to old mapping
+        state: address.state_province_region,
+        state_province_region: address.state_province_region,
+        addressLine1: address.address_line1,
+        addressLine2: address.address_line2,
+        pincode: address.postal_code
+      };
+
+      console.log('🔧 [Smart Mapping] Prepared addressInput:', {
+        city: addressInput.city,
+        district: addressInput.district,
+        hasDistrictField: !!address.district,
+        province: addressInput.state,
+        addressLine1: addressInput.addressLine1
+      });
+
+      // Check if NCM branches are available first
+      console.log('🔍 [Smart Mapping] Checking NCM branches availability:', {
+        availableNCMBranchesCount: availableNCMBranches.length,
+        loadingNCMBranches,
+        destinationCountry
+      });
+
+      // Get best match from smart mapper
+      const mapping = await smartNCMBranchMapper.findBestMatch(addressInput);
+      
+      if (mapping) {
+        console.log(`✅ [Smart Mapping] Found match: ${mapping.branch.name} (${mapping.confidence}, ${mapping.matchReason})`);
+        
+        // Update states
+        setBranchMapping(mapping);
+        setSelectedNCMBranch(mapping.branch);
+        setIsAutoSelected(true);
+        setUserOverrodeNCMBranch(false);
+        
+        // Also get suggestions for user to see alternatives
+        const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
+        setSuggestedNCMBranches(suggestions.filter(s => s.branch.name !== mapping.branch.name));
+        
+        console.log(`ℹ️ [Smart Mapping] Auto-selected ${mapping.branch.name} with ${suggestions.length} alternatives`);
+      } else {
+        console.log('🔍 [Smart Mapping] No single match found - checking for district branches');
+        setBranchMapping(null);
+        setIsAutoSelected(false);
+        
+        // Check if there are multiple branches in the same district
+        const districtBranches = await smartNCMBranchMapper.findDistrictBranches(addressInput);
+        
+        if (districtBranches.length > 1) {
+          console.log(`🏢 [Smart Mapping] Found ${districtBranches.length} branches in district - showing all options`);
+          setSuggestedNCMBranches(districtBranches);
+        } else {
+          // Fall back to general suggestions
+          const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
+          setSuggestedNCMBranches(suggestions);
+          
+          if (suggestions.length > 0) {
+            console.log(`💡 [Smart Mapping] No district match, showing ${suggestions.length} general suggestions`);
+          } else {
+            console.log('🔍 [Smart Mapping] No suggestions found either. Address input was:', addressInput);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ [Smart Mapping] Error in smart mapping:', error);
+      setBranchMapping(null);
+      setIsAutoSelected(false);
+      setSuggestedNCMBranches([]);
     }
   };
 
@@ -1822,7 +2065,296 @@ const QuoteCalculatorV2: React.FC = () => {
                       />
                     )}
                     
-                    {destinationCountry === 'NP' || (!destinationPincode && destinationCountry !== 'IN') ? (
+                    {destinationCountry === 'NP' ? (
+                      /* Nepal - Show NCM Branch Configuration */
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-gray-800 mb-1 block">
+                          Nepal Shipping Configuration
+                        </Label>
+                        <div>
+                          <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                            NCM Branch
+                            <span className="text-xs text-gray-500 ml-1 font-normal">(Package delivery location in Nepal)</span>
+                          </Label>
+                          
+                          {/* Professional Searchable Combobox */}
+                          <Popover open={ncmComboboxOpen} onOpenChange={setNCMComboboxOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={ncmComboboxOpen}
+                                className="w-full h-8 justify-between text-xs border-gray-300 hover:border-gray-400 text-left"
+                                disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                              >
+                                <span className="truncate">
+                                  {selectedNCMBranch
+                                    ? `${selectedNCMBranch.district} (${selectedNCMBranch.name})`
+                                    : loadingNCMBranches
+                                      ? "Loading branches..."
+                                      : availableNCMBranches.length === 0
+                                        ? "No branches available"
+                                        : "Search and select branch..."
+                                  }
+                                </span>
+                                <svg
+                                  className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="m6 9 6 6 6-6" />
+                                </svg>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                              <Command>
+                                <CommandInput 
+                                  placeholder="Search branches by district, name, or area..." 
+                                  className="h-9"
+                                />
+                                <CommandEmpty>No branches found.</CommandEmpty>
+                                <CommandList className="max-h-64 overflow-y-auto">
+                                  {(() => {
+                                    // Group branches by major cities first
+                                    const majorCities = ['KATHMANDU', 'POKHARA', 'CHITWAN', 'BIRATNAGAR', 'BIRGUNJ'];
+                                    const majorCityBranches = availableNCMBranches.filter(branch => 
+                                      majorCities.some(city => 
+                                        branch.district.toUpperCase().includes(city) || 
+                                        branch.name.toUpperCase().includes(city)
+                                      )
+                                    );
+                                    
+                                    const otherBranches = availableNCMBranches.filter(branch => 
+                                      !majorCityBranches.includes(branch)
+                                    );
+
+                                    return (
+                                      <>
+                                        {majorCityBranches.length > 0 && (
+                                          <CommandGroup heading="Major Cities">
+                                            {majorCityBranches.map((branch) => (
+                                              <CommandItem
+                                                key={branch.name}
+                                                value={`${branch.district} ${branch.name} ${branch.coveredAreas?.join(' ') || ''}`}
+                                                onSelect={() => {
+                                                  setSelectedNCMBranch(branch);
+                                                  setNCMComboboxOpen(false);
+                                                  
+                                                  // Track manual override
+                                                  if (isAutoSelected) {
+                                                    setUserOverrodeNCMBranch(true);
+                                                    setIsAutoSelected(false);
+                                                    console.log(`User manually selected: ${branch.name}`);
+                                                  }
+                                                  
+                                                  // Clear suggestions
+                                                  setSuggestedNCMBranches([]);
+                                                }}
+                                                className="cursor-pointer"
+                                              >
+                                                <div className="flex flex-col gap-1 w-full">
+                                                  <div className="flex items-center justify-between">
+                                                    <span className="font-medium text-gray-900">
+                                                      {branch.district} ({branch.name})
+                                                    </span>
+                                                    <Badge variant="secondary" className="text-xs h-4 px-1.5 ml-2">
+                                                      Major
+                                                    </Badge>
+                                                  </div>
+                                                  <div className="flex items-center justify-between text-xs">
+                                                    {branch.coveredAreas && branch.coveredAreas.length > 0 && (
+                                                      <span className="text-gray-500 truncate">
+                                                        Covers: {branch.coveredAreas.slice(0, 2).join(', ')}
+                                                      </span>
+                                                    )}
+                                                    <span className="text-blue-600 ml-2">
+                                                      {getDeliveryEstimate(branch)}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        )}
+                                        
+                                        {otherBranches.length > 0 && (
+                                          <CommandGroup heading="Other Branches">
+                                            {otherBranches.map((branch) => (
+                                              <CommandItem
+                                                key={branch.name}
+                                                value={`${branch.district} ${branch.name} ${branch.coveredAreas?.join(' ') || ''}`}
+                                                onSelect={() => {
+                                                  setSelectedNCMBranch(branch);
+                                                  setNCMComboboxOpen(false);
+                                                  
+                                                  // Track manual override
+                                                  if (isAutoSelected) {
+                                                    setUserOverrodeNCMBranch(true);
+                                                    setIsAutoSelected(false);
+                                                    console.log(`User manually selected: ${branch.name}`);
+                                                  }
+                                                  
+                                                  // Clear suggestions
+                                                  setSuggestedNCMBranches([]);
+                                                }}
+                                                className="cursor-pointer"
+                                              >
+                                                <div className="flex flex-col gap-1 w-full">
+                                                  <span className="font-medium text-gray-900">
+                                                    {branch.district} ({branch.name})
+                                                  </span>
+                                                  <div className="flex items-center justify-between text-xs">
+                                                    {branch.coveredAreas && branch.coveredAreas.length > 0 && (
+                                                      <span className="text-gray-500 truncate">
+                                                        Covers: {branch.coveredAreas.slice(0, 2).join(', ')}
+                                                      </span>
+                                                    )}
+                                                    <span className="text-blue-600 ml-2">
+                                                      {getDeliveryEstimate(branch)}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          {selectedNCMBranch && (
+                            <div className="mt-1 space-y-1">
+                              <div className="text-xs text-green-700 bg-green-100 p-2 rounded flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Selected: <span className="font-medium ml-1">{selectedNCMBranch.name}</span> 
+                                  <span className="text-green-600 ml-1">({selectedNCMBranch.district})</span>
+                                </div>
+                                
+                                {/* Confidence indicators */}
+                                {isAutoSelected && branchMapping && (
+                                  <div className="flex items-center gap-1">
+                                    {branchMapping.confidence === 'high' && (
+                                      <Badge variant="default" className="text-xs h-4 bg-green-500 text-white">
+                                        ✓ Auto-matched
+                                      </Badge>
+                                    )}
+                                    {branchMapping.confidence === 'medium' && (
+                                      <Badge variant="secondary" className="text-xs h-4 bg-yellow-500 text-white">
+                                        ~ Suggested
+                                      </Badge>
+                                    )}
+                                    {branchMapping.confidence === 'low' && (
+                                      <Badge variant="outline" className="text-xs h-4">
+                                        ? Fallback
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {userOverrodeNCMBranch && (
+                                  <Badge variant="outline" className="text-xs h-4 border-blue-300 text-blue-700">
+                                    👤 Manual
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              {/* Match reason for auto-selected branches */}
+                              {isAutoSelected && branchMapping && (
+                                <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                                  <span className="text-gray-500">Reason:</span> {branchMapping.matchReason}
+                                </div>
+                              )}
+                              
+                              {/* Show suggestions if available */}
+                              {suggestedNCMBranches.length > 0 && !isAutoSelected && (
+                                <div className="text-xs">
+                                  <div className="text-gray-600 mb-2 font-medium">
+                                    {suggestedNCMBranches.length > 1 && 
+                                     suggestedNCMBranches.every(s => s.matchType === 'exact_district')
+                                      ? `Multiple branches found in district (${suggestedNCMBranches.length}):`
+                                      : 'Suggested branches:'}
+                                  </div>
+                                  <div className="space-y-1">
+                                    {suggestedNCMBranches.slice(0, 3).map((suggestion, index) => (
+                                      <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded border hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col">
+                                          <span className="text-gray-900 font-medium">
+                                            {suggestion.branch.district} ({suggestion.branch.name})
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            {suggestion.matchReason}
+                                          </span>
+                                          {suggestion.branch.coveredAreas && suggestion.branch.coveredAreas.length > 0 && (
+                                            <span className="text-xs text-blue-600">
+                                              Covers: {suggestion.branch.coveredAreas.slice(0, 2).join(', ')}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <Button 
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs h-6 px-2 cursor-pointer hover:bg-blue-50"
+                                          onClick={() => {
+                                            setSelectedNCMBranch(suggestion.branch);
+                                            setBranchMapping(suggestion);
+                                            setIsAutoSelected(true);
+                                            setSuggestedNCMBranches([]);
+                                          }}
+                                        >
+                                          Select
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Delivery Method - Only show when branch is selected */}
+                        {selectedNCMBranch && (
+                          <div className="mt-2">
+                            <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                              Delivery Method
+                            </Label>
+                            <Select 
+                              value={ncmServiceType} 
+                              onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
+                              disabled={loadingNCMRates}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-white border-green-300">
+                                <SelectValue placeholder="Select delivery method" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pickup">
+                                  <div className="flex items-center gap-2">
+                                    <span>Door Delivery</span>
+                                    <span className="text-xs text-gray-500">(Faster)</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="collect">
+                                  <div className="flex items-center gap-2">
+                                    <span>Branch Pickup</span>
+                                    <span className="text-xs text-gray-500">(Lower cost)</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    ) : (!destinationPincode && destinationCountry !== 'IN') ? (
+                      /* Other countries - Show Urban/Rural dropdown */
                       <Select value={destinationState} onValueChange={setDestinationState}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Location" />
@@ -1934,107 +2466,6 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   )}
 
-                  {destinationCountry === 'NP' && (
-                    <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
-                      <Label className="text-xs font-medium text-green-800 mb-2 block">
-                        🇳🇵 Nepal Shipping Configuration
-                      </Label>
-                      
-                      {/* NCM Branch Selector */}
-                      <div>
-                        <Label className="text-xs font-medium text-green-700 mb-1 block">
-                          📍 NCM Branch
-                          <span className="text-xs text-green-600 ml-1 font-normal">(Package delivery location in Nepal)</span>
-                        </Label>
-                        <Select 
-                          value={selectedNCMBranch?.name || ''} 
-                          onValueChange={(branchName) => {
-                            const branch = availableNCMBranches.find(b => b.name === branchName);
-                            setSelectedNCMBranch(branch || null);
-                          }}
-                          disabled={loadingNCMBranches || availableNCMBranches.length === 0}
-                        >
-                          <SelectTrigger className="h-9 text-sm bg-white border-green-300">
-                            <SelectValue placeholder={
-                              loadingNCMBranches 
-                                ? "Loading branches..." 
-                                : availableNCMBranches.length === 0
-                                  ? "No branches available"
-                                  : "Select NCM branch"
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableNCMBranches.length > 0 ? (
-                              availableNCMBranches.map((branch) => (
-                                <SelectItem key={branch.name} value={branch.name}>
-                                  <div className="flex items-center gap-2">
-                                    <span>📍</span>
-                                    <div>
-                                      <span className="font-medium">{branch.name}</span>
-                                      <span className="text-xs text-gray-500 ml-1">• {branch.district}</span>
-                                    </div>
-                                  </div>
-                                </SelectItem>
-                              ))
-                            ) : loadingNCMBranches ? (
-                              <SelectItem value="loading" disabled>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-3 w-3 animate-spin" />
-                                  <span>Loading branches...</span>
-                                </div>
-                              </SelectItem>
-                            ) : (
-                              <SelectItem value="none" disabled>
-                                <div className="flex items-center gap-2">
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span>No branches available</span>
-                                </div>
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {selectedNCMBranch && (
-                          <div className="text-xs mt-1 text-green-700 bg-green-100 p-2 rounded flex items-center">
-                            <Check className="h-3 w-3 mr-1" />
-                            Selected: <span className="font-medium ml-1">{selectedNCMBranch.name}</span> 
-                            <span className="text-green-600 ml-1">({selectedNCMBranch.district})</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Delivery Method - Only show when branch is selected */}
-                      {selectedNCMBranch && (
-                        <div>
-                          <Label className="text-xs font-medium text-green-700 mb-1 block">
-                            🚚 Delivery Method
-                          </Label>
-                          <Select 
-                            value={ncmServiceType} 
-                            onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
-                            disabled={loadingNCMRates}
-                          >
-                            <SelectTrigger className="h-9 text-sm bg-white border-green-300">
-                              <SelectValue placeholder="Select delivery method" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pickup">
-                                <div className="flex items-center gap-2">
-                                  <span>🚪</span>
-                                  <span>Door Delivery</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="collect">
-                                <div className="flex items-center gap-2">
-                                  <span>🏪</span>
-                                  <span>Branch Pickup</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Payment & Options Column - Redesigned */}
@@ -2151,120 +2582,123 @@ const QuoteCalculatorV2: React.FC = () => {
 
           {/* Items - Each item as separate card */}
           {items.map((item, index) => (
-                <Card key={item.id} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  {/* Card Header */}
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                          {index + 1}
-                        </div>
-                        <h4 className="text-lg font-semibold text-gray-900">Item {index + 1}</h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            if (item.name) {
-                              const loadingKey = `enhance-${item.id}`;
-                              setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
-                              try {
-                                const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                  product_name: item.name,
-                                  destination_country: destinationCountry,
-                                  category: item.category,
-                                  price_usd: item.unit_price_usd
+            <Card key={item.id} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              {/* Clean Header */}
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        {item.name || `Item ${index + 1}`}
+                      </h4>
+                      {item.name && (
+                        <p className="text-sm text-gray-500">Item {index + 1}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (item.name) {
+                          const loadingKey = `enhance-${item.id}`;
+                          setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
+                          try {
+                            const suggestion = await productIntelligenceService.getSmartSuggestions({
+                              product_name: item.name,
+                              destination_country: destinationCountry,
+                              category: item.category,
+                              price_usd: item.unit_price_usd
+                            });
+                            if (suggestion) {
+                              const confidence = Math.round(suggestion.confidence_score * 100);
+                              updateItem(item.id, 'hsn_code', suggestion.classification_code);
+                              updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                              updateItem(item.id, 'category', suggestion.category);
+                              toast({
+                                title: "🤖 Smart Enhancement Applied",
+                                description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.suggested_weight_kg}${weightUnit}, Category: ${suggestion.category} (${confidence}% confidence)`,
+                                duration: 5000,
+                              });
+                              
+                              if (confidence >= 80) {
+                                toast({
+                                  title: "✅ High Confidence Match",
+                                  description: "AI is very confident about these suggestions.",
+                                  duration: 3000,
                                 });
-                                if (suggestion) {
-                                  const confidence = Math.round(suggestion.confidence_score * 100);
-                                  updateItem(item.id, 'hsn_code', suggestion.classification_code);
-                                  updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
-                                  updateItem(item.id, 'category', suggestion.category);
-                                  toast({
-                                    title: "🤖 Smart Enhancement Applied",
-                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.suggested_weight_kg}${weightUnit}, Category: ${suggestion.category} (${confidence}% confidence)`,
-                                    duration: 5000,
-                                  });
-                                  
-                                  // Add visual feedback for high/low confidence
-                                  if (confidence >= 80) {
-                                    toast({
-                                      title: "✅ High Confidence Match",
-                                      description: "AI is very confident about these suggestions.",
-                                      duration: 3000,
-                                    });
-                                  } else if (confidence < 60) {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "⚠️ Low Confidence Match", 
-                                      description: "Please review and verify the AI suggestions manually.",
-                                      duration: 4000,
-                                    });
-                                  }
-                                } else {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "No Suggestions Found",
-                                    description: "No matching product classification found. Please fill manually.",
-                                  });
-                                }
-                              } catch (error) {
-                                console.error('Smart enhancement error:', error);
+                              } else if (confidence < 60) {
                                 toast({
                                   variant: "destructive",
-                                  title: "Enhancement Failed",
-                                  description: "Unable to get smart suggestions. Please fill manually.",
+                                  title: "⚠️ Low Confidence Match", 
+                                  description: "Please review and verify the AI suggestions manually.",
+                                  duration: 4000,
                                 });
-                              } finally {
-                                setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
                               }
+                            } else {
+                              toast({
+                                variant: "destructive",
+                                title: "No Suggestions Found",
+                                description: "No matching product classification found. Please fill manually.",
+                              });
                             }
-                          }}
-                          className="text-xs h-8 px-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
-                          disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
-                        >
-                          <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
-                          {smartFeatureLoading[`enhance-${item.id}`] ? 'Enhancing...' : 'AI Enhance'}
-                        </Button>
-                        {items.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(item.id)}
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
+                          } catch (error) {
+                            console.error('Smart enhancement error:', error);
+                            toast({
+                              variant: "destructive",
+                              title: "Enhancement Failed",
+                              description: "Unable to get smart suggestions. Please fill manually.",
+                            });
+                          } finally {
+                            setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
+                          }
+                        }
+                      }}
+                      className="text-xs h-8 px-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
+                      disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
+                    >
+                      <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
+                      {smartFeatureLoading[`enhance-${item.id}`] ? 'Enhancing...' : 'AI'}
+                    </Button>
+                    {items.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
 
-                  <CardContent className="space-y-6">
-                    {/* Product Information Section */}
-                    <div className="space-y-4">
-                      {/* Product URL and Name - Inline */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <ExternalLink className="w-4 h-4 text-gray-500" />
-                            <Label className="text-sm font-medium text-gray-700">Product URL</Label>
-                          </div>
-                          <EditableUrlInput
-                            value={item.url}
-                            onChange={(value) => updateItem(item.id, 'url', value)}
-                            placeholder="https://www.amazon.com/product-link or any international store"
-                            showFetchButton={true}
-                            onDataFetched={(data) => {
+              <CardContent className="space-y-4">
+                {/* Product Input Section */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ExternalLink className="w-4 h-4 text-gray-500" />
+                      <Label className="text-sm font-medium text-gray-700">Product URL</Label>
+                    </div>
+                    <EditableUrlInput
+                      value={item.url}
+                      onChange={(value) => updateItem(item.id, 'url', value)}
+                      placeholder="https://www.amazon.com/product-link or any international store"
+                      showFetchButton={true}
+                      onDataFetched={(data) => {
                               try {
+                                console.log('🚀 FETCH COMPLETE - Auto-filling data immediately:', data);
+                                
                                 // Find current item state to ensure we have latest values
                                 const currentItem = items.find(i => i.id === item.id);
-                                
-                                // Auto-fill product data from scraping
-                                console.log('🤖 Auto-filling scraped data:', data);
-                                console.log('🎯 Current item before update:', { 
+                                console.log('🎯 Current item before auto-fill:', { 
                                   id: item.id, 
                                   name: currentItem?.name || item.name, 
                                   price: currentItem?.unit_price_usd || item.unit_price_usd, 
@@ -2273,85 +2707,70 @@ const QuoteCalculatorV2: React.FC = () => {
                                 
                                 const updatedFields: string[] = [];
                                 
-                                // Update product name (ALWAYS overwrite if new data is available and useful)
+                                // Update product name (ALWAYS overwrite if new data is available)
                                 if (data.productName && 
                                     typeof data.productName === 'string' && 
                                     data.productName.trim() &&
                                     data.productName.trim() !== 'Unknown Product') {
                                   const newName = data.productName.trim();
-                                  console.log('🎯 Overwriting product name:', {
+                                  console.log('🎯 AUTO-FILL: Overwriting product name:', {
                                     old: currentItem?.name || item.name, 
                                     new: newName, 
                                     itemId: item.id
                                   });
-                                  flushSync(() => {
-                                    updateItem(item.id, 'name', newName);
-                                  });
+                                  updateItem(item.id, 'name', newName);
                                   updatedFields.push('name');
-                                  console.log('✅ Product name overwritten successfully');
-                                } else if (data.productName === 'Unknown Product') {
-                                  console.log('⚠️ Skipping product name update - generic fallback value');
+                                } else {
+                                  console.log('⚠️ AUTO-FILL: Skipping product name - invalid or generic:', data.productName);
                                 }
                                 
                                 // Update price with validation (ALWAYS overwrite if new data is valid)
                                 if (data.price && typeof data.price === 'number' && data.price > 0 && isFinite(data.price)) {
-                                  console.log('🎯 Overwriting price:', {
+                                  console.log('🎯 AUTO-FILL: Overwriting price:', {
                                     old: currentItem?.unit_price_usd || item.unit_price_usd, 
                                     new: data.price, 
                                     itemId: item.id
                                   });
-                                  flushSync(() => {
-                                    updateItem(item.id, 'unit_price_usd', data.price);
-                                  });
+                                  updateItem(item.id, 'unit_price_usd', data.price);
                                   updatedFields.push('price');
-                                  console.log('✅ Price overwritten successfully');
-                                } else if (data.price) {
-                                  console.warn('⚠️ Invalid price data, not overwriting:', data.price);
+                                } else {
+                                  console.log('⚠️ AUTO-FILL: Skipping price - invalid:', data.price);
                                 }
                                 
                                 // Update weight with validation (ALWAYS overwrite if new data is valid)
                                 if (data.weight && typeof data.weight === 'number' && data.weight > 0 && isFinite(data.weight)) {
-                                  console.log('🎯 Overwriting weight:', {
+                                  console.log('🎯 AUTO-FILL: Overwriting weight:', {
                                     old: currentItem?.weight_kg || item.weight_kg, 
                                     new: data.weight, 
                                     itemId: item.id
                                   });
-                                  flushSync(() => {
-                                    updateItem(item.id, 'weight_kg', data.weight);
-                                  });
+                                  updateItem(item.id, 'weight_kg', data.weight);
                                   updatedFields.push('weight');
-                                  console.log('✅ Weight overwritten successfully');
-                                } else if (data.weight) {
-                                  console.warn('⚠️ Invalid weight data, not overwriting:', data.weight);
+                                } else {
+                                  console.log('⚠️ AUTO-FILL: Skipping weight - invalid:', data.weight);
                                 }
                                 
                                 // Update category (always useful)
                                 if (data.category && typeof data.category === 'string' && data.category.trim()) {
                                   const newCategory = data.category.trim();
-                                  console.log('🎯 Overwriting category:', {
+                                  console.log('🎯 AUTO-FILL: Overwriting category:', {
                                     old: currentItem?.category || item.category,
                                     new: newCategory,
                                     itemId: item.id
                                   });
-                                  flushSync(() => {
-                                    updateItem(item.id, 'category', newCategory);
-                                  });
+                                  updateItem(item.id, 'category', newCategory);
                                   updatedFields.push('category');
-                                  console.log('✅ Category overwritten successfully');
-                                }
-                                
-                                // Log brand information (not stored in QuoteItem)
-                                if (data.brand) {
-                                  console.log('ℹ️ Brand from scraping (not stored):', data.brand);
+                                } else {
+                                  console.log('⚠️ AUTO-FILL: Skipping category - invalid:', data.category);
                                 }
                                 
                                 // Update HSN code if available
                                 if (data.hsn && typeof data.hsn === 'string' && data.hsn.trim()) {
-                                  flushSync(() => {
-                                    updateItem(item.id, 'hsn_code', data.hsn.trim());
-                                  });
+                                  console.log('🎯 AUTO-FILL: Setting HSN code:', data.hsn);
+                                  updateItem(item.id, 'hsn_code', data.hsn.trim());
                                   updatedFields.push('HSN code');
-                                  console.log('✅ Updated HSN code:', data.hsn);
+                                } else {
+                                  console.log('⚠️ AUTO-FILL: Skipping HSN - invalid:', data.hsn);
                                 }
                                 
                                 // Log currency information (handled at quote level)
@@ -2370,10 +2789,8 @@ const QuoteCalculatorV2: React.FC = () => {
                                   );
                                   
                                   if (validImages.length > 0) {
-                                    flushSync(() => {
-                                      updateItem(item.id, 'images', validImages);
-                                      updateItem(item.id, 'main_image', validImages[0]); // First image as main
-                                    });
+                                    updateItem(item.id, 'images', validImages);
+                                    updateItem(item.id, 'main_image', validImages[0]); // First image as main
                                     updatedFields.push(`${validImages.length} image${validImages.length > 1 ? 's' : ''}`);
                                     console.log('✅ Updated images:', validImages.length, 'valid images');
                                   } else {
@@ -2440,201 +2857,197 @@ const QuoteCalculatorV2: React.FC = () => {
                                   variant: "destructive"
                                 });
                               }
-                            }}
-                          />
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Package className="w-4 h-4 text-gray-500" />
-                            <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
-                          </div>
-                          <Input
-                            value={item.name}
-                            onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                            placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                            className="text-base"
-                          />
-                        </div>
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Package className="w-4 h-4 text-gray-500" />
+                      <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
+                    </div>
+                    <Input
+                      value={item.name}
+                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                      placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                      className="text-base font-medium"
+                    />
+                  </div>
 
-                        {/* Product Images Section */}
-                        {item.images && item.images.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Eye className="w-4 h-4 text-gray-500" />
-                              <Label className="text-sm font-medium text-gray-700">Product Images</Label>
-                              <Badge variant="secondary" className="text-xs">
-                                {item.images.length} image{item.images.length > 1 ? 's' : ''}
+                  {/* Product Images Section */}
+                  {item.images && item.images.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Eye className="w-4 h-4 text-gray-500" />
+                        <Label className="text-sm font-medium text-gray-700">Product Images</Label>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.images.length} image{item.images.length > 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {item.images.slice(0, 4).map((imageUrl, imageIndex) => (
+                          <div 
+                            key={imageIndex} 
+                            className="relative group cursor-pointer"
+                            onClick={() => window.open(imageUrl, '_blank')}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`${item.name} - Image ${imageIndex + 1}`}
+                              className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
+                              <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            {imageIndex === 0 && (
+                              <Badge 
+                                variant="default" 
+                                className="absolute -top-1 -right-1 text-xs px-1 py-0 h-4"
+                              >
+                                Main
                               </Badge>
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              {item.images.slice(0, 4).map((imageUrl, imageIndex) => (
-                                <div 
-                                  key={imageIndex} 
-                                  className="relative group cursor-pointer"
-                                  onClick={() => window.open(imageUrl, '_blank')}
-                                >
-                                  <img
-                                    src={imageUrl}
-                                    alt={`${item.name} - Image ${imageIndex + 1}`}
-                                    className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
-                                    onError={(e) => {
-                                      // Hide image if it fails to load
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
-                                    <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  </div>
-                                  {imageIndex === 0 && (
-                                    <Badge 
-                                      variant="default" 
-                                      className="absolute -top-1 -right-1 text-xs px-1 py-0 h-4"
-                                    >
-                                      Main
-                                    </Badge>
-                                  )}
-                                </div>
-                              ))}
-                              {item.images.length > 4 && (
-                                <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-500">
-                                  +{item.images.length - 4} more
-                                </div>
-                              )}
-                            </div>
+                            )}
+                          </div>
+                        ))}
+                        {item.images.length > 4 && (
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-500">
+                            +{item.images.length - 4} more
                           </div>
                         )}
                       </div>
                     </div>
+                  )}
+                </div>
 
-                    {/* Essential Details Section */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                        <Calculator className="w-4 h-4" />
-                        Essential Details
-                      </h5>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Quantity *</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                            className="text-center font-medium"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Unit Price ({originCurrency}) *</Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.unit_price_usd}
-                              onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              className="pl-9 font-medium"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <Label className="text-sm font-medium text-gray-600">Weight ({weightUnit})</Label>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  if (item.name || item.category) {
-                                    const loadingKey = `weight-${item.id}`;
-                                    setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
-                                    try {
-                                      const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                        product_name: item.name || '',
-                                        destination_country: destinationCountry,
-                                        category: item.category || 'general'
-                                      });
-                                      if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
-                                        updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
-                                        toast({
-                                          title: "⚖️ Weight Estimated",
-                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
-                                          duration: 4000,
-                                        });
-                                      } else {
-                                        toast({
-                                          variant: "destructive",
-                                          title: "Weight Estimation Failed",
-                                          description: "No weight data available for this product type.",
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.error('Weight estimation error:', error);
-                                      toast({
-                                        variant: "destructive",
-                                        title: "Estimation Failed",
-                                        description: "Unable to estimate weight. Please enter manually.",
-                                      });
-                                    } finally {
-                                      setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
-                                    }
-                                  }
-                                }}
-                                className="h-5 px-2 text-xs bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
-                                disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
-                              >
-                                <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
-                              </Button>
-                              <button
-                                type="button"
-                                onClick={() => setVolumetricModalOpen(item.id)}
-                                className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1 h-5 px-1"
-                              >
-                                <Ruler className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.001"
-                            value={item.weight_kg || ''}
-                            onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
-                            placeholder="0.5"
-                            className="text-sm font-medium"
-                          />
-                          {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
-                            const { length, width, height, unit = 'cm' } = item.dimensions;
-                            let l = length, w = width, h = height;
-                            if (unit === 'in') {
-                              l *= 2.54; w *= 2.54; h *= 2.54;
-                            }
-                            const volume = l * w * h;
-                            const divisor = item.volumetric_divisor || 5000;
-                            const volumetricWeightPerItem = volume / divisor;
-                            const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                            const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                            const isVolumetric = volumetricWeight > actualWeight;
-                            
-                            return (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                                <p className="text-blue-700 font-medium">📦 {length}×{width}×{height} {unit}</p>
-                                <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
-                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}{weightUnit}
-                                  {isVolumetric && ' (volumetric)'}
-                                </p>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
+                {/* Essential Details - Large, prominent row */}
+                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg border">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-900">
+                      {currencySymbol}{item.unit_price_usd?.toFixed(2) || '0.00'}
                     </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Unit Price ({originCurrency})
+                    </div>
+                    <div className="mt-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unit_price_usd}
+                        onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className="h-8 text-center text-sm font-medium w-24"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="h-16 w-px bg-gray-300"></div>
+                  
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-gray-900">
+                      {item.quantity || 1}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Quantity
+                    </div>
+                    <div className="mt-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                        className="h-8 text-center text-sm font-medium w-20"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="h-16 w-px bg-gray-300"></div>
+                  
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-gray-900">
+                      {item.weight_kg?.toFixed(2) || '0.00'}
+                      <span className="text-sm text-gray-500 ml-1">{weightUnit}</span>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Weight
+                    </div>
+                    <div className="mt-2 flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={item.weight_kg || ''}
+                        onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
+                        placeholder="0.5"
+                        className="h-8 text-center text-sm font-medium w-20"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (item.name || item.category) {
+                            const loadingKey = `weight-${item.id}`;
+                            setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
+                            try {
+                              const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                product_name: item.name || '',
+                                destination_country: destinationCountry,
+                                category: item.category || 'general'
+                              });
+                              if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+                                updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                                toast({
+                                  title: "⚖️ Weight Estimated",
+                                  description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} based on product analysis (${Math.round((suggestion.weight_confidence || 0) * 100)}% confidence)`,
+                                  duration: 4000,
+                                });
+                              } else {
+                                toast({
+                                  variant: "destructive",
+                                  title: "Weight Estimation Failed",
+                                  description: "No weight data available for this product type.",
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Weight estimation error:', error);
+                              toast({
+                                variant: "destructive",
+                                title: "Estimation Failed",
+                                description: "Unable to estimate weight. Please enter manually.",
+                              });
+                            } finally {
+                              setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
+                            }
+                          }
+                        }}
+                        className="h-8 w-8 p-0 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                        disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
+                      >
+                        <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Compact HSN Search */}
-                    {item.name && item.unit_price_usd > 0 && (
+                {/* HSN Classification - Compact single line */}
+                {item.name && item.unit_price_usd > 0 && (
+                  <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Tag className="w-4 h-4 text-blue-600" />
+                      <span className="font-medium text-blue-900">HSN:</span>
+                      <span className="font-mono text-blue-800">
+                        {item.hsn_code || 'Not set'}
+                      </span>
+                      <span className="text-gray-400">|</span>
+                      <span className="text-blue-700">
+                        {item.category || 'No category'}
+                      </span>
+                    </div>
+                    <div className="ml-auto">
                       <CompactHSNSearch
                         control={null}
                         index={0}
@@ -2650,90 +3063,165 @@ const QuoteCalculatorV2: React.FC = () => {
                         currentCategory={item.category}
                         currentHSN={item.hsn_code}
                         onSelection={(data) => handleHSNSelection(item.id, data)}
-                        // Settings props
                         currentUseHSNRates={item.use_hsn_rates}
                         currentValuationPreference={item.valuation_preference}
                         onHSNRateToggle={(useHSNRates) => updateItem(item.id, 'use_hsn_rates', useHSNRates)}
                         onValuationChange={(preference) => updateItem(item.id, 'valuation_preference', preference)}
                         getHSNInfo={(hsnCode, countryCode) => simplifiedQuoteCalculator.getHSNInfo(hsnCode, countryCode)}
                       />
-                    )}
+                    </div>
+                  </div>
+                )}
 
 
 
-                    {/* Discount Section */}
-                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                      <h5 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center gap-2">
-                        <Tag className="w-4 h-4" />
-                        Item Discount
-                      </h5>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm font-medium text-yellow-700">Type:</Label>
-                          <select
-                            className="text-sm border rounded px-3 py-1 bg-white"
-                            value={item.discount_type || 'percentage'}
-                            onChange={(e) => {
-                              const newType = e.target.value as 'percentage' | 'amount';
-                              setItems(items.map(currentItem => 
-                                currentItem.id === item.id ? {
-                                  ...currentItem,
-                                  discount_type: newType,
-                                  discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
-                                  discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
-                                } : currentItem
-                              ));
-                            }}
-                          >
-                            <option value="percentage">Percentage (%)</option>
-                            <option value="amount">Fixed Amount ({currencySymbol})</option>
-                          </select>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={item.discount_type === 'percentage' ? "100" : undefined}
-                              step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
-                              value={item.discount_type === 'amount' 
-                                ? (item.discount_amount || '') 
-                                : (item.discount_percentage || '')
-                              }
+                {/* Advanced Options - Collapsible */}
+                <div className="border-t pt-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleAdvancedOptions(item.id)}
+                    className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-700">Advanced Options</span>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <span>Discounts</span>
+                        <span>•</span>
+                        <span>Dimensions</span>
+                        <span>•</span>
+                        <span>Settings</span>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform group-hover:text-gray-700 ${
+                      advancedOptionsExpanded[item.id] ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+                  
+                  {advancedOptionsExpanded[item.id] && (
+                    <div className="mt-4 space-y-4">
+                      {/* Discount Section */}
+                      <div className="p-4 rounded-lg border border-yellow-200 bg-yellow-50/30">
+                        <h6 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                          <Tag className="w-4 h-4" />
+                          Item Discount
+                        </h6>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium text-yellow-700">Type:</Label>
+                            <select
+                              className="text-sm border rounded px-3 py-1 bg-white"
+                              value={item.discount_type || 'percentage'}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value) || undefined;
-                                if (item.discount_type === 'amount') {
-                                  updateItem(item.id, 'discount_amount', value);
-                                } else {
-                                  updateItem(item.id, 'discount_percentage', value);
-                                }
+                                const newType = e.target.value as 'percentage' | 'amount';
+                                setItems(items.map(currentItem => 
+                                  currentItem.id === item.id ? {
+                                    ...currentItem,
+                                    discount_type: newType,
+                                    discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
+                                    discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
+                                  } : currentItem
+                                ));
                               }}
-                              placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
-                              className="text-sm pr-8"
-                            />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                              <span className="text-gray-500 text-sm">
-                                {item.discount_type === 'amount' ? currencySymbol : '%'}
-                              </span>
+                            >
+                              <option value="percentage">Percentage (%)</option>
+                              <option value="amount">Fixed Amount ({currencySymbol})</option>
+                            </select>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={item.discount_type === 'percentage' ? "100" : undefined}
+                                step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
+                                value={item.discount_type === 'amount' 
+                                  ? (item.discount_amount || '') 
+                                  : (item.discount_percentage || '')
+                                }
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || undefined;
+                                  if (item.discount_type === 'amount') {
+                                    updateItem(item.id, 'discount_amount', value);
+                                  } else {
+                                    updateItem(item.id, 'discount_percentage', value);
+                                  }
+                                }}
+                                placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
+                                className="text-sm pr-8"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span className="text-gray-500 text-sm">
+                                  {item.discount_type === 'amount' ? currencySymbol : '%'}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Show savings */}
+                          {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
+                            (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
+                              Save {currencySymbol}{item.discount_type === 'percentage' 
+                                ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
+                                : (item.discount_amount || 0).toFixed(2)
+                              }
+                            </Badge>
+                          )}
                         </div>
-
-                        {/* Show savings */}
-                        {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
-                          (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
-                            Save {currencySymbol}{item.discount_type === 'percentage' 
-                              ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
-                              : (item.discount_amount || 0).toFixed(2)
-                            }
-                          </Badge>
+                      </div>
+                      
+                      {/* Dimensions Section */}
+                      <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/30">
+                        <div className="flex items-center justify-between mb-3">
+                          <h6 className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                            <Ruler className="w-4 h-4" />
+                            Dimensions & Volumetric Weight
+                          </h6>
+                          <button
+                            type="button"
+                            onClick={() => setVolumetricModalOpen(item.id)}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                          >
+                            <Ruler className="w-3 h-3" />
+                            Set Dimensions
+                          </button>
+                        </div>
+                        
+                        {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 ? (() => {
+                          const { length, width, height, unit = 'cm' } = item.dimensions;
+                          let l = length, w = width, h = height;
+                          if (unit === 'in') {
+                            l *= 2.54; w *= 2.54; h *= 2.54;
+                          }
+                          const volume = l * w * h;
+                          const divisor = item.volumetric_divisor || 5000;
+                          const volumetricWeightPerItem = volume / divisor;
+                          const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                          const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                          const isVolumetric = volumetricWeight > actualWeight;
+                          
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-blue-700 font-medium text-sm">📦 {length} × {width} × {height} {unit}</p>
+                              <p className={`text-sm font-medium ${
+                                isVolumetric ? 'text-orange-600' : 'text-green-600'
+                              }`}>
+                                Chargeable Weight: {Math.max(actualWeight, volumetricWeight).toFixed(3)}{weightUnit}
+                                {isVolumetric && ' (volumetric weight applies)'}
+                              </p>
+                            </div>
+                          );
+                        })() : (
+                          <p className="text-sm text-gray-500">No dimensions set - using actual weight only</p>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
           
           {/* Add Another Item Button - Separate card */}
@@ -3079,7 +3567,29 @@ const QuoteCalculatorV2: React.FC = () => {
             </Card>
           )}
 
-          {/* Quote Details & Analysis - Always visible when calculation exists */}
+          {/* Detailed Breakdown using proper component - First in order */}
+          {calculationResult && showPreview && calculationResult.calculation_steps && (
+            <QuoteBreakdownV2 
+              quote={{
+                id: 'temp-' + Date.now(),
+                quote_number: 'PREVIEW',
+                status: 'draft',
+                customer_email: customerEmail || 'preview@example.com',
+                customer_name: customerName,
+                origin_country: originCountry,
+                destination_country: destinationCountry,
+                items: items.filter(item => item.name && item.unit_price_usd > 0),
+                calculation_data: calculationResult,
+                total_usd: calculationResult.calculation_steps.total_usd || 0,
+                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+                customer_currency: customerCurrency,
+                created_at: new Date().toISOString(),
+                calculated_at: calculationResult.calculation_timestamp
+              }}
+            />
+          )}
+
+          {/* Quote Details & Analysis - Second in order */}
           {calculationResult && calculationResult.calculation_steps && (
             <QuoteDetailsAnalysis 
               quote={{
@@ -3101,7 +3611,7 @@ const QuoteCalculatorV2: React.FC = () => {
             />
           )}
 
-          {/* Shipping Route Debug Component */}
+          {/* Shipping Route Debug Component - Third in order */}
           {calculationResult && calculationResult.calculation_steps && (
             <ShippingRouteDebug
               routeCalculations={calculationResult.route_calculations}
@@ -3110,28 +3620,6 @@ const QuoteCalculatorV2: React.FC = () => {
               weight={items.reduce((sum, item) => sum + (item.weight_kg || 0.5) * item.quantity, 0)}
               itemValueUSD={items.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0)}
               fallbackUsed={!calculationResult.route_calculations}
-            />
-          )}
-
-          {/* Detailed Breakdown using proper component */}
-          {calculationResult && showPreview && calculationResult.calculation_steps && (
-            <QuoteBreakdownV2 
-              quote={{
-                id: 'temp-' + Date.now(),
-                quote_number: 'PREVIEW',
-                status: 'draft',
-                customer_email: customerEmail || 'preview@example.com',
-                customer_name: customerName,
-                origin_country: originCountry,
-                destination_country: destinationCountry,
-                items: items.filter(item => item.name && item.unit_price_usd > 0),
-                calculation_data: calculationResult,
-                total_usd: calculationResult.calculation_steps.total_usd || 0,
-                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
-                customer_currency: customerCurrency,
-                created_at: new Date().toISOString(),
-                calculated_at: calculationResult.calculation_timestamp
-              }}
             />
           )}
 

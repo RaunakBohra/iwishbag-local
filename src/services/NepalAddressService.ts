@@ -175,6 +175,16 @@ export class NepalAddressService {
   }
 
   /**
+   * Get district code by district name (reverse lookup)
+   */
+  static getDistrictCodeByName(districtName: string): string | null {
+    const district = this.NEPAL_DISTRICTS.find(d => 
+      d.name.toLowerCase() === districtName.toLowerCase()
+    );
+    return district?.code || null;
+  }
+
+  /**
    * Format Nepal address for display
    */
   static formatNepalAddress(address: {
