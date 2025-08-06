@@ -80,7 +80,7 @@ interface PackageReturn {
   updated_at: string;
 }
 
-export const ReturnManagementDashboard: React.FC = () => {
+export const ReturnManagementDashboardRefactored: React.FC = () => {
   const queryClient = useQueryClient();
   
   // State management
@@ -420,4 +420,5 @@ export const ReturnManagementDashboard: React.FC = () => {
   );
 };
 
-export default ReturnManagementDashboard;
+// Export as the main component for backward compatibility
+export { ReturnManagementDashboardRefactored as ReturnManagementDashboard };

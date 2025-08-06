@@ -1912,11 +1912,11 @@ const QuoteCalculatorV2: React.FC = () => {
 
               {/* Email */}
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Mail className="h-3 w-3 text-green-600" />
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-3 w-3 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-green-700 uppercase tracking-wide">Email</div>
+                  <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Email</div>
                   <div className="text-sm font-medium text-gray-900 truncate">
                     {customerEmail || 'Not provided'}
                   </div>
@@ -2024,21 +2024,6 @@ const QuoteCalculatorV2: React.FC = () => {
 
           {/* Route & Shipping - Professional International Design */}
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg text-gray-900">Route Configuration</CardTitle>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs px-2 py-1">
-                  Required
-                </Badge>
-              </div>
-            </CardHeader>
             <CardContent className="p-4">
               {/* Compact 4-Column Layout */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -2088,7 +2073,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Destination Column */}
                 <div>
                   <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-green-600" />
+                    <MapPin className="h-3 w-3 text-blue-600" />
                     Destination
                     {userOverrodeDestination && (
                       <span className="text-xs text-blue-600 font-medium ml-1">Manual</span>
@@ -2129,7 +2114,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
                             ? 'border-amber-300' 
                             : destinationPincode 
-                              ? 'border-green-300' 
+                              ? 'border-blue-300' 
                               : ''
                         }`}
                       />
@@ -2316,7 +2301,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <Truck className="h-3 w-3 text-blue-600" />
                     International Shipping
                     {calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod && (
-                      <span className="text-xs text-green-600 ml-1">(Auto)</span>
+                      <span className="text-xs text-blue-600 ml-1">(Auto)</span>
                     )}
                   </Label>
                   <div className="space-y-2">
@@ -2328,10 +2313,10 @@ const QuoteCalculatorV2: React.FC = () => {
                     >
                       <SelectTrigger className={`h-10 text-sm ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
-                          ? 'border-green-500 bg-green-50' 
+                          ? 'border-blue-500 bg-blue-50' 
                           : 'border-gray-300'
                       }`}>
-                        <SelectValue placeholder="Shipping method" />
+                        <SelectValue placeholder="Select shipping method" />
                       </SelectTrigger>
                       <SelectContent>
                         {shippingMethods.map(method => (
@@ -2388,7 +2373,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 <div className="h-4 w-4 rounded bg-gray-100 flex items-center justify-center">
                                   {service.value === 'standard' && <Package className="h-3 w-3 text-gray-600" />}
                                   {service.value === 'express' && <Clock className="h-3 w-3 text-blue-600" />}
-                                  {service.value === 'same_day' && <CheckCircle className="h-3 w-3 text-green-600" />}
+                                  {service.value === 'same_day' && <CheckCircle className="h-3 w-3 text-blue-600" />}
                                 </div>
                                 <span>{service.label}</span>
                               </div>
@@ -2404,7 +2389,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Payment Column */}
                 <div>
                   <Label className="text-xs font-medium text-gray-600 mb-2 block flex items-center gap-1">
-                    <CreditCard className="h-3 w-3 text-green-600" />
+                    <CreditCard className="h-3 w-3 text-blue-600" />
                     Payment
                   </Label>
                   <div className="space-y-2">
@@ -2427,7 +2412,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     </Select>
 
                     {/* Insurance Toggle */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-gray-50/50">
                       <Label className="text-xs font-medium text-gray-600 flex items-center gap-1">
                         <Shield className="h-3 w-3 text-blue-600" />
                         Insurance
@@ -2449,7 +2434,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {destinationCountry === 'IN' && destinationPincode && (
                   <div className="flex items-center">
                     {/^[1-9][0-9]{5}$/.test(destinationPincode) ? (
-                      <span className="text-green-600 flex items-center">
+                      <span className="text-blue-600 flex items-center">
                         <Check className="h-3 w-3 mr-1" />
                         Pincode valid - Delhivery rates active
                       </span>
@@ -2471,7 +2456,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </span>
                 )}
                 {destinationCountry === 'NP' && ncmRates?.rates && (
-                  <span className="text-green-600 flex items-center">
+                  <span className="text-blue-600 flex items-center">
                     <Check className="h-3 w-3 mr-1" />
                     NCM rates loaded • {ncmRates.markup_applied}% markup
                   </span>
@@ -2919,7 +2904,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               }
                             }
                           }}
-                          className="h-8 w-8 p-0 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                          className="h-8 w-8 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
                           disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
                           title="Get AI weight estimate"
                         >
@@ -3022,16 +3007,16 @@ const QuoteCalculatorV2: React.FC = () => {
                       <div className={`mt-3 p-3 rounded-lg border-2 ${
                         isVolumetric 
                           ? 'bg-orange-50 border-orange-200' 
-                          : 'bg-green-50 border-green-200'
+                          : 'bg-blue-50 border-blue-200'
                       }`}>
                         <div className="flex items-center justify-between">
                           <span className={`font-medium ${
-                            isVolumetric ? 'text-orange-800' : 'text-green-800'
+                            isVolumetric ? 'text-orange-800' : 'text-blue-800'
                           }`}>
                             Chargeable Weight:
                           </span>
                           <span className={`text-lg font-bold ${
-                            isVolumetric ? 'text-orange-900' : 'text-green-900'
+                            isVolumetric ? 'text-orange-900' : 'text-blue-900'
                           }`}>
                             {chargeableWeight.toFixed(2)}{weightUnit} {isVolumetric ? '(volumetric)' : '(actual)'}
                           </span>
@@ -3133,7 +3118,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           {/* Show savings */}
                           {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
                             (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300">
                               Save {currencySymbol}{item.discount_type === 'percentage' 
                                 ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
                                 : (item.discount_amount || 0).toFixed(2)
@@ -3301,12 +3286,12 @@ const QuoteCalculatorV2: React.FC = () => {
                 {discountCodes.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-blue-600" />
                       Applied Discount Codes
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {discountCodes.map((code) => (
-                        <Badge key={code} variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
+                        <Badge key={code} variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800">
                           <Tag className="w-3 h-3" />
                           {code}
                           <button
@@ -3319,7 +3304,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 setOrderDiscountCodeId(null);
                               }
                             }}
-                            className="ml-1 rounded-full hover:bg-green-200 p-0.5 transition-colors"
+                            className="ml-1 rounded-full hover:bg-blue-200 p-0.5 transition-colors"
                           >
                             <X className="w-3 h-3" />
                           </button>
