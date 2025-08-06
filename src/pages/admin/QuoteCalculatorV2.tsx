@@ -264,6 +264,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [paymentGateway, setPaymentGateway] = useState('stripe');
   const [adminNotes, setAdminNotes] = useState('');
   const [customerCurrency, setCustomerCurrency] = useState('NPR');
+  const [insuranceEnabled, setInsuranceEnabled] = useState(true); // Insurance toggle
   
   // Discount state
   const [orderDiscountType, setOrderDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -342,6 +343,16 @@ const QuoteCalculatorV2: React.FC = () => {
     });
   }, [destinationCountry, isEditMode, quoteLoadingComplete, userOverrodeDestination]);
 
+  // Debug: Log calculation result state changes
+  useEffect(() => {
+    console.log('📊 [State Debug] calculationResult state changed:', {
+      hasResult: !!calculationResult,
+      hasCalculationSteps: !!calculationResult?.calculation_steps,
+      resultKeys: calculationResult ? Object.keys(calculationResult) : null,
+      timestamp: new Date().toISOString()
+    });
+  }, [calculationResult]);
+
   // Auto-calculate on changes (but not during initial quote loading)
   useEffect(() => {
     const hasValidItems = items.some(item => item.name && item.unit_price_usd > 0);
@@ -373,7 +384,7 @@ const QuoteCalculatorV2: React.FC = () => {
           : 'unknown'
       });
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote, isEditMode]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, insuranceEnabled, loadingQuote, isEditMode]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -605,6 +616,9 @@ const QuoteCalculatorV2: React.FC = () => {
           current: shippingMethod
         });
         setShippingMethod(quote.shipping_method || 'standard');
+        
+        // Load insurance preference from database (default to true if not set)
+        setInsuranceEnabled(quote.insurance_required !== undefined ? quote.insurance_required : true);
 
         // Map items - convert from V2 format to calculator format
         if (quote.items && Array.isArray(quote.items)) {
@@ -891,15 +905,41 @@ const QuoteCalculatorV2: React.FC = () => {
         previousSelection: shippingMethod
       });
       
-      setShippingMethod(usedShippingMethodId);
+      // Get current shipping methods for validation
+      const currentShippingMethods = dynamicShippingMethods.length > 0 
+        ? dynamicShippingMethods 
+        : simplifiedQuoteCalculator.getShippingMethods();
       
-      // Show user feedback about auto-selection
-      if (usedShippingMethodId !== shippingMethod) {
-        toast({
-          title: "✈️ Shipping Method Updated",
-          description: `Auto-selected cheapest option: ${usedShippingMethodName}`,
-          duration: 3000
-        });
+      // Check if the calculated method exists in available options
+      const methodExists = currentShippingMethods.some(method => method.value === usedShippingMethodId);
+      
+      console.log(`🔍 [Shipping Sync] Method validation:`, {
+        calculatedMethodId: usedShippingMethodId,
+        availableOptions: currentShippingMethods.map(m => m.value),
+        methodExists,
+        willUpdate: methodExists
+      });
+      
+      if (methodExists) {
+        setShippingMethod(usedShippingMethodId);
+        
+        // Show user feedback about auto-selection
+        if (usedShippingMethodId !== shippingMethod) {
+          toast({
+            title: "✈️ Shipping Method Updated",
+            description: `Auto-selected cheapest option: ${usedShippingMethodName}`,
+            duration: 3000
+          });
+        }
+      } else {
+        console.warn(`⚠️ [Shipping Sync] Calculated method ${usedShippingMethodId} not found in available options. Using first available option.`);
+        
+        // Fallback to first available option
+        if (currentShippingMethods.length > 0) {
+          const fallbackMethod = currentShippingMethods[0];
+          console.log(`🔄 [Shipping Sync] Falling back to: ${fallbackMethod.value} (${fallbackMethod.label})`);
+          setShippingMethod(fallbackMethod.value);
+        }
       }
     }
   };
@@ -999,7 +1039,8 @@ const QuoteCalculatorV2: React.FC = () => {
         apply_component_discounts: applyComponentDiscounts,
         customer_id: customerId,
         discount_codes: discountCodes,
-        is_first_order: false // Could be enhanced later with first-order detection
+        is_first_order: false, // Could be enhanced later with first-order detection
+        insurance_enabled: insuranceEnabled // Insurance toggle
       });
 
       console.log('✅ [DEBUG] simplifiedQuoteCalculator.calculate completed:', {
@@ -1010,6 +1051,12 @@ const QuoteCalculatorV2: React.FC = () => {
       });
 
       setCalculationResult(result);
+      console.log('🎯 [DEBUG] State updated - calculationResult set:', {
+        resultSet: !!result,
+        calculationSteps: !!result?.calculation_steps,
+        stateHasResult: !!calculationResult, // This might still be old state
+        newResultKeys: result ? Object.keys(result) : null
+      });
       setShippingError(null); // Clear any previous shipping errors
       
       // Sync shipping method dropdown with calculation results
@@ -1101,6 +1148,7 @@ const QuoteCalculatorV2: React.FC = () => {
         origin_country: originCountry,
         destination_country: destinationCountry,
         shipping_method: shippingMethod,
+        insurance_required: insuranceEnabled, // Save insurance preference
         items: items.filter(item => item.name && item.unit_price_usd > 0).map(item => ({
           ...item,
           costprice_origin: item.unit_price_usd, // Map back to V2 format
@@ -1410,18 +1458,6 @@ const QuoteCalculatorV2: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
           )}
           
-          {/* DEBUG UI - Remove after fixing */}
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-            <div className="font-semibold text-yellow-800 mb-1">DEBUG INFO:</div>
-            <div className="space-y-1 text-yellow-700">
-              <div>isEditMode: <span className={isEditMode ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{String(isEditMode)}</span></div>
-              <div>quoteId: <span className="font-mono">{quoteId || 'null'}</span></div>
-              <div>calculationResult: <span className={calculationResult ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{calculationResult ? 'EXISTS' : 'NULL'}</span></div>
-              <div>calculationSteps: <span className={calculationResult?.calculation_steps ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{calculationResult?.calculation_steps ? 'EXISTS' : 'NULL'}</span></div>
-              <div>itemsCount: {items.length}</div>
-              <div>validItemsCount: {items.filter(item => item.name && item.unit_price_usd > 0).length}</div>
-            </div>
-          </div>
         </div>
         <div className="flex items-center gap-4">
           {/* Informational badges */}
@@ -1803,200 +1839,279 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Shipping Column */}
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">
-                    Shipping
-                    <span className="text-xs text-gray-400 ml-1">
-                      (Current: {shippingMethod}
-                      {calculationResult?.route_calculations?.delivery_option_used?.id && 
-                       calculationResult.route_calculations.delivery_option_used.id === shippingMethod && (
-                        <span className="text-green-600 font-semibold"> - Auto-Selected ✓</span>
-                      )}
-                      {calculationResult?.route_calculations?.delivery_option_used?.id && 
-                       calculationResult.route_calculations.delivery_option_used.id !== shippingMethod && (
-                        <span className="text-orange-600 font-semibold"> - Manual Override</span>
-                      )})
-                    </span>
-                  </Label>
-                  <div className="space-y-2">
+                {/* Shipping Column - Redesigned */}
+                <div className="space-y-3">
+                  {/* Shipping Method Header */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                      🚚 Shipping Method
+                    </Label>
+                    {calculationResult?.route_calculations?.delivery_option_used?.id && (
+                      <div className="flex items-center gap-1">
+                        {calculationResult.route_calculations.delivery_option_used.id === shippingMethod ? (
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
+                            ✓ Auto-Selected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full font-medium">
+                            ⚠ Manual Override
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Primary Shipping Selector */}
+                  <div className="relative">
                     <Select 
                       value={shippingMethod} 
                       onValueChange={(value: any) => setShippingMethod(value)}
-                      key={`shipping-${shippingMethod}`} // Force re-render when value changes
+                      key={`shipping-${shippingMethod}`}
                     >
-                      <SelectTrigger className={`h-8 text-xs ${
+                      <SelectTrigger className={`h-10 text-sm font-medium transition-all ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
-                          ? 'border-green-500 bg-green-50' 
-                          : ''
+                          ? 'border-green-500 bg-green-50/50 shadow-sm' 
+                          : 'border-gray-300 hover:border-gray-400'
                       }`}>
-                        <SelectValue />
+                        <SelectValue placeholder="Choose shipping method" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-w-md">
                         {shippingMethods.map(method => (
-                          <SelectItem key={method.value} value={method.value}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>
-                                {dynamicShippingMethods.length > 0 
-                                  ? `${method.label} - ${currencySymbol}${method.rate}/${weightUnit} (${method.delivery_days})`
-                                  : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - ${currencySymbol}${method.rate}/${weightUnit}`
-                                }
-                              </span>
+                          <SelectItem key={method.value} value={method.value} className="cursor-pointer">
+                            <div className="flex items-center justify-between w-full py-1">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900">
+                                  {method.label}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {currencySymbol}{method.rate}/{weightUnit}
+                                  {dynamicShippingMethods.length > 0 && method.delivery_days && (
+                                    <span className="ml-1">• {method.delivery_days}</span>
+                                  )}
+                                </span>
+                              </div>
                               {calculationResult?.route_calculations?.delivery_option_used?.id === method.value && (
-                                <span className="ml-2 text-green-600 text-xs">✓ Used</span>
+                                <span className="ml-3 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">
+                                  ✓ Used
+                                </span>
                               )}
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    
-                    {/* Show service type for India with valid pincode */}
-                    {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
+                  </div>
+
+                  {/* Country-Specific Service Options */}
+                  {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <Label className="text-xs font-medium text-blue-800 mb-2 block">
+                        🇮🇳 India Service Type
+                      </Label>
                       <Select 
                         value={delhiveryServiceType} 
                         onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
                         disabled={loadingServices}
                       >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Service" />
+                        <SelectTrigger className="h-9 text-sm bg-white border-blue-300">
+                          <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableServices.map((service) => (
                             <SelectItem key={service.value} value={service.value}>
-                              {service.value === 'standard' && '📦 '}
-                              {service.value === 'express' && '⚡ '}
-                              {service.value === 'same_day' && '🚀 '}
-                              {service.label.replace('Standard', 'Std').replace('Express', 'Exp')}
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {service.value === 'standard' && '📦'}
+                                  {service.value === 'express' && '⚡'}
+                                  {service.value === 'same_day' && '🚀'}
+                                </span>
+                                <span>{service.label}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    )}
-                    
-                    {/* Show NCM service type for Nepal */}
-                    {destinationCountry === 'NP' && selectedNCMBranch && (
-                      <Select 
-                        value={ncmServiceType} 
-                        onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
-                        disabled={loadingNCMRates}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pickup">🚪 Door</SelectItem>
-                          <SelectItem value="collect">🏪 Pickup</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {destinationCountry === 'NP' && (
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
+                      <Label className="text-xs font-medium text-green-800 mb-2 block">
+                        🇳🇵 Nepal Shipping Configuration
+                      </Label>
+                      
+                      {/* NCM Branch Selector */}
+                      <div>
+                        <Label className="text-xs font-medium text-green-700 mb-1 block">
+                          📍 NCM Branch
+                          <span className="text-xs text-green-600 ml-1 font-normal">(Package delivery location in Nepal)</span>
+                        </Label>
+                        <Select 
+                          value={selectedNCMBranch?.name || ''} 
+                          onValueChange={(branchName) => {
+                            const branch = availableNCMBranches.find(b => b.name === branchName);
+                            setSelectedNCMBranch(branch || null);
+                          }}
+                          disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                        >
+                          <SelectTrigger className="h-9 text-sm bg-white border-green-300">
+                            <SelectValue placeholder={
+                              loadingNCMBranches 
+                                ? "Loading branches..." 
+                                : availableNCMBranches.length === 0
+                                  ? "No branches available"
+                                  : "Select NCM branch"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableNCMBranches.length > 0 ? (
+                              availableNCMBranches.map((branch) => (
+                                <SelectItem key={branch.name} value={branch.name}>
+                                  <div className="flex items-center gap-2">
+                                    <span>📍</span>
+                                    <div>
+                                      <span className="font-medium">{branch.name}</span>
+                                      <span className="text-xs text-gray-500 ml-1">• {branch.district}</span>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : loadingNCMBranches ? (
+                              <SelectItem value="loading" disabled>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3 animate-spin" />
+                                  <span>Loading branches...</span>
+                                </div>
+                              </SelectItem>
+                            ) : (
+                              <SelectItem value="none" disabled>
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-3 w-3" />
+                                  <span>No branches available</span>
+                                </div>
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {selectedNCMBranch && (
+                          <div className="text-xs mt-1 text-green-700 bg-green-100 p-2 rounded flex items-center">
+                            <Check className="h-3 w-3 mr-1" />
+                            Selected: <span className="font-medium ml-1">{selectedNCMBranch.name}</span> 
+                            <span className="text-green-600 ml-1">({selectedNCMBranch.district})</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Delivery Method - Only show when branch is selected */}
+                      {selectedNCMBranch && (
+                        <div>
+                          <Label className="text-xs font-medium text-green-700 mb-1 block">
+                            🚚 Delivery Method
+                          </Label>
+                          <Select 
+                            value={ncmServiceType} 
+                            onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
+                            disabled={loadingNCMRates}
+                          >
+                            <SelectTrigger className="h-9 text-sm bg-white border-green-300">
+                              <SelectValue placeholder="Select delivery method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pickup">
+                                <div className="flex items-center gap-2">
+                                  <span>🚪</span>
+                                  <span>Door Delivery</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="collect">
+                                <div className="flex items-center gap-2">
+                                  <span>🏪</span>
+                                  <span>Branch Pickup</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Payment Column */}
-                <div>
-                  <Label className="text-xs font-medium text-gray-600">Payment</Label>
-                  <div className="space-y-2">
+                {/* Payment & Options Column - Redesigned */}
+                <div className="space-y-4">
+                  {/* Payment Gateway */}
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-2">
+                      💳 Payment Gateway
+                    </Label>
                     <Select value={paymentGateway} onValueChange={setPaymentGateway}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
+                      <SelectTrigger className="h-10 text-sm font-medium border-gray-300 hover:border-gray-400 transition-colors">
+                        <SelectValue placeholder="Select payment method" />
                       </SelectTrigger>
                       <SelectContent>
                         {simplifiedQuoteCalculator.getPaymentGateways().map(gateway => (
-                          <SelectItem key={gateway.value} value={gateway.value}>
-                            {gateway.label} - {gateway.fees.percentage}%
+                          <SelectItem key={gateway.value} value={gateway.value} className="cursor-pointer">
+                            <div className="flex items-center justify-between w-full py-1">
+                              <span className="font-medium">{gateway.label}</span>
+                              <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                {gateway.fees.percentage}%
+                              </span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* Dynamic Handling Display */}
-                    <div className="p-2 bg-gray-50 rounded border text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-700">Handling</span>
-                        {calculationResult?.route_calculations?.handling ? (
-                          <span className="text-green-600 font-mono">
-                            ${calculationResult.route_calculations.handling.base_fee}+{(calculationResult.route_calculations.handling.percentage_fee / (calculationResult.calculation_steps?.items_subtotal || 1) * 100).toFixed(1)}%
-                          </span>
-                        ) : (
-                          <span className="text-gray-500">Route handling</span>
+                  </div>
+
+                  {/* Insurance Section */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <Label className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                          🛡️ Shipping Insurance
+                        </Label>
+                        {calculationResult?.route_calculations?.insurance?.available && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            {calculationResult.route_calculations.insurance.percentage}% of shipment value
+                          </p>
                         )}
                       </div>
-                      {calculationResult?.route_calculations?.handling && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Min: ${calculationResult.route_calculations.handling.min_fee} - Max: ${calculationResult.route_calculations.handling.max_fee}
-                        </div>
-                      )}
+                      <Switch
+                        checked={insuranceEnabled}
+                        onCheckedChange={setInsuranceEnabled}
+                        disabled={!calculationResult?.route_calculations?.insurance?.available}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
                     </div>
                     
-                    {/* Dynamic Insurance Display */}
-                    <div className="p-2 bg-gray-50 rounded border text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-700">Insurance</span>
-                        {calculationResult?.route_calculations?.insurance?.available ? (
-                          <span className="text-green-600 font-mono">
-                            {calculationResult.route_calculations.insurance.percentage}% (Min: ${calculationResult.route_calculations.insurance.min_fee})
-                          </span>
-                        ) : (
-                          <span className="text-gray-500">Not available</span>
+                    {calculationResult?.route_calculations?.insurance?.available ? (
+                      <div className="space-y-1">
+                        {insuranceEnabled && (
+                          <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                            <div className="flex justify-between items-center">
+                              <span>Coverage:</span>
+                              <span className="font-medium">
+                                {calculationResult.route_calculations.insurance.percentage}% 
+                                (Min: ${calculationResult.route_calculations.insurance.min_fee})
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {!insuranceEnabled && (
+                          <p className="text-xs text-gray-500 italic">
+                            Insurance disabled - shipment not covered
+                          </p>
                         )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                        Insurance not available for this route
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* NCM Branch as full width when Nepal is selected */}
-              {destinationCountry === 'NP' && (
-                <div className="mt-3 pt-3 border-t">
-                  <Label className="text-xs font-medium text-gray-600">
-                    NCM Branch 
-                    <span className="text-xs text-blue-600 ml-1">(Where NCM will deliver the package in Nepal)</span>
-                  </Label>
-                  <Select 
-                    value={selectedNCMBranch?.name || ''} 
-                    onValueChange={(branchName) => {
-                      const branch = availableNCMBranches.find(b => b.name === branchName);
-                      setSelectedNCMBranch(branch || null);
-                    }}
-                    disabled={loadingNCMBranches || availableNCMBranches.length === 0}
-                  >
-                    <SelectTrigger className="h-8 text-xs mt-1">
-                      <SelectValue placeholder={
-                        loadingNCMBranches 
-                          ? "Loading branches..." 
-                          : availableNCMBranches.length === 0
-                            ? "No branches available"
-                            : "Select NCM branch"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableNCMBranches.length > 0 ? (
-                        availableNCMBranches.map((branch) => (
-                          <SelectItem key={branch.name} value={branch.name}>
-                            📍 {branch.name} • {branch.district}
-                          </SelectItem>
-                        ))
-                      ) : loadingNCMBranches ? (
-                        <SelectItem value="loading" disabled>
-                          <Clock className="h-3 w-3 mr-2 animate-spin inline" />
-                          Loading branches...
-                        </SelectItem>
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          <AlertCircle className="h-3 w-3 mr-2 inline" />
-                          No branches available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {selectedNCMBranch && (
-                    <div className="text-xs mt-1 text-green-600 flex items-center">
-                      <Check className="h-3 w-3 mr-1" />
-                      Selected: {selectedNCMBranch.name} ({selectedNCMBranch.district})
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Status indicators for validation */}
               <div className="flex flex-wrap gap-2 text-xs mt-3 pt-2 border-t">

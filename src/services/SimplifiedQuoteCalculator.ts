@@ -68,6 +68,7 @@ interface CalculationInput {
   quote_id?: string; // For logging purposes
   is_first_order?: boolean;
   apply_component_discounts?: boolean; // Enable component-based discounts
+  insurance_enabled?: boolean; // Toggle insurance on/off
 }
 
 interface CalculationResult {
@@ -590,12 +591,18 @@ class SimplifiedQuoteCalculator {
     let insuranceAmount = 0;
     let insurancePercentage = 0;
     
-    if (routeCalculations && routeCalculations.insurance.available) {
-      // Use dynamic insurance from shipping route
+    if (input.insurance_enabled !== false && routeCalculations && routeCalculations.insurance.available) {
+      // Use dynamic insurance from shipping route (only if enabled)
       insuranceAmount = routeCalculations.insurance.amount;
       insurancePercentage = routeCalculations.insurance.percentage;
       
-      console.log(`🛡️ [Dynamic Insurance] Percentage: ${insurancePercentage}%, Amount: ${insuranceAmount}`);
+      console.log(`🛡️ [Dynamic Insurance] Enabled - Percentage: ${insurancePercentage}%, Amount: ${insuranceAmount}`);
+    } else if (input.insurance_enabled === false) {
+      // Insurance explicitly disabled by user
+      insuranceAmount = 0;
+      insurancePercentage = 0;
+        
+      console.log(`🛡️ [Insurance Disabled] User disabled insurance, Amount: $0`);
     } else {
       // No insurance available - set to 0
       insuranceAmount = 0;

@@ -169,45 +169,81 @@ class ProductIntelligenceService {
         return exactMatch;
       }
 
-      // Then try keyword search
-      const { data: keywordResults, error: keywordError } = await supabase
-        .from('product_classifications')
-        .select('*')
-        .eq('country_code', countryCode)
-        .contains('search_keywords', [query.toLowerCase()])
-        .eq('is_active', true)
-        .order('confidence_score', { ascending: false })
-        .order('usage_frequency', { ascending: false })
-        .limit(limit);
+      // Enhanced keyword search - split query into words and search for any of them
+      const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+      
+      if (queryWords.length > 0) {
+        // Try individual word matches in search keywords
+        let keywordResults: any[] = [];
+        
+        for (const word of queryWords) {
+          const { data: wordResults } = await supabase
+            .from('product_classifications')
+            .select('*')
+            .eq('country_code', countryCode)
+            .contains('search_keywords', [word])
+            .eq('is_active', true)
+            .order('confidence_score', { ascending: false })
+            .order('usage_frequency', { ascending: false })
+            .limit(limit * 2); // Get more results to dedupe
 
-      if (keywordResults && keywordResults.length > 0) {
-        return keywordResults;
+          if (wordResults && wordResults.length > 0) {
+            keywordResults.push(...wordResults);
+          }
+        }
+
+        // Remove duplicates and sort by relevance
+        const uniqueResults = keywordResults.filter((item: any, index: number, self: any[]) =>
+          index === self.findIndex((t: any) => t.id === item.id)
+        ).sort((a: any, b: any) => {
+          // Sort by number of matching words (more matches = higher relevance)
+          const aMatches = queryWords.filter(word => 
+            a.search_keywords && a.search_keywords.some((keyword: string) => keyword.includes(word))
+          ).length;
+          const bMatches = queryWords.filter(word => 
+            b.search_keywords && b.search_keywords.some((keyword: string) => keyword.includes(word))
+          ).length;
+          
+          if (aMatches !== bMatches) return bMatches - aMatches;
+          return (b.confidence_score || 0) - (a.confidence_score || 0);
+        }).slice(0, limit) as ProductClassification[];
+
+        if (uniqueResults.length > 0) {
+          return uniqueResults;
+        }
       }
 
-      // Finally try full-text search
-      const { data: ftsResults, error: ftsError } = await supabase
-        .rpc('search_product_classifications_fts', {
-          search_query: query,
-          target_country: countryCode,
-          result_limit: limit
-        });
+      // Fallback to ILIKE search with individual words
+      const iLikeConditions = queryWords.map(word => 
+        `product_name.ilike.%${word}%,category.ilike.%${word}%,description.ilike.%${word}%`
+      ).join(',');
 
-      if (ftsError) {
-        console.error('Full-text search error:', ftsError);
-        // Fallback to simple ILIKE search
+      if (iLikeConditions) {
         const { data: fallbackResults } = await supabase
           .from('product_classifications')
           .select('*')
           .eq('country_code', countryCode)
-          .or(`product_name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
+          .or(iLikeConditions)
           .eq('is_active', true)
           .order('confidence_score', { ascending: false })
           .limit(limit);
 
-        return fallbackResults || [];
+        if (fallbackResults && fallbackResults.length > 0) {
+          return fallbackResults as ProductClassification[];
+        }
       }
 
-      return ftsResults || [];
+      // Final fallback - try original query as phrase
+      const { data: phraseResults } = await supabase
+        .from('product_classifications')
+        .select('*')
+        .eq('country_code', countryCode)
+        .or(`product_name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
+        .eq('is_active', true)
+        .order('confidence_score', { ascending: false })
+        .limit(limit);
+
+      return (phraseResults as ProductClassification[]) || [];
     } catch (error) {
       console.error('Search product classifications error:', error);
       return [];
@@ -300,7 +336,7 @@ class ProductIntelligenceService {
         return [];
       }
 
-      return data || [];
+      return (data as ProductClassification[]) || [];
     } catch (error) {
       console.error('Category suggestions error:', error);
       return [];
@@ -324,7 +360,7 @@ class ProductIntelligenceService {
       }
 
       // Get unique categories
-      const categories = [...new Set(data?.map(item => item.category) || [])];
+      const categories = [...new Set((data as any)?.map((item: any) => item.category) || [])];
       return categories.filter(Boolean).sort();
     } catch (error) {
       console.error('Available categories error:', error);
@@ -335,10 +371,13 @@ class ProductIntelligenceService {
   /**
    * Update classification usage frequency (for learning)
    */
-  async updateUsageFrequency(classificationId: string): Promise<void> {
+  async updateUsageFrequency(classificationId: string, countryCode?: string): Promise<void> {
     try {
+      // Since increment_classification_usage may not exist, use direct SQL update
       const { error } = await supabase
-        .rpc('increment_classification_usage', { classification_id: classificationId });
+        .from('product_classifications')
+        .update({ usage_frequency: (supabase as any).sql`usage_frequency + 1` })
+        .eq('id', classificationId);
 
       if (error) {
         console.error('Update usage frequency error:', error);
@@ -369,7 +408,7 @@ class ProductIntelligenceService {
           ...override,
           justification_documents: override.justification_documents || [],
           created_by: (await supabase.auth.getUser()).data.user?.id
-        });
+        } as any);
 
       if (error) {
         console.error('Record customs override error:', error);
@@ -449,7 +488,7 @@ class ProductIntelligenceService {
   ): string {
     const parts = [];
     
-    parts.push(`Matched "${request.product_name}" to ${classification.classification_system} code ${classification.classification_code}`);
+    parts.push(`Matched "${request.product_name}" to classification code ${classification.classification_code}`);
     
     if (classification.customs_rate) {
       parts.push(`${classification.customs_rate}% customs rate for ${classification.category}`);
@@ -469,11 +508,3 @@ class ProductIntelligenceService {
 
 // Create and export the singleton instance
 export const productIntelligenceService = ProductIntelligenceService.getInstance();
-
-// Export types for use in other components
-export type {
-  ProductClassification,
-  CountryConfig,
-  SmartSuggestion,
-  ProductSuggestionRequest
-};

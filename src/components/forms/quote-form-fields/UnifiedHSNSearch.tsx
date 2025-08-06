@@ -402,10 +402,11 @@ export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
                   </Badge>
                 </div>
                 <div 
-                  className="max-h-80 overflow-y-auto pr-2 space-y-2 border rounded-md bg-gray-50 p-2"
+                  className="max-h-80 overflow-y-auto space-y-2 border rounded-md bg-gray-50 p-2"
                   style={{
                     scrollbarWidth: 'thin',
-                    scrollbarColor: '#cbd5e1 #f1f5f9'
+                    scrollbarColor: '#cbd5e1 #f1f5f9',
+                    overflowY: 'scroll' as const
                   }}
                 >
                     {suggestions.map((suggestion, idx) => {
