@@ -1789,7 +1789,7 @@ const QuoteCalculatorV2: React.FC = () => {
             <div className="flex items-center gap-2 border-l pl-4">
               {/* Status dropdown */}
               <Select value={currentQuoteStatus} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-32 h-8">
+                <SelectTrigger className="w-32 h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2003,20 +2003,20 @@ const QuoteCalculatorV2: React.FC = () => {
                   placeholder="Customer Name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="text-xs h-7"
+                  className="text-xs h-10"
                 />
                 <Input
                   type="email"
                   placeholder="Email Address"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="text-xs h-7"
+                  className="text-xs h-10"
                 />
                 <Input
                   placeholder="Phone Number"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="text-xs h-7"
+                  className="text-xs h-10"
                 />
               </div>
             </div>
@@ -2050,7 +2050,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="space-y-2">
                     <Select value={originCountry} onValueChange={setOriginCountry} disabled={loadingCountries}>
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="h-10 text-sm">
                         <SelectValue placeholder={loadingCountries ? "Loading..." : "Origin country"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -2069,7 +2069,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       </Select>
                     {originCountry === 'US' && (
                       <Select value={originState} onValueChange={setOriginState}>
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-10 text-xs">
                           <SelectValue placeholder="State" />
                             </SelectTrigger>
                         <SelectContent>
@@ -2100,7 +2100,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       onValueChange={handleUserDestinationChange}
                       key={`destination-${destinationCountry}`}
                     >
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="h-10 text-sm">
                         <SelectValue placeholder="Destination" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2300,7 +2300,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     ) : (!destinationPincode && destinationCountry !== 'IN') ? (
                       /* Other countries - Show Urban/Rural dropdown */
                       <Select value={destinationState} onValueChange={setDestinationState}>
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-10 text-xs">
                           <SelectValue placeholder="Location" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2331,7 +2331,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       onValueChange={(value: any) => setShippingMethod(value)}
                       key={`shipping-${shippingMethod}`}
                     >
-                      <SelectTrigger className={`h-9 text-sm ${
+                      <SelectTrigger className={`h-10 text-sm ${
                         calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
                           ? 'border-green-500 bg-green-50' 
                           : 'border-gray-300'
@@ -2359,7 +2359,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
                         disabled={loadingNCMRates}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-10 text-xs">
                           <SelectValue placeholder="Delivery method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2414,7 +2414,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="space-y-2">
                     <Select value={paymentGateway} onValueChange={setPaymentGateway}>
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="h-10 text-sm">
                         <SelectValue placeholder="Payment gateway" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2580,17 +2580,66 @@ const QuoteCalculatorV2: React.FC = () => {
               </CardHeader>
 
               <CardContent className="p-6 space-y-5">
-                {/* Product URL Section */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Product URL
-                  </Label>
-                  <EditableUrlInput
-                    value={item.url}
-                    onChange={(value) => updateItem(item.id, 'url', value)}
-                    placeholder="https://www.amazon.com/product-link or any international store"
-                      showFetchButton={true}
-                      onDataFetched={(data) => {
+                {/* Product Images Section */}
+                {item.images && item.images.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label className="text-sm font-medium text-gray-700">Product Images</Label>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.images.length} image{item.images.length > 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {item.images.slice(0, 4).map((imageUrl, imageIndex) => (
+                        <div 
+                          key={imageIndex} 
+                          className="relative group cursor-pointer"
+                          onClick={() => window.open(imageUrl, '_blank')}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`${item.name} - Image ${imageIndex + 1}`}
+                            className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
+                            <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          {imageIndex === 0 && (
+                            <Badge 
+                              variant="default" 
+                              className="absolute -top-1 -right-1 text-xs px-1 py-0 h-4"
+                            >
+                              Main
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                      {item.images.length > 4 && (
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-500">
+                          +{item.images.length - 4} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Product URL & Name Section - Inline Layout */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-12 gap-4 items-start">
+                    {/* Product URL - Dynamic width */}
+                    <div className="col-span-4 space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Product URL
+                      </Label>
+                      <EditableUrlInput
+                        value={item.url}
+                        onChange={(value) => updateItem(item.id, 'url', value)}
+                        placeholder="https://www.amazon.com/product-link"
+                        showFetchButton={true}
+                        onDataFetched={(data) => {
                               try {
                                 console.log('🚀 FETCH COMPLETE - Auto-filling data immediately:', data);
                                 
@@ -2757,66 +2806,22 @@ const QuoteCalculatorV2: React.FC = () => {
                               }
                       }}
                     />
-                  </div>
-                  
-                {/* Product Name Section */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Product Name *
-                  </Label>
-                  <Input
-                    value={item.name}
-                    onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                    placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                    className="h-10 text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                  {/* Product Images Section */}
-                  {item.images && item.images.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Label className="text-sm font-medium text-gray-700">Product Images</Label>
-                        <Badge variant="secondary" className="text-xs">
-                          {item.images.length} image{item.images.length > 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {item.images.slice(0, 4).map((imageUrl, imageIndex) => (
-                          <div 
-                            key={imageIndex} 
-                            className="relative group cursor-pointer"
-                            onClick={() => window.open(imageUrl, '_blank')}
-                          >
-                            <img
-                              src={imageUrl}
-                              alt={`${item.name} - Image ${imageIndex + 1}`}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
-                              <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                            {imageIndex === 0 && (
-                              <Badge 
-                                variant="default" 
-                                className="absolute -top-1 -right-1 text-xs px-1 py-0 h-4"
-                              >
-                                Main
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                        {item.images.length > 4 && (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-500">
-                            +{item.images.length - 4} more
-                          </div>
-                        )}
-                      </div>
                     </div>
-                  )}
+
+                    {/* Product Name - Flexible width */}
+                    <div className="col-span-8 space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Product Name *
+                      </Label>
+                      <Input
+                        value={item.name}
+                        onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                        placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                        className="h-10 text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 {/* Pricing & Details Section */}
                 <div className="space-y-2">
@@ -2825,7 +2830,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Label>
                   <div className="grid grid-cols-[80px_1px_100px_1px_1fr_1px_2fr] gap-4 p-4 bg-gray-50/50 rounded-lg border border-gray-200">
                     {/* Quantity Column - FIRST for better UX flow */}
-                    <div className="space-y-2 h-16 flex flex-col justify-between">
+                    <div className="space-y-2 h-18 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Quantity</div>
                       </div>
@@ -2834,7 +2839,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         min="1"
                         value={item.quantity}
                         onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
@@ -2842,7 +2847,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
                     {/* Price Column - SECOND */}
-                    <div className="space-y-2 h-16 flex flex-col justify-between">
+                    <div className="space-y-2 h-18 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Price</div>
                       </div>
@@ -2853,7 +2858,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         value={item.unit_price_usd || ''}
                         onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
                         placeholder="25.99"
-                        className="h-8 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
@@ -2861,7 +2866,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
                     {/* Weight Column - Clean Horizontal Layout */}
-                    <div className="space-y-2 h-16 flex flex-col justify-between">
+                    <div className="space-y-2 h-18 flex flex-col justify-between">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">Weight</div>
                       </div>
@@ -2873,7 +2878,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           value={item.weight_kg || ''}
                           onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                           placeholder="0.5"
-                          className="h-8 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          className="h-10 text-center text-sm font-medium flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                         />
                         <Button
                           type="button"
@@ -2942,11 +2947,11 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="w-px bg-gray-300 self-stretch"></div>
 
                     {/* HSN & Category Column */}
-                    <div className="space-y-2 h-16 flex flex-col justify-between min-w-0">
+                    <div className="space-y-2 min-h-18 flex flex-col justify-between min-w-0">
                       <div className="text-center">
                         <div className="text-xs text-gray-500 font-medium">HSN / Category</div>
                       </div>
-                      <div className="w-full overflow-hidden h-8">
+                      <div className="w-full overflow-visible h-auto min-h-10">
                         <CompactHSNSearch
                           control={null}
                           index={0}
@@ -2961,15 +2966,18 @@ const QuoteCalculatorV2: React.FC = () => {
                               updateItem(item.id, 'use_hsn_rates', value);
                             }
                           }}
-                          currentValues={{
-                            hsnCode: item.hsn_code || '',
-                            category: item.category || '',
-                            useHsnRates: item.use_hsn_rates || false
-                          }}
+                          currentHSN={item.hsn_code || ''}
+                          currentCategory={item.category || ''}
                           productName={item.name}
-                          productPrice={item.unit_price_usd}
-                          destinationCountry={destinationCountry}
-                          className="h-10 w-full border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          countryCode={destinationCountry}
+                          currentUseHSNRates={item.use_hsn_rates || false}
+                          currentValuationPreference={item.valuation_preference || 'auto'}
+                          onHSNRateToggle={(useHSNRates: boolean) => {
+                            updateItem(item.id, 'use_hsn_rates', useHSNRates);
+                          }}
+                          onValuationChange={(preference: 'auto' | 'product_price' | 'minimum_valuation') => {
+                            updateItem(item.id, 'valuation_preference', preference);
+                          }}
                         />
                       </div>
                   </div>

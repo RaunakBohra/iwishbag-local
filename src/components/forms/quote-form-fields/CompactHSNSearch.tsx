@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -109,6 +110,27 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
       return () => clearTimeout(timeoutId);
     }
   }, [productName]);
+
+  // Fetch HSN details when we have currentHSN but no selectedResult (loading existing data)
+  useEffect(() => {
+    if (currentHSN && !selectedResult) {
+      const fetchHSNDetails = async () => {
+        try {
+          const results = await productIntelligenceService.searchProductClassifications(
+            currentHSN, 
+            countryCode, 
+            1
+          );
+          if (results.length > 0 && results[0].classification_code === currentHSN) {
+            setSelectedResult(results[0]);
+          }
+        } catch (error) {
+          console.log('Could not fetch HSN details:', error);
+        }
+      };
+      fetchHSNDetails();
+    }
+  }, [currentHSN, selectedResult, countryCode]);
 
   const performSearch = useCallback(async (query: string) => {
     if (!query?.trim()) {
@@ -210,6 +232,16 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
   const displayCategory = selectedResult?.category || currentCategory;
   const displayName = selectedResult?.product_name;
 
+  // Debug logging (can be removed in production)
+  // console.log('[CompactHSNSearch] Debug:', {
+  //   hasSelection,
+  //   currentHSN,
+  //   selectedResult: !!selectedResult,
+  //   hasCallbacks: !!(onHSNRateToggle || onValuationChange),
+  //   shouldShowSettings: hasSelection && (onHSNRateToggle || onValuationChange),
+  //   showSettings: showSettings
+  // });
+
   return (
     <TooltipProvider>
       <div className="flex items-center gap-2 w-full">
@@ -221,21 +253,46 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
               role="combobox"
               aria-expanded={open}
               className={cn(
-                "flex-1 justify-between text-left font-normal min-w-0 sm:min-w-[300px]",
-                hasSelection ? "border-green-300 bg-green-50" : "border-gray-300"
+                "flex-1 justify-between text-left font-normal min-w-0 sm:min-w-[300px] transition-all duration-200 relative",
+                hasSelection 
+                  ? "border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm hover:from-blue-100 hover:to-indigo-100 border-l-4 border-l-blue-500" 
+                  : "border-gray-300 bg-white hover:border-gray-400"
               )}
             >
               <div className="flex items-center space-x-2 flex-1 min-w-0">
                 {hasSelection ? (
                   <>
-                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      <Badge variant="outline" className="font-mono text-xs flex-shrink-0">
-                        {displayHSN}
-                      </Badge>
-                      <span className="truncate text-sm">
-                        {displayName || displayCategory}
-                      </span>
+                    <div className="flex items-center justify-center w-4 h-4 bg-blue-600 text-white rounded-full flex-shrink-0">
+                      <CheckCircle className="h-3 w-3" />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span className="font-mono text-sm font-semibold text-blue-800 flex-shrink-0">
+                          {displayHSN}
+                        </span>
+                        <span className="truncate text-sm font-medium text-gray-900">
+                          {displayName || displayCategory}
+                        </span>
+                      </div>
+                      {/* Additional details - Financial information only */}
+                      <div className="flex items-center space-x-4 text-xs text-gray-600 mt-1.5">
+                        {(selectedResult?.country_data?.customs_rate || selectedResult?.customs_rate) && (
+                          <div className="flex items-center space-x-1">
+                            <span className="text-gray-500 font-medium text-xs">DUTY:</span>
+                            <span className="font-semibold text-blue-700 text-xs">
+                              {selectedResult.country_data?.customs_rate || selectedResult.customs_rate}%
+                            </span>
+                          </div>
+                        )}
+                        {selectedResult?.minimum_valuation_usd && (
+                          <div className="flex items-center space-x-1">
+                            <span className="text-gray-500 font-medium text-xs">MIN VAL:</span>
+                            <span className="font-semibold text-emerald-700 text-xs">
+                              ${selectedResult.minimum_valuation_usd}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 ) : (
@@ -254,11 +311,22 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
                 )}
               </div>
               <div className="flex items-center space-x-1 flex-shrink-0">
-                <Badge variant="outline" className="text-xs">
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "text-xs font-medium",
+                    hasSelection 
+                      ? "bg-white/80 text-blue-700 border-blue-200" 
+                      : "bg-gray-100 text-gray-600 border-gray-200"
+                  )}
+                >
                   <Globe className="h-3 w-3 mr-1" />
                   {countryCode}
                 </Badge>
-                <ChevronDown className="h-4 w-4 opacity-50" />
+                <ChevronDown className={cn(
+                  "h-4 w-4 transition-colors",
+                  hasSelection ? "text-blue-500" : "text-gray-400"
+                )} />
               </div>
             </Button>
           </PopoverTrigger>
@@ -319,15 +387,25 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
                               <div className="text-sm font-medium truncate">
                                 {suggestion.product_name}
                               </div>
-                              <div className="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                              <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
                                 <div className="flex items-center space-x-1">
                                   <Package className="h-3 w-3" />
-                                  <span>{suggestion.category}</span>
+                                  <span className="font-medium">{suggestion.category}</span>
                                 </div>
                                 {(suggestion.country_data?.customs_rate || suggestion.customs_rate) && (
                                   <div className="flex items-center space-x-1">
-                                    <Calculator className="h-3 w-3" />
-                                    <span>{suggestion.country_data?.customs_rate || suggestion.customs_rate}%</span>
+                                    <span className="text-gray-400 font-medium">DUTY:</span>
+                                    <span className="font-semibold text-blue-600">
+                                      {suggestion.country_data?.customs_rate || suggestion.customs_rate}%
+                                    </span>
+                                  </div>
+                                )}
+                                {suggestion.minimum_valuation_usd && (
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-gray-400 font-medium">MIN:</span>
+                                    <span className="font-semibold text-green-600">
+                                      ${suggestion.minimum_valuation_usd}
+                                    </span>
                                   </div>
                                 )}
                                 {suggestion.typical_weight_kg && (
@@ -368,84 +446,185 @@ export const CompactHSNSearch: React.FC<CompactHSNSearchProps> = ({
           </Tooltip>
         )}
 
-        {/* Settings Button (when selection exists) */}
+        {/* Settings Button (when selection exists) - Using Dialog instead of Popover */}
         {hasSelection && (onHSNRateToggle || onValuationChange) && (
-          <Popover open={showSettings} onOpenChange={setShowSettings}>
-            <PopoverTrigger asChild>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-shrink-0"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>HSN settings</p>
-                </TooltipContent>
-              </Tooltip>
-            </PopoverTrigger>
-            <PopoverContent className="w-[90vw] sm:w-80" align="end">
-              <div className="space-y-4">
-                <h4 className="font-semibold text-sm">HSN Settings</h4>
-                
-                {/* HSN Rate Information */}
-                {getHSNInfo && displayHSN && (() => {
-                  const hsnInfo = getHSNInfo(displayHSN, countryCode);
-                  const savings = hsnInfo ? Math.max(0, hsnInfo.countryRate - hsnInfo.customsRate) : 0;
-                  const isUsingHSN = currentUseHSNRates || false;
-                  
-                  return hsnInfo ? (
-                    <div className="p-3 bg-gray-50 rounded border text-sm">
-                      <div className="font-medium">{displayHSN} - {displayCategory}</div>
-                      <div className="text-gray-600 mt-1">
-                        HSN: {hsnInfo.customsRate}% • Default: {hsnInfo.countryRate}%
-                        {savings > 0 && ` • Saves ${savings}%`}
-                      </div>
-                      <div className="mt-2">
-                        {isUsingHSN ? (
-                          <span className="text-green-700 font-medium text-xs">✅ Using HSN rate</span>
-                        ) : (
-                          <span className="text-orange-600 font-medium text-xs">⚠️ Using default rate</span>
-                        )}
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+                title="HSN settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-base font-semibold text-gray-900">
+                  Classification Settings
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6">
+                {/* HSN Classification Details */}
+                {displayHSN && (
+                  <div className="border rounded-lg bg-white">
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {getClassificationSystemName(countryCode)} Classification
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {countryCode} Customs Code
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="font-mono text-sm">
+                          {displayHSN}
+                        </Badge>
                       </div>
                     </div>
-                  ) : null;
-                })()}
-
-                <Separator />
-
-                {/* Valuation Preference */}
-                {onValuationChange && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Valuation Method</Label>
-                    <select
-                      className="w-full text-sm border rounded px-3 py-2 bg-white"
-                      value={currentValuationPreference || 'auto'}
-                      onChange={(e) => onValuationChange(e.target.value as 'auto' | 'product_price' | 'minimum_valuation')}
-                    >
-                      <option value="auto">🤖 Auto</option>
-                      <option value="product_price">💰 Product Price</option>
-                      <option value="minimum_valuation">🏛️ Min Valuation</option>
-                    </select>
+                    
+                    {/* Content */}
+                    <div className="px-4 py-4 space-y-4">
+                      {/* Primary Classification */}
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 mb-1">Product Classification</div>
+                        <div className="text-sm text-gray-900">{displayName || displayCategory}</div>
+                      </div>
+                      
+                      {/* Subcategory */}
+                      {selectedResult?.subcategory && (
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Subcategory</div>
+                          <div className="text-sm text-gray-900">{selectedResult.subcategory}</div>
+                        </div>
+                      )}
+                      
+                      {/* Description */}
+                      {selectedResult?.description && (
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Description</div>
+                          <div className="text-sm text-gray-900 leading-relaxed">{selectedResult.description}</div>
+                        </div>
+                      )}
+                      
+                      {/* Financial Details */}
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                        {/* Customs Rate */}
+                        {(selectedResult?.country_data?.customs_rate || selectedResult?.customs_rate) && (
+                          <div>
+                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                              Customs Duty Rate
+                            </div>
+                            <div className="text-lg font-semibold text-blue-600">
+                              {selectedResult.country_data?.customs_rate || selectedResult.customs_rate}%
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Minimum Valuation */}
+                        {selectedResult?.minimum_valuation_usd && (
+                          <div>
+                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                              Minimum Valuation
+                            </div>
+                            <div className="text-lg font-semibold text-green-600">
+                              ${selectedResult.minimum_valuation_usd} USD
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">Current Configuration:</span>
+                          {currentUseHSNRates ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></div>
+                              HSN-Specific Rates Applied
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1.5"></div>
+                              Default Country Rates Applied
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* HSN Rate Toggle */}
-                {onHSNRateToggle && (
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Use HSN Rate</Label>
-                    <Switch
-                      checked={currentUseHSNRates || false}
-                      onCheckedChange={onHSNRateToggle}
-                    />
+                {/* Configuration Controls */}
+                <div className="border rounded-lg bg-white">
+                  <div className="px-4 py-3 bg-gray-50 border-b rounded-t-lg">
+                    <div className="text-sm font-medium text-gray-900">Configuration Settings</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Adjust customs calculation parameters</div>
                   </div>
-                )}
+                  
+                  <div className="px-4 py-4 space-y-6">
+                    {/* Valuation Method */}
+                    {onValuationChange && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Valuation Method</Label>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Determines how customs value is calculated
+                          </div>
+                        </div>
+                        <select
+                          className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={currentValuationPreference || 'auto'}
+                          onChange={(e) => onValuationChange(e.target.value as 'auto' | 'product_price' | 'minimum_valuation')}
+                        >
+                          <option value="auto">Automatic Selection (recommended)</option>
+                          <option value="product_price">Product Price Only</option>
+                          <option value="minimum_valuation">Minimum Valuation Only</option>
+                        </select>
+                        <div className="text-xs text-gray-500">
+                          {currentValuationPreference === 'auto' && 'Uses the higher value between product price and minimum valuation'}
+                          {currentValuationPreference === 'product_price' && 'Uses only the declared product price for customs calculation'}
+                          {currentValuationPreference === 'minimum_valuation' && 'Uses only the minimum valuation threshold for customs'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* HSN Rate Toggle */}
+                    {onHSNRateToggle && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Customs Rate Application</Label>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Choose between HSN-specific or default country rates
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              Apply HSN-Specific Rate
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {currentUseHSNRates 
+                                ? `Using ${selectedResult?.country_data?.customs_rate || selectedResult?.customs_rate || 'N/A'}% HSN rate`
+                                : 'Using default country rate'
+                              }
+                            </div>
+                          </div>
+                          <Switch
+                            checked={currentUseHSNRates || false}
+                            onCheckedChange={onHSNRateToggle}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </PopoverContent>
-          </Popover>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
     </TooltipProvider>

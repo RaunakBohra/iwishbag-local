@@ -119,7 +119,7 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
             onKeyDown={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}
-            className={cn("text-sm", className)}
+            className={cn("text-sm h-10", className)}
             autoFocus
           />
         </div>
@@ -129,7 +129,7 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
           size="sm"
           onClick={handleSave}
           disabled={disabled}
-          className="h-9 px-3 bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+          className="h-10 px-3 bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
         >
           <Check className="w-4 h-4" />
         </Button>
@@ -140,7 +140,7 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
             size="sm"
             onClick={handleCancel}
             disabled={disabled}
-            className="h-9 px-3"
+            className="h-10 px-3"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -149,70 +149,75 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
     );
   }
 
-  // Display Mode - Clean URL display with separate action buttons
+  // Display Mode - URL display with buttons beside it
   return (
-    <div className="flex gap-3 items-center">
-      <div className="flex-1">
+    <div className="flex gap-2 items-center">
+      {/* URL Display */}
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 p-3 rounded-lg border bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
-          <div className="flex-1 min-w-0">
-            {value ? (
-              <a
-                href={value}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-800 underline truncate block"
-                title={value}
-              >
-                {value.length > 60 ? `${value.substring(0, 60)}...` : value}
-              </a>
-            ) : (
-              <span className="text-sm text-gray-400">{placeholder}</span>
-            )}
-          </div>
+          {value ? (
+            <a
+              href={value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-2 flex-shrink-0"
+              title={value}
+            >
+              <ExternalLink className="w-3 h-3" />
+              {(() => {
+                try {
+                  const domain = new URL(value).hostname;
+                  return domain.replace('www.', '');
+                } catch {
+                  return value.split('/')[2] || value;
+                }
+              })()}
+            </a>
+          ) : (
+            <span className="text-sm text-gray-400 flex-shrink-0">{placeholder}</span>
+          )}
         </div>
       </div>
       
-      {/* Action buttons - clearly separated and labeled */}
-      <div className="flex gap-2">
-        {/* Fetch button with status indication */}
-        {showFetchButton && value && productScraping && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleFetch}
-            disabled={disabled || productScraping.isLoading}
-            className={cn(
-              "h-9 px-3 flex items-center gap-2",
-              productScraping.isLoading 
-                ? "bg-orange-50 border-orange-200 text-orange-700" 
-                : productScraping.isScraped && !productScraping.error
-                ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-            )}
-            title={productScraping.isLoading ? "Fetching product data..." : "Fetch product data from URL"}
-          >
-            <Download className={cn("w-4 h-4", productScraping.isLoading && "animate-spin")} />
-            <span className="text-xs font-medium">
-              {productScraping.isLoading ? "Fetching" : productScraping.isScraped && !productScraping.error ? "Fetched" : "Fetch"}
-            </span>
-          </Button>
-        )}
-        
-        {/* Edit button */}
+      {/* Action buttons - beside the URL input */}
+      {/* Fetch button with status indication */}
+      {showFetchButton && value && productScraping && (
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={handleEdit}
-          disabled={disabled}
-          className="h-9 px-3 flex items-center gap-2"
-          title="Edit this URL"
+          onClick={handleFetch}
+          disabled={disabled || productScraping.isLoading}
+          className={cn(
+            "h-10 px-2 flex items-center gap-1 flex-shrink-0",
+            productScraping.isLoading 
+              ? "bg-orange-50 border-orange-200 text-orange-700" 
+              : productScraping.isScraped && !productScraping.error
+              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+              : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+          )}
+          title={productScraping.isLoading ? "Fetching product data..." : "Fetch product data from URL"}
         >
-          <Edit2 className="w-4 h-4" />
-          <span className="text-xs font-medium">Edit</span>
+          <Download className={cn("w-4 h-4", productScraping.isLoading && "animate-spin")} />
+          <span className="text-xs font-medium">
+            {productScraping.isLoading ? "Fetching" : productScraping.isScraped && !productScraping.error ? "Fetched" : "Fetch"}
+          </span>
         </Button>
-      </div>
+      )}
+      
+      {/* Edit button */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleEdit}
+        disabled={disabled}
+        className="h-10 px-2 flex items-center gap-1 flex-shrink-0"
+        title="Edit this URL"
+      >
+        <Edit2 className="w-4 h-4" />
+        <span className="text-xs font-medium">Edit</span>
+      </Button>
     </div>
   );
 };

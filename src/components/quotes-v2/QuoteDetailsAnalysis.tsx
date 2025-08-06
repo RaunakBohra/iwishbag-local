@@ -347,50 +347,61 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   {isExpanded && (
                     <div className="px-4 py-3 bg-gray-50 border-t">
                       <div className="space-y-3 text-sm">
-                        {/* URL gets full width */}
-                        {item.url && (
-                          <div>
-                            <span className="text-gray-500 font-medium block mb-1">Product URL</span>
-                            <p className="break-words">
-                              <a 
-                                href={item.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm"
-                                title={item.url}
-                              >
-                                {item.url}
-                              </a>
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Other fields in a grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {item.category && (
+                        {/* First row: URL, Category, and HSN Code */}
+                        <div className="grid grid-cols-3 gap-4">
+                          {/* URL - show only domain */}
+                          {item.url && (
                             <div>
-                              <span className="text-gray-500 font-medium">Category</span>
-                              <p>{item.category}</p>
+                              <span className="text-gray-500 font-medium">Source</span>
+                              <p>
+                                <a 
+                                  href={item.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                                  title={item.url}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  {(() => {
+                                    try {
+                                      const domain = new URL(item.url).hostname;
+                                      return domain.replace('www.', '');
+                                    } catch {
+                                      return item.url.split('/')[2] || item.url;
+                                    }
+                                  })()}
+                                </a>
+                              </p>
                             </div>
                           )}
                           
+                          {/* Category */}
+                          {item.category && (
+                            <div>
+                              <span className="text-gray-500 font-medium">Category</span>
+                              <p className="text-sm">{item.category}</p>
+                            </div>
+                          )}
+                          
+                          {/* HSN Code */}
                           {item.hsn_code && (
                             <div>
                               <span className="text-gray-500 font-medium">HSN Code</span>
-                              <p className="flex items-center gap-1">
+                              <p className="flex items-center gap-1 text-sm">
                                 <Tag className="w-3 h-3" />
                                 {item.hsn_code}
                               </p>
                             </div>
                           )}
-                          
-                          {(item.notes || item.customer_notes) && (
-                            <div>
-                              <span className="text-gray-500 font-medium">Notes</span>
-                              <p>{item.notes || item.customer_notes}</p>
-                            </div>
-                          )}
                         </div>
+                        
+                        {/* Second row: Notes (if exists) */}
+                        {(item.notes || item.customer_notes) && (
+                          <div className="mt-3">
+                            <span className="text-gray-500 font-medium block mb-1">Notes</span>
+                            <p className="text-sm">{item.notes || item.customer_notes}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
