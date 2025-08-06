@@ -107,6 +107,7 @@ const QuoteReminderSettings = React.lazy(() => import('@/pages/admin/QuoteRemind
 const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
 const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
 const AbuseMonitoringDashboard = React.lazy(() => import('@/components/admin/AbuseMonitoringDashboard').then((m) => ({ default: m.AbuseMonitoringDashboard })));
+const CustomerQuotesList = React.lazy(() => import('@/pages/CustomerQuotesList'));
 
 // Demo components - temporarily disabled for build issues
 // const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
@@ -119,6 +120,7 @@ const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integra
 const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
 const RouteShippingDesigns = React.lazy(() => import('@/pages/demo/RouteShippingDesigns'));
+const ShopifyStyleQuoteView = React.lazy(() => import('@/components/quotes/ShopifyStyleQuoteView').then((m) => ({ default: m.ShopifyStyleQuoteView })));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 // Smart Intelligence Management pages
@@ -420,7 +422,11 @@ const router = createBrowserRouter([
       },
       {
         path: 's/:shareToken',
-        element: <PublicQuoteView />, // Use V2 public quote view
+        element: (
+          <ErrorBoundary fallback={QuoteFormErrorFallback}>
+            <ShopifyStyleQuoteView viewMode="shared" />
+          </ErrorBoundary>
+        ),
       },
       // Moved quotes/:id to ProtectedRoute children section below
       {
@@ -504,11 +510,19 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard/quotes',
-            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes list
+            element: (
+              <ErrorBoundary fallback={QuoteFormErrorFallback}>
+                <CustomerQuotesList />
+              </ErrorBoundary>
+            ),
           },
           {
             path: 'dashboard/quotes/:id',
-            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes
+            element: (
+              <ErrorBoundary fallback={QuoteFormErrorFallback}>
+                <ShopifyStyleQuoteView viewMode="customer" />
+              </ErrorBoundary>
+            ),
           },
           {
             path: 'dashboard/orders',
