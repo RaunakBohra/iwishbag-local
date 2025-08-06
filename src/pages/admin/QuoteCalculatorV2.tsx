@@ -353,10 +353,28 @@ const QuoteCalculatorV2: React.FC = () => {
 
   // Update customer currency when destination changes
   useEffect(() => {
-    getCustomerCurrency(destinationCountry).then(currency => {
+    const updateCustomerCurrency = async () => {
+      // Get customer_id for currency resolution
+      let customerId: string | null = null;
+      if (customerEmail) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .ilike('email', customerEmail.trim())
+            .maybeSingle();
+          customerId = profile?.id || null;
+        } catch (error) {
+          console.warn('Failed to fetch profile for currency resolution:', error);
+        }
+      }
+      
+      const currency = await getCustomerCurrency(destinationCountry, customerId);
       setCustomerCurrency(currency);
-    });
-  }, [destinationCountry]);
+    };
+
+    updateCustomerCurrency();
+  }, [destinationCountry, customerEmail]);
 
   // Clear pincode when switching away from India
   useEffect(() => {
@@ -1735,16 +1753,25 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
-  const getCustomerCurrency = async (countryCode: string): Promise<string> => {
-    const countryCurrencyMap: Record<string, string> = {
-      IN: 'INR',
-      NP: 'NPR',
-      US: 'USD',
-      CA: 'CAD',
-      GB: 'GBP',
-      AU: 'AUD',
-    };
-    return countryCurrencyMap[countryCode] || 'USD';
+  const getCustomerCurrency = async (countryCode: string, customerId?: string): Promise<string> => {
+    // Use CurrencyCalculationService for customer-aware currency resolution
+    try {
+      const { CurrencyCalculationService } = await import('@/services/quote-calculator/CurrencyCalculationService');
+      const currencyCalcService = new CurrencyCalculationService();
+      return await currencyCalcService.getCustomerCurrency(countryCode, customerId);
+    } catch (error) {
+      console.warn('Failed to get customer currency, using fallback:', error);
+      // Fallback to hardcoded mapping
+      const countryCurrencyMap: Record<string, string> = {
+        IN: 'INR',
+        NP: 'NPR',
+        US: 'USD',
+        CA: 'CAD',
+        GB: 'GBP',
+        AU: 'AUD',
+      };
+      return countryCurrencyMap[countryCode] || 'USD';
+    }
   };
 
   const taxInfo = simplifiedQuoteCalculator.getTaxInfo(destinationCountry);

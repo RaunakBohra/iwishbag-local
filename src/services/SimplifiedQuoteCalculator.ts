@@ -511,7 +511,7 @@ class SimplifiedQuoteCalculator {
     const countryConfig = COUNTRY_TAX_CONFIG[input.destination_country as keyof typeof COUNTRY_TAX_CONFIG] 
       || COUNTRY_TAX_CONFIG.DEFAULT;
     
-    const customerCurrency = await this.getCustomerCurrency(input.destination_country);
+    const customerCurrency = await this.getCustomerCurrency(input.destination_country, input.customer_id);
     // CRITICAL FIX: Exchange rate should be from origin currency to customer currency, not USD to customer
     const exchangeRate = await currencyService.getExchangeRate(input.origin_currency, customerCurrency);
 
@@ -1096,19 +1096,9 @@ class SimplifiedQuoteCalculator {
     };
   }
 
-  private async getCustomerCurrency(countryCode: string): Promise<string> {
-    // Map country to currency
-    const countryCurrencyMap: Record<string, string> = {
-      IN: 'INR',
-      NP: 'NPR',
-      US: 'USD',
-      CA: 'CAD',
-      GB: 'GBP',
-      AU: 'AUD',
-      // Add more as needed
-    };
-
-    return countryCurrencyMap[countryCode] || 'USD';
+  private async getCustomerCurrency(countryCode: string, customerId?: string): Promise<string> {
+    // Use CurrencyCalculationService for consistent customer currency resolution
+    return await this.currencyService.getCustomerCurrency(countryCode, customerId);
   }
 
   private async convertToOriginCurrency(amountUSD: number, originCountry: string): Promise<number> {

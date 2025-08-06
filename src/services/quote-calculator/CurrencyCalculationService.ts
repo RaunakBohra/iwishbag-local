@@ -79,12 +79,13 @@ export class CurrencyCalculationService {
     originCountry: string, 
     destinationCountry: string,
     forcedOriginCurrency?: string,
-    forcedCustomerCurrency?: string
+    forcedCustomerCurrency?: string,
+    customerId?: string
   ): Promise<CurrencyConfig> {
     try {
       // Determine currencies
       const originCurrency = forcedOriginCurrency || this.getCountryCurrency(originCountry);
-      const customerCurrency = forcedCustomerCurrency || await this.getCustomerCurrency(destinationCountry);
+      const customerCurrency = forcedCustomerCurrency || await this.getCustomerCurrency(destinationCountry, customerId);
 
       // Pre-fetch all required exchange rates
       const exchangeRates: { [fromTo: string]: number } = {};
@@ -318,15 +319,35 @@ export class CurrencyCalculationService {
   /**
    * Get customer currency for a country
    */
-  async getCustomerCurrency(countryCode: string): Promise<string> {
+  async getCustomerCurrency(countryCode: string, customerId?: string): Promise<string> {
     try {
-      // Try to get from CurrencyService first
+      // PRIORITY 1: Check customer profile preference if customer ID provided
+      if (customerId) {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferred_display_currency')
+            .eq('id', customerId)
+            .maybeSingle();
+
+          if (profile?.preferred_display_currency && this.validateCurrencyCode(profile.preferred_display_currency)) {
+            logger.info(`Using customer preferred currency: ${profile.preferred_display_currency} for customer ${customerId}`);
+            return profile.preferred_display_currency;
+          }
+        } catch (profileError) {
+          logger.warn(`Failed to get customer profile currency for ${customerId}:`, profileError);
+          // Continue to fallback logic
+        }
+      }
+
+      // PRIORITY 2: Try to get from CurrencyService (country-based)
       const currency = await currencyService.getCurrency(countryCode);
       if (currency && currency !== 'USD') {
         return currency;
       }
 
-      // Fallback to hardcoded mapping
+      // PRIORITY 3: Fallback to hardcoded mapping
       return this.getCountryCurrency(countryCode);
 
     } catch (error) {
