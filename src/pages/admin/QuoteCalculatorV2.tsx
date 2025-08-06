@@ -2149,13 +2149,8 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Items</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {items.map((item, index) => (
+          {/* Items - Each item as separate card */}
+          {items.map((item, index) => (
                 <Card key={item.id} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   {/* Card Header */}
                   <CardHeader className="pb-4">
@@ -2739,9 +2734,12 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-              
-              <Button onClick={addItem} variant="outline" className="w-full">
+          ))}
+          
+          {/* Add Another Item Button - Separate card */}
+          <Card className="border-dashed border-2 border-gray-300 hover:border-blue-400 transition-colors">
+            <CardContent className="flex items-center justify-center py-8">
+              <Button onClick={addItem} variant="outline" className="w-full max-w-md">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Another Item
               </Button>
