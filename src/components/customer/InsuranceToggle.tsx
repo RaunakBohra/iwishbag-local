@@ -32,20 +32,20 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
   const routeInsuranceConfig: RouteInsuranceOptions | null =
     selectedShippingOption?.insurance_options || null;
 
-  // Calculate items total for insurance calculation
-  const itemsTotal =
-    quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
+  // Calculate total amount for insurance calculation (match backend exactly)
+  // Backend uses v_quote.total_usd, so we use the quote's total value
+  const totalAmount = quote.total_usd || 0;
 
-  // Calculate insurance cost
+  // Calculate insurance cost (match backend RPC function exactly)
   const calculateInsuranceCost = (): number => {
     if (!routeInsuranceConfig || !routeInsuranceConfig.available) {
-      // Fallback to legacy calculation
-      return itemsTotal * 0.005; // 0.5% of items
+      // Fallback to match backend: 1.5% of total, min 2.00
+      return Math.max(2, totalAmount * 0.015); // 1.5% like backend
     }
 
     const coveragePercentage = routeInsuranceConfig.coverage_percentage || 1.5;
-    const calculatedCost = itemsTotal * (coveragePercentage / 100);
-    const minFee = routeInsuranceConfig.min_fee || 0;
+    const calculatedCost = totalAmount * (coveragePercentage / 100);
+    const minFee = routeInsuranceConfig.min_fee || 2; // Match backend default of 2
     const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
 
     return Math.max(minFee, Math.min(maxCoverage, calculatedCost));
@@ -65,11 +65,11 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
   // Get coverage details
   const getCoverageDetails = (): string => {
     if (!routeInsuranceConfig) {
-      return `Covers up to ${currencySymbol}${itemsTotal.toFixed(2)} (full item value)`;
+      return `Covers up to ${currencySymbol}${totalAmount.toFixed(2)} (full order value)`;
     }
 
     const maxCoverage = routeInsuranceConfig.max_coverage;
-    const actualCoverage = Math.min(itemsTotal, maxCoverage);
+    const actualCoverage = Math.min(totalAmount, maxCoverage);
 
     return `Covers up to ${currencySymbol}${actualCoverage.toFixed(2)}`;
   };
