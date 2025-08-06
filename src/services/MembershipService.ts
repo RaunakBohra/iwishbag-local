@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from './CurrencyService';
+import { logger } from '@/utils/logger';
 
 export interface MembershipPlan {
   id: string;
@@ -313,11 +314,58 @@ class MembershipServiceClass {
         member_since: membership?.started_at
       };
 
-      // TODO: Implement actual calculation queries
+      // Implement actual calculation queries for membership benefits
+      if (membership) {
+        const memberSince = new Date(membership.started_at);
+        
+        // Calculate total orders since membership started
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, total_amount, created_at, discount_amount')
+          .eq('user_id', customerId)
+          .gte('created_at', memberSince.toISOString());
+
+        if (!ordersError && orders) {
+          stats.total_orders = orders.length;
+          
+          // Calculate total savings from member discounts
+          stats.total_savings = orders.reduce((total, order) => {
+            return total + (order.discount_amount || 0);
+          }, 0);
+        }
+
+        // Calculate storage days saved (if package forwarding is used)
+        const { data: packages, error: packagesError } = await supabase
+          .from('received_packages')
+          .select('consolidation_date, created_at')
+          .eq('user_id', customerId)
+          .gte('created_at', memberSince.toISOString())
+          .not('consolidation_date', 'is', null);
+
+        if (!packagesError && packages) {
+          stats.storage_days_saved = packages.reduce((totalDays, pkg) => {
+            if (pkg.consolidation_date) {
+              const received = new Date(pkg.created_at);
+              const consolidated = new Date(pkg.consolidation_date);
+              const daysSaved = Math.max(0, Math.floor((consolidated.getTime() - received.getTime()) / (1000 * 60 * 60 * 24)));
+              return totalDays + daysSaved;
+            }
+            return totalDays;
+          }, 0);
+        }
+
+        logger.info('Calculated membership usage stats', {
+          customerId,
+          memberSince: membership.started_at,
+          totalOrders: stats.total_orders,
+          totalSavings: stats.total_savings,
+          storageDaysSaved: stats.storage_days_saved
+        });
+      }
       
       return stats;
     } catch (error) {
-      console.error('Error getting membership usage stats:', error);
+      logger.error('Error getting membership usage stats:', error);
       return {
         total_orders: 0,
         total_savings: 0,

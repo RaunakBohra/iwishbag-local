@@ -3334,72 +3334,33 @@ const QuoteCalculatorV2: React.FC = () => {
                 )}
               </div>
 
-              {/* Legacy Manual Discount Controls (Admin Override) */}
-              <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Manual Discount (Admin Override) */}
-                <div className="space-y-2">
-                  <h4 className="text-base font-medium text-gray-700">Manual Discount (Admin)</h4>
-                  <div className="flex gap-2">
-                    <Select value={orderDiscountType} onValueChange={(value: any) => setOrderDiscountType(value)}>
-                      <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="fixed">{currencySymbol}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={orderDiscountValue}
-                      onChange={(e) => setOrderDiscountValue(parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                      disabled={!!orderDiscountCode} // Disable if coupon is applied
-                      className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                  </div>
-                  {orderDiscountCode && (
-                    <p className="text-sm text-amber-600">
-                      Coupon applied - manual discount disabled
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Shipping Discount */}
-                <div className="space-y-2">
-                  <h4 className="text-base font-medium text-gray-700">Shipping Discount</h4>
-                  <div className="flex gap-2">
-                    <Select value={shippingDiscountType} onValueChange={(value: any) => setShippingDiscountType(value)}>
-                      <SelectTrigger className="w-32 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="fixed">{currencySymbol}</SelectItem>
-                        <SelectItem value="free">Free</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {shippingDiscountType !== 'free' && (
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={shippingDiscountValue}
-                        onChange={(e) => setShippingDiscountValue(parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                        className="h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
+              {/* Admin Discount Controls - Modern Interface */}
+              <AdminDiscountControls 
+                currencySymbol={currencySymbol}
+                onDiscountChange={(discounts) => {
+                  // Handle discount changes from the new component
+                  const orderDiscounts = discounts.filter(d => d.type === 'order' && d.applied);
+                  const shippingDiscounts = discounts.filter(d => d.type === 'shipping' && d.applied);
+                  
+                  // Update order discount state
+                  if (orderDiscounts.length > 0) {
+                    const discount = orderDiscounts[0]; // Take first order discount
+                    setOrderDiscountType(discount.method === 'free' ? 'fixed' : discount.method);
+                    setOrderDiscountValue(discount.value);
+                  } else {
+                    setOrderDiscountValue(0);
+                  }
+                  
+                  // Update shipping discount state
+                  if (shippingDiscounts.length > 0) {
+                    const discount = shippingDiscounts[0]; // Take first shipping discount
+                    setShippingDiscountType(discount.method);
+                    setShippingDiscountValue(discount.method === 'free' ? 0 : discount.value);
+                  } else {
+                    setShippingDiscountValue(0);
+                  }
+                }}
+              />
               </CardContent>
             )}
           </Card>

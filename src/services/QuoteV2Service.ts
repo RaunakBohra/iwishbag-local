@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 import { QuoteV2, CreateQuoteV2Input, UpdateQuoteV2Input, QuoteShareInfo, ActiveQuote } from '@/types/quotes-v2';
 
 export class QuoteV2Service {
@@ -366,18 +367,63 @@ export class QuoteV2Service {
         throw new Error('Only approved quotes can be converted to orders');
       }
 
-      // TODO: Create order in orders table
-      // For now, just update the quote status
+      // Create order in orders table
       const orderId = crypto.randomUUID();
       
+      // Create comprehensive order record
+      const orderData = {
+        id: orderId,
+        user_id: quote.customer_id || quote.customer_email, // Handle both authenticated and guest users
+        quote_id: quoteId,
+        status: 'payment_pending',
+        total_amount: quote.calculation_data?.calculation_steps?.total_usd || 0,
+        customer_currency_amount: quote.calculation_data?.calculation_steps?.total_customer_currency || 0,
+        customer_currency: quote.customer_currency || 'USD',
+        origin_country: quote.origin_country,
+        destination_country: quote.destination_country,
+        shipping_method: quote.shipping_method || 'standard',
+        items: quote.items || [],
+        customer_name: quote.customer_name,
+        customer_email: quote.customer_email,
+        customer_phone: quote.customer_phone,
+        delivery_address_id: quote.delivery_address_id,
+        admin_notes: `Converted from quote ${quoteId}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Insert order into orders table
+      const { data: createdOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (orderError) {
+        logger.error('Failed to create order from quote', {
+          quoteId,
+          orderId,
+          error: orderError.message
+        });
+        throw new Error(`Failed to create order: ${orderError.message}`);
+      }
+
+      // Update quote status to indicate successful conversion
       await this.updateQuote(quoteId, {
         status: 'paid',
         converted_to_order_id: orderId,
       });
 
-      return orderId;
+      logger.info('Successfully converted quote to order', {
+        quoteId,
+        orderId: createdOrder.id,
+        totalAmount: orderData.total_amount,
+        customerCurrency: orderData.customer_currency
+      });
+
+      return createdOrder.id;
     } catch (error) {
-      console.error('Error converting quote to order:', error);
+      logger.error('Error converting quote to order:', error);
       throw error;
     }
   }
