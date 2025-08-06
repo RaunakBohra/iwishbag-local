@@ -33,7 +33,8 @@ import {
   MobileProductSummary, 
   MobileBreakdown, 
   MobileTrustSignals, 
-  MobileProgress 
+  MobileProgress,
+  MobileQuoteOptions 
 } from './ShopifyMobileOptimizations';
 import { QuoteOptionsSelector } from './QuoteOptionsSelector';
 
@@ -105,9 +106,16 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [mobileBreakdownExpanded, setMobileBreakdownExpanded] = useState(false);
   const [quoteOptions, setQuoteOptions] = useState({
     shipping: 'express',
-    insurance: 'standard',
-    discountCode: ''
+    insurance: true,
+    discountCode: '',
+    adjustedTotal: 0,
+    shippingAdjustment: 0,
+    insuranceAdjustment: 0,
+    discountAmount: 0
   });
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectDetails, setRejectDetails] = useState('');
 
   useEffect(() => {
     fetchQuote();
@@ -141,13 +149,17 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   const handleApprove = async () => {
     try {
-      // Add to cart
+      // Use adjusted total if options have been changed
+      const finalTotal = quoteOptions.adjustedTotal || quote.total_usd;
+      const finalTotalLocal = quoteOptions.adjustedTotal || quote.total_customer_currency;
+
+      // Add to cart with selected options
       const cartItem = {
         id: quote.id,
         quoteId: quote.id,
         productName: quote.items?.[0]?.name || 'Quote Items',
-        finalTotal: quote.total_usd,
-        finalTotalLocal: quote.total_customer_currency,
+        finalTotal: finalTotal,
+        finalTotalLocal: finalTotalLocal,
         finalCurrency: quote.customer_currency,
         quantity: 1,
         itemWeight: quote.items?.reduce((sum: number, item: any) => sum + (item.weight || 0), 0) || 0,
@@ -157,16 +169,39 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         destinationCountryCode: quote.destination_country,
         inCart: true,
         isSelected: false,
+        selectedOptions: {
+          shipping: quoteOptions.shipping,
+          insurance: quoteOptions.insurance,
+          discountCode: quoteOptions.discountCode,
+          adjustments: {
+            shippingAdjustment: quoteOptions.shippingAdjustment,
+            insuranceAdjustment: quoteOptions.insuranceAdjustment,
+            discountAmount: quoteOptions.discountAmount
+          }
+        },
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
       addItem(cartItem);
 
-      // Update quote status
+      // Update quote status with selected options
       await supabase
         .from('quotes_v2')
-        .update({ status: 'approved' })
+        .update({ 
+          status: 'approved',
+          selected_options: {
+            shipping: quoteOptions.shipping,
+            insurance: quoteOptions.insurance,
+            discountCode: quoteOptions.discountCode,
+            finalTotal: finalTotal,
+            adjustments: {
+              shippingAdjustment: quoteOptions.shippingAdjustment,
+              insuranceAdjustment: quoteOptions.insuranceAdjustment,
+              discountAmount: quoteOptions.discountAmount
+            }
+          }
+        })
         .eq('id', quote.id);
 
       toast({
@@ -182,6 +217,54 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       toast({
         title: "Error",
         description: "Failed to approve quote",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      // Update quote status to rejected with reason
+      await supabase
+        .from('quotes_v2')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: rejectReason,
+          rejection_details: rejectDetails,
+          rejected_at: new Date().toISOString()
+        })
+        .eq('id', quote.id);
+
+      // Also create a support ticket for follow-up
+      await supabase
+        .from('customer_tickets')
+        .insert({
+          user_id: user?.id,
+          quote_id: quote.id,
+          subject: `Quote Rejected - #${quote.quote_number || quote.id.slice(0, 8)}`,
+          message: `Quote rejected. Reason: ${rejectReason}\n\nDetails: ${rejectDetails}`,
+          category: 'quote_rejection',
+          priority: 'medium',
+          status: 'open'
+        });
+
+      toast({
+        title: "Quote Rejected",
+        description: "We'll review your feedback and get back to you soon",
+      });
+
+      setRejectModalOpen(false);
+      setRejectReason('');
+      setRejectDetails('');
+      
+      // Refresh quote data to show updated status
+      fetchQuote();
+      
+    } catch (error) {
+      console.error('Error rejecting quote:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject quote",
         variant: "destructive"
       });
     }
@@ -320,12 +403,22 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           formatCurrency={formatCurrency}
         />
         
+        <MobileQuoteOptions
+          quote={quote}
+          breakdown={breakdown}
+          quoteOptions={quoteOptions}
+          onOptionsChange={setQuoteOptions}
+          formatCurrency={formatCurrency}
+        />
+        
         <MobileBreakdown 
           quote={quote}
           breakdown={breakdown}
           expanded={mobileBreakdownExpanded}
           onToggle={() => setMobileBreakdownExpanded(!mobileBreakdownExpanded)}
           formatCurrency={formatCurrency}
+          quoteOptions={quoteOptions}
+          onOptionsChange={setQuoteOptions}
         />
         
         <MobileTrustSignals />
@@ -390,13 +483,23 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       <span className="text-sm">Estimated delivery</span>
                     </div>
                     <span className="font-medium">
-                      {new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })} - {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
+                      {(() => {
+                        // Get selected shipping option from admin settings
+                        const adminShippingOptions = quote.calculation_data?.shipping_options || [];
+                        const selectedOption = adminShippingOptions.find((opt: any) => opt.id === quoteOptions.shipping) || 
+                          { min_days: 12, max_days: 15 }; // fallback
+
+                        const minDate = new Date(Date.now() + selectedOption.min_days * 24 * 60 * 60 * 1000);
+                        const maxDate = new Date(Date.now() + selectedOption.max_days * 24 * 60 * 60 * 1000);
+                        
+                        return `${minDate.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })} - ${maxDate.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}`;
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -495,9 +598,36 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Shipping & Insurance</span>
                     <span className="font-medium">
-                      {formatCurrency((breakdown.shipping || 0) + (breakdown.insurance || 0), quote.customer_currency)}
+                      {formatCurrency(
+                        (breakdown.shipping || 0) + (breakdown.insurance || 0) + 
+                        (quoteOptions.shippingAdjustment || 0) + (quoteOptions.insuranceAdjustment || 0), 
+                        quote.customer_currency
+                      )}
                     </span>
                   </div>
+
+                  {(quoteOptions.shippingAdjustment !== 0 || quoteOptions.insuranceAdjustment !== 0) && (
+                    <div className="ml-4 space-y-1 text-sm">
+                      {quoteOptions.shippingAdjustment !== 0 && (
+                        <div className="flex justify-between text-blue-600">
+                          <span>• Shipping adjustment</span>
+                          <span>
+                            {quoteOptions.shippingAdjustment > 0 ? '+' : ''}
+                            {formatCurrency(quoteOptions.shippingAdjustment, quote.customer_currency)}
+                          </span>
+                        </div>
+                      )}
+                      {quoteOptions.insuranceAdjustment !== 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>• Insurance adjustment</span>
+                          <span>
+                            {quoteOptions.insuranceAdjustment > 0 ? '+' : ''}
+                            {formatCurrency(quoteOptions.insuranceAdjustment, quote.customer_currency)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Duties & Taxes</span>
@@ -513,12 +643,28 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     </span>
                   </div>
 
+                  {quoteOptions.discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>Discount ({quoteOptions.discountCode})</span>
+                      <span>-{formatCurrency(quoteOptions.discountAmount, quote.customer_currency)}</span>
+                    </div>
+                  )}
+
                   <Separator />
 
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span>{formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}</span>
+                    <span>{formatCurrency(
+                      quoteOptions.adjustedTotal || quote.total_customer_currency || quote.total_usd, 
+                      quote.customer_currency
+                    )}</span>
                   </div>
+
+                  {quoteOptions.adjustedTotal && quoteOptions.adjustedTotal !== (quote.total_customer_currency || quote.total_usd) && (
+                    <div className="text-sm text-muted-foreground text-center">
+                      Original total: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -536,11 +682,19 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
                     <div className="text-3xl font-bold">
-                      {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                      {formatCurrency(
+                        quoteOptions.adjustedTotal || quote.total_customer_currency || quote.total_usd, 
+                        quote.customer_currency
+                      )}
                     </div>
+                    {(quoteOptions.adjustedTotal && quoteOptions.adjustedTotal !== (quote.total_customer_currency || quote.total_usd)) && (
+                      <div className="text-sm text-muted-foreground line-through">
+                        Original: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                      </div>
+                    )}
                     {quote.customer_currency !== 'USD' && (
                       <div className="text-sm text-muted-foreground">
-                        ≈ {formatCurrency(quote.total_usd, 'USD')}
+                        ≈ {formatCurrency(quoteOptions.adjustedTotal || quote.total_usd, 'USD')}
                       </div>
                     )}
                   </div>
@@ -600,14 +754,23 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       Approve & Add to Cart
                     </Button>
 
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-12"
-                      onClick={() => setQuestionModalOpen(true)}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Request Modifications
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="destructive" 
+                        className="h-12"
+                        onClick={() => setRejectModalOpen(true)}
+                      >
+                        Reject Quote
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="h-12"
+                        onClick={() => setQuestionModalOpen(true)}
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Ask Question
+                      </Button>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <Button variant="ghost" size="sm" className="h-10">
@@ -716,6 +879,70 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </DialogContent>
       </Dialog>
 
+      {/* Reject Modal */}
+      <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reject Quote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <p className="text-muted-foreground">
+              Help us improve by letting us know why you're rejecting this quote. We'll use this feedback to provide better quotes in the future.
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Main reason for rejection</label>
+              <Select value={rejectReason} onValueChange={setRejectReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select the main reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price_too_high">Price is too high</SelectItem>
+                  <SelectItem value="shipping_too_slow">Shipping is too slow</SelectItem>
+                  <SelectItem value="shipping_too_expensive">Shipping costs too much</SelectItem>
+                  <SelectItem value="dont_need_anymore">Don't need the items anymore</SelectItem>
+                  <SelectItem value="found_better_deal">Found a better deal elsewhere</SelectItem>
+                  <SelectItem value="missing_items">Some items are missing</SelectItem>
+                  <SelectItem value="incorrect_calculation">Quote calculation seems incorrect</SelectItem>
+                  <SelectItem value="payment_issues">Payment method issues</SelectItem>
+                  <SelectItem value="other">Other reason</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Additional details (optional)</label>
+              <Textarea 
+                placeholder="Any additional feedback to help us serve you better..."
+                value={rejectDetails}
+                onChange={(e) => setRejectDetails(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> Rejecting this quote will mark it as declined and create a support ticket for our team to review. You can always request a new quote with different requirements.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setRejectModalOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleReject} 
+                disabled={!rejectReason}
+                className="flex-1"
+              >
+                Reject Quote
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Question Modal */}
       <Dialog open={questionModalOpen} onOpenChange={setQuestionModalOpen}>
         <DialogContent className="max-w-2xl">
@@ -776,7 +1003,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         quote={quote}
         onApprove={() => setApproveModalOpen(true)}
         onRequestChanges={() => setQuestionModalOpen(true)}
+        onReject={() => setRejectModalOpen(true)}
         formatCurrency={formatCurrency}
+        adjustedTotal={quoteOptions.adjustedTotal}
       />
     </div>
   );
