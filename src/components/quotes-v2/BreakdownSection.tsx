@@ -94,7 +94,7 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
   shippingError,
   onNavigateToShippingRoutes
 }) => {
-  const hasValidItems = items.some(item => item.name && item.unit_price_usd > 0);
+  const hasValidItems = items.some(item => item.unit_price_usd > 0);
 
   const generateQuoteData = () => ({
     id: quoteId || 'temp-' + Date.now(),
@@ -104,7 +104,7 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
     customer_name: customerName,
     origin_country: originCountry,
     destination_country: destinationCountry,
-    items: items.filter(item => item.name && item.unit_price_usd > 0),
+    items: items.filter(item => item.unit_price_usd > 0),
     calculation_data: calculationResult,
     total_usd: calculationResult?.calculation_steps?.total_usd || 0,
     total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency || 0,
