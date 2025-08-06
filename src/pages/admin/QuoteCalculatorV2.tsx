@@ -72,7 +72,7 @@ import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview'
 import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligibilityChecker';
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
-import { UnifiedHSNSearch } from '@/components/forms/quote-form-fields/UnifiedHSNSearch';
+import { CompactHSNSearch } from '@/components/forms/quote-form-fields/CompactHSNSearch';
 import { ShareQuoteButtonV2 } from '@/components/admin/ShareQuoteButtonV2';
 import { ShippingRouteDebug } from '@/components/admin/ShippingRouteDebug';
 import { DynamicShippingService } from '@/services/DynamicShippingService';
@@ -2638,9 +2638,9 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* HSN Search Section with Consolidated Controls */}
+                    {/* Compact HSN Search */}
                     {item.name && item.unit_price_usd > 0 && (
-                      <UnifiedHSNSearch
+                      <CompactHSNSearch
                         control={null}
                         index={0}
                         setValue={(name: string, value: any) => {
@@ -2655,7 +2655,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         currentCategory={item.category}
                         currentHSN={item.hsn_code}
                         onSelection={(data) => handleHSNSelection(item.id, data)}
-                        // Consolidated controls props
+                        // Settings props
                         currentUseHSNRates={item.use_hsn_rates}
                         currentValuationPreference={item.valuation_preference}
                         onHSNRateToggle={(useHSNRates) => updateItem(item.id, 'use_hsn_rates', useHSNRates)}
