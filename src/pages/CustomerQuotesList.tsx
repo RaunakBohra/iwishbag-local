@@ -32,10 +32,11 @@ export default function CustomerQuotesList() {
 
   const fetchQuotes = async () => {
     try {
+      // Fetch quotes for the current user
+      // The RLS policies will automatically filter by customer_id = auth.uid() OR customer_email = auth.email
       const { data, error } = await supabase
         .from('quotes_v2')
         .select('*')
-        .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -161,9 +162,9 @@ export default function CustomerQuotesList() {
                             {quote.items?.slice(0, 2).map((item: any, index: number) => (
                               <div key={index} className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
-                                  {item.image_url ? (
+                                  {item.images?.[0] ? (
                                     <img 
-                                      src={item.image_url} 
+                                      src={item.images[0]} 
                                       alt={item.name}
                                       className="w-full h-full object-cover rounded"
                                     />

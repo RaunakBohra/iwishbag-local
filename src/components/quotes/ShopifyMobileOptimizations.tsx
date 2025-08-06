@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,9 +116,9 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
         {/* Hero Product */}
         <div className="flex items-start gap-4 mb-4">
           <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-            {items[0]?.image_url ? (
+            {items[0]?.images?.[0] ? (
               <img 
-                src={items[0].image_url} 
+                src={items[0].images[0]} 
                 alt={items[0].name}
                 className="w-full h-full object-cover"
               />
@@ -139,7 +140,7 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 hover:underline"
                     >
-                      {items[0].name}
+                      {items[0]?.name}
                     </a>
                   ) : (
                     <span>{items[0]?.name}</span>
@@ -166,6 +167,51 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
             </div>
           </div>
         </div>
+
+        {/* All Items List (for multiple items) */}
+        {items.length > 1 && (
+          <div className="space-y-3">
+            <h3 className="font-medium text-sm text-muted-foreground">All Items:</h3>
+            {items.map((item: any, index: number) => (
+              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
+                  {item.images?.[0] ? (
+                    <img 
+                      src={item.images[0]} 
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="w-4 h-4 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  {item.product_url ? (
+                    <a 
+                      href={item.product_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline block truncate"
+                    >
+                      {item.name}
+                    </a>
+                  ) : (
+                    <p className="font-medium text-sm truncate">{item.name}</p>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    <span>Qty: {item.quantity}</span>
+                    <span>•</span>
+                    <span>{item.weight || 0}kg</span>
+                    <span>•</span>
+                    <span>{formatCurrency(item.costprice_origin, quote.customer_currency)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Key Benefits */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -195,10 +241,10 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
                 // Use admin shipping settings for delivery estimate
                 const adminShippingOptions = quote.calculation_data?.shipping_options || [];
                 const defaultOption = adminShippingOptions.find((opt: any) => opt.recommended) || 
-                  adminShippingOptions[0] || { min_days: 25, max_days: 30 }; // fallback
+                  adminShippingOptions[0];
 
-                const minDate = new Date(Date.now() + defaultOption.min_days * 24 * 60 * 60 * 1000);
-                const maxDate = new Date(Date.now() + defaultOption.max_days * 24 * 60 * 60 * 1000);
+                const minDate = defaultOption ? new Date(Date.now() + defaultOption.min_days * 24 * 60 * 60 * 1000) : new Date();
+                const maxDate = defaultOption ? new Date(Date.now() + defaultOption.max_days * 24 * 60 * 60 * 1000) : new Date();
                 
                 return `${minDate.toLocaleDateString('en-US', { 
                   month: 'short', 
@@ -401,6 +447,7 @@ interface MobileQuoteOptionsProps {
     discountAmount?: number;
   }) => void;
   formatCurrency: (amount: number, currency: string) => string;
+  onQuoteUpdate?: () => void; // Callback to refresh quote data from parent
 }
 
 export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
@@ -408,53 +455,145 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
   breakdown,
   quoteOptions,
   onOptionsChange,
-  formatCurrency
+  formatCurrency,
+  onQuoteUpdate
 }) => {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
 
-  // Get shipping options from admin calculation data (same source admin uses)
-  const adminShippingOptions = quote.calculation_data?.shipping_options || [];
-  const selectedOptionId = quote.operational_data?.shipping?.selected_option;
+  // Get shipping data from route calculations and fetch all available options
+  const routeCalculations = quote.calculation_data?.route_calculations || {};
+  const selectedDeliveryOption = routeCalculations.delivery_option_used;
   
-  // Convert admin shipping options to mobile display format - no fallbacks, only show what admin configured
-  const shippingOptions = adminShippingOptions.map((option: any) => {
-    const isSelected = selectedOptionId === option.id;
+  const [availableOptions, setAvailableOptions] = useState<any[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  
+  useEffect(() => {
+    const fetchShippingOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('shipping_routes')
+          .select('delivery_options')
+          .eq('origin_country', quote.origin_country)
+          .eq('destination_country', quote.destination_country)
+          .eq('is_active', true)
+          .single();
+          
+        if (!error && data?.delivery_options) {
+          setAvailableOptions(data.delivery_options.filter((opt: any) => opt.active));
+        }
+      } catch (err) {
+        console.warn('Could not fetch shipping options:', err);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+    
+    fetchShippingOptions();
+  }, [quote.origin_country, quote.destination_country]);
+  
+  // Convert all available options to display format for mobile
+  const shippingOptions = availableOptions.map((option: any) => {
+    const isSelected = selectedDeliveryOption?.id === option.id;
+    const baseShippingCost = breakdown.shipping || 0;
     
     return {
       id: option.id,
       name: option.name || 'Standard',
-      description: option.description || 'Delivery service',
-      days: option.days || `${option.min_days}-${option.max_days} days`,
-      price: isSelected ? 0 : (option.cost_usd || option.cost || 0) - (breakdown.shipping || 0),
-      recommended: option.recommended || isSelected,
+      description: `${option.min_days}-${option.max_days} days`,
+      days: `${option.min_days}-${option.max_days} days`,
+      price: isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost,
+      recommended: isSelected,
       carrier: option.carrier || 'Standard',
-      icon: option.carrier === 'FedEx' || option.service_type === 'express' ? <Zap className="w-4 h-4" /> :
-            option.carrier === 'DHL' || option.service_type === 'standard' ? <Truck className="w-4 h-4" /> :
+      icon: option.carrier === 'FedEx' || option.carrier === 'fedex' || option.carrier === 'JE' ? <Zap className="w-4 h-4" /> :
+            option.carrier === 'DHL' || option.carrier === 'dhl' ? <Truck className="w-4 h-4" /> :
             <Package className="w-4 h-4" />
     };
   });
 
-  // Get insurance settings from admin calculation result (same as admin side)
-  const adminInsuranceEnabled = quote.calculation_result?.insurance_enabled !== false;
+  // Get insurance settings from route calculations
+  const insuranceSettings = routeCalculations.insurance || {};
+  const adminInsuranceEnabled = insuranceSettings.available !== false;
   const insuranceFromBreakdown = breakdown.insurance || 0;
   
-  const insuranceSettings = {
+  const insuranceConfig = {
     enabled: adminInsuranceEnabled,
     currentFee: insuranceFromBreakdown,
     coverage: quote.total_usd || 0
   };
 
   const calculateInsuranceFee = (enabled: boolean) => {
-    if (!enabled || !insuranceSettings.enabled) return 0;
-    return insuranceSettings.currentFee; // Use admin-calculated fee
+    if (!enabled || !insuranceConfig.enabled) return 0;
+    return insuranceConfig.currentFee; // Use admin-calculated fee
   };
 
-  const handleOptionsUpdate = (updates: Partial<{ shipping: string; insurance: boolean; discountCode: string }>) => {
+
+  const handleOptionsUpdate = async (updates: Partial<{ shipping: string; insurance: boolean; discountCode: string }>) => {
+    // Prevent infinite loops by checking if values actually changed
+    const shippingChanged = updates.shipping && updates.shipping !== quoteOptions.shipping;
+    const insuranceChanged = updates.insurance !== undefined && updates.insurance !== quoteOptions.insurance;
+    const discountChanged = updates.discountCode !== undefined && updates.discountCode !== quoteOptions.discountCode;
+    
+    if (!shippingChanged && !insuranceChanged && !discountChanged) {
+      return; // Nothing actually changed, exit early
+    }
+    
     const shipping = updates.shipping || quoteOptions.shipping;
     const insurance = updates.insurance !== undefined ? updates.insurance : quoteOptions.insurance;
     const discountCode = updates.discountCode !== undefined ? updates.discountCode : quoteOptions.discountCode;
+    
+    // Instant database save for shipping or insurance changes
+    if (shippingChanged || insuranceChanged) {
+      try {
+        const updateData: any = {};
+        
+        if (shippingChanged) {
+          // Update the delivery option in route calculations
+          const selectedOption = availableOptions.find(opt => opt.id === updates.shipping);
+          if (selectedOption) {
+            const newRouteCalc = {
+              ...routeCalculations,
+              delivery_option_used: {
+                id: selectedOption.id,
+                name: selectedOption.name,
+                carrier: selectedOption.carrier,
+                price_per_kg: selectedOption.price,
+                delivery_days: `${selectedOption.min_days}-${selectedOption.max_days}`
+              }
+            };
+            
+            updateData.calculation_data = {
+              ...quote.calculation_data,
+              route_calculations: newRouteCalc
+            };
+            updateData.shipping_method = updates.shipping;
+          }
+        }
+        
+        if (insuranceChanged) {
+          updateData.insurance_required = updates.insurance;
+        }
+        
+        // Save to database instantly
+        await supabase
+          .from('quotes_v2')
+          .update(updateData)
+          .eq('id', quote.id);
+          
+        console.log('✅ Quote options updated in database (mobile)');
+        
+        // Refresh quote data to get updated totals and breakdown
+        if (onQuoteUpdate) {
+          setTimeout(() => {
+            onQuoteUpdate();
+            console.log('🔄 Quote data refreshed (mobile)');
+          }, 500); // Small delay to ensure database update is complete
+        }
+      } catch (error) {
+        console.error('❌ Failed to update quote options (mobile):', error);
+      }
+    }
     
     // Calculate adjustments
     const selectedShippingOption = shippingOptions.find(opt => opt.id === shipping);
@@ -464,7 +603,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
     
     // Calculate insurance adjustment based on toggle and admin settings
     const currentInsuranceFee = breakdown.insurance || 0;
-    const newInsuranceFee = insurance ? calculateInsuranceFee() : 0;
+    const newInsuranceFee = insurance ? calculateInsuranceFee(true) : 0;
     const insuranceAdjustment = newInsuranceFee - currentInsuranceFee;
     
     let discountAmount = 0;
@@ -560,7 +699,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                 <div className="space-y-2">
                   {shippingOptions.map((option) => (
                     <div key={option.id} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
-                      selectedOptionId === option.id 
+                      selectedDeliveryOption?.id === option.id 
                         ? 'border-teal-500 bg-teal-50' 
                         : 'border-gray-300'
                     }`}>
@@ -574,12 +713,12 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                             <Label htmlFor={`mobile-${option.id}`} className="font-medium cursor-pointer text-sm">
                               {option.name}
                             </Label>
-                            {selectedOptionId === option.id && (
+                            {selectedDeliveryOption?.id === option.id && (
                               <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
-                                Auto
+                                Selected
                               </Badge>
                             )}
-                            {option.recommended && selectedOptionId !== option.id && (
+                            {option.recommended && (
                               <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                                 Rec
                               </Badge>
@@ -616,7 +755,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                 <div className="flex-1">
                   <div className="font-medium text-sm">Package Insurance</div>
                   <div className="text-xs text-muted-foreground">
-                    Coverage up to {formatCurrency(insuranceSettings.coverage, 'USD')}
+                    Coverage up to {formatCurrency(insuranceConfig.coverage, 'USD')}
                   </div>
                   {quoteOptions.insurance && (
                     <div className="text-xs text-green-600 font-medium mt-1">
@@ -630,9 +769,9 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                 />
               </div>
               
-              {!insuranceSettings.enabled && (
+              {!insuranceConfig.enabled && (
                 <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                  Insurance is currently disabled by admin settings.
+                  Insurance is currently disabled for this quote.
                 </div>
               )}
             </div>

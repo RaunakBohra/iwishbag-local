@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ import {
   MobileQuoteOptions 
 } from './ShopifyMobileOptimizations';
 import { QuoteOptionsSelector } from './QuoteOptionsSelector';
+import { CustomerBreakdown } from './CustomerBreakdown';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -97,8 +99,29 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const { addItem } = useCartStore();
   const { id: quoteId, shareToken } = useParams<{ id: string; shareToken: string }>();
   
-  const [quote, setQuote] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  
+  // Use React Query for quote data with cache invalidation
+  const { data: quote, isLoading: loading, refetch: refetchQuote } = useQuery({
+    queryKey: ['quote', quoteId || shareToken],
+    queryFn: async () => {
+      let query = supabase.from('quotes_v2').select('*');
+      
+      if (quoteId) {
+        query = query.eq('id', quoteId);
+      } else if (shareToken) {
+        query = query.eq('share_token', shareToken);
+      }
+
+      const { data, error } = await query.single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!(quoteId || shareToken),
+    staleTime: 0, // Always refetch for real-time updates
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [questionType, setQuestionType] = useState('');
@@ -117,35 +140,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
 
-  useEffect(() => {
-    fetchQuote();
-  }, [quoteId, shareToken]);
+  // React Query handles data fetching automatically
 
-  const fetchQuote = async () => {
-    try {
-      let query = supabase.from('quotes_v2').select('*');
-      
-      if (quoteId) {
-        query = query.eq('id', quoteId);
-      } else if (shareToken) {
-        query = query.eq('share_token', shareToken);
-      }
-
-      const { data, error } = await query.single();
-      
-      if (error) throw error;
-      setQuote(data);
-    } catch (error) {
-      console.error('Error fetching quote:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load quote",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Quote refresh function for components that need to trigger updates
+  const refreshQuote = useCallback(() => {
+    console.log('🔄 Refreshing quote data...');
+    refetchQuote();
+  }, [refetchQuote]);
 
   const handleApprove = async () => {
     try {
@@ -163,7 +164,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         finalCurrency: quote.customer_currency,
         quantity: 1,
         itemWeight: quote.items?.reduce((sum: number, item: any) => sum + (item.weight || 0), 0) || 0,
-        imageUrl: quote.items?.[0]?.image_url,
+        imageUrl: quote.items?.[0]?.images?.[0],
         countryCode: quote.destination_country,
         purchaseCountryCode: quote.origin_country,
         destinationCountryCode: quote.destination_country,
@@ -258,7 +259,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       setRejectDetails('');
       
       // Refresh quote data to show updated status
-      fetchQuote();
+      refreshQuote();
       
     } catch (error) {
       console.error('Error rejecting quote:', error);
@@ -409,6 +410,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           quoteOptions={quoteOptions}
           onOptionsChange={setQuoteOptions}
           formatCurrency={formatCurrency}
+          onQuoteUpdate={refreshQuote}
         />
         
         <MobileBreakdown 
@@ -432,9 +434,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 <div className="flex items-start gap-4">
                   {/* Product Image */}
                   <div className="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                    {items[0]?.image_url ? (
+                    {items[0]?.images?.[0] ? (
                       <img 
-                        src={items[0].image_url} 
+                        src={items[0].images[0]} 
                         alt={items[0].name}
                         className="w-full h-full object-cover"
                       />
@@ -516,9 +518,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   {items.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
-                        {item.image_url ? (
+                        {item.images?.[0] ? (
                           <img 
-                            src={item.image_url} 
+                            src={item.images[0]} 
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
@@ -575,110 +577,14 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               onOptionsChange={setQuoteOptions}
               formatCurrency={formatCurrency}
               className="mb-6"
+              onQuoteUpdate={refreshQuote}
             />
 
             {/* Pricing Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                  <span>Pricing Breakdown</span>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                    Show Details
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Product Total</span>
-                    <span className="font-medium">
-                      {formatCurrency(breakdown.items_total || 0, quote.customer_currency)}
-                    </span>
-                  </div>
-
-                  {breakdown.item_discounts > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Bundle Savings</span>
-                      <span className="font-medium">
-                        -{formatCurrency(breakdown.item_discounts, quote.customer_currency)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping & Insurance</span>
-                    <span className="font-medium">
-                      {formatCurrency(
-                        (breakdown.shipping || 0) + (breakdown.insurance || 0) + 
-                        (quoteOptions.shippingAdjustment || 0) + (quoteOptions.insuranceAdjustment || 0), 
-                        quote.customer_currency
-                      )}
-                    </span>
-                  </div>
-
-                  {(quoteOptions.shippingAdjustment !== 0 || quoteOptions.insuranceAdjustment !== 0) && (
-                    <div className="ml-4 space-y-1 text-sm">
-                      {quoteOptions.shippingAdjustment !== 0 && (
-                        <div className="flex justify-between text-blue-600">
-                          <span>• Shipping adjustment</span>
-                          <span>
-                            {quoteOptions.shippingAdjustment > 0 ? '+' : ''}
-                            {formatCurrency(quoteOptions.shippingAdjustment, quote.customer_currency)}
-                          </span>
-                        </div>
-                      )}
-                      {quoteOptions.insuranceAdjustment !== 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>• Insurance adjustment</span>
-                          <span>
-                            {quoteOptions.insuranceAdjustment > 0 ? '+' : ''}
-                            {formatCurrency(quoteOptions.insuranceAdjustment, quote.customer_currency)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duties & Taxes</span>
-                    <span className="font-medium">
-                      {formatCurrency((breakdown.customs || 0) + (breakdown.local_tax || 0), quote.customer_currency)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Service Fee</span>
-                    <span className="font-medium">
-                      {formatCurrency((breakdown.handling_fee || 0) + (breakdown.domestic_delivery || 0), quote.customer_currency)}
-                    </span>
-                  </div>
-
-                  {quoteOptions.discountAmount > 0 && (
-                    <div className="flex justify-between text-green-600 font-medium">
-                      <span>Discount ({quoteOptions.discountCode})</span>
-                      <span>-{formatCurrency(quoteOptions.discountAmount, quote.customer_currency)}</span>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span>{formatCurrency(
-                      quoteOptions.adjustedTotal || quote.total_customer_currency || quote.total_usd, 
-                      quote.customer_currency
-                    )}</span>
-                  </div>
-
-                  {quoteOptions.adjustedTotal && quoteOptions.adjustedTotal !== (quote.total_customer_currency || quote.total_usd) && (
-                    <div className="text-sm text-muted-foreground text-center">
-                      Original total: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <CustomerBreakdown 
+              quote={quote}
+              formatCurrency={formatCurrency}
+            />
           </div>
 
           {/* Right Column - Summary & Actions */}
