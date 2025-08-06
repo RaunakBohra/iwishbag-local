@@ -529,7 +529,18 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{item.name}</p>
+                        {item.product_url ? (
+                          <a 
+                            href={item.product_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {item.name}
+                          </a>
+                        ) : (
+                          <p className="font-medium text-sm">{item.name}</p>
+                        )}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span>Qty: {item.quantity}</span>
                           <span>•</span>

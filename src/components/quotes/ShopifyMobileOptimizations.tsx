@@ -130,10 +130,36 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
           
           <div className="flex-1 min-w-0">
             <h2 className="font-semibold text-lg leading-tight mb-2">
-              {items.length > 1 
-                ? `${items[0]?.name} + ${items.length - 1} more`
-                : items[0]?.name
-              }
+              {items.length > 1 ? (
+                <>
+                  {items[0]?.product_url ? (
+                    <a 
+                      href={items[0].product_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {items[0].name}
+                    </a>
+                  ) : (
+                    <span>{items[0]?.name}</span>
+                  )}
+                  <span> + {items.length - 1} more</span>
+                </>
+              ) : (
+                items[0]?.product_url ? (
+                  <a 
+                    href={items[0].product_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {items[0]?.name}
+                  </a>
+                ) : (
+                  <span>{items[0]?.name}</span>
+                )
+              )}
             </h2>
             <div className="text-sm text-muted-foreground">
               {items.length} item{items.length !== 1 ? 's' : ''} • Express shipping
@@ -388,58 +414,41 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
 
-  // Get shipping options from admin settings or defaults
+  // Get shipping options from admin calculation data (same source admin uses)
   const adminShippingOptions = quote.calculation_data?.shipping_options || [];
+  const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   
-  const shippingOptions = adminShippingOptions.length > 0 ? 
-    adminShippingOptions.map((option: any) => ({
+  // Convert admin shipping options to mobile display format - no fallbacks, only show what admin configured
+  const shippingOptions = adminShippingOptions.map((option: any) => {
+    const isSelected = selectedOptionId === option.id;
+    
+    return {
       id: option.id,
-      name: option.name,
-      days: option.delivery_days || `${option.min_days}-${option.max_days} days`,
-      price: option.additional_cost || 0,
-      recommended: option.recommended || false,
-      icon: option.type === 'express' ? <Truck className="w-4 h-4" /> : 
-            option.type === 'priority' ? <Zap className="w-4 h-4" /> : 
+      name: option.name || 'Standard',
+      description: option.description || 'Delivery service',
+      days: option.days || `${option.min_days}-${option.max_days} days`,
+      price: isSelected ? 0 : (option.cost_usd || option.cost || 0) - (breakdown.shipping || 0),
+      recommended: option.recommended || isSelected,
+      carrier: option.carrier || 'Standard',
+      icon: option.carrier === 'FedEx' || option.service_type === 'express' ? <Zap className="w-4 h-4" /> :
+            option.carrier === 'DHL' || option.service_type === 'standard' ? <Truck className="w-4 h-4" /> :
             <Package className="w-4 h-4" />
-    })) : [
-      // Fallback options if admin hasn't configured shipping
-      {
-        id: 'standard',
-        name: 'Standard',
-        days: '15-22 days',
-        price: 0,
-        icon: <Package className="w-4 h-4" />
-      },
-      {
-        id: 'express',
-        name: 'Express',
-        days: '10-15 days',
-        price: (breakdown.shipping || 45) * 0.3,
-        recommended: true,
-        icon: <Truck className="w-4 h-4" />
-      },
-      {
-        id: 'priority',
-        name: 'Priority',
-        days: '7-12 days',
-        price: (breakdown.shipping || 45) * 0.6,
-        icon: <Zap className="w-4 h-4" />
-      }
-    ];
+    };
+  });
 
-  // Get insurance settings from quote or defaults
+  // Get insurance settings from admin calculation result (same as admin side)
+  const adminInsuranceEnabled = quote.calculation_result?.insurance_enabled !== false;
+  const insuranceFromBreakdown = breakdown.insurance || 0;
+  
   const insuranceSettings = {
-    enabled: quote.calculation_data?.insurance_enabled !== false,
-    rate: quote.calculation_data?.insurance_rate || 0.02,
-    minFee: quote.calculation_data?.insurance_min_fee || 5,
-    maxFee: quote.calculation_data?.insurance_max_fee || 50,
+    enabled: adminInsuranceEnabled,
+    currentFee: insuranceFromBreakdown,
     coverage: quote.total_usd || 0
   };
 
-  const calculateInsuranceFee = () => {
-    if (!insuranceSettings.enabled) return 0;
-    const calculatedFee = (quote.total_usd || 0) * insuranceSettings.rate;
-    return Math.min(Math.max(calculatedFee, insuranceSettings.minFee), insuranceSettings.maxFee);
+  const calculateInsuranceFee = (enabled: boolean) => {
+    if (!enabled || !insuranceSettings.enabled) return 0;
+    return insuranceSettings.currentFee; // Use admin-calculated fee
   };
 
   const handleOptionsUpdate = (updates: Partial<{ shipping: string; insurance: boolean; discountCode: string }>) => {
@@ -550,7 +559,11 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
               <RadioGroup value={quoteOptions.shipping} onValueChange={(value) => handleOptionsUpdate({ shipping: value })}>
                 <div className="space-y-2">
                   {shippingOptions.map((option) => (
-                    <div key={option.id} className="flex items-center space-x-3 p-3 rounded-lg border">
+                    <div key={option.id} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                      selectedOptionId === option.id 
+                        ? 'border-teal-500 bg-teal-50' 
+                        : 'border-gray-300'
+                    }`}>
                       <RadioGroupItem value={option.id} id={`mobile-${option.id}`} />
                       <div className="flex items-center gap-2 flex-1">
                         <div className="text-blue-600">
@@ -561,7 +574,12 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                             <Label htmlFor={`mobile-${option.id}`} className="font-medium cursor-pointer text-sm">
                               {option.name}
                             </Label>
-                            {option.recommended && (
+                            {selectedOptionId === option.id && (
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                                Auto
+                              </Badge>
+                            )}
+                            {option.recommended && selectedOptionId !== option.id && (
                               <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                                 Rec
                               </Badge>
@@ -570,6 +588,8 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             <span>{option.days}</span>
+                            <span>•</span>
+                            <span>{option.carrier}</span>
                           </div>
                         </div>
                         <div className="text-right text-sm font-semibold">
@@ -600,7 +620,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                   </div>
                   {quoteOptions.insurance && (
                     <div className="text-xs text-green-600 font-medium mt-1">
-                      +{formatCurrency(calculateInsuranceFee(), quote.customer_currency)}
+                      +{formatCurrency(calculateInsuranceFee(true), quote.customer_currency)}
                     </div>
                   )}
                 </div>

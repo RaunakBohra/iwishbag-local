@@ -67,71 +67,65 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
 
-  // Get shipping options from admin settings or defaults
+  // Get shipping options from admin calculation data (same source admin uses)
   const adminShippingOptions = quote.calculation_data?.shipping_options || [];
+  const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   
-  const shippingOptions: ShippingOption[] = adminShippingOptions.length > 0 ? 
-    adminShippingOptions.map((option: any) => ({
+  // Convert admin shipping options to display format - no fallbacks, only show what admin configured
+  const shippingOptions: ShippingOption[] = adminShippingOptions.map((option: any) => {
+    const isSelected = selectedOptionId === option.id;
+    
+    return {
       id: option.id,
-      name: option.name,
-      description: option.description,
-      days: option.delivery_days || `${option.min_days}-${option.max_days} days`,
-      price: option.additional_cost || 0,
-      recommended: option.recommended || false,
-      icon: option.type === 'express' ? <Truck className="w-5 h-5" /> : 
-            option.type === 'priority' ? <Zap className="w-5 h-5" /> : 
+      name: option.name || `${option.carrier || 'Standard'} Shipping`,
+      description: `${option.carrier || 'Standard'} - ${option.description || 'Delivery service'}`,
+      days: option.days || `${option.min_days}-${option.max_days} days`,
+      price: isSelected ? 0 : (option.cost_usd || option.cost || 0) - (breakdown.shipping || 0),
+      recommended: option.recommended || isSelected,
+      icon: option.carrier === 'FedEx' || option.service_type === 'express' ? <Zap className="w-5 h-5" /> :
+            option.carrier === 'DHL' || option.service_type === 'standard' ? <Truck className="w-5 h-5" /> :
             <Package className="w-5 h-5" />
-    })) : [
-      // Fallback options if admin hasn't configured shipping
-      {
-        id: 'standard',
-        name: 'Standard Shipping',
-        description: 'Most economical option',
-        days: '15-22 days',
-        price: 0,
-        icon: <Package className="w-5 h-5" />
-      },
-      {
-        id: 'express',
-        name: 'Express Shipping',
-        description: 'Faster delivery, tracking included',
-        days: '10-15 days',
-        price: (breakdown.shipping || 45) * 0.3,
-        recommended: true,
-        icon: <Truck className="w-5 h-5" />
-      },
-      {
-        id: 'priority',
-        name: 'Priority Express',
-        description: 'Fastest option with premium handling',
-        days: '7-12 days',
-        price: (breakdown.shipping || 45) * 0.6,
-        icon: <Zap className="w-5 h-5" />
-      }
-    ];
+    };
+  });
 
-  // Get insurance settings from quote or defaults
+  // Get insurance settings from admin calculation result (same as admin side)
+  const adminInsuranceEnabled = quote.calculation_result?.insurance_enabled !== false;
+  const insuranceFromBreakdown = breakdown.insurance || 0;
+  
   const insuranceSettings = {
-    enabled: quote.calculation_data?.insurance_enabled !== false, // Default to enabled
-    rate: quote.calculation_data?.insurance_rate || 0.02, // 2% default rate
-    minFee: quote.calculation_data?.insurance_min_fee || 5, // $5 minimum
-    maxFee: quote.calculation_data?.insurance_max_fee || 50, // $50 maximum
+    enabled: adminInsuranceEnabled,
+    currentFee: insuranceFromBreakdown,
+    rate: 0.02, // 2% rate for calculation
+    minFee: 5,
+    maxFee: 50,
     coverage: quote.total_usd || 0
   };
 
-  const calculateInsuranceFee = () => {
-    if (!insuranceSettings.enabled) return 0;
-    const calculatedFee = (quote.total_usd || 0) * insuranceSettings.rate;
-    return Math.min(Math.max(calculatedFee, insuranceSettings.minFee), insuranceSettings.maxFee);
+  const calculateInsuranceFee = (enabled: boolean) => {
+    if (!enabled || !insuranceSettings.enabled) return 0;
+    return insuranceSettings.currentFee; // Use admin-calculated fee
   };
 
   const handleOptionsUpdate = (updates: Partial<{ shipping: string; insurance: boolean; discountCode: string }>) => {
-    if (updates.shipping) setSelectedShipping(updates.shipping);
-    if (updates.insurance !== undefined) setInsuranceEnabled(updates.insurance);
-    if (updates.discountCode !== undefined) setDiscountCode(updates.discountCode);
+    let shouldRecalculate = false;
+    
+    if (updates.shipping && updates.shipping !== selectedShipping) {
+      setSelectedShipping(updates.shipping);
+      shouldRecalculate = true;
+    }
+    if (updates.insurance !== undefined && updates.insurance !== insuranceEnabled) {
+      setInsuranceEnabled(updates.insurance);
+      shouldRecalculate = true;
+    }
+    if (updates.discountCode !== undefined && updates.discountCode !== discountCode) {
+      setDiscountCode(updates.discountCode);
+      shouldRecalculate = true;
+    }
 
-    // Trigger recalculation after state updates
-    setTimeout(() => calculateAdjustedTotal(), 0);
+    // Only recalculate if something actually changed
+    if (shouldRecalculate) {
+      setTimeout(() => calculateAdjustedTotal(), 10);
+    }
   };
 
   const handleApplyDiscount = () => {
@@ -153,37 +147,43 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   };
 
   const calculateAdjustedTotal = () => {
-    const baseTotal = quote.total_customer_currency || quote.total_usd;
-    const selectedShippingOption = shippingOptions.find(opt => opt.id === selectedShipping);
-    
-    const shippingAdjustment = (selectedShippingOption?.price || 0) - (breakdown.shipping || 0);
-    
-    // Calculate insurance adjustment based on toggle and admin settings
-    const currentInsuranceFee = breakdown.insurance || 0;
-    const newInsuranceFee = insuranceEnabled ? calculateInsuranceFee() : 0;
-    const insuranceAdjustment = newInsuranceFee - currentInsuranceFee;
-    
-    let discountAmount = 0;
-    if (discountApplied) {
-      // Simple discount calculation based on code
-      const discountPercentages = { 'FIRST10': 0.1, 'WELCOME5': 0.05, 'SAVE15': 0.15, 'BUNDLE20': 0.2 };
-      discountAmount = baseTotal * (discountPercentages[discountCode.toUpperCase()] || 0);
-    }
+    try {
+      const baseTotal = quote.total_customer_currency || quote.total_usd;
+      const selectedShippingOption = shippingOptions.find(opt => opt.id === selectedShipping);
+      
+      const shippingAdjustment = (selectedShippingOption?.price || 0);
+      
+      // Calculate insurance adjustment based on toggle
+      const currentInsuranceFee = insuranceFromBreakdown;
+      const newInsuranceFee = insuranceEnabled ? currentInsuranceFee : 0;
+      const insuranceAdjustment = newInsuranceFee - currentInsuranceFee;
+      
+      let discountAmount = 0;
+      if (discountApplied && discountCode) {
+        const discountPercentages = { 'FIRST10': 0.1, 'WELCOME5': 0.05, 'SAVE15': 0.15, 'BUNDLE20': 0.2 };
+        discountAmount = baseTotal * (discountPercentages[discountCode.toUpperCase()] || 0);
+      }
 
-    const adjustedTotal = baseTotal + shippingAdjustment + insuranceAdjustment - discountAmount;
-    
-    // Notify parent of total change
-    onOptionsChange({
-      shipping: selectedShipping,
-      insurance: insuranceEnabled,
-      discountCode: discountCode,
-      adjustedTotal: adjustedTotal,
-      shippingAdjustment: shippingAdjustment,
-      insuranceAdjustment: insuranceAdjustment,
-      discountAmount: discountAmount
-    });
-    
-    return adjustedTotal;
+      const adjustedTotal = baseTotal + shippingAdjustment + insuranceAdjustment - discountAmount;
+      
+      // Safely notify parent of total change
+      if (onOptionsChange) {
+        onOptionsChange({
+          shipping: selectedShipping,
+          insurance: insuranceEnabled,
+          discountCode: discountCode,
+          adjustedTotal: Math.max(0, adjustedTotal), // Ensure non-negative
+          shippingAdjustment: shippingAdjustment,
+          insuranceAdjustment: insuranceAdjustment,
+          discountAmount: discountAmount
+        });
+      }
+      
+      return adjustedTotal;
+    } catch (error) {
+      console.error('Error calculating adjusted total:', error);
+      return quote.total_customer_currency || quote.total_usd;
+    }
   };
 
   return (
@@ -201,7 +201,11 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
             <div className="space-y-3">
               {shippingOptions.map((option) => (
                 <div key={option.id} className="relative">
-                  <div className="flex items-center space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                  <div className={`flex items-center space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer transition-all ${
+                    selectedOptionId === option.id 
+                      ? 'border-teal-500 bg-teal-50' 
+                      : 'border-gray-300'
+                  }`}>
                     <RadioGroupItem value={option.id} id={option.id} />
                     <div className="flex items-center gap-3 flex-1">
                       <div className="text-blue-600">
@@ -212,16 +216,27 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
                           <Label htmlFor={option.id} className="font-medium cursor-pointer">
                             {option.name}
                           </Label>
-                          {option.recommended && (
+                          {selectedOptionId === option.id && (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                              Auto
+                            </Badge>
+                          )}
+                          {option.recommended && selectedOptionId !== option.id && (
                             <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                               Recommended
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{option.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-sm font-medium">{option.days}</span>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{option.days}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Package className="w-3 h-3" />
+                            <span>{option.description.split(' - ')[0]}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -261,7 +276,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
                 </div>
                 {insuranceEnabled && (
                   <div className="text-sm text-green-600 font-medium mt-1">
-                    +{formatCurrency(calculateInsuranceFee(), quote.customer_currency)}
+                    +{formatCurrency(calculateInsuranceFee(true), quote.customer_currency)}
                   </div>
                 )}
               </div>
