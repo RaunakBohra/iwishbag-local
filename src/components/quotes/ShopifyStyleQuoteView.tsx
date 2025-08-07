@@ -44,7 +44,7 @@ import {
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
-import { getOriginCurrency } from '@/utils/originCurrency';
+import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -153,7 +153,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     }
     // Fall back to destination country currency (customer's country)
     if (quote?.destination_country) {
-      const { getDestinationCurrency } = require('@/utils/originCurrency');
       return getDestinationCurrency(quote.destination_country);
     }
     return 'USD';

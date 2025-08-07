@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 
 interface QuoteV2 {
   id: string;
@@ -28,9 +30,10 @@ interface QuoteV2 {
   destination_country: string;
   items: any[];
   calculation_data: any;
-  total_usd: number;
-  total_customer_currency: number;
-  customer_currency: string;
+  total_usd?: number; // Legacy
+  total_customer_currency?: number; // Legacy
+  customer_currency?: string; // Legacy
+  total_origin_currency?: number; // New system
   created_at: string;
   calculated_at?: string;
 }
@@ -39,18 +42,45 @@ interface QuoteBreakdownV2Props {
   quote: QuoteV2;
 }
 
-// Utility function to get customer currency from destination country  
-const getCustomerCurrency = (destinationCountry: string): string => {
-  const countryCurrencyMap: Record<string, string> = {
-    IN: 'INR',
-    NP: 'NPR',
-    US: 'USD', 
-    CA: 'CAD',
-    GB: 'GBP',
-    AU: 'AUD',
-  };
-  return countryCurrencyMap[destinationCountry] || 'USD';
+// Component to handle async destination total calculation for admin dual-currency display
+const AdminDestinationTotal: React.FC<{
+  getDestinationTotal: () => Promise<number>;
+  destinationCurrency: string;
+}> = ({ getDestinationTotal, destinationCurrency }) => {
+  const [destinationTotal, setDestinationTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTotal = async () => {
+      try {
+        const total = await getDestinationTotal();
+        setDestinationTotal(total);
+      } catch (error) {
+        console.error('Failed to calculate destination total:', error);
+        setDestinationTotal(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadTotal();
+  }, [getDestinationTotal]);
+
+  if (loading) {
+    return <p className="text-lg text-green-700">Converting...</p>;
+  }
+
+  if (destinationTotal === null) {
+    return <p className="text-lg text-green-600">Conversion failed</p>;
+  }
+
+  return (
+    <p className="text-lg text-green-700">
+      {currencyService.formatAmount(destinationTotal, destinationCurrency)}
+    </p>
+  );
 };
+
 
 export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => {
   if (!quote.calculation_data || !quote.calculation_data.calculation_steps) {
@@ -64,24 +94,38 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   }
 
   const calc = quote.calculation_data;
-  const customerCurrency = quote.customer_currency || calc.inputs?.customer_currency || getCustomerCurrency(quote.destination_country);
   
-  // Calculate customer currency total if not available using exchange rate
-  const calculateCustomerTotal = () => {
-    const usdTotal = calc.calculation_steps?.total_usd || quote.final_total_usd || 0;
-    const existingCustomerTotal = calc.calculation_steps?.total_customer_currency || quote.total_customer_currency || 0;
-    
-    if (existingCustomerTotal) return existingCustomerTotal;
-    if (usdTotal && calc.exchange_rate?.rate) {
-      return usdTotal * calc.exchange_rate.rate;
-    }
-    return usdTotal; // Fallback to USD amount
+  // NEW SYSTEM: Use origin currency as primary breakdown currency
+  const breakdownCurrency = getBreakdownSourceCurrency(quote);
+  
+  // Helper function to format amounts in breakdown currency (now origin currency)
+  const formatBreakdownAmount = (amount: number): string => {
+    return currencyService.formatAmount(amount, breakdownCurrency);
   };
   
-  // Helper function to format amounts in origin currency
-  const formatOriginAmount = (amount: number): string => {
-    const originCurrency = calc.inputs?.origin_currency || 'USD';
-    return currencyService.formatAmount(amount, originCurrency);
+  // Get total from new system (origin currency) with fallback
+  const getOriginTotal = () => {
+    return calc.calculation_steps?.total_origin_currency || 
+           quote.total_origin_currency || 
+           calc.calculation_steps?.total_usd || 
+           quote.total_usd || 
+           0;
+  };
+  
+  // Get destination currency for dual display (admin feature)
+  const destinationCurrency = getDestinationCurrency(quote.destination_country);
+  const getDestinationTotal = async () => {
+    const originTotal = getOriginTotal();
+    if (breakdownCurrency === destinationCurrency) {
+      return originTotal;
+    }
+    
+    try {
+      return await currencyService.convertAmount(originTotal, breakdownCurrency, destinationCurrency);
+    } catch (error) {
+      console.warn('Currency conversion failed, using origin amount:', error);
+      return originTotal;
+    }
   };
   
   // Create default steps object with all properties set to 0
@@ -125,15 +169,6 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   
   const taxInfo = simplifiedQuoteCalculator.getTaxInfo(quote.destination_country);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -153,7 +188,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                 <span className="text-sm font-medium text-gray-700">Step 1: Items Subtotal</span>
               </div>
-              <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.items_subtotal)}</span>
+              <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.items_subtotal)}</span>
             </div>
           </div>
 
@@ -165,10 +200,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Item-level Discounts</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.item_discounts)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.item_discounts)}</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                Applied to individual items = {formatOriginAmount(steps.discounted_items_subtotal)} after discounts
+                Applied to individual items = {formatBreakdownAmount(steps.discounted_items_subtotal)} after discounts
               </p>
             </div>
           )}
@@ -181,7 +216,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Order Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.order_discount_amount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.order_discount_amount)}</span>
               </div>
             </div>
           )}
@@ -194,7 +229,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-gray-700">Step 2: Origin Sales Tax</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.origin_sales_tax)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.origin_sales_tax)}</span>
               </div>
               <p className="text-sm text-gray-600 mt-1">
                 {rates.origin_sales_tax_percentage}% sales tax in {inputs.origin_state || inputs.origin_country}
@@ -209,7 +244,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                 <span className="text-sm font-medium text-gray-700">Step 3: International Shipping</span>
               </div>
-              <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.shipping_cost)}</span>
+              <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.shipping_cost)}</span>
             </div>
             {calc.route_calculations ? (
               <div className="text-sm text-gray-600 mt-2">
@@ -218,10 +253,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                     <strong>Dynamic Route Calculation:</strong>
                   </div>
                   <div>
-                    Base: {formatOriginAmount(calc.route_calculations.shipping.base_cost)} + 
-                    Per-kg: {formatOriginAmount(calc.route_calculations.shipping.per_kg_cost)} + 
-                    Cost%: {formatOriginAmount(calc.route_calculations.shipping.cost_percentage)} = 
-                    <strong> {formatOriginAmount(calc.route_calculations.shipping.total)}</strong>
+                    Base: {formatBreakdownAmount(calc.route_calculations.shipping.base_cost)} + 
+                    Per-kg: {formatBreakdownAmount(calc.route_calculations.shipping.per_kg_cost)} + 
+                    Cost%: {formatBreakdownAmount(calc.route_calculations.shipping.cost_percentage)} = 
+                    <strong> {formatBreakdownAmount(calc.route_calculations.shipping.total)}</strong>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     Using: {calc.route_calculations.delivery_option_used.name} ({calc.route_calculations.delivery_option_used.carrier}) - 
@@ -231,7 +266,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
             ) : (
               <p className="text-sm text-gray-600 mt-1">
-                {inputs.total_chargeable_weight_kg}kg × {formatOriginAmount(rates.shipping_rate_per_kg)}/kg = {formatOriginAmount(steps.shipping_cost)}
+                {inputs.total_chargeable_weight_kg}kg × {formatBreakdownAmount(rates.shipping_rate_per_kg)}/kg = {formatBreakdownAmount(steps.shipping_cost)}
               </p>
             )}
           </div>
@@ -244,10 +279,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Shipping Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.shipping_discount_amount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.shipping_discount_amount)}</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                Final shipping cost: {formatOriginAmount(steps.discounted_shipping_cost)}
+                Final shipping cost: {formatBreakdownAmount(steps.discounted_shipping_cost)}
               </p>
             </div>
           )}
@@ -260,18 +295,18 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Shipping Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.component_discounts.shipping.discount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.component_discounts.shipping.discount)}</span>
               </div>
               <div className="text-sm text-green-700 mt-2">
-                {steps.component_discounts.shipping.applied_discounts?.map((discount, index) => (
+                {steps.component_discounts.shipping.applied_discounts?.map((discount: any, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>• {discount.description}</span>
-                    <span>-{formatOriginAmount(discount.amount)}</span>
+                    <span>-{formatBreakdownAmount(discount.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
                   <span>Final shipping cost:</span>
-                  <span>{formatOriginAmount(steps.component_discounts.shipping.final)}</span>
+                  <span>{formatBreakdownAmount(steps.component_discounts.shipping.final)}</span>
                 </div>
               </div>
             </div>
@@ -285,7 +320,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-gray-700">Step 4: Insurance</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.insurance_amount)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.insurance_amount)}</span>
               </div>
               {calc.route_calculations?.insurance ? (
                 <div className="text-sm text-gray-600 mt-2">
@@ -297,10 +332,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                       Coverage: {calc.route_calculations.insurance.percentage}% of order value
                     </div>
                     <div>
-                      Min Fee: {formatOriginAmount(calc.route_calculations.insurance.min_fee)}
+                      Min Fee: {formatBreakdownAmount(calc.route_calculations.insurance.min_fee)}
                     </div>
                     <div>
-                      <strong>Amount: {formatOriginAmount(calc.route_calculations.insurance.amount)}</strong>
+                      <strong>Amount: {formatBreakdownAmount(calc.route_calculations.insurance.amount)}</strong>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {calc.route_calculations.insurance.available ? '✅ Available' : '❌ Not Available'}
@@ -309,7 +344,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 </div>
               ) : (
                 <p className="text-sm text-gray-600 mt-1">
-                  {rates.insurance_percentage}% of order value = {formatOriginAmount(steps.insurance_amount)}
+                  {rates.insurance_percentage}% of order value = {formatBreakdownAmount(steps.insurance_amount)}
                 </p>
               )}
             </div>
@@ -322,7 +357,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <p className="text-base font-semibold text-blue-900">CIF Value</p>
                 <p className="text-sm text-blue-700">Cost + Insurance + Freight</p>
               </div>
-              <span className="text-xl font-semibold text-blue-900">{formatOriginAmount(steps.cif_value)}</span>
+              <span className="text-xl font-semibold text-blue-900">{formatBreakdownAmount(steps.cif_value)}</span>
             </div>
           </div>
 
@@ -333,10 +368,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                 <span className="font-medium">Step 5: Customs Duty</span>
               </div>
-              <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.customs_duty)}</span>
+              <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.customs_duty)}</span>
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              {rates.customs_percentage}% of CIF {formatOriginAmount(steps.cif_value)} = {formatOriginAmount(steps.customs_duty)}
+              {rates.customs_percentage}% of CIF {formatBreakdownAmount(steps.cif_value)} = {formatBreakdownAmount(steps.customs_duty)}
             </p>
           </div>
 
@@ -348,18 +383,18 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Customs Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.component_discounts.customs.discount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.component_discounts.customs.discount)}</span>
               </div>
               <div className="text-sm text-green-700 mt-2">
-                {steps.component_discounts.customs.applied_discounts?.map((discount, index) => (
+                {steps.component_discounts.customs.applied_discounts?.map((discount: any, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>• {discount.description}</span>
-                    <span>-{formatOriginAmount(discount.amount)}</span>
+                    <span>-{formatBreakdownAmount(discount.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
                   <span>Final customs duty:</span>
-                  <span>{formatOriginAmount(steps.component_discounts.customs.final)}</span>
+                  <span>{formatBreakdownAmount(steps.component_discounts.customs.final)}</span>
                 </div>
               </div>
             </div>
@@ -373,7 +408,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="font-medium">Step 6: Handling Fees</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.handling_fee)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.handling_fee)}</span>
               </div>
               {calc.route_calculations?.handling ? (
                 <div className="text-sm text-gray-600 mt-2">
@@ -382,24 +417,24 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                       <strong>Dynamic Route Handling:</strong>
                     </div>
                     <div>
-                      Base Fee: {formatOriginAmount(calc.route_calculations.handling.base_fee)} + 
-                      Percentage: {formatOriginAmount(calc.route_calculations.handling.percentage_fee)} = 
-                      {formatOriginAmount(calc.route_calculations.handling.total_before_caps)}
+                      Base Fee: {formatBreakdownAmount(calc.route_calculations.handling.base_fee)} + 
+                      Percentage: {formatBreakdownAmount(calc.route_calculations.handling.percentage_fee)} = 
+                      {formatBreakdownAmount(calc.route_calculations.handling.total_before_caps)}
                     </div>
                     <div>
-                      <strong>Final (capped): {formatOriginAmount(calc.route_calculations.handling.total)}</strong>
+                      <strong>Final (capped): {formatBreakdownAmount(calc.route_calculations.handling.total)}</strong>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Caps: Min {formatOriginAmount(calc.route_calculations.handling.min_fee)} - Max {formatOriginAmount(calc.route_calculations.handling.max_fee)}
+                      Caps: Min {formatBreakdownAmount(calc.route_calculations.handling.min_fee)} - Max {formatBreakdownAmount(calc.route_calculations.handling.max_fee)}
                     </div>
                   </div>
                 </div>
               ) : (
                 <p className="text-sm text-gray-600 mt-1">
                   {rates.handling_fee_fixed > 0 && rates.handling_fee_percentage > 0 
-                    ? `${formatOriginAmount(rates.handling_fee_fixed)} fixed + ${rates.handling_fee_percentage}% of order`
+                    ? `${formatBreakdownAmount(rates.handling_fee_fixed)} fixed + ${rates.handling_fee_percentage}% of order`
                     : rates.handling_fee_fixed > 0 
-                      ? `${formatOriginAmount(rates.handling_fee_fixed)} fixed fee`
+                      ? `${formatBreakdownAmount(rates.handling_fee_fixed)} fixed fee`
                       : `${rates.handling_fee_percentage}% of order value`
                   }
                 </p>
@@ -415,18 +450,18 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Handling Fee Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.component_discounts.handling.discount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.component_discounts.handling.discount)}</span>
               </div>
               <div className="text-sm text-green-700 mt-2">
-                {steps.component_discounts.handling.applied_discounts?.map((discount, index) => (
+                {steps.component_discounts.handling.applied_discounts?.map((discount: any, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>• {discount.description}</span>
-                    <span>-{formatOriginAmount(discount.amount)}</span>
+                    <span>-{formatBreakdownAmount(discount.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
                   <span>Final handling fee:</span>
-                  <span>{formatOriginAmount(steps.component_discounts.handling.final)}</span>
+                  <span>{formatBreakdownAmount(steps.component_discounts.handling.final)}</span>
                 </div>
               </div>
             </div>
@@ -440,7 +475,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="font-medium">Step 7: Domestic Delivery</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.domestic_delivery)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.domestic_delivery)}</span>
               </div>
               <p className="text-sm text-gray-600 mt-1">
                 {inputs.destination_state === 'rural' ? 'Rural' : 'Urban'} delivery in {inputs.destination_country}
@@ -464,7 +499,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                       <span className="text-xs text-gray-600 ml-2">(cached)</span>
                     )}
                     <div className="text-xs text-gray-600 mt-1">
-                      {steps.delhivery_rates.rates.map(rate => (
+                      {steps.delhivery_rates.rates.map((rate: any) => (
                         <div key={rate.service_type} className="flex justify-between">
                           <span>
                             {rate.service_type === 'standard' ? '📦 Standard' : 
@@ -490,18 +525,18 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Delivery Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.component_discounts.delivery.discount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.component_discounts.delivery.discount)}</span>
               </div>
               <div className="text-sm text-green-700 mt-2">
-                {steps.component_discounts.delivery.applied_discounts?.map((discount, index) => (
+                {steps.component_discounts.delivery.applied_discounts?.map((discount: any, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>• {discount.description}</span>
-                    <span>-{formatOriginAmount(discount.amount)}</span>
+                    <span>-{formatBreakdownAmount(discount.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
                   <span>Final delivery fee:</span>
-                  <span>{formatOriginAmount(steps.component_discounts.delivery.final)}</span>
+                  <span>{formatBreakdownAmount(steps.component_discounts.delivery.final)}</span>
                 </div>
               </div>
             </div>
@@ -514,7 +549,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <p className="text-base font-semibold text-orange-900">Taxable Value</p>
                 <p className="text-sm text-orange-700">All costs before local tax</p>
               </div>
-              <span className="text-xl font-semibold text-orange-900">{formatOriginAmount(steps.taxable_value)}</span>
+              <span className="text-xl font-semibold text-orange-900">{formatBreakdownAmount(steps.taxable_value)}</span>
             </div>
           </div>
 
@@ -526,10 +561,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="font-medium">Step 8: {taxInfo.local_tax_name}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.local_tax_amount)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.local_tax_amount)}</span>
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                {rates.local_tax_percentage}% of taxable value {formatOriginAmount(steps.taxable_value)} = {formatOriginAmount(steps.local_tax_amount)}
+                {rates.local_tax_percentage}% of taxable value {formatBreakdownAmount(steps.taxable_value)} = {formatBreakdownAmount(steps.local_tax_amount)}
               </p>
             </div>
           )}
@@ -542,18 +577,18 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">{taxInfo.local_tax_name} Discount</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.component_discounts.taxes.discount)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.component_discounts.taxes.discount)}</span>
               </div>
               <div className="text-sm text-green-700 mt-2">
-                {steps.component_discounts.taxes.applied_discounts?.map((discount, index) => (
+                {steps.component_discounts.taxes.applied_discounts?.map((discount: any, index: number) => (
                   <div key={index} className="flex justify-between">
                     <span>• {discount.description}</span>
-                    <span>-{formatOriginAmount(discount.amount)}</span>
+                    <span>-{formatBreakdownAmount(discount.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
                   <span>Final {taxInfo.local_tax_name.toLowerCase()}:</span>
-                  <span>{formatOriginAmount(steps.component_discounts.taxes.final)}</span>
+                  <span>{formatBreakdownAmount(steps.component_discounts.taxes.final)}</span>
                 </div>
               </div>
             </div>
@@ -567,10 +602,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="font-medium">Step 9: Payment Gateway Fee</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{formatOriginAmount(steps.payment_gateway_fee)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatBreakdownAmount(steps.payment_gateway_fee)}</span>
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                {rates.payment_gateway_fee_percentage}% + {formatOriginAmount(rates.payment_gateway_fee_fixed)} ({inputs.payment_gateway})
+                {rates.payment_gateway_fee_percentage}% + {formatBreakdownAmount(rates.payment_gateway_fee_fixed)} ({inputs.payment_gateway})
               </p>
             </div>
           )}
@@ -583,10 +618,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                   <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                   <span className="text-sm font-medium text-green-800">Total Savings</span>
                 </div>
-                <span className="text-sm font-semibold text-green-800">-{formatOriginAmount(steps.total_savings)}</span>
+                <span className="text-sm font-semibold text-green-800">-{formatBreakdownAmount(steps.total_savings)}</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                You saved {formatOriginAmount(steps.total_savings)} with applied discounts!
+                You saved {formatBreakdownAmount(steps.total_savings)} with applied discounts!
               </p>
             </div>
           )}
@@ -598,21 +633,23 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-lg font-semibold text-green-900">Total Amount</p>
-                <p className="text-sm text-green-700">All costs included (Origin pricing above, customer pays below)</p>
+                <p className="text-sm text-green-700">
+                  {breakdownCurrency === destinationCurrency 
+                    ? 'All costs included' 
+                    : `Origin: ${breakdownCurrency} | Customer pays: ${destinationCurrency}`
+                  }
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-semibold text-green-900">
-                  {currencyService.formatAmount(
-                    steps.total_origin_currency || steps.total_usd || quote.final_total_usd || 0,
-                    calc.inputs?.origin_currency || 'USD'
-                  )}
+                  {formatBreakdownAmount(getOriginTotal())}
                 </p>
-                <p className="text-lg text-green-700">
-                  {currencyService.formatAmount(
-                    calculateCustomerTotal(), 
-                    customerCurrency
-                  )}
-                </p>
+                {breakdownCurrency !== destinationCurrency && (
+                  <AdminDestinationTotal 
+                    getDestinationTotal={getDestinationTotal}
+                    destinationCurrency={destinationCurrency}
+                  />
+                )}
               </div>
             </div>
           </div>

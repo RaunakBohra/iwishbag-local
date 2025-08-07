@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 
 interface QuoteDetailsAnalysisProps {
   quote: any;
 }
 
-// Utility function to get customer currency from destination country
+// DEPRECATED: Legacy function - use getDestinationCurrency from originCurrency.ts instead
 const getCustomerCurrency = (destinationCountry: string): string => {
   const countryCurrencyMap: Record<string, string> = {
     IN: 'INR',
@@ -39,6 +41,8 @@ const getCustomerCurrency = (destinationCountry: string): string => {
 export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quote }) => {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showConfiguration, setShowConfiguration] = useState(false);
+  const [destinationTotal, setDestinationTotal] = useState<number | null>(null);
+  const [conversionLoading, setConversionLoading] = useState(false);
 
   if (!quote.calculation_data || !quote.calculation_data.calculation_steps) {
     return (
@@ -66,16 +70,16 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     setExpandedItems(newExpanded);
   };
 
+  // NEW SYSTEM: Use origin currency as primary breakdown currency
+  const breakdownCurrency = getBreakdownSourceCurrency(quote);
+  const originCurrency = getOriginCurrency(quote.origin_country);
+  const destinationCurrency = getDestinationCurrency(quote.destination_country);
+
   const formatCurrency = (amount: number, currency?: string) => {
-    // Try to get origin currency from quote data
-    const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
-    return currencyService.formatAmount(amount, currency || originCurrency);
+    return currencyService.formatAmount(amount, currency || breakdownCurrency);
   };
 
-  // Get origin currency for display purposes
-  const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
-
-  // Calculate key values
+  // Calculate key values using new system
   const itemsSubtotal = steps.items_subtotal || quote.items.reduce((sum: number, item: any) => {
     const price = item.costprice_origin || item.unit_price_usd || 0;
     const quantity = item.quantity || 1;
@@ -84,23 +88,54 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
   const totalShippingCost = steps.shipping_cost || steps.discounted_shipping_cost || 0;
   const totalTaxAmount = steps.local_tax_amount || 0;
-  const finalTotalUSD = steps.total_usd || quote.total_usd || 0;
   
-  // Calculate customer currency amount if not available
-  let finalTotalCustomer = steps.total_customer_currency || quote.total_customer_currency || 0;
-  const customerCurrency = quote.customer_currency || calc.inputs?.customer_currency || getCustomerCurrency(quote.destination_country);
-  
-  // If we don't have customer currency amount but have exchange rate, calculate it
-  if (!finalTotalCustomer && finalTotalUSD && calc.exchange_rate?.rate) {
-    finalTotalCustomer = finalTotalUSD * calc.exchange_rate.rate;
-  }
+  // FIXED: Use origin currency total first, then fallback to USD
+  const finalTotalOrigin = steps.total_origin_currency || 
+                          quote.total_origin_currency || 
+                          steps.total_usd || 
+                          quote.total_usd || 
+                          0;
 
-  // Validation: Check for impossible scenarios
-  const isImpossibleScenario = finalTotalUSD < itemsSubtotal && itemsSubtotal > 0;
+  // Currency conversion for dual display (only when currencies are different)
+  useEffect(() => {
+    const convertCurrency = async () => {
+      if (breakdownCurrency === destinationCurrency) {
+        // Same currency, no conversion needed
+        setDestinationTotal(finalTotalOrigin);
+        return;
+      }
+
+      if (finalTotalOrigin === 0) {
+        // No amount to convert
+        setDestinationTotal(0);
+        return;
+      }
+
+      try {
+        setConversionLoading(true);
+        const converted = await currencyService.convertAmount(
+          finalTotalOrigin, 
+          breakdownCurrency, 
+          destinationCurrency
+        );
+        setDestinationTotal(converted);
+      } catch (error) {
+        console.warn('Currency conversion failed:', error);
+        // Fallback to origin amount
+        setDestinationTotal(finalTotalOrigin);
+      } finally {
+        setConversionLoading(false);
+      }
+    };
+
+    convertCurrency();
+  }, [finalTotalOrigin, breakdownCurrency, destinationCurrency]);
+
+  // FIXED: Validation using origin currency total
+  const isImpossibleScenario = finalTotalOrigin < itemsSubtotal && itemsSubtotal > 0;
   if (isImpossibleScenario) {
-    const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
-    console.error(`🚨 [VALIDATION ERROR] Total (${formatCurrency(finalTotalUSD)}) is less than items cost (${formatCurrency(itemsSubtotal)}) - this is impossible!`);
-    console.error(`🔍 [DEBUG] Quote ID: ${quote.id}, Items:`, quote.items.map(item => ({
+    console.error(`🚨 [VALIDATION ERROR] Total (${formatCurrency(finalTotalOrigin)}) is less than items cost (${formatCurrency(itemsSubtotal)}) - this is impossible!`);
+    console.error(`🔍 [DEBUG] Quote ID: ${quote.id}, Items:`, quote.items.map((item: any) => ({
       name: item.name,
       price: item.costprice_origin || item.unit_price_usd || 0,
       quantity: item.quantity,
@@ -115,7 +150,26 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
       icon: Globe,
       title: 'Route',
       value: `${inputs.origin_country || quote.origin_country || 'US'} → ${inputs.destination_country || quote.destination_country || 'NP'}`,
-      subtitle: `${inputs.shipping_method || 'International'} • Rate: ${(inputs.exchange_rate || 1).toFixed(4)}`,
+      subtitle: (() => {
+        const shippingMethod = inputs.shipping_method || 'International';
+        const exchangeRateData = calc.exchange_rate || calc.applied_rates?.exchange_rate_data;
+        
+        if (exchangeRateData && typeof exchangeRateData === 'object') {
+          // Show actual exchange rate with source/method
+          const rate = exchangeRateData.rate || exchangeRateData.value || inputs.exchange_rate || 1;
+          const source = exchangeRateData.source || exchangeRateData.provider || 'System';
+          const method = exchangeRateData.method || 'Live API';
+          return `${shippingMethod} • ${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency} (${source})`;
+        } else if (calc.applied_rates?.exchange_rate) {
+          // Fallback to applied rates
+          const rate = calc.applied_rates.exchange_rate;
+          return `${shippingMethod} • ${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency}`;
+        } else {
+          // Legacy fallback
+          const rate = inputs.exchange_rate || 1;
+          return `${shippingMethod} • ${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency}`;
+        }
+      })(),
       color: 'text-blue-600'
     },
     {
@@ -196,10 +250,12 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: DollarSign,
       title: 'Total',
-      value: customerCurrency !== originCurrency 
-        ? `${formatCurrency(finalTotalUSD)} ${originCurrency} / ${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}`
-        : `${formatCurrency(finalTotalUSD)} ${originCurrency}`,
-      subtitle: customerCurrency !== originCurrency ? 'Origin pricing / Customer pays' : 'Final amount',
+      value: breakdownCurrency !== destinationCurrency 
+        ? conversionLoading 
+          ? `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency} / Converting...`
+          : `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency} / ${currencyService.formatAmount(destinationTotal || finalTotalOrigin, destinationCurrency)}`
+        : `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency}`,
+      subtitle: breakdownCurrency !== destinationCurrency ? 'Origin pricing / Customer pays' : 'Final amount',
       color: 'text-green-600'
     }
   ];
@@ -226,7 +282,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
               <span className="text-sm font-medium">Calculation Error Detected</span>
             </div>
             <p className="text-sm text-red-700 mt-1">
-              Total amount ({formatCurrency(finalTotalUSD)}) is less than items cost ({formatCurrency(itemsSubtotal)}). 
+              Total amount ({formatCurrency(finalTotalOrigin)}) is less than items cost ({formatCurrency(itemsSubtotal)}). 
               This indicates a calculation bug that needs to be fixed.
             </p>
           </div>
@@ -614,12 +670,31 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                     <span>{inputs.destination_country || quote.destination_country}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Customer Currency:</span>
-                    <span>{quote.customer_currency}</span>
+                    <span>Origin Currency:</span>
+                    <span>{breakdownCurrency}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Destination Currency:</span>
+                    <span>{destinationCurrency}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Exchange Rate:</span>
-                    <span>{inputs.exchange_rate || 1} {quote.customer_currency}/{originCurrency}</span>
+                    <span>
+                      {(() => {
+                        const exchangeRateData = calc.exchange_rate || calc.applied_rates?.exchange_rate_data;
+                        if (exchangeRateData && typeof exchangeRateData === 'object') {
+                          const rate = exchangeRateData.rate || exchangeRateData.value || inputs.exchange_rate || 1;
+                          const source = exchangeRateData.source || exchangeRateData.provider || 'System';
+                          return `${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency} (${source})`;
+                        } else if (calc.applied_rates?.exchange_rate) {
+                          const rate = calc.applied_rates.exchange_rate;
+                          return `${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency}`;
+                        } else {
+                          const rate = inputs.exchange_rate || 1;
+                          return `${rate.toFixed(4)} ${destinationCurrency}/${breakdownCurrency}`;
+                        }
+                      })()}
+                    </span>
                   </div>
                 </div>
               </div>

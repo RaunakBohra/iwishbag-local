@@ -331,7 +331,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
     }
   }, []);
 
-  // Convert amounts when displayCurrency or quote changes - Updated for origin currency system
+  // Convert amounts when displayCurrency or quote changes - Fixed infinite loop
   useEffect(() => {
     const convertAmounts = async () => {
       const sourceCurrency = getBreakdownSourceCurrency(quote);
@@ -350,8 +350,6 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
       }
 
       try {
-        console.log(`[MobileBreakdown] Origin currency conversion: ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
-        
         const [
           convertedTotal,
           convertedItemsTotal,
@@ -397,7 +395,22 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
     };
     
     convertAmounts();
-  }, [quote, breakdown, displayCurrency, convertCurrency]);
+  }, [
+    quote.id, 
+    quote.total_origin_currency, 
+    quote.origin_total_amount, 
+    quote.total_usd,
+    quote.calculation_data?.origin_currency,
+    breakdown.items_total,
+    breakdown.item_discounts, 
+    breakdown.shipping,
+    breakdown.insurance,
+    breakdown.customs,
+    breakdown.local_tax,
+    breakdown.handling_fee,
+    breakdown.domestic_delivery,
+    displayCurrency
+  ]); // Only depend on primitive values to prevent infinite loop
 
   return (
     <Card className="md:hidden mb-6">

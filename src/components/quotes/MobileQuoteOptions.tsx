@@ -11,7 +11,7 @@
  * Syncs with admin interface via WebSocket for seamless coordination
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QuoteOptionsCore, type QuoteOptionsCoreProps } from './QuoteOptionsCore';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
@@ -57,8 +57,8 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
 }) => {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
 
-  // Handle quote options state updates and notify parent
-  const handleQuoteOptionsUpdate = (optionsState: any) => {
+  // Handle quote options state updates and notify parent - Stable callback to prevent loops
+  const handleQuoteOptionsUpdate = useCallback((optionsState: any) => {
     if (!optionsState || !onOptionsChange) return;
     
     // Extract values for backward compatibility with existing parent components
@@ -79,7 +79,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
       insuranceAdjustment, 
       discountAmount
     });
-  };
+  }, [onOptionsChange]);
 
   // Mobile-specific configuration for QuoteOptionsCore
   const coreProps: QuoteOptionsCoreProps = {
@@ -87,12 +87,12 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
     quote,
     userType: 'customer',
     displayCurrency: displayCurrency || getBreakdownSourceCurrency(quote),
-    onQuoteUpdate: () => {
+    onQuoteUpdate: useCallback(() => {
       // Trigger the parent's quote update callback
       if (onQuoteUpdate) {
         onQuoteUpdate();
       }
-    },
+    }, [onQuoteUpdate]),
     
     // UI variant and styling
     variant: 'mobile',
@@ -162,13 +162,13 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
           {/* Core Options Interface */}
           <QuoteOptionsCore 
             {...coreProps}
-            onQuoteUpdate={(optionsState) => {
+            onQuoteUpdate={useCallback((optionsState) => {
               // Handle quote options state updates and notify parent
               handleQuoteOptionsUpdate(optionsState);
               if (onQuoteUpdate) {
                 onQuoteUpdate();
               }
-            }}
+            }, [handleQuoteOptionsUpdate, onQuoteUpdate])}
           />
 
           {/* Mobile Help Section */}

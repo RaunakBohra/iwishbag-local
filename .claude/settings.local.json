@@ -301,7 +301,8 @@
       "Bash(wrangler pages domain add:*)",
       "Bash(aws configure:*)",
       "Bash(aws cloudfront:*)",
-      "Bash(dig:*)"
+      "Bash(dig:*)",
+      "Bash(aws dynamodb scan:*)"
     ],
     "deny": []
   }

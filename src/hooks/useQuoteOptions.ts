@@ -113,6 +113,12 @@ export const useQuoteOptions = (config: UseQuoteOptionsConfig): UseQuoteOptionsR
     }
   }, []);
 
+  // Stable callback ref to prevent infinite loops
+  const onQuoteUpdateRef = useRef(onQuoteUpdate);
+  useEffect(() => {
+    onQuoteUpdateRef.current = onQuoteUpdate;
+  });
+
   // Initialize and subscribe to real-time updates
   useEffect(() => {
     let mounted = true;
@@ -151,9 +157,9 @@ export const useQuoteOptions = (config: UseQuoteOptionsConfig): UseQuoteOptionsR
                 optimisticUpdateRef.current = null;
               }
               
-              // Trigger parent refresh if provided
-              if (onQuoteUpdate) {
-                setTimeout(() => onQuoteUpdate(result.options_state), 100); // Pass updated state
+              // Trigger parent refresh if provided - use stable ref to prevent loops
+              if (onQuoteUpdateRef.current) {
+                setTimeout(() => onQuoteUpdateRef.current?.(result.options_state), 100);
               }
             } else if (result.errors) {
               setError(result.errors.join(', '));
@@ -191,7 +197,7 @@ export const useQuoteOptions = (config: UseQuoteOptionsConfig): UseQuoteOptionsR
         unsubscribeRef.current = null;
       }
     };
-  }, [quoteId, user?.id, userType, onQuoteUpdate]);
+  }, [quoteId, user?.id, userType]); // Removed onQuoteUpdate to prevent infinite loop
 
   // Update shipping option
   const updateShippingOption = useCallback(async (

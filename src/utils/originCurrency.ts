@@ -109,7 +109,8 @@ export function getOriginCurrency(originCountry: string): string {
     return 'USD';
   }
   
-  logger.info(`[OriginCurrency] Mapped ${countryCode} → ${currency}`);
+  // Reduced logging to prevent spam
+  // logger.info(`[OriginCurrency] Mapped ${countryCode} → ${currency}`);
   return currency;
 }
 
@@ -134,7 +135,8 @@ export function getDestinationCurrency(destinationCountry: string): string {
     return 'USD';
   }
   
-  logger.info(`[DestinationCurrency] Mapped ${countryCode} → ${currency}`);
+  // Reduced logging to prevent spam
+  // logger.info(`[DestinationCurrency] Mapped ${countryCode} → ${currency}`);
   return currency;
 }
 

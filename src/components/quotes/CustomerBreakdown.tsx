@@ -119,7 +119,15 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
         
         for (const [key, amount] of Object.entries(stepsToConvert)) {
           if (amount !== 0) {
-            converted[key] = await convertCurrency(amount, fromCurrency, displayCurrency);
+            // Convert currency and apply smart rounding via CurrencyService
+            const rawConverted = await convertCurrency(amount, fromCurrency, displayCurrency);
+            // Apply admin-level smart rounding by re-formatting with CurrencyService
+            const { currencyService } = await import('@/services/CurrencyService');
+            // Extract numeric value by formatting and parsing (to apply smart rounding)
+            const formattedAmount = currencyService.formatAmount(rawConverted, displayCurrency);
+            // Extract just the number from the formatted string (remove currency symbol)
+            const numericValue = parseFloat(formattedAmount.replace(/[^\d.-]/g, ''));
+            converted[key] = isNaN(numericValue) ? rawConverted : numericValue;
           } else {
             converted[key] = 0;
           }

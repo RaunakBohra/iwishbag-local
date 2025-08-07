@@ -223,12 +223,14 @@ export function getBreakdownSourceCurrency(quote: any): string {
   // Legacy quotes: detect currency
   const detection = detectBreakdownCurrency(quote);
   
-  // Log the detection for debugging
-  logger.info(`[CurrencyMigration] Breakdown currency detection for quote ${quote.id}:`, {
-    detected: detection.currency,
-    confidence: detection.confidence,
-    reasoning: detection.reasoning
-  });
+  // Log the detection for debugging (reduced frequency to prevent spam)
+  if (Math.random() < 0.1) { // Only log 10% of calls to reduce spam
+    logger.info(`[CurrencyMigration] Breakdown currency detection for quote ${quote.id}:`, {
+      detected: detection.currency,
+      confidence: detection.confidence,
+      reasoning: detection.reasoning
+    });
+  }
   
   return detection.currency;
 }

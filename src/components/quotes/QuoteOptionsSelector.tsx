@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { QuoteOptionsCore, type QuoteOptionsCoreProps } from './QuoteOptionsCore';
 import { formatCurrency } from '@/lib/utils';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
@@ -35,8 +35,8 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const sourceCurrency = getBreakdownSourceCurrency(quote);
 
-  // Hook to track quote options changes and notify parent
-  const handleQuoteOptionsUpdate = (optionsState: any) => {
+  // Hook to track quote options changes and notify parent - Stable callback to prevent loops
+  const handleQuoteOptionsUpdate = useCallback((optionsState: any) => {
     if (!optionsState || !onOptionsChange) return;
     
     // Extract values for backward compatibility with existing parent components
@@ -58,7 +58,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
       insuranceAdjustment, 
       discountAmount
     });
-  };
+  }, [onOptionsChange]);
 
   // Admin-specific configuration for QuoteOptionsCore
   const coreProps: QuoteOptionsCoreProps = {
