@@ -37,8 +37,6 @@ const Returns = React.lazy(() => import('@/pages/Returns'));
 const Help = React.lazy(() => import('@/pages/Help'));
 const NotFound = React.lazy(() => import('@/pages/NotFound'));
 const MessageCenterPage = React.lazy(() => import('@/pages/MessageCenterPage'));
-const Cart = React.lazy(() => import('@/components/cart/Cart').then((m) => ({ default: m.Cart })));
-const Checkout = React.lazy(() => import('@/components/checkout/Checkout').then((m) => ({ default: m.Checkout })));
 const CostEstimatorPage = React.lazy(() => import('@/pages/CostEstimator'));
 const TestPayment = React.lazy(() => import('@/pages/TestPayment'));
 const EsewaTest = React.lazy(() => import('@/pages/EsewaTest'));
@@ -429,14 +427,11 @@ const router = createBrowserRouter([
         ),
       },
       // Moved quotes/:id to ProtectedRoute children section below
-      {
-        path: 'guest-checkout',
-        element: (
-          <ErrorBoundary fallback={PaymentErrorFallback}>
-            <Checkout />
-          </ErrorBoundary>
-        ),
-      },
+      // Checkout functionality removed - will be rebuilt
+      // {
+      //   path: 'guest-checkout',
+      //   element: <div>Checkout Coming Soon</div>,
+      // },
       {
         path: 'order-confirmation/:id',
         element: <OrderConfirmationPage />,
@@ -547,18 +542,6 @@ const router = createBrowserRouter([
           {
             path: 'order/:id',
             element: <CustomerOrderDetailPage />,
-          },
-          {
-            path: 'cart',
-            element: <Cart />,
-          },
-          {
-            path: 'checkout',
-            element: (
-              <ErrorBoundary fallback={PaymentErrorFallback}>
-                <Checkout />
-              </ErrorBoundary>
-            ),
           },
           {
             path: 'messages',

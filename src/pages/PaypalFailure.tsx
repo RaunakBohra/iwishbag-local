@@ -57,11 +57,11 @@ const PaypalFailure: React.FC = () => {
   }, [searchParams, toast]);
 
   const handleRetryPayment = () => {
-    // Navigate back to cart/checkout
+    // Cart/checkout removed - navigate to dashboard or home
     if (user) {
-      navigate('/cart');
+      navigate('/dashboard');
     } else {
-      navigate('/guest-checkout');
+      navigate('/');
     }
   };
 

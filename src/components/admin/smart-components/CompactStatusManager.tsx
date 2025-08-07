@@ -20,7 +20,7 @@ import {
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
-import { useCart } from '@/hooks/useCart';
+// import { useCart } from '@/hooks/useCart'; // REMOVED - Cart functionality completely removed
 import { supabase } from '@/integrations/supabase/client';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
@@ -42,7 +42,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   const { getStatusConfig, getAllowedTransitions, isValidTransition, orderStatuses } =
     useStatusManagement();
   const { toast } = useToast();
-  const { addItem, removeItem } = useCart();
+  // const { addItem, removeItem } = useCart(); // REMOVED - Cart functionality completely removed
 
   // Use optimistic status for immediate UI updates
   const displayStatus = optimisticStatus || quote.status;
@@ -141,8 +141,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         updatedAt: new Date(quote.updated_at),
       };
 
-      // Add to cart
-      addItem(cartItem);
+      // Cart functionality removed - would add item to cart here
+      // addItem(cartItem); // DISABLED
 
       // Update quote's in_cart flag in database using direct Supabase call
       // This is more reliable than going through UnifiedDataEngine for this simple update
@@ -267,8 +267,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
 
   const handleRemoveFromCart = async () => {
     try {
-      // Remove from cart store using the hook
-      await removeItem(quote.id);
+      // Cart functionality removed - would remove item from cart here
+      // await removeItem(quote.id); // DISABLED
     } catch (error) {
       // Don't throw - this is a side effect, main status update should still proceed
     }

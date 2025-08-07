@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
-import { useCartStore } from '@/stores/cartStore';
+
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { Quote } from '@/types/quote';
 
@@ -26,15 +26,16 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onAddToCart,
   onRenewed,
 }) => {
-  // Subscribe to cart store to make sticky bar reactive to cart changes
-  const cartItems = useCartStore((state) => state.items);
+  // Cart functionality has been removed
+  // const cartItems = useCartStore((state) => state.items);
   const { getStatusConfig } = useStatusManagement();
 
   if (!isOwner) return null;
 
   // Helper function to check if this quote is in cart
   const isQuoteInCart = (quoteId: string) => {
-    return cartItems.some((item) => item.quoteId === quoteId);
+    // Cart functionality removed - check database flag instead
+    return quote.in_cart || false;
   };
 
   // Get dynamic status configuration
@@ -98,12 +99,13 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
         );
       } else {
         return (
-          <Link to="/cart" className="w-full">
-            <Button className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              View in Cart
-            </Button>
-          </Link>
+          <Button 
+            disabled 
+            className="w-full opacity-50 cursor-not-allowed bg-gradient-to-r from-slate-600 to-gray-700"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Cart (Coming Soon)
+          </Button>
         );
       }
     }

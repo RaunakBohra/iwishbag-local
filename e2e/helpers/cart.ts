@@ -50,16 +50,21 @@ export async function getCartItemCount(page: Page): Promise<number> {
 
 /**
  * Proceed to checkout from cart
+ * NOTE: Checkout functionality has been removed
  */
 export async function proceedToCheckout(page: Page) {
-  await goToCart(page);
+  // Checkout functionality removed - this function is disabled
+  // await goToCart(page);
+  // 
+  // const checkoutButton = page.getByRole('button', { name: /checkout|proceed to checkout/i });
+  // await expect(checkoutButton).toBeVisible();
+  // await checkoutButton.click();
+  // 
+  // // Verify we're on checkout page
+  // await expect(page.getByText(/checkout|order summary/i)).toBeVisible();
   
-  const checkoutButton = page.getByRole('button', { name: /checkout|proceed to checkout/i });
-  await expect(checkoutButton).toBeVisible();
-  await checkoutButton.click();
-  
-  // Verify we're on checkout page
-  await expect(page.getByText(/checkout|order summary/i)).toBeVisible();
+  // For now, just go to dashboard
+  await page.goto('/dashboard');
 }
 
 /**

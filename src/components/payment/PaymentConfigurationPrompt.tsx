@@ -84,7 +84,7 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
                 <div className="text-sm">
                   No payment methods are available for{' '}
                   <span className="font-medium">{currency}</span> payments. Configure payment
-                  gateways in System Settings to enable checkout functionality.
+                  gateways in System Settings to enable payment functionality.
                 </div>
               </>
             )}
@@ -174,7 +174,7 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
             {isUserFacing ? (
               <span>Need help with payment? Our support team is here to assist.</span>
             ) : (
-              <span>Configure payment methods to enable customer checkout.</span>
+              <span>Configure payment methods to enable customer payments.</span>
             )}
           </div>
 

@@ -48,7 +48,7 @@ export const CustomerDashboardSummary = ({ quotes, orders }: CustomerDashboardSu
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{itemsInCart}</div>
-          <p className="text-xs text-muted-foreground">Ready to checkout</p>
+          <p className="text-xs text-muted-foreground">Cart system rebuilding</p>
         </CardContent>
       </Card>
 

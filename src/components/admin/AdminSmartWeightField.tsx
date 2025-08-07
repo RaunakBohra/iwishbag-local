@@ -55,8 +55,10 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
 }) => {
   const { toast } = useToast();
   const [mlEstimation, setMlEstimation] = useState<EstimationResult | null>(null);
-  const [hsnWeight, setHsnWeight] = useState<setIsEstimating] = useState(false);
-  const [isLoadingsetIsLoadingsetHasUserInput] = useState(false);
+  const [hsnWeight, setHsnWeight] = useState<number | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUserInput, setHasUserInput] = useState(false);
   const [selectedSource, setSelectedSource] = useState<'hsn' | 'ml' | 'manual' | null>(null);
 
   // Watch relevant fields for auto-estimation

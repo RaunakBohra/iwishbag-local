@@ -120,12 +120,12 @@ const PaymentFailure: React.FC = () => {
   };
 
   const handleRetryPayment = () => {
-    // Navigate back to checkout with the same quote IDs
-    const quotes = searchParams.get('quotes');
-    if (quotes) {
-      navigate(`/checkout?quotes=${quotes}`);
+    // Checkout system removed - navigate to dashboard or home
+    const user = localStorage.getItem('supabase.auth.token');
+    if (user) {
+      navigate('/dashboard');
     } else {
-      navigate('/checkout');
+      navigate('/');
     }
   };
 

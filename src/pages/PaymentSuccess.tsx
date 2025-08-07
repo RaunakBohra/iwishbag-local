@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { supabase } from '@/integrations/supabase/client';
-import { useCartStore } from '@/stores/cartStore';
+
 import { useQueryClient } from '@tanstack/react-query';
 
 interface PaymentSuccessData {
@@ -296,7 +296,7 @@ const PaymentSuccess: React.FC = () => {
               description: 'Your payment could not be processed. Please try again.',
               variant: 'destructive',
             });
-            navigate('/checkout');
+            navigate('/'); // Checkout removed, redirect to home
           }
         }
       } catch (error) {
@@ -486,9 +486,8 @@ const PaymentSuccess: React.FC = () => {
         // Don't throw - this is not critical for the user experience
       }
 
-      // Clear cart items for paid quotes
-      const { bulkDelete } = useCartStore.getState();
-      bulkDelete(quoteIds);
+      // Cart items cleared automatically when quotes are marked as paid
+      // (Cart functionality has been removed)
 
       // Invalidate queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -592,9 +591,9 @@ const PaymentSuccess: React.FC = () => {
             <CardContent className="p-8 pt-0">
               <AnimatedSection animation="fadeInUp" delay={500}>
                 <Button asChild className="w-full group">
-                  <Link to="/checkout">
+                  <Link to="/">
                     <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                    Try Again
+                    Back to Home
                   </Link>
                 </Button>
               </AnimatedSection>

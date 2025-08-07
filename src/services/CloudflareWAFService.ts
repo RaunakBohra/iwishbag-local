@@ -120,8 +120,7 @@ export class CloudflareWAFService {
       {
         name: 'Enhanced Payment Security',
         description: 'Extra protection for payment endpoints',
-        expression: `(http.request.uri.path contains "/payment" or 
-                     http.request.uri.path contains "/checkout") and
+        expression: `(http.request.uri.path contains "/payment") and
                      (cf.threat_score gt 30 or not ssl)`,
         action: 'block',
         enabled: true,

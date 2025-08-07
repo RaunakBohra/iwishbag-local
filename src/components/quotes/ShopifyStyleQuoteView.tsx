@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
-import { useCartStore } from '@/stores/cartStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { QuoteStatusBadge } from '@/components/ui/QuoteStatusBadge';
@@ -104,7 +103,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addItem } = useCartStore();
   const { id: quoteId, shareToken } = useParams<{ id: string; shareToken: string }>();
   
   const queryClient = useQueryClient();
@@ -284,9 +282,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [discountError, setDiscountError] = useState('');
   const [couponsModalOpen, setCouponsModalOpen] = useState(false);
   
-  // Cart state checking
-  const { items: cartItems } = useCartStore();
-  const isInCart = cartItems.some(item => item.id === quote?.id);
+  // Cart functionality removed - check database flag instead
+  // const { items: cartItems } = useCartStore(); // REMOVED
+  const isInCart = quote?.in_cart || false;
 
   // Convert currency amounts when quote or display currency changes
   useEffect(() => {

@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { supabase } from '@/integrations/supabase/client';
-import { useCartStore } from '@/stores/cartStore';
+
 import { useQueryClient } from '@tanstack/react-query';
 import { currencyService } from '@/services/CurrencyService';
 
@@ -57,7 +57,7 @@ const PaypalSuccess: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const clearCart = useCartStore((state) => state.clearCart);
+
   const [isProcessing, setIsProcessing] = useState(true);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -422,10 +422,8 @@ const PaypalSuccess: React.FC = () => {
           });
         }
 
-        // Clear cart if user is authenticated
-        if (user) {
-          clearCart();
-        }
+        // Cart cleared automatically when payment is processed
+        // (Cart functionality has been removed)
 
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -447,7 +445,7 @@ const PaypalSuccess: React.FC = () => {
     };
 
     verifyPayment();
-  }, [searchParams, user, clearCart, queryClient, toast, supabase]);
+  }, [searchParams, user, queryClient, toast]);
 
   if (isProcessing) {
     return (

@@ -29,8 +29,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CartDrawer } from '@/components/cart/CartDrawer';
-import { useCart } from '@/hooks/useCart';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
@@ -45,7 +43,6 @@ const Header = () => {
   const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-    const { itemCount: cartItemCount } = useCart();
 
   // Default homepage settings
   const homePageSettings = {
