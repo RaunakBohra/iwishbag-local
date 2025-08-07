@@ -182,6 +182,7 @@ class QuoteOptionsService {
         total_usd: calculatedTotal,
         total_customer_currency: calculatedTotal,
         customer_currency: updatedQuoteInput.origin_currency,
+        origin_currency: updatedQuoteInput.origin_currency, // CRITICAL: Preserve origin currency
         updated_at: new Date().toISOString()
       };
 
