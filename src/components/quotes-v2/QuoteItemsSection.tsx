@@ -26,6 +26,8 @@ import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal'
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { toast } from '@/hooks/use-toast';
+import { currencyService } from '@/services/CurrencyService';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface QuoteItem {
   id: string;
@@ -49,6 +51,7 @@ interface QuoteItem {
 interface QuoteItemsSectionProps {
   items: QuoteItem[];
   onItemsChange: (items: QuoteItem[]) => void;
+  originCountry?: string; // NEW: Origin country for currency/weight units
   destinationCountry: string;
   smartFeatureLoading: Record<string, boolean>;
   onSmartFeatureLoadingChange: (loading: Record<string, boolean>) => void;
@@ -57,12 +60,39 @@ interface QuoteItemsSectionProps {
 export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
   items,
   onItemsChange,
+  originCountry = 'US', // Default to US if not provided
   destinationCountry,
   smartFeatureLoading,
   onSmartFeatureLoadingChange
 }) => {
   // Advanced options state - track which items have expanded advanced options
   const [expandedAdvancedOptions, setExpandedAdvancedOptions] = useState<Record<string, boolean>>({});
+  
+  // Get origin currency and weight units
+  const originCurrency = getOriginCurrency(originCountry);
+  const weightUnit = originCountry === 'US' ? 'lb' : 'kg';
+  const weightConversionFactor = originCountry === 'US' ? 2.20462 : 1; // kg to lb conversion
+  
+  // Helper functions for display
+  const formatPrice = (price: number) => {
+    return currencyService.formatAmount(price, originCurrency);
+  };
+  
+  const displayWeight = (weightKg: number) => {
+    if (originCountry === 'US') {
+      return (weightKg * weightConversionFactor).toFixed(2);
+    }
+    return weightKg.toFixed(2);
+  };
+  
+  const parseWeightInput = (displayValue: string): number => {
+    const numValue = parseFloat(displayValue) || 0;
+    if (originCountry === 'US') {
+      // Convert lb back to kg for storage
+      return numValue / weightConversionFactor;
+    }
+    return numValue;
+  };
   const [showVolumetricModal, setShowVolumetricModal] = useState<{item: QuoteItem | null, show: boolean}>({
     item: null,
     show: false
@@ -440,7 +470,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                 {/* Price Column */}
                 <div className="space-y-2 h-16 flex flex-col justify-between">
                   <div className="text-center">
-                    <div className="text-xs text-gray-500 font-medium">Price</div>
+                    <div className="text-xs text-gray-500 font-medium">Price ({originCurrency})</div>
                   </div>
                   <Input
                     type="number"
@@ -458,19 +488,19 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                 {/* Weight Column */}
                 <div className="space-y-2 h-16 flex flex-col justify-between">
                   <div className="text-center">
-                    <div className="text-xs text-gray-500 font-medium">Weight</div>
+                    <div className="text-xs text-gray-500 font-medium">Weight ({weightUnit})</div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Input
                       type="number"
                       min="0"
-                      step="0.1"
-                      value={item.weight_kg || ''}
-                      onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || 0)}
-                      placeholder="0.5"
+                      step={originCountry === 'US' ? "0.1" : "0.1"}
+                      value={displayWeight(item.weight_kg || 0)}
+                      onChange={(e) => updateItem(item.id, 'weight_kg', parseWeightInput(e.target.value))}
+                      placeholder={originCountry === 'US' ? "1.1" : "0.5"}
                       className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 flex-1 text-sm text-gray-900 font-normal"
                     />
-                    <span className="text-xs text-gray-500 font-medium min-w-[16px]">kg</span>
+                    <span className="text-xs text-gray-500 font-medium min-w-[16px]">{weightUnit}</span>
                   </div>
                 </div>
 

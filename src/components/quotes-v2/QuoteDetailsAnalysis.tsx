@@ -74,9 +74,21 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   const breakdownCurrency = getBreakdownSourceCurrency(quote);
   const originCurrency = getOriginCurrency(quote.origin_country);
   const destinationCurrency = getDestinationCurrency(quote.destination_country);
+  
+  // Get origin country units
+  const originCountry = quote.origin_country || inputs.origin_country || 'US';
+  const weightUnit = originCountry === 'US' ? 'lb' : 'kg';
+  const weightConversionFactor = originCountry === 'US' ? 2.20462 : 1;
 
   const formatCurrency = (amount: number, currency?: string) => {
     return currencyService.formatAmount(amount, currency || breakdownCurrency);
+  };
+  
+  const displayWeight = (weightKg: number): string => {
+    if (originCountry === 'US') {
+      return `${(weightKg * weightConversionFactor).toFixed(1)} ${weightUnit}`;
+    }
+    return `${weightKg.toFixed(1)} ${weightUnit}`;
   };
 
   // Calculate key values using new system
@@ -188,20 +200,20 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
         const totalChargeable = inputs.total_chargeable_weight_kg || totalActual;
         
         if (totalVolumetric > totalActual) {
-          return `${totalChargeable} kg (Vol)`;
+          return `${displayWeight(totalChargeable).replace(' ' + weightUnit, '')} ${weightUnit} (Vol)`;
         }
-        return `${totalChargeable} kg`;
+        return displayWeight(totalChargeable);
       })(),
       subtitle: (() => {
         const totalActual = inputs.total_weight_kg || 0;
         const totalVolumetric = inputs.total_volumetric_weight_kg || 0;
         
         if (totalVolumetric > totalActual) {
-          return `Volumetric: ${totalVolumetric}kg > Actual: ${totalActual}kg`;
+          return `Volumetric: ${displayWeight(totalVolumetric)} > Actual: ${displayWeight(totalActual)}`;
         } else if (totalVolumetric > 0) {
-          return `Actual: ${totalActual}kg > Volumetric: ${totalVolumetric}kg`;
+          return `Actual: ${displayWeight(totalActual)} > Volumetric: ${displayWeight(totalVolumetric)}`;
         }
-        return `Actual weight: ${totalActual}kg`;
+        return `Actual weight: ${displayWeight(totalActual)}`;
       })(),
       color: (inputs.total_volumetric_weight_kg || 0) > (inputs.total_weight_kg || 0) ? 'text-orange-600' : 'text-blue-600'
     },
@@ -209,7 +221,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: Truck,
       title: 'Shipping',
-      value: `${formatCurrency(rates.shipping_rate_per_kg || 0)}/kg`,
+      value: `${formatCurrency(rates.shipping_rate_per_kg || 0)}/${weightUnit}`,
       subtitle: `${formatCurrency(totalShippingCost)} cost`,
       color: 'text-blue-600'
     },
@@ -601,7 +613,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                       <div className="flex items-center gap-1 mb-1">
                         <span className="text-xs font-medium text-gray-600">Actual Weight</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{inputs.total_weight_kg || 0} kg</span>
+                      <span className="text-sm font-medium text-gray-900">{displayWeight(inputs.total_weight_kg || 0)}</span>
                     </div>
                     
                     {inputs.total_volumetric_weight_kg ? (
@@ -609,7 +621,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                         <div className="flex items-center gap-1 mb-1">
                           <span className="text-xs font-medium text-orange-600">Volumetric Weight</span>
                         </div>
-                        <span className="text-sm font-medium text-orange-700">{inputs.total_volumetric_weight_kg} kg</span>
+                        <span className="text-sm font-medium text-orange-700">{displayWeight(inputs.total_volumetric_weight_kg)}</span>
                       </div>
                     ) : (
                       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -642,7 +654,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                           ? 'text-orange-800'
                           : 'text-blue-800'
                       }`}>
-                        {inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg
+                        {displayWeight(inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0)}
                       </span>
                     </div>
                     <div className="text-xs text-gray-600 mt-1">

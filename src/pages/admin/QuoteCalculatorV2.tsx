@@ -2896,7 +2896,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     {/* Price Column - SECOND */}
                     <div className="space-y-2 h-18 flex flex-col justify-between">
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 font-medium">Price</div>
+                        <div className="text-xs text-gray-500 font-medium">Price ({originCurrency})</div>
                       </div>
                       <Input
                         type="number"
@@ -2915,7 +2915,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     {/* Weight Column - Clean Horizontal Layout */}
                     <div className="space-y-2 h-18 flex flex-col justify-between">
                       <div className="text-center">
-                        <div className="text-xs text-gray-500 font-medium">Weight</div>
+                        <div className="text-xs text-gray-500 font-medium">Weight ({weightUnit})</div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Input
