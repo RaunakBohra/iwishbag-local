@@ -322,6 +322,24 @@ export const useCartStore = create<CartStore>()(
             }
 
             // Log cart data to check loaded fields
+            console.log('🛍️ [CartStore] Cart quotes loaded:', {
+              count: cartQuotes?.length || 0,
+              fullQuoteData: cartQuotes?.slice(0, 1),
+              sample: cartQuotes?.slice(0, 2).map((q) => ({
+                id: q.id,
+                total_usd: q.total_usd,
+                total_origin_currency: q.total_origin_currency,
+                customer_currency: q.customer_currency,
+                origin_country: q.origin_country,
+                destination_country: q.destination_country,
+                status: q.status,
+                // Add more fields for debugging
+                quote_number: q.quote_number,
+                items: q.items?.length || 0,
+                itemsSample: q.items?.slice(0, 1)
+              })),
+            });
+            
             logger.debug('[CartStore] Cart quotes loaded:', {
               count: cartQuotes?.length || 0,
               sample: cartQuotes?.slice(0, 1).map((q) => ({
@@ -372,14 +390,34 @@ export const useCartStore = create<CartStore>()(
               const items = quote.items || [];
 
               // Calculate total quantity and weight from all items
-              const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              // CRITICAL FIX: Ensure minimum quantity of 1 for cart items
+              const totalQuantity = Math.max(1, items.reduce((sum, item) => sum + (item.quantity || 1), 0));
               const totalWeight = items.reduce(
                 (sum, item) => sum + (item.weight || 0) * (item.quantity || 1),
                 0,
               );
 
-              // Use total_usd directly (this is the authoritative total)
-              const totalPrice = quote.total_usd || 0;
+              // Use origin currency total as primary, fallback to USD for legacy quotes
+              let totalPrice = quote.total_origin_currency || quote.total_usd || 0;
+              
+              // CRITICAL FIX: If totalPrice is 0, calculate from items array
+              if (totalPrice === 0 && items.length > 0) {
+                totalPrice = items.reduce((sum, item) => {
+                  const itemPrice = item.costprice_origin || item.unit_price_origin || item.price_origin || 0;
+                  const itemQty = item.quantity || 1;
+                  return sum + (itemPrice * itemQty);
+                }, 0);
+                console.log(`🔍 [CartStore] Calculated totalPrice from items: ${totalPrice} for quote ${quote.id}`);
+              }
+              
+              console.log(`🛍️ [CartStore] Processing quote ${quote.id}:`, {
+                total_origin_currency: quote.total_origin_currency,
+                total_usd: quote.total_usd,
+                totalPrice,
+                origin_country: quote.origin_country,
+                customer_currency: quote.customer_currency,
+                itemsCount: quote.items?.length || 0
+              });
 
               // Use calculated totals from items array
               // Individual item fields are no longer needed
@@ -444,9 +482,9 @@ export const useCartStore = create<CartStore>()(
                 // Full quote object with complete currency context
                 quote: {
                   id: quote.id,
-                  total_origin_currency: quote.total_origin_currency,
-                  origin_total_amount: quote.total_origin_currency, // Alias for compatibility
-                  total_usd: quote.total_usd,
+                  total_origin_currency: quote.total_origin_currency || totalPrice,
+                  origin_total_amount: quote.total_origin_currency || totalPrice, // Alias for compatibility
+                  total_usd: quote.total_usd || totalPrice,
                   destination_currency: quote.customer_currency,
                   customer_currency: quote.customer_currency,
                   exchange_rate: quote.exchange_rate,
@@ -469,9 +507,7 @@ export const useCartStore = create<CartStore>()(
                   status: quote.status,
                 },
                 cartItem: {
-                  finalTotal: cartItem.finalTotal,
-                  finalTotalLocal: cartItem.finalTotalLocal,
-                  finalCurrency: cartItem.finalCurrency,
+                  totalPrice: totalPrice,
                   purchaseCountryCode: cartItem.purchaseCountryCode,
                   destinationCountryCode: cartItem.destinationCountryCode,
                 },
@@ -507,7 +543,8 @@ export const useCartStore = create<CartStore>()(
               cartItems: cartItems.slice(0, 2).map((item) => ({
                 id: item.id,
                 quoteId: item.quoteId,
-                finalTotal: item.finalTotal,
+                total_origin_currency: item.quote?.total_origin_currency,
+                total_usd: item.quote?.total_usd,
               })),
             });
 

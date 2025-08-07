@@ -41,10 +41,21 @@ export const useCart = () => {
     }
   }, [userId]);
 
-  // Cart calculations - FIXED: Use consistent calculation method
+  // Cart calculations - FIXED: Use origin currency total with fallback and items calculation
   const cartTotal = useMemo(() => {
     return items.reduce((total, item) => {
-      return total + (item.finalTotal || 0) * (item.quantity || 1);
+      let itemTotal = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
+      
+      // CRITICAL FIX: If itemTotal is 0, try to calculate from items array
+      if (itemTotal === 0 && item.quote?.items && item.quote.items.length > 0) {
+        itemTotal = item.quote.items.reduce((itemSum: number, quoteItem: any) => {
+          const itemPrice = quoteItem.costprice_origin || quoteItem.unit_price_origin || quoteItem.price_origin || 0;
+          const itemQty = quoteItem.quantity || 1;
+          return itemSum + (itemPrice * itemQty);
+        }, 0);
+      }
+      
+      return total + itemTotal * (item.quantity || 1);
     }, 0);
   }, [items]);
 
@@ -57,7 +68,18 @@ export const useCart = () => {
   const selectedItemsTotal = useMemo(() => {
     const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
     return selectedCartItems.reduce((total, item) => {
-      return total + (item.finalTotal || 0) * (item.quantity || 1);
+      let itemTotal = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
+      
+      // CRITICAL FIX: If itemTotal is 0, try to calculate from items array
+      if (itemTotal === 0 && item.quote?.items && item.quote.items.length > 0) {
+        itemTotal = item.quote.items.reduce((itemSum: number, quoteItem: any) => {
+          const itemPrice = quoteItem.costprice_origin || quoteItem.unit_price_origin || quoteItem.price_origin || 0;
+          const itemQty = quoteItem.quantity || 1;
+          return itemSum + (itemPrice * itemQty);
+        }, 0);
+      }
+      
+      return total + itemTotal * (item.quantity || 1);
     }, 0);
   }, [items, selectedItems]);
 

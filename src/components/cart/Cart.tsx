@@ -32,21 +32,63 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
   useEffect(() => {
     const convertPrice = async () => {
       try {
-        // Get the total amount to display from quote data
+        // Get the total amount to display from quote data with detailed logging
         const baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0;
         const totalWithQuantity = baseAmount * quantity;
+        
+        // CRITICAL FIX: If we have zero amounts, it means the data isn't loaded correctly
+        // Let's try a different approach to get the amount
+        if (baseAmount === 0 && item.quote?.items && item.quote.items.length > 0) {
+          console.log(`🔍 [CART ITEM] Zero base amount, checking items array:`, item.quote.items);
+          // Try to calculate from items array
+          const itemsTotal = item.quote.items.reduce((sum: number, quoteItem: any) => {
+            const itemPrice = quoteItem.costprice_origin || quoteItem.unit_price_origin || quoteItem.price_origin || quoteItem.costprice_origin || 0;
+            const itemQty = quoteItem.quantity || 1;
+            console.log(`🔍 [CART ITEM] Quote item price: ${itemPrice}, qty: ${itemQty}`);
+            return sum + (itemPrice * itemQty);
+          }, 0);
+          
+          if (itemsTotal > 0) {
+            console.log(`✅ [CART ITEM] Found total from items array: ${itemsTotal}`);
+            // Use the calculated total from items
+            const totalWithQuantity = itemsTotal * quantity;
+            const sourceCurrency = item.quote ? getSourceCurrency(item.quote) : 'USD';
+            const formatted = await formatAmountWithConversion(totalWithQuantity, sourceCurrency);
+            setConvertedAmount(formatted);
+            return;
+          }
+        }
+        
+        console.log(`💰 [CART ITEM DEBUG] Full item data:`, {
+          itemId: item.id,
+          itemData: {
+            quote: {
+              id: item.quote?.id,
+              total_origin_currency: item.quote?.total_origin_currency,
+              total_usd: item.quote?.total_usd,
+              origin_country: item.quote?.origin_country,
+              destination_country: item.quote?.destination_country,
+              customer_currency: item.quote?.customer_currency,
+              items: item.quote?.items,
+              itemsLength: item.quote?.items?.length || 0
+            }
+          },
+          baseAmount,
+          quantity,
+          totalWithQuantity
+        });
+        
+        // If baseAmount is 0, something is wrong with the data
+        if (baseAmount === 0) {
+          console.error(`🚨 [CART ITEM] Zero base amount detected for item ${item.id}`);
+          setConvertedAmount(formatAmountSync(0));
+          return;
+        }
         
         // Get source currency (origin country currency)
         const sourceCurrency = item.quote ? getSourceCurrency(item.quote) : 'USD';
         
-        console.log(`💰 [CART ITEM] Converting: ${totalWithQuantity} ${sourceCurrency} → ${displayCurrency}`, {
-          itemId: item.id,
-          baseAmount,
-          quantity,
-          sourceCurrency,
-          displayCurrency,
-          quote: item.quote ? { id: item.quote.id, origin_country: item.quote.origin_country } : null
-        });
+        console.log(`💰 [CART ITEM] Converting: ${totalWithQuantity} ${sourceCurrency} → ${displayCurrency}`);
         
         // Convert and format using the same logic as quote page
         const formatted = await formatAmountWithConversion(totalWithQuantity, sourceCurrency);
@@ -54,16 +96,16 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
         console.log(`✅ [CART ITEM] Converted result: ${formatted}`);
       } catch (error) {
         console.warn('❌ [CART ITEM] Cart item price conversion failed:', error);
-        // Fallback to sync formatting - THIS IS THE PROBLEM!
+        // Fallback to sync formatting with better logging
         const baseAmount = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
         const fallbackAmount = formatAmountSync(baseAmount * quantity);
-        console.warn(`⚠️ [CART ITEM] Using fallback (no conversion): ${fallbackAmount}`);
+        console.warn(`⚠️ [CART ITEM] Using fallback: baseAmount=${baseAmount}, result=${fallbackAmount}`);
         setConvertedAmount(fallbackAmount);
       }
     };
     
     convertPrice();
-  }, [item, quantity, formatAmountWithConversion, formatAmountSync, getSourceCurrency]);
+  }, [item, quantity, formatAmountWithConversion, formatAmountSync, getSourceCurrency, displayCurrency]);
   
   return <>{convertedAmount || formatAmountSync(0)}</>;
 };
@@ -96,28 +138,56 @@ const CartTotal = ({ items }: { items: CartItem[] }) => {
         console.log('💰 [CART DEBUG] Converting cart total with quote data:', {
           itemCount: items.length,
           firstQuoteId: firstItemQuote.id,
-          originCountry: firstItemQuote.origin_country
+          originCountry: firstItemQuote.origin_country,
+          firstQuoteData: {
+            total_origin_currency: firstItemQuote.total_origin_currency,
+            total_usd: firstItemQuote.total_usd,
+            origin_country: firstItemQuote.origin_country
+          }
         });
         
-        // Calculate total using same logic as quote page
+        // Calculate total using same logic as quote page - prioritize origin currency
         const totalAmount = items.reduce((sum, item) => {
-          const baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || item.finalTotal || 0;
+          let baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0;
+          
+          // CRITICAL FIX: If baseAmount is 0, try to calculate from items array
+          if (baseAmount === 0 && item.quote?.items && item.quote.items.length > 0) {
+            baseAmount = item.quote.items.reduce((itemSum: number, quoteItem: any) => {
+              const itemPrice = quoteItem.costprice_origin || quoteItem.unit_price_origin || quoteItem.price_origin || 0;
+              const itemQty = quoteItem.quantity || 1;
+              return itemSum + (itemPrice * itemQty);
+            }, 0);
+            console.log(`🔍 [CART DEBUG] Calculated baseAmount from items: ${baseAmount} for item ${item.id}`);
+          }
+          
+          console.log(`💰 [CART DEBUG] Item ${item.id}: baseAmount=${baseAmount}, quantity=${item.quantity}`);
           return sum + (baseAmount * item.quantity);
         }, 0);
         
+        console.log(`💰 [CART DEBUG] Total calculated amount: ${totalAmount}`);
+        
+        if (totalAmount === 0) {
+          console.error('🚨 [CART DEBUG] Total amount is 0 - check cart item data');
+          setConvertedTotal(formatAmountSync(0));
+          return;
+        }
+        
         // Use source currency from first quote
         const sourceCurrency = getSourceCurrency(firstItemQuote);
+        console.log(`💰 [CART DEBUG] Using source currency: ${sourceCurrency}`);
         
         // Convert and format using the same logic as quote page
         const formatted = await formatAmountWithConversion(totalAmount, sourceCurrency);
         setConvertedTotal(formatted);
+        console.log(`✅ [CART DEBUG] Final formatted total: ${formatted}`);
       } catch (error) {
-        console.warn('Cart total conversion failed:', error);
-        // Fallback to sync formatting with quote data only
+        console.warn('❌ [CART DEBUG] Cart total conversion failed:', error);
+        // Fallback to sync formatting with quote data only - prioritize origin currency
         const totalAmount = items.reduce((sum, item) => {
           const baseAmount = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
           return sum + (baseAmount * item.quantity);
         }, 0);
+        console.warn(`⚠️ [CART DEBUG] Using fallback total: ${totalAmount}`);
         setConvertedTotal(formatAmountSync(totalAmount));
       }
     };
@@ -158,8 +228,24 @@ export const Cart = () => {
 
   // Load cart when component mounts
   if (user && !cartLoading && !hasLoadedFromServer) {
+    console.log('🛍️ [CART] Loading cart for user:', user.id);
     loadFromServer(user.id);
   }
+  
+  // Debug cart state
+  console.log('🛍️ [CART] Cart state:', {
+    hasUser: !!user,
+    cartLoading,
+    hasLoadedFromServer,
+    itemCount: cartItems.length,
+    cartItems: cartItems.slice(0, 2).map(item => ({
+      id: item.id,
+      quoteId: item.quoteId,
+      hasQuote: !!item.quote,
+      quoteTotalOrigin: item.quote?.total_origin_currency,
+      quoteTotalUSD: item.quote?.total_usd
+    }))
+  });
 
   const handleQuantityChange = useCallback(
     (id: string, newQuantity: number) => {

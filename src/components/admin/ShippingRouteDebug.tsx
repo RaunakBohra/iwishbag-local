@@ -79,7 +79,7 @@ export function ShippingRouteDebug({
           <div className="space-y-1 text-xs text-blue-700">
             <div><strong>Route:</strong> {originCountry} → {destinationCountry}</div>
             <div><strong>Weight:</strong> {weight}kg</div>
-            <div><strong>Item Value:</strong> ${itemValueUSD}</div>
+            <div><strong>Item Value:</strong> {formatCurrency(itemValue, 'USD')}</div>
             {routeCalculations?.route_info && (
               <div><strong>Exchange Rate:</strong> {routeCalculations.route_info.exchange_rate}</div>
             )}
