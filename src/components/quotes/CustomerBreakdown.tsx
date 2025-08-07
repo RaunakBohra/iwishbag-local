@@ -61,12 +61,16 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
 
   const calc = quote.calculation_data;
   const steps = calc.calculation_steps || {};
-  const currency = displayCurrency || quote.customer_currency || 'USD';
+  // FIXED: Use breakdown source currency instead of customer_currency
+  const sourceCurrency = getBreakdownSourceCurrency(quote);
+  const currency = displayCurrency || sourceCurrency;
 
   // Convert amounts when displayCurrency changes
   useEffect(() => {
     const convertAmounts = async () => {
-      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+      // FIXED: Check against breakdown source currency, not customer_currency
+      const sourceCurrency = getBreakdownSourceCurrency(quote);
+      if (!displayCurrency || displayCurrency === sourceCurrency) {
         // No conversion needed, reset converted amounts
         setConvertedAmounts({});
         return;
@@ -130,9 +134,9 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
     convertAmounts();
   }, [quote, displayCurrency, convertCurrency, steps]);
 
-  // Helper to get converted amount or original
+  // Helper to get converted amount or original - FIXED for origin currency system
   const getAmount = (key: string, originalAmount: number) => {
-    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedAmounts[key] !== undefined) {
+    if (displayCurrency && convertedAmounts[key] !== undefined) {
       return convertedAmounts[key];
     }
     return originalAmount;
