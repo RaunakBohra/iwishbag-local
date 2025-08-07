@@ -444,6 +444,19 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               <p className="text-sm text-gray-600 mt-1">
                 {inputs.destination_state === 'rural' ? 'Rural' : 'Urban'} delivery in {inputs.destination_country}
+                {/* Show domestic delivery conversion details */}
+                {steps.domestic_delivery_details && (
+                  <span className="text-blue-600 font-medium block mt-1">
+                    🔄 {steps.domestic_delivery_details.provider}: 
+                    {steps.domestic_delivery_details.original_currency} {steps.domestic_delivery_details.original_amount} → 
+                    {calc.inputs?.origin_currency || 'USD'} {steps.domestic_delivery_details.amount}
+                    {steps.domestic_delivery_details.conversion_rate && (
+                      <span className="text-xs text-gray-500 ml-1">
+                        (rate: {steps.domestic_delivery_details.conversion_rate})
+                      </span>
+                    )}
+                  </span>
+                )}
                 {steps.delhivery_rates && inputs.destination_country === 'IN' && (
                   <span className="text-blue-600 font-medium block mt-1">
                     📦 Powered by Delhivery API

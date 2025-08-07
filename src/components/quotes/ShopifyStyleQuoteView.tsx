@@ -809,6 +809,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           items={items} 
           quote={quote} 
           formatCurrency={formatCurrency}
+          displayCurrency={displayCurrency}
         />
         
         <MobileQuoteOptions
@@ -818,6 +819,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           onOptionsChange={setQuoteOptions}
           formatCurrency={formatCurrency}
           onQuoteUpdate={refreshQuote}
+          displayCurrency={displayCurrency}
         />
         
         <MobileBreakdown 
@@ -828,6 +830,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           formatCurrency={formatCurrency}
           quoteOptions={quoteOptions}
           onOptionsChange={setQuoteOptions}
+          displayCurrency={displayCurrency}
         />
         
         <MobileTrustSignals />

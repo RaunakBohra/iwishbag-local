@@ -116,6 +116,14 @@ interface CalculationResult {
     handling_discount_amount?: number; // NEW: Handling fee discount
     discounted_handling_fee?: number; // NEW: Final handling fee after discount
     domestic_delivery: number;
+    domestic_delivery_details?: { // NEW: Enhanced domestic delivery tracking
+      amount: number;
+      currency: string;
+      original_amount: number;
+      original_currency: string;
+      provider: string;
+      conversion_rate?: number;
+    };
     delivery_discount_amount?: number; // NEW: Delivery discount
     discounted_delivery?: number; // NEW: Final delivery after discount
     delhivery_rates?: DelhiveryMultiRateResponse; // NEW: Delhivery API response for Indian deliveries
@@ -524,6 +532,12 @@ class SimplifiedQuoteCalculator {
       || COUNTRY_TAX_CONFIG.DEFAULT;
     
     const customerCurrency = await this.getCustomerCurrency(input.destination_country, input.customer_id);
+    
+    // CRITICAL DEBUG: Log currency determination for admin vs user side
+    console.log(`💱 [Currency Logic] Admin breakdown should use ORIGIN currency: ${input.origin_currency}`);
+    console.log(`💱 [Currency Logic] Customer currency detected: ${customerCurrency} (based on destination: ${input.destination_country})`);
+    console.log(`💱 [Currency Logic] This is admin side, so we should display in origin currency for consistency`);
+    
     // CRITICAL FIX: Exchange rate should be from origin currency to customer currency, not USD to customer
     const exchangeRate = await currencyService.getExchangeRateByCurrency(input.origin_currency, customerCurrency);
 
@@ -858,6 +872,7 @@ class SimplifiedQuoteCalculator {
 
     // Step 11: Calculate domestic delivery (with Delhivery for India, NCM for Nepal)
     let domesticDelivery = 0;
+    let domesticDeliveryDetails: any = null;
     let delhiveryRates: DelhiveryMultiRateResponse | undefined;
     let ncmRates: NCMMultiRateResponse | undefined;
     
@@ -882,22 +897,59 @@ class SimplifiedQuoteCalculator {
           const selectedService = delhiveryRates.rates.find(r => r.service_type === (input.delhivery_service_type || 'standard'));
           const deliveryRateINR = selectedService ? selectedService.rate : delhiveryRates.rates[0]?.rate || 0;
           
-          // Convert INR to USD for calculation consistency
-          domesticDelivery = await delhiveryService.convertToUSD(deliveryRateINR);
+          console.log(`🚚 [Delhivery] Original rate: ₹${deliveryRateINR} INR`);
+          console.log(`🚚 [Delhivery] Admin breakdown should display in ORIGIN currency: ${input.origin_currency}`);
           
-          console.log(`🚚 [Delhivery] Rate: ₹${deliveryRateINR} → $${domesticDelivery.toFixed(2)} USD`);
+          // CRITICAL FIX: Admin breakdown should show origin currency, not destination currency
+          // For admin: Convert Delhivery INR rates → Origin currency (e.g., USD)
+          domesticDelivery = await delhiveryService.convertToCurrency(deliveryRateINR, input.origin_currency);
+          
+          console.log(`🚚 [Delhivery] Converted: ₹${deliveryRateINR} INR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          // Store detailed conversion information for transparency
+          const conversionRate = input.origin_currency === 'INR' ? 1 : (domesticDelivery / deliveryRateINR);
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: this.round(deliveryRateINR),
+            original_currency: 'INR',
+            provider: 'Delhivery',
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `Delhivery API rate: ₹${deliveryRateINR} INR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
           
         } else {
-          logger.warn();
+          logger.warn('🚚 [Delhivery] Invalid or missing pincode, using fallback rates');
           // Fallback to fixed rates if no valid pincode
           const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-          domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+          const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+          domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+          
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: fallbackRate,
+            original_currency: 'USD',
+            provider: 'Fallback',
+            conversion_rate: this.round(exchangeRate, 6),
+            debug_info: `Fallback rate: $${fallbackRate} USD → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
         }
       } catch (error) {
         logger.error('❌ [Delhivery] API error, using fallback rates:', error);
         // Fallback to fixed rates on API failure
         const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-        domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+        
+        domesticDeliveryDetails = {
+          amount: this.round(domesticDelivery),
+          currency: customerCurrency,
+          original_amount: fallbackRate,
+          original_currency: 'USD',
+          provider: 'Fallback',
+          conversion_rate: exchangeRate
+        };
       }
     } else if (input.destination_country === 'NP') {
       // Use NCM for Nepal deliveries
@@ -930,27 +982,74 @@ class SimplifiedQuoteCalculator {
           const selectedService = ncmRates.rates.find(r => r.service_type === (input.ncm_service_type || 'pickup'));
           const deliveryRateNPR = selectedService ? selectedService.rate : ncmRates.rates[0]?.rate || 0;
           
-          // Convert NPR to USD for calculation consistency
-          domesticDelivery = await ncmService.convertToUSD(deliveryRateNPR);
+          console.log(`🏔️ [NCM] Original rate: ₨${deliveryRateNPR} NPR`);
+          console.log(`🏔️ [NCM] Admin breakdown should display in ORIGIN currency: ${input.origin_currency}`);
           
-          console.log(`🏔️ [NCM] Rate: ₨${deliveryRateNPR} → $${domesticDelivery.toFixed(2)} USD`);
+          // CRITICAL FIX: Admin breakdown should show origin currency, not destination currency  
+          // For admin: Convert NCM NPR rates → Origin currency (e.g., USD)
+          domesticDelivery = await ncmService.convertToCurrency(deliveryRateNPR, input.origin_currency);
+          
+          console.log(`🏔️ [NCM] Converted: ₨${deliveryRateNPR} NPR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          // Store detailed conversion information for transparency
+          const conversionRate = input.origin_currency === 'NPR' ? 1 : (domesticDelivery / deliveryRateNPR);
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: this.round(deliveryRateNPR),
+            original_currency: 'NPR',
+            provider: 'NCM',
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `NCM API rate: ₨${deliveryRateNPR} NPR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
           
         } else {
-          logger.warn();
+          logger.warn('🏔️ [NCM] No branch mapping found, using fallback rates');
           // Fallback to fixed rates if no branches found
           const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-          domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+          const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+          domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+          
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: fallbackRate,
+            original_currency: 'USD',
+            provider: 'Fallback',
+            conversion_rate: this.round(exchangeRate, 6),
+            debug_info: `Fallback rate: $${fallbackRate} USD → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
         }
       } catch (error) {
         logger.error('❌ [NCM] API error, using fallback rates:', error);
         // Fallback to fixed rates on API failure
         const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-        domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+        
+        domesticDeliveryDetails = {
+          amount: this.round(domesticDelivery),
+          currency: customerCurrency,
+          original_amount: fallbackRate,
+          original_currency: 'USD',
+          provider: 'Fallback',
+          conversion_rate: exchangeRate
+        };
       }
     } else {
       // Use existing logic for other destinations
       const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-      domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+      const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+      domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+      
+      domesticDeliveryDetails = {
+        amount: this.round(domesticDelivery),
+        currency: customerCurrency,
+        original_amount: fallbackRate,
+        original_currency: 'USD',
+        provider: 'Default',
+        conversion_rate: exchangeRate
+      };
     }
 
     // Apply delivery discounts if available
@@ -1076,6 +1175,7 @@ class SimplifiedQuoteCalculator {
         handling_discount_amount: this.round(handlingDiscountAmount),
         discounted_handling_fee: this.round(discountedHandlingFee),
         domestic_delivery: this.round(domesticDelivery),
+        domestic_delivery_details: domesticDeliveryDetails, // NEW: Enhanced domestic delivery tracking
         delivery_discount_amount: this.round(deliveryDiscountAmount),
         discounted_delivery: this.round(discountedDelivery),
         delhivery_rates: delhiveryRates,

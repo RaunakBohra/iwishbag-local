@@ -914,6 +914,8 @@ class CurrencyService {
               NP_IN: 0.625, // NPR to INR approximate
               US_NP: 134.5, // USD to NPR approximate
               NP_US: 0.0074, // NPR to USD approximate
+              IN_US: 0.012, // INR to USD (83.33 INR per USD)
+              US_IN: 83.33, // USD to INR
             };
             const fallbackKey = `${originCountry}_${destinationCountry}`;
             const fallbackRate = fallbackRates[fallbackKey] || 1.0;

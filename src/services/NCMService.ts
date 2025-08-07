@@ -402,18 +402,50 @@ class NCMService {
   }
 
   /**
-   * Convert NPR to USD for quote calculations
+   * Convert NPR to any target currency for quote calculations
    */
-  async convertToUSD(amountNPR: number): Promise<number> {
+  async convertToCurrency(amountNPR: number, targetCurrency: string): Promise<number> {
     try {
-      // Use your existing currency service
+      console.log(`[NCM] Converting ${amountNPR} NPR to ${targetCurrency}`);
+      
+      // No conversion needed if target is NPR
+      if (targetCurrency === 'NPR') {
+        console.log(`[NCM] Same currency, no conversion needed: ${amountNPR} NPR`);
+        return amountNPR;
+      }
+
+      // Use your existing currency service for conversion
       const { currencyService } = await import('./CurrencyService');
-      const rate = await currencyService.getExchangeRateByCurrency('NPR', 'USD');
-      return amountNPR * (rate || 0.0075); // Fallback: 1 NPR = 0.0075 USD
+      const rate = await currencyService.getExchangeRateByCurrency('NPR', targetCurrency);
+      console.log(`[NCM] Exchange rate NPR → ${targetCurrency}: ${rate}`);
+      
+      // Apply fallback rates if conversion fails
+      const fallbackRates: { [key: string]: number } = {
+        'USD': 0.0075, // 1 NPR = 0.0075 USD
+        'INR': 0.625,  // 1 NPR = 0.625 INR (approximate)
+        'EUR': 0.0068, // 1 NPR = 0.0068 EUR
+        'GBP': 0.0059  // 1 NPR = 0.0059 GBP
+      };
+      
+      return amountNPR * (rate || fallbackRates[targetCurrency] || 0.0075);
     } catch (error) {
       console.error('Currency conversion error:', error);
-      return amountNPR * 0.0075; // Fallback conversion
+      // Use fallback conversion
+      const fallbackRates: { [key: string]: number } = {
+        'USD': 0.0075,
+        'INR': 0.625,
+        'EUR': 0.0068,
+        'GBP': 0.0059
+      };
+      return amountNPR * (fallbackRates[targetCurrency] || 0.0075);
     }
+  }
+
+  /**
+   * Convert NPR to USD for quote calculations (backward compatibility)
+   */
+  async convertToUSD(amountNPR: number): Promise<number> {
+    return this.convertToCurrency(amountNPR, 'USD');
   }
 
   /**

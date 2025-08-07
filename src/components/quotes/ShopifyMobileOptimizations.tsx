@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,12 +107,14 @@ interface MobileProductSummaryProps {
   items: any[];
   quote: any;
   formatCurrency: (amount: number, currency: string) => string;
+  displayCurrency?: string;
 }
 
 export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
   items,
   quote,
-  formatCurrency
+  formatCurrency,
+  displayCurrency
 }) => {
   return (
     <Card className="md:hidden mb-6">
@@ -209,7 +211,7 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
                     <span>•</span>
                     <span>{item.weight || 0}kg</span>
                     <span>•</span>
-                    <span>{formatCurrency(item.costprice_origin, quote.customer_currency)}</span>
+                    <span>{formatCurrency(item.costprice_origin, quote.origin_currency || 'USD')}</span>
                   </div>
                 </div>
               </div>
@@ -282,6 +284,7 @@ interface MobileBreakdownProps {
     insurance: boolean;
     discountCode: string;
   }) => void;
+  displayCurrency?: string;
 }
 
 export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
@@ -291,13 +294,111 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
   onToggle,
   formatCurrency,
   quoteOptions,
-  onOptionsChange
+  onOptionsChange,
+  displayCurrency
 }) => {
+  const [convertedAmounts, setConvertedAmounts] = useState<{
+    total: number;
+    itemsTotal: number;
+    itemDiscounts: number;
+    shippingAndInsurance: number;
+    dutiesAndTaxes: number;
+    serviceFees: number;
+  }>({
+    total: 0,
+    itemsTotal: 0,
+    itemDiscounts: 0,
+    shippingAndInsurance: 0,
+    dutiesAndTaxes: 0,
+    serviceFees: 0,
+  });
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount; // Return original amount if conversion fails
+    }
+  }, []);
+
+  // Convert amounts when displayCurrency or quote changes
+  useEffect(() => {
+    const convertAmounts = async () => {
+      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+        // No conversion needed
+        setConvertedAmounts({
+          total: quote.total_customer_currency || quote.total_usd,
+          itemsTotal: breakdown.items_total || 0,
+          itemDiscounts: breakdown.item_discounts || 0,
+          shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
+          dutiesAndTaxes: (breakdown.customs || 0) + (breakdown.local_tax || 0),
+          serviceFees: (breakdown.handling_fee || 0) + (breakdown.domestic_delivery || 0),
+        });
+        return;
+      }
+
+      try {
+        const fromCurrency = quote.customer_currency || 'USD';
+        
+        const [
+          convertedTotal,
+          convertedItemsTotal,
+          convertedItemDiscounts,
+          convertedShipping,
+          convertedInsurance,
+          convertedCustoms,
+          convertedLocalTax,
+          convertedHandlingFee,
+          convertedDomesticDelivery,
+        ] = await Promise.all([
+          convertCurrency(quote.total_customer_currency || quote.total_usd, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.items_total || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.item_discounts || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.shipping || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.insurance || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.customs || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.local_tax || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.handling_fee || 0, fromCurrency, displayCurrency),
+          convertCurrency(breakdown.domestic_delivery || 0, fromCurrency, displayCurrency),
+        ]);
+
+        setConvertedAmounts({
+          total: convertedTotal,
+          itemsTotal: convertedItemsTotal,
+          itemDiscounts: convertedItemDiscounts,
+          shippingAndInsurance: convertedShipping + convertedInsurance,
+          dutiesAndTaxes: convertedCustoms + convertedLocalTax,
+          serviceFees: convertedHandlingFee + convertedDomesticDelivery,
+        });
+      } catch (error) {
+        console.error('Failed to convert mobile breakdown amounts:', error);
+        // Fallback to original amounts
+        setConvertedAmounts({
+          total: quote.total_customer_currency || quote.total_usd,
+          itemsTotal: breakdown.items_total || 0,
+          itemDiscounts: breakdown.item_discounts || 0,
+          shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
+          dutiesAndTaxes: (breakdown.customs || 0) + (breakdown.local_tax || 0),
+          serviceFees: (breakdown.handling_fee || 0) + (breakdown.domestic_delivery || 0),
+        });
+      }
+    };
+    
+    convertAmounts();
+  }, [quote, breakdown, displayCurrency, convertCurrency]);
+
   return (
     <Card className="md:hidden mb-6">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Total: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}</h3>
+          <h3 className="font-semibold">Total: {formatCurrency(convertedAmounts.total, displayCurrency || quote.customer_currency)}</h3>
           <Button variant="ghost" size="sm" onClick={onToggle} className="p-1 h-auto">
             {expanded ? (
               <>
@@ -323,29 +424,29 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
           <div className="space-y-3 pt-3 border-t">
             <div className="flex justify-between text-sm">
               <span>Products</span>
-              <span>{formatCurrency(breakdown.items_total || 0, quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.itemsTotal, displayCurrency || quote.customer_currency)}</span>
             </div>
             
-            {breakdown.item_discounts > 0 && (
+            {convertedAmounts.itemDiscounts > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>Bundle savings</span>
-                <span>-{formatCurrency(breakdown.item_discounts, quote.customer_currency)}</span>
+                <span>-{formatCurrency(convertedAmounts.itemDiscounts, displayCurrency || quote.customer_currency)}</span>
               </div>
             )}
             
             <div className="flex justify-between text-sm">
               <span>Shipping & Insurance</span>
-              <span>{formatCurrency((breakdown.shipping || 0) + (breakdown.insurance || 0), quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.shippingAndInsurance, displayCurrency || quote.customer_currency)}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span>Duties & Taxes</span>
-              <span>{formatCurrency((breakdown.customs || 0) + (breakdown.local_tax || 0), quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.dutiesAndTaxes, displayCurrency || quote.customer_currency)}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span>Service fees</span>
-              <span>{formatCurrency((breakdown.handling_fee || 0) + (breakdown.domestic_delivery || 0), quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.serviceFees, displayCurrency || quote.customer_currency)}</span>
             </div>
           </div>
         )}
@@ -452,6 +553,7 @@ interface MobileQuoteOptionsProps {
   }) => void;
   formatCurrency: (amount: number, currency: string) => string;
   onQuoteUpdate?: () => void; // Callback to refresh quote data from parent
+  displayCurrency?: string;
 }
 
 export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
@@ -460,11 +562,14 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
   quoteOptions,
   onOptionsChange,
   formatCurrency,
-  onQuoteUpdate
+  onQuoteUpdate,
+  displayCurrency
 }) => {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
+  const [convertedShippingPrices, setConvertedShippingPrices] = useState<{ [key: string]: number }>({});
+  const [convertedInsuranceFee, setConvertedInsuranceFee] = useState<number>(0);
 
   // Get shipping data from route calculations and fetch all available options
   const routeCalculations = quote.calculation_data?.route_calculations || {};
@@ -472,6 +577,21 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
   
   const [availableOptions, setAvailableOptions] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount; // Return original amount if conversion fails
+    }
+  }, []);
   
   useEffect(() => {
     const fetchShippingOptions = async () => {
@@ -496,18 +616,73 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
     
     fetchShippingOptions();
   }, [quote.origin_country, quote.destination_country]);
+
+  // Convert shipping prices and insurance fee when displayCurrency or data changes
+  useEffect(() => {
+    const convertPrices = async () => {
+      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+        // No conversion needed, reset converted prices
+        setConvertedShippingPrices({});
+        setConvertedInsuranceFee(0);
+        return;
+      }
+
+      try {
+        const fromCurrency = quote.customer_currency || 'USD';
+        
+        // Convert shipping option prices
+        const convertedPrices: { [key: string]: number } = {};
+        for (const option of availableOptions) {
+          const isSelected = selectedDeliveryOption?.id === option.id;
+          const baseShippingCost = breakdown.shipping || 0;
+          const originalPrice = isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
+          
+          if (originalPrice > 0) {
+            convertedPrices[option.id] = await convertCurrency(originalPrice, fromCurrency, displayCurrency);
+          } else {
+            convertedPrices[option.id] = 0;
+          }
+        }
+        setConvertedShippingPrices(convertedPrices);
+
+        // Convert insurance fee
+        const originalInsuranceFee = calculateInsuranceFee(true);
+        if (originalInsuranceFee > 0) {
+          const convertedFee = await convertCurrency(originalInsuranceFee, fromCurrency, displayCurrency);
+          setConvertedInsuranceFee(convertedFee);
+        } else {
+          setConvertedInsuranceFee(0);
+        }
+      } catch (error) {
+        console.error('Failed to convert mobile quote option prices:', error);
+        // Reset to defaults on error
+        setConvertedShippingPrices({});
+        setConvertedInsuranceFee(0);
+      }
+    };
+    
+    if (availableOptions.length > 0) {
+      convertPrices();
+    }
+  }, [quote, breakdown, displayCurrency, availableOptions, selectedDeliveryOption, convertCurrency]);
   
   // Convert all available options to display format for mobile
   const shippingOptions = availableOptions.map((option: any) => {
     const isSelected = selectedDeliveryOption?.id === option.id;
     const baseShippingCost = breakdown.shipping || 0;
     
+    // Use converted price if available, otherwise use original price
+    let price = isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
+    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedShippingPrices[option.id] !== undefined) {
+      price = convertedShippingPrices[option.id];
+    }
+    
     return {
       id: option.id,
       name: option.name || 'Standard',
       description: `${option.min_days}-${option.max_days} days`,
       days: `${option.min_days}-${option.max_days} days`,
-      price: isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost,
+      price: price,
       recommended: isSelected,
       carrier: option.carrier || 'Standard',
       icon: option.carrier === 'FedEx' || option.carrier === 'fedex' || option.carrier === 'JE' ? <Zap className="w-4 h-4" /> :
@@ -529,6 +704,12 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
 
   const calculateInsuranceFee = (enabled: boolean) => {
     if (!enabled || !insuranceConfig.enabled) return 0;
+    
+    // Use converted fee if available, otherwise use original fee
+    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedInsuranceFee > 0) {
+      return convertedInsuranceFee;
+    }
+    
     return insuranceConfig.currentFee; // Use admin-calculated fee
   };
 
@@ -739,7 +920,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                           {option.price === 0 ? (
                             <span className="text-green-600">FREE</span>
                           ) : (
-                            <span>+{formatCurrency(option.price, quote.customer_currency)}</span>
+                            <span>+{formatCurrency(option.price, displayCurrency || quote.customer_currency)}</span>
                           )}
                         </div>
                       </div>
@@ -763,7 +944,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
                   </div>
                   {quoteOptions.insurance && (
                     <div className="text-xs text-green-600 font-medium mt-1">
-                      +{formatCurrency(calculateInsuranceFee(true), quote.customer_currency)}
+                      +{formatCurrency(calculateInsuranceFee(true), displayCurrency || quote.customer_currency)}
                     </div>
                   )}
                 </div>

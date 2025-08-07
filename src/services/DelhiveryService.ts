@@ -219,18 +219,48 @@ class DelhiveryService {
   }
 
   /**
-   * Convert INR to USD for quote calculations
+   * Convert INR to any target currency for quote calculations
    */
-  async convertToUSD(amountINR: number): Promise<number> {
+  async convertToCurrency(amountINR: number, targetCurrency: string): Promise<number> {
     try {
-      // Use your existing currency service
+      console.log(`[Delhivery] Converting ${amountINR} INR to ${targetCurrency}`);
+      
+      // No conversion needed if target is INR
+      if (targetCurrency === 'INR') {
+        console.log(`[Delhivery] Same currency, no conversion needed: ${amountINR} INR`);
+        return amountINR;
+      }
+
+      // Use your existing currency service for conversion
       const { currencyService } = await import('./CurrencyService');
-      const rate = await currencyService.getExchangeRateByCurrency('INR', 'USD');
-      return amountINR * (rate || 0.012); // Fallback: 1 INR = 0.012 USD
+      const rate = await currencyService.getExchangeRateByCurrency('INR', targetCurrency);
+      console.log(`[Delhivery] Exchange rate INR → ${targetCurrency}: ${rate}`);
+      
+      // Let the currency service handle all conversions properly
+      if (!rate || rate <= 0) {
+        console.error(`[Delhivery] Invalid exchange rate received: ${rate}`);
+        throw new Error(`Invalid exchange rate for INR → ${targetCurrency}: ${rate}`);
+      }
+      
+      return amountINR * rate;
     } catch (error) {
       console.error('Currency conversion error:', error);
-      return amountINR * 0.012; // Fallback conversion
+      // Use fallback conversion
+      const fallbackRates: { [key: string]: number } = {
+        'USD': 0.012,
+        'NPR': 1.6,
+        'EUR': 0.011,
+        'GBP': 0.0095
+      };
+      return amountINR * (fallbackRates[targetCurrency] || 0.012);
     }
+  }
+
+  /**
+   * Convert INR to USD for quote calculations (backward compatibility)
+   */
+  async convertToUSD(amountINR: number): Promise<number> {
+    return this.convertToCurrency(amountINR, 'USD');
   }
 
   /**

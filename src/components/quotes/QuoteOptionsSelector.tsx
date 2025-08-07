@@ -54,6 +54,7 @@ interface QuoteOptionsSelectorProps {
   formatCurrency: (amount: number, currency: string) => string;
   className?: string;
   onQuoteUpdate?: () => void; // Callback to refresh quote data from parent
+  displayCurrency?: string; // Override currency for display
 }
 
 export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
@@ -62,7 +63,8 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   onOptionsChange,
   formatCurrency,
   className = "",
-  onQuoteUpdate
+  onQuoteUpdate,
+  displayCurrency
 }) => {
   // Get shipping data from route calculations and available options
   const routeCalculations = quote.calculation_data?.route_calculations || {};
@@ -73,10 +75,27 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
+  const [convertedShippingPrices, setConvertedShippingPrices] = useState<{ [key: string]: number }>({});
+  const [convertedInsuranceFee, setConvertedInsuranceFee] = useState<number>(0);
 
   // Fetch all available shipping options for this route
   const [availableOptions, setAvailableOptions] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount; // Return original amount if conversion fails
+    }
+  }, []);
   
   useEffect(() => {
     const fetchShippingOptions = async () => {
@@ -115,18 +134,73 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
     
     fetchShippingOptions();
   }, [quote.origin_country, quote.destination_country, selectedDeliveryOption?.id]);
+
+  // Convert shipping prices and insurance fee when displayCurrency or data changes
+  useEffect(() => {
+    const convertPrices = async () => {
+      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+        // No conversion needed, reset converted prices
+        setConvertedShippingPrices({});
+        setConvertedInsuranceFee(0);
+        return;
+      }
+
+      try {
+        const fromCurrency = quote.customer_currency || 'USD';
+        
+        // Convert shipping option prices
+        const convertedPrices: { [key: string]: number } = {};
+        for (const option of availableOptions) {
+          const isSelected = selectedDeliveryOption?.id === option.id;
+          const baseShippingCost = breakdown.shipping || 0;
+          const originalPrice = isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
+          
+          if (originalPrice > 0) {
+            convertedPrices[option.id] = await convertCurrency(originalPrice, fromCurrency, displayCurrency);
+          } else {
+            convertedPrices[option.id] = 0;
+          }
+        }
+        setConvertedShippingPrices(convertedPrices);
+
+        // Convert insurance fee
+        const originalInsuranceFee = insuranceFromBreakdown;
+        if (originalInsuranceFee > 0) {
+          const convertedFee = await convertCurrency(originalInsuranceFee, fromCurrency, displayCurrency);
+          setConvertedInsuranceFee(convertedFee);
+        } else {
+          setConvertedInsuranceFee(0);
+        }
+      } catch (error) {
+        console.error('Failed to convert desktop quote option prices:', error);
+        // Reset to defaults on error
+        setConvertedShippingPrices({});
+        setConvertedInsuranceFee(0);
+      }
+    };
+    
+    if (availableOptions.length > 0) {
+      convertPrices();
+    }
+  }, [quote, breakdown, displayCurrency, availableOptions, selectedDeliveryOption, insuranceFromBreakdown, convertCurrency]);
   
   // Convert all available options to display format
   const shippingOptions: ShippingOption[] = availableOptions.map((option: any) => {
     const isSelected = selectedDeliveryOption?.id === option.id;
     const baseShippingCost = breakdown.shipping || 0;
     
+    // Use converted price if available, otherwise use original price
+    let price = isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
+    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedShippingPrices[option.id] !== undefined) {
+      price = convertedShippingPrices[option.id];
+    }
+    
     return {
       id: option.id,
       name: option.name || `${option.carrier || 'Standard'} Shipping`,
       description: `${option.carrier || 'Standard'} - ${option.min_days}-${option.max_days} days delivery`,
       days: `${option.min_days}-${option.max_days} days`,
-      price: isSelected ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost,
+      price: price,
       recommended: isSelected,
       icon: option.carrier === 'FedEx' || option.carrier === 'fedex' || option.carrier === 'JE' ? <Zap className="w-5 h-5" /> :
             option.carrier === 'DHL' || option.carrier === 'dhl' ? <Truck className="w-5 h-5" /> :
@@ -150,6 +224,11 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
 
   const calculateInsuranceFee = (enabled: boolean) => {
     if (!enabled || !insuranceConfig.enabled) return 0;
+    
+    // Use converted fee if available, otherwise use original fee
+    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedInsuranceFee > 0) {
+      return convertedInsuranceFee;
+    }
     
     // Use admin-calculated fee if available, otherwise calculate using rate
     if (insuranceConfig.currentFee > 0) {
@@ -373,7 +452,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
                           {option.price === 0 ? (
                             <span className="text-green-600">FREE</span>
                           ) : (
-                            <span>+{formatCurrency(option.price, quote.customer_currency)}</span>
+                            <span>+{formatCurrency(option.price, displayCurrency || quote.customer_currency)}</span>
                           )}
                         </div>
                       </div>
@@ -406,7 +485,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
                 </div>
                 {insuranceEnabled && (
                   <div className="text-sm text-green-600 font-medium mt-1">
-                    +{formatCurrency(calculateInsuranceFee(true), quote.customer_currency)}
+                    +{formatCurrency(calculateInsuranceFee(true), displayCurrency || quote.customer_currency)}
                   </div>
                 )}
               </div>
@@ -516,7 +595,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-green-900">
-                  {formatCurrency(calculateAdjustedTotal().adjustedTotal, quote.customer_currency)}
+                  {formatCurrency(calculateAdjustedTotal().adjustedTotal, displayCurrency || quote.customer_currency)}
                 </div>
                 {(() => {
                   const result = calculateAdjustedTotal();
@@ -524,7 +603,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
                   return result.adjustedTotal !== originalTotal && (
                     <div className="text-sm text-green-700">
                       {result.adjustedTotal < originalTotal ? 'You save ' : 'Additional '}
-                      {formatCurrency(Math.abs(result.adjustedTotal - originalTotal), quote.customer_currency)}
+                      {formatCurrency(Math.abs(result.adjustedTotal - originalTotal), displayCurrency || quote.customer_currency)}
                     </div>
                   );
                 })()}

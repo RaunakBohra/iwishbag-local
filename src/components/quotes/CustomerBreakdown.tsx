@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +30,22 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   displayCurrency
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount; // Return original amount if conversion fails
+    }
+  }, []);
 
   if (!quote || !quote.calculation_data) {
     return (
@@ -44,6 +60,76 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   const calc = quote.calculation_data;
   const steps = calc.calculation_steps || {};
   const currency = displayCurrency || quote.customer_currency || 'USD';
+
+  // Convert amounts when displayCurrency changes
+  useEffect(() => {
+    const convertAmounts = async () => {
+      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+        // No conversion needed, reset converted amounts
+        setConvertedAmounts({});
+        return;
+      }
+
+      try {
+        const fromCurrency = quote.customer_currency || 'USD';
+        const stepsToConvert = {
+          'items_subtotal': steps.discounted_items_subtotal || steps.items_subtotal || 0,
+          'shipping_total': (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
+                           (steps.insurance_amount || 0) + 
+                           (steps.discounted_delivery || steps.domestic_delivery || 0),
+          'taxes_total': (steps.discounted_customs_duty || steps.customs_duty || 0) + 
+                        (steps.discounted_tax_amount || steps.local_tax_amount || 0),
+          'service_fees': (steps.discounted_handling_fee || steps.handling_fee || 0) + 
+                         (steps.payment_gateway_fee || 0),
+          'final_total': steps.total_customer_currency || quote.total_customer_currency || 0,
+          'total_savings': steps.total_savings || 0,
+          'total_usd': steps.total_usd || 0,
+          // Detailed breakdown items
+          'item_discounts': steps.item_discounts || 0,
+          'order_discount_amount': steps.order_discount_amount || 0,
+          'origin_sales_tax': steps.origin_sales_tax || 0,
+          'shipping_cost': steps.shipping_cost || 0,
+          'shipping_discount_amount': steps.shipping_discount_amount || 0,
+          'insurance_amount': steps.insurance_amount || 0,
+          'domestic_delivery': steps.domestic_delivery || 0,
+          'delivery_discount_amount': steps.delivery_discount_amount || 0,
+          'customs_duty': steps.customs_duty || 0,
+          'customs_discount_amount': steps.customs_discount_amount || 0,
+          'local_tax_amount': steps.local_tax_amount || 0,
+          'tax_discount_amount': steps.tax_discount_amount || 0,
+          'handling_fee': steps.handling_fee || 0,
+          'handling_discount_amount': steps.handling_discount_amount || 0,
+          'payment_gateway_fee': steps.payment_gateway_fee || 0,
+        };
+
+        const converted: { [key: string]: number } = {};
+        
+        for (const [key, amount] of Object.entries(stepsToConvert)) {
+          if (amount !== 0) {
+            converted[key] = await convertCurrency(amount, fromCurrency, displayCurrency);
+          } else {
+            converted[key] = 0;
+          }
+        }
+
+        setConvertedAmounts(converted);
+      } catch (error) {
+        console.error('Failed to convert customer breakdown amounts:', error);
+        // Reset to defaults on error
+        setConvertedAmounts({});
+      }
+    };
+    
+    convertAmounts();
+  }, [quote, displayCurrency, convertCurrency, steps]);
+
+  // Helper to get converted amount or original
+  const getAmount = (key: string, originalAmount: number) => {
+    if (displayCurrency && displayCurrency !== quote.customer_currency && convertedAmounts[key] !== undefined) {
+      return convertedAmounts[key];
+    }
+    return originalAmount;
+  };
 
   // Helper function to get country-specific tax name
   const getLocalTaxName = (countryCode: string) => {
@@ -72,26 +158,26 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   const essentialItems = [
     {
       label: 'Items',
-      amount: steps.discounted_items_subtotal || steps.items_subtotal || 0,
+      amount: getAmount('items_subtotal', steps.discounted_items_subtotal || steps.items_subtotal || 0),
       icon: <Package className="w-4 h-4" />
     },
     {
       label: 'Shipping',
-      amount: (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
+      amount: getAmount('shipping_total', (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
               (steps.insurance_amount || 0) + 
-              (steps.discounted_delivery || steps.domestic_delivery || 0),
+              (steps.discounted_delivery || steps.domestic_delivery || 0)),
       icon: <Truck className="w-4 h-4" />
     },
     {
       label: 'Taxes',
-      amount: (steps.discounted_customs_duty || steps.customs_duty || 0) + 
-              (steps.discounted_tax_amount || steps.local_tax_amount || 0),
+      amount: getAmount('taxes_total', (steps.discounted_customs_duty || steps.customs_duty || 0) + 
+              (steps.discounted_tax_amount || steps.local_tax_amount || 0)),
       icon: <Globe className="w-4 h-4" />
     },
     {
       label: 'Service Fees',
-      amount: (steps.discounted_handling_fee || steps.handling_fee || 0) + 
-              (steps.payment_gateway_fee || 0),
+      amount: getAmount('service_fees', (steps.discounted_handling_fee || steps.handling_fee || 0) + 
+              (steps.payment_gateway_fee || 0)),
       icon: <Calculator className="w-4 h-4" />
     }
   ];
@@ -104,37 +190,43 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
     {
       section: 'Items',
       items: [
-        { label: 'Items Subtotal', amount: steps.items_subtotal || 0 },
-        ...(steps.item_discounts > 0 ? [{ label: 'Item Discounts', amount: -(steps.item_discounts || 0), isDiscount: true }] : []),
-        ...(steps.order_discount_amount > 0 ? [{ label: 'Order Discount', amount: -(steps.order_discount_amount || 0), isDiscount: true }] : []),
-        ...(steps.origin_sales_tax > 0 ? [{ label: 'Origin Sales Tax', amount: steps.origin_sales_tax || 0 }] : [])
+        { label: 'Items Subtotal', amount: getAmount('items_subtotal', steps.items_subtotal || 0) },
+        ...(steps.item_discounts > 0 ? [{ label: 'Item Discounts', amount: -getAmount('item_discounts', steps.item_discounts || 0), isDiscount: true }] : []),
+        ...(steps.order_discount_amount > 0 ? [{ label: 'Order Discount', amount: -getAmount('order_discount_amount', steps.order_discount_amount || 0), isDiscount: true }] : []),
+        ...(steps.origin_sales_tax > 0 ? [{ label: 'Origin Sales Tax', amount: getAmount('origin_sales_tax', steps.origin_sales_tax || 0) }] : [])
       ]
     },
     {
       section: 'Shipping & Logistics',
       items: [
-        { label: 'International Shipping', amount: steps.shipping_cost || 0 },
-        ...(steps.shipping_discount_amount > 0 ? [{ label: 'Shipping Savings', amount: -(steps.shipping_discount_amount || 0), isDiscount: true }] : []),
-        ...(steps.insurance_amount > 0 ? [{ label: 'Package Insurance', amount: steps.insurance_amount || 0 }] : []),
-        { label: 'Local Delivery', amount: steps.domestic_delivery || 0 },
-        ...(steps.delivery_discount_amount > 0 ? [{ label: 'Delivery Savings', amount: -(steps.delivery_discount_amount || 0), isDiscount: true }] : [])
+        { label: 'International Shipping', amount: getAmount('shipping_cost', steps.shipping_cost || 0) },
+        ...(steps.shipping_discount_amount > 0 ? [{ label: 'Shipping Savings', amount: -getAmount('shipping_discount_amount', steps.shipping_discount_amount || 0), isDiscount: true }] : []),
+        ...(steps.insurance_amount > 0 ? [{ label: 'Package Insurance', amount: getAmount('insurance_amount', steps.insurance_amount || 0) }] : []),
+        { 
+          label: 'Local Delivery', 
+          amount: getAmount('domestic_delivery', steps.domestic_delivery || 0),
+          description: steps.domestic_delivery_details ? 
+            `${steps.domestic_delivery_details.provider}: ${steps.domestic_delivery_details.original_currency} ${steps.domestic_delivery_details.original_amount} → ${steps.domestic_delivery_details.currency} ${steps.domestic_delivery_details.amount}` : 
+            undefined 
+        },
+        ...(steps.delivery_discount_amount > 0 ? [{ label: 'Delivery Savings', amount: -getAmount('delivery_discount_amount', steps.delivery_discount_amount || 0), isDiscount: true }] : [])
       ]
     },
     {
       section: 'Taxes & Duties',
       items: [
-        ...(steps.customs_duty > 0 ? [{ label: 'Import Duties', amount: steps.customs_duty || 0 }] : []),
-        ...(steps.customs_discount_amount > 0 ? [{ label: 'Customs Savings', amount: -(steps.customs_discount_amount || 0), isDiscount: true }] : []),
-        ...(steps.local_tax_amount > 0 ? [{ label: localTaxName, amount: steps.local_tax_amount || 0 }] : []),
-        ...(steps.tax_discount_amount > 0 ? [{ label: 'Tax Savings', amount: -(steps.tax_discount_amount || 0), isDiscount: true }] : [])
+        ...(steps.customs_duty > 0 ? [{ label: 'Import Duties', amount: getAmount('customs_duty', steps.customs_duty || 0) }] : []),
+        ...(steps.customs_discount_amount > 0 ? [{ label: 'Customs Savings', amount: -getAmount('customs_discount_amount', steps.customs_discount_amount || 0), isDiscount: true }] : []),
+        ...(steps.local_tax_amount > 0 ? [{ label: localTaxName, amount: getAmount('local_tax_amount', steps.local_tax_amount || 0) }] : []),
+        ...(steps.tax_discount_amount > 0 ? [{ label: 'Tax Savings', amount: -getAmount('tax_discount_amount', steps.tax_discount_amount || 0), isDiscount: true }] : [])
       ]
     },
     {
       section: 'Service Fees',
       items: [
-        ...(steps.handling_fee > 0 ? [{ label: 'Handling Fee', amount: steps.handling_fee || 0 }] : []),
-        ...(steps.handling_discount_amount > 0 ? [{ label: 'Handling Savings', amount: -(steps.handling_discount_amount || 0), isDiscount: true }] : []),
-        { label: 'Payment Gateway Fee', amount: steps.payment_gateway_fee || 0, description: '2.9% + $0.30 processing fee' }
+        ...(steps.handling_fee > 0 ? [{ label: 'Handling Fee', amount: getAmount('handling_fee', steps.handling_fee || 0) }] : []),
+        ...(steps.handling_discount_amount > 0 ? [{ label: 'Handling Savings', amount: -getAmount('handling_discount_amount', steps.handling_discount_amount || 0), isDiscount: true }] : []),
+        { label: 'Payment Gateway Fee', amount: getAmount('payment_gateway_fee', steps.payment_gateway_fee || 0), description: '2.9% + $0.30 processing fee' }
       ]
     },
     {
@@ -145,8 +237,8 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
     }
   ];
 
-  const totalSavings = steps.total_savings || 0;
-  const finalTotal = steps.total_customer_currency || quote.total_customer_currency || 0;
+  const totalSavings = getAmount('total_savings', steps.total_savings || 0);
+  const finalTotal = getAmount('final_total', steps.total_customer_currency || quote.total_customer_currency || 0);
 
   return (
     <Card className={className}>
@@ -203,7 +295,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
           {/* USD Equivalent */}
           {currency !== 'USD' && steps.total_usd && (
             <div className="text-center text-sm text-muted-foreground">
-              ≈ {formatCurrency(steps.total_usd || 0, 'USD')}
+              ≈ {formatCurrency(getAmount('total_usd', steps.total_usd || 0), 'USD')}
             </div>
           )}
 
