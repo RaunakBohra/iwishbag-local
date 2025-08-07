@@ -291,7 +291,17 @@
       "Bash(--custom-redirect-domain \"iwishbag.store\" )",
       "Bash(--configuration-set-name \"iwishbag-transactional\" )",
       "Bash(--configuration-set-name \"iwishbag-transactional\" )",
-      "Bash(--suppressed-reasons \"BOUNCE\" \"COMPLAINT\" )"
+      "Bash(--suppressed-reasons \"BOUNCE\" \"COMPLAINT\" )",
+      "Bash(wrangler pages deploy:*)",
+      "Bash(aws s3 sync:*)",
+      "Bash(aws s3api put-bucket-website:*)",
+      "Bash(aws cloudfront create-distribution:*)",
+      "Bash(aws s3api put-public-access-block:*)",
+      "Bash(aws s3api get-bucket-website:*)",
+      "Bash(wrangler pages domain add:*)",
+      "Bash(aws configure:*)",
+      "Bash(aws cloudfront:*)",
+      "Bash(dig:*)"
     ],
     "deny": []
   }

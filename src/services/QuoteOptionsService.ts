@@ -232,7 +232,7 @@ class QuoteOptionsService {
 
       // Add audit trail
       if (userId) {
-        dbUpdates.last_updated_by = userId;
+        dbUpdates.options_last_updated_by = userId;
         dbUpdates.options_last_updated_at = new Date().toISOString();
       }
 

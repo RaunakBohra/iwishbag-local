@@ -202,7 +202,9 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
             ) : (
               <RadioGroup 
                 value={selectedShipping || ''} 
-                onValueChange={(value) => actions.updateShippingOption(value)}
+                onValueChange={(value) => {
+                  actions.updateShippingOption(value);
+                }}
               >
                 <div className="space-y-3">
                   {optionsState.shipping.available_options.map((option: any) => {
@@ -296,7 +298,9 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
               </div>
               <Switch
                 checked={insuranceEnabled}
-                onCheckedChange={(checked) => actions.toggleInsurance(checked)}
+                onCheckedChange={(checked) => {
+                  actions.toggleInsurance(checked);
+                }}
                 disabled={isLoading}
               />
             </div>
@@ -376,7 +380,9 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={() => actions.applyDiscountCode(formState.discountCode)}
+                  onClick={() => {
+                    actions.applyDiscountCode(formState.discountCode);
+                  }}
                   disabled={formState.discountLoading || !formState.discountCode.trim()}
                 >
                   {formState.discountLoading ? (

@@ -24,7 +24,7 @@ export interface UseQuoteOptionsConfig {
   quote: any;
   userType: 'admin' | 'customer';
   displayCurrency?: string;
-  onQuoteUpdate?: () => void; // Callback for parent component refresh
+  onQuoteUpdate?: (optionsState?: any) => void; // Callback for parent component refresh with optional state
 }
 
 export interface QuoteOptionsActions {
@@ -153,7 +153,7 @@ export const useQuoteOptions = (config: UseQuoteOptionsConfig): UseQuoteOptionsR
               
               // Trigger parent refresh if provided
               if (onQuoteUpdate) {
-                setTimeout(onQuoteUpdate, 100); // Small delay to ensure state is updated
+                setTimeout(() => onQuoteUpdate(result.options_state), 100); // Pass updated state
               }
             } else if (result.errors) {
               setError(result.errors.join(', '));

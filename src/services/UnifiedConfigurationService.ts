@@ -340,7 +340,7 @@ class UnifiedConfigurationService {
       const { data, error } = await supabase
         .from('country_settings')
         .select('*')
-        .eq('country_code', countryCode)
+        .eq('code', countryCode)
         .single();
 
       if (error || !data) {

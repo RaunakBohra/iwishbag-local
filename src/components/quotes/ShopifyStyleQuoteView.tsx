@@ -8,9 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -239,13 +237,10 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
-  const [insuranceEnabled, setInsuranceEnabled] = useState(quote?.insurance_required || false);
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
   const [couponsModalOpen, setCouponsModalOpen] = useState(false);
-  const [availableShippingOptions, setAvailableShippingOptions] = useState<any[]>([]);
-  const [selectedShipping, setSelectedShipping] = useState('');
 
   // Convert currency amounts when quote or display currency changes
   useEffect(() => {
@@ -286,44 +281,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     convertAmounts();
   }, [quote, displayCurrency, convertCurrency]);
 
-  // Fetch shipping options
-  useEffect(() => {
-    const fetchShippingOptions = async () => {
-      if (!quote) return;
-      
-      try {
-        console.log('🚚 Fetching shipping options for:', quote.origin_country, '→', quote.destination_country);
-        const { data, error } = await supabase
-          .from('shipping_routes')
-          .select('delivery_options')
-          .eq('origin_country', quote.origin_country)
-          .eq('destination_country', quote.destination_country)
-          .eq('is_active', true)
-          .single();
-          
-        if (!error && data?.delivery_options) {
-          const activeOptions = data.delivery_options.filter((opt: any) => opt.active);
-          console.log('✅ Found shipping options:', activeOptions.length, activeOptions);
-          setAvailableShippingOptions(activeOptions);
-          
-          // Set the currently selected option
-          const routeCalculations = quote.calculation_data?.route_calculations;
-          const currentlySelected = routeCalculations?.delivery_option_used?.id;
-          if (currentlySelected) {
-            setSelectedShipping(currentlySelected);
-          } else if (activeOptions.length > 0) {
-            setSelectedShipping(activeOptions[0].id);
-          }
-        } else {
-          console.warn('❌ No shipping options found:', error);
-        }
-      } catch (err) {
-        console.error('❌ Error fetching shipping options:', err);
-      }
-    };
-    
-    fetchShippingOptions();
-  }, [quote]);
 
   // React Query handles data fetching automatically
 
@@ -333,70 +290,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     refetchQuote();
   }, [refetchQuote]);
 
-  // Handle insurance toggle with full backend integration
-  const handleInsuranceToggle = async (checked: boolean) => {
-    console.log('🚪️ Toggling insurance:', checked);
-    
-    if (!user || !quote) {
-      console.error('❌ Unable to toggle insurance - missing user or quote data');
-      return;
-    }
-    
-    // Simple toggle without custom service
-    setInsuranceEnabled(checked);
-    toast({
-      title: "Insurance Updated!",
-      description: checked ? "Insurance enabled!" : "Insurance disabled",
-      variant: "default"
-    });
-  };
-
-  // Handle shipping option change
-  const handleShippingChange = async (shippingId: string) => {
-    const selectedOption = availableShippingOptions.find(opt => opt.id === shippingId);
-    if (!selectedOption) return;
-
-    setSelectedShipping(shippingId);
-    
-    try {
-      // Update the delivery option in route calculations
-      const routeCalculations = quote.calculation_data?.route_calculations || {};
-      const newRouteCalc = {
-        ...routeCalculations,
-        delivery_option_used: {
-          id: selectedOption.id,
-          name: selectedOption.name,
-          carrier: selectedOption.carrier,
-          price_per_kg: selectedOption.price,
-          delivery_days: `${selectedOption.min_days}-${selectedOption.max_days}`
-        }
-      };
-      
-      const updateData = {
-        calculation_data: {
-          ...quote.calculation_data,
-          route_calculations: newRouteCalc
-        },
-        shipping_method: shippingId
-      };
-      
-      // Save to database
-      await supabase
-        .from('quotes_v2')
-        .update(updateData)
-        .eq('id', quote.id);
-        
-      console.log('✅ Shipping option updated in database');
-      
-      // Refresh quote data to get updated totals
-      setTimeout(() => {
-        refreshQuote();
-        console.log('🔄 Quote data refreshed');
-      }, 500);
-    } catch (error) {
-      console.error('❌ Failed to update shipping option:', error);
-    }
-  };
 
   // Available coupons for this order - fetch real data from database
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
@@ -499,61 +392,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     fetchAvailableCoupons();
   }, [quote, user]);
 
-  // Handle discount code application
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
-      setCouponsModalOpen(true);
-      setDiscountError('');
-      return;
-    }
-
-    // Use the backend service to apply the manually entered code
-    await handleSelectCoupon(discountCode.toUpperCase());
-  };
-
-  const handleSelectCoupon = async (code: string) => {
-    console.log('🏷️ Applying coupon:', code);
-    
-    if (!user || !quote) {
-      setDiscountError('Unable to apply coupon - missing user or quote data');
-      return;
-    }
-    
-    // Simple discount application
-    setLoadingCoupons(true);
-    setDiscountError('');
-    
-    // Update UI state  
-    setDiscountCode(code);
-    setDiscountApplied(true);
-    setCouponsModalOpen(false);
-    setLoadingCoupons(false);
-    
-    toast({
-      title: "Discount Applied!",
-      description: `${code} applied successfully!`,
-      variant: "default"
-    });
-  };
-
-  const handleRemoveCoupon = async () => {
-    console.log('🗑️ Removing applied coupon:', discountCode);
-    
-    if (!quote || !discountCode) {
-      return;
-    }
-    
-    // Simple coupon removal
-    setDiscountCode('');
-    setDiscountApplied(false);
-    setDiscountError('');
-    
-    toast({
-      title: "Discount Removed",
-      description: `${discountCode} has been removed from your quote.`,
-      variant: "default"
-    });
-  };
 
   const handleApprove = async () => {
     try {
@@ -1014,105 +852,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             </Card>
 
 
-            {/* Shipping Options */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-blue-600" />
-                  Choose Your Shipping Speed
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {availableShippingOptions.length === 0 ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <span className="ml-2 text-sm text-gray-600">Loading shipping options...</span>
-                  </div>
-                ) : (
-                  <RadioGroup value={selectedShipping} onValueChange={handleShippingChange}>
-                    <div className="space-y-3">
-                      {availableShippingOptions.map((option: any) => {
-                        const isSelected = selectedShipping === option.id;
-                        const currentlyUsed = quote.calculation_data?.route_calculations?.delivery_option_used?.id === option.id;
-                        const baseShippingCost = quote.calculation_data?.calculation_steps?.shipping_cost || 0;
-                        const adjustmentCost = currentlyUsed ? 0 : (option.price * (quote.calculation_data?.inputs?.total_weight_kg || 1)) - baseShippingCost;
-                        
-                        return (
-                          <div key={option.id} className="relative">
-                            <div className={`flex items-center space-x-3 p-4 rounded-lg border hover:bg-gray-50 cursor-pointer transition-all ${
-                              isSelected 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-300'
-                            }`}>
-                              <RadioGroupItem value={option.id} id={option.id} />
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="text-blue-600">
-                                  {option.carrier === 'FedEx' || option.carrier === 'fedex' || option.carrier === 'JE' ? (
-                                    <Zap className="w-5 h-5" />
-                                  ) : option.carrier === 'DHL' || option.carrier === 'dhl' ? (
-                                    <Truck className="w-5 h-5" />
-                                  ) : (
-                                    <Package className="w-5 h-5" />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <Label htmlFor={option.id} className="font-medium cursor-pointer">
-                                      {option.name || `${option.carrier || 'Standard'} Shipping`}
-                                    </Label>
-                                    {isSelected && (
-                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
-                                        Selected
-                                      </Badge>
-                                    )}
-                                    {currentlyUsed && !isSelected && (
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                                        Current
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {option.carrier || 'Standard'} - {option.min_days}-{option.max_days} days delivery
-                                  </p>
-                                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      <span>{option.min_days}-{option.max_days} days</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <Package className="w-3 h-3" />
-                                      <span>{option.carrier || 'Standard'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-semibold">
-                                    {adjustmentCost === 0 ? (
-                                      <span className="text-green-600">FREE</span>
-                                    ) : adjustmentCost > 0 ? (
-                                      <span>+{formatCurrency(adjustmentCost, displayCurrency)}</span>
-                                    ) : (
-                                      <span className="text-green-600">-{formatCurrency(Math.abs(adjustmentCost), displayCurrency)}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </RadioGroup>
-                )}
-                
-                {/* Shipping Benefits */}
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <div className="text-sm text-blue-600">
-                    ✓ Tracking included • ✓ Insurance available • ✓ Secure packaging
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Pricing Breakdown */}
             <CustomerBreakdown 
@@ -1194,93 +933,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     )}
                   </div>
 
-                  <Separator />
-
-                  {/* Package Insurance */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center">
-                        <Shield className="w-4 h-4 text-green-600 mr-3" />
-                        <div>
-                          <div className="font-medium text-sm">Package Insurance</div>
-                          <div className="text-xs text-muted-foreground">
-                            Coverage up to {formatCurrency(quote?.total_usd || 0, 'USD')}
-                          </div>
-                          {insuranceEnabled && (
-                            <div className="text-xs text-green-600 font-medium">
-                              +{formatCurrency(breakdown.insurance || 0, displayCurrency)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={insuranceEnabled}
-                        onCheckedChange={handleInsuranceToggle}
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Discount Code */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Tag className="w-4 h-4 text-purple-600 mr-2" />
-                        <Label className="font-medium text-sm">Discount Code</Label>
-                      </div>
-                      {discountApplied && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveCoupon}
-                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Input
-                          value={discountCode}
-                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                          className={`flex-1 text-sm ${discountError ? 'border-red-300' : ''} ${discountApplied ? 'bg-green-50 border-green-300' : ''}`}
-                          disabled={discountApplied}
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleApplyDiscount}
-                          disabled={discountApplied}
-                          className="px-3"
-                        >
-                          {discountCode.trim() ? 'Apply' : 'Show Coupons'}
-                        </Button>
-                      </div>
-                      
-                      {discountError && (
-                        <p className="text-xs text-red-600">{discountError}</p>
-                      )}
-                      {discountApplied && (
-                        <div className="bg-green-50 border border-green-200 rounded p-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-green-700 flex items-center">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              <strong>{discountCode}</strong> applied successfully
-                            </p>
-                            <span className="text-xs text-green-600 font-medium">
-                              {(() => {
-                                const appliedCoupon = availableCoupons.find(c => c.code === discountCode);
-                                return appliedCoupon ? `Save ${formatCurrency(appliedCoupon.savings, displayCurrency)}` : '';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   <Separator />
 
