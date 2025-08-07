@@ -14,6 +14,7 @@ import { logger } from '@/utils/logger';
 import { simplifiedQuoteCalculator } from './SimplifiedQuoteCalculator';
 import { currencyService } from './CurrencyService';
 import { quoteOptionsWebSocketService } from './QuoteOptionsWebSocketService';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 export interface QuoteOptionUpdate {
   type: 'shipping' | 'insurance' | 'discount';
@@ -165,12 +166,22 @@ class QuoteOptionsService {
       // Recalculate quote with new options
       const recalculationResult = await simplifiedQuoteCalculator.calculate(updatedQuoteInput);
       
+      // Extract the correct total from calculation result
+      const calculatedTotal = recalculationResult.calculation_steps?.total_origin_currency || 0;
+      
+      logger.info(`🧮 [QuoteOptions] Recalculation complete for quote ${quoteId}:`, {
+        calculatedTotal,
+        originCurrency: updatedQuoteInput.origin_currency,
+        hasCalculationData: !!recalculationResult.calculation_data
+      });
+      
       // Prepare database update
       const dbUpdates: any = {
         calculation_data: recalculationResult.calculation_data,
-        total_usd: recalculationResult.total_usd,
-        total_customer_currency: recalculationResult.total_customer_currency,
-        customer_currency: recalculationResult.customer_currency,
+        // Map SimplifiedQuoteCalculator result to database fields
+        total_usd: calculatedTotal,
+        total_customer_currency: calculatedTotal,
+        customer_currency: updatedQuoteInput.origin_currency || 'USD',
         updated_at: new Date().toISOString()
       };
 
@@ -191,7 +202,10 @@ class QuoteOptionsService {
               dbUpdates.insurance_required = update.data.insurance_enabled;
               // Also update insurance coverage amount and rate
               if (update.data.insurance_enabled) {
-                dbUpdates.insurance_coverage_amount = currentQuote.total_usd || 0;
+                // Use calculation_data origin total or fallback to total_usd
+                const calculatedTotal = currentQuote.calculation_data?.calculation_steps?.total_origin_currency || 
+                                      currentQuote.total_usd || 0;
+                dbUpdates.insurance_coverage_amount = calculatedTotal;
                 dbUpdates.insurance_rate_percentage = 1.5; // Standard rate
               }
             }
@@ -210,8 +224,13 @@ class QuoteOptionsService {
                   
                   // Calculate discount amount (basic implementation)
                   const discountPercentages = { 'FIRST10': 0.1, 'WELCOME5': 0.05, 'SAVE15': 0.15, 'BUNDLE20': 0.2 };
-                  const discountAmount = (currentQuote.total_customer_currency || currentQuote.total_usd || 0) * 
-                                       (discountPercentages[update.data.discount_code] || 0);
+                  
+                  // Use calculation_data origin total or fallback to other totals
+                  const calculatedTotal = currentQuote.calculation_data?.calculation_steps?.total_origin_currency || 
+                                        currentQuote.total_customer_currency || 
+                                        currentQuote.total_usd || 0;
+                  
+                  const discountAmount = calculatedTotal * (discountPercentages[update.data.discount_code] || 0);
                   
                   dbUpdates.discount_amounts = {
                     ...currentAmounts,
@@ -396,6 +415,9 @@ class QuoteOptionsService {
     const calcData = quote.calculation_data || {};
     const routeCalc = calcData.route_calculations || {};
     
+    // Get origin currency dynamically
+    const originCurrency = quote.origin_currency || getOriginCurrency(quote.origin_country);
+    
     // Get available shipping options
     const availableOptions = await this.getAvailableShippingOptions(quote.id);
     const selectedOption = routeCalc.delivery_option_used;
@@ -406,26 +428,30 @@ class QuoteOptionsService {
         selected_method: quote.shipping_method || null,
         available_options: availableOptions,
         cost: calcData.breakdown?.shipping || 0,
-        cost_currency: quote.customer_currency || 'USD'
+        cost_currency: originCurrency
       },
       insurance: {
         enabled: quote.insurance_required || false,
         available: routeCalc.insurance?.available !== false,
         cost: calcData.breakdown?.insurance || 0,
-        cost_currency: quote.customer_currency || 'USD',
-        coverage_amount: quote.total_usd || 0,
+        cost_currency: originCurrency,
+        coverage_amount: quote.calculation_data?.calculation_steps?.total_origin_currency || 
+                        quote.total_customer_currency || 
+                        quote.total_usd || 0,
         rate_percentage: routeCalc.insurance?.percentage || 1.5
       },
       discounts: {
-        applied_codes: [], // TODO: Extract from calculation_data
+        applied_codes: quote.applied_discount_codes || [],
         total_discount: calcData.breakdown?.discount || 0,
-        discount_currency: quote.customer_currency || 'USD',
+        discount_currency: originCurrency,
         available_codes: ['FIRST10', 'WELCOME5', 'SAVE15', 'BUNDLE20'] // TODO: Dynamic lookup
       },
       totals: {
         base_total: calcData.breakdown?.items_total || quote.costprice_total_usd || 0,
-        adjusted_total: quote.total_customer_currency || quote.total_usd || 0,
-        currency: quote.customer_currency || 'USD',
+        adjusted_total: quote.calculation_data?.calculation_steps?.total_origin_currency || 
+                       quote.total_customer_currency || 
+                       quote.total_usd || 0,
+        currency: originCurrency,
         savings: calcData.total_savings || 0
       }
     };
@@ -435,9 +461,12 @@ class QuoteOptionsService {
    * Build updated quote input for recalculation
    */
   private async buildUpdatedQuoteInput(quote: any, updates: QuoteOptionUpdate[]): Promise<any> {
+    // Get origin currency dynamically from origin country
+    const originCurrency = quote.origin_currency || getOriginCurrency(quote.origin_country);
+    
     const input = {
       items: quote.items || [],
-      origin_currency: quote.origin_currency || 'USD',
+      origin_currency: originCurrency,
       origin_country: quote.origin_country,
       destination_country: quote.destination_country,
       destination_state: quote.destination_state,

@@ -287,7 +287,7 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
                 <div>
                   <div className="font-medium">Package Insurance</div>
                   <div className="text-sm text-muted-foreground">
-                    Coverage up to {formatCurrency(optionsState.insurance.coverage_amount, 'USD')}
+                    Coverage up to {formatCurrency(optionsState.insurance.coverage_amount, optionsState.insurance.cost_currency)}
                   </div>
                   {insuranceEnabled && (
                     <div className="text-sm text-green-600 font-medium mt-1">
@@ -319,7 +319,7 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
                   </ul>
                   <p className="text-blue-700 text-xs mt-2">
                     Rate: {optionsState.insurance.rate_percentage}% 
-                    (min: {formatCurrency(2, 'USD')}, max: {formatCurrency(50, 'USD')})
+                    (min: {formatCurrency(2, optionsState.insurance.cost_currency)}, max: {formatCurrency(50, optionsState.insurance.cost_currency)})
                   </p>
                 </div>
               </div>
