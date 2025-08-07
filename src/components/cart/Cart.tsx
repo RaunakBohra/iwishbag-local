@@ -310,14 +310,14 @@ const CartSummary = ({
   );
 };
 
-export const ModernCart: React.FC = () => {
+export const Cart: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch cart items (approved quotes)
   const { data: cartItems = [], isLoading: loading, refetch: refetchCart } = useQuery({
-    queryKey: ['modern-cart', user?.id],
+    queryKey: ['cart', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
 
@@ -408,7 +408,7 @@ export const ModernCart: React.FC = () => {
   // Cart actions
   const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
     // Update quantity in local state
-    queryClient.setQueryData(['modern-cart', user?.id], (oldData: CartItem[] = []) => {
+    queryClient.setQueryData(['cart', user?.id], (oldData: CartItem[] = []) => {
       return oldData.map(item => 
         item.id === itemId ? { ...item, quantity: newQuantity } : item
       );

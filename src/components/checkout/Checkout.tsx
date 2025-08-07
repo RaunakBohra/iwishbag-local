@@ -353,7 +353,7 @@ const AddressForm = ({
   );
 };
 
-export const ModernCheckout: React.FC = () => {
+export const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -367,7 +367,7 @@ export const ModernCheckout: React.FC = () => {
 
   // Fetch checkout items
   const { data: checkoutItems = [], isLoading: loading } = useQuery({
-    queryKey: ['modern-checkout', quoteIds],
+    queryKey: ['checkout', quoteIds],
     queryFn: async () => {
       if (quoteIds.length === 0) return [];
 
