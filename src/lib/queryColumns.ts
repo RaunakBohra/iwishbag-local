@@ -50,10 +50,11 @@ export const QUERY_COLUMNS = {
   /**
    * For cart operations
    * Optimized for cart display and operations
+   * Updated for quotes_v2 table schema
    */
   CART_ITEMS: `
-    id, display_id, final_total_usd,
-    created_at, destination_country, origin_country, items, in_cart
+    id, quote_number, total_usd, total_origin_currency, customer_currency,
+    created_at, destination_country, origin_country, items, status
   `,
 
   /**

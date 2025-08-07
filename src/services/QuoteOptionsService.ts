@@ -179,6 +179,7 @@ class QuoteOptionsService {
       const dbUpdates: any = {
         calculation_data: recalculationResult.calculation_data,
         // Map SimplifiedQuoteCalculator result to database fields
+        total_origin_currency: calculatedTotal,  // Primary field components look for
         total_usd: calculatedTotal,
         total_customer_currency: calculatedTotal,
         customer_currency: updatedQuoteInput.origin_currency,

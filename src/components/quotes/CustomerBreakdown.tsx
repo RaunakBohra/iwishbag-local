@@ -262,12 +262,18 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0);
   
   // Share calculated total with parent component (Quote Summary)
+  const [lastSharedTotal, setLastSharedTotal] = React.useState<{total: number, currency: string} | null>(null);
+  
   React.useEffect(() => {
     if (onTotalCalculated && finalTotal !== undefined) {
-      const formattedTotal = formatCurrency(finalTotal, currency);
-      onTotalCalculated(formattedTotal, finalTotal, currency);
+      // Only update if the total or currency has actually changed
+      if (!lastSharedTotal || lastSharedTotal.total !== finalTotal || lastSharedTotal.currency !== currency) {
+        const formattedTotal = formatCurrency(finalTotal, currency);
+        onTotalCalculated(formattedTotal, finalTotal, currency);
+        setLastSharedTotal({ total: finalTotal, currency });
+      }
     }
-  }, [onTotalCalculated, finalTotal, currency, formatCurrency]);
+  }, [finalTotal, currency]); // Remove onTotalCalculated and formatCurrency from deps to prevent infinite re-renders
 
   return (
     <Card className={className}>

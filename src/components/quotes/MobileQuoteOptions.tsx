@@ -81,18 +81,24 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
     });
   }, [onOptionsChange]);
 
+  // Combined callback for quote updates
+  const handleCombinedQuoteUpdate = useCallback((optionsState?: any) => {
+    // Handle quote options state updates and notify parent
+    if (optionsState) {
+      handleQuoteOptionsUpdate(optionsState);
+    }
+    if (onQuoteUpdate) {
+      onQuoteUpdate();
+    }
+  }, [handleQuoteOptionsUpdate, onQuoteUpdate]);
+
   // Mobile-specific configuration for QuoteOptionsCore
   const coreProps: QuoteOptionsCoreProps = {
     quoteId: quote.id,
     quote,
     userType: 'customer',
     displayCurrency: displayCurrency || getBreakdownSourceCurrency(quote),
-    onQuoteUpdate: useCallback(() => {
-      // Trigger the parent's quote update callback
-      if (onQuoteUpdate) {
-        onQuoteUpdate();
-      }
-    }, [onQuoteUpdate]),
+    onQuoteUpdate: handleCombinedQuoteUpdate,
     
     // UI variant and styling
     variant: 'mobile',
@@ -162,13 +168,6 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
           {/* Core Options Interface */}
           <QuoteOptionsCore 
             {...coreProps}
-            onQuoteUpdate={useCallback((optionsState) => {
-              // Handle quote options state updates and notify parent
-              handleQuoteOptionsUpdate(optionsState);
-              if (onQuoteUpdate) {
-                onQuoteUpdate();
-              }
-            }, [handleQuoteOptionsUpdate, onQuoteUpdate])}
           />
 
           {/* Mobile Help Section */}

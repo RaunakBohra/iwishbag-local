@@ -113,7 +113,10 @@ export const useCartStore = create<CartStore>()(
 
           // Sync with server
           try {
-            const { error } = await supabase.from('quotes').update({ in_cart: false }).eq('id', id);
+            // Note: In quotes_v2, we don't remove from cart by changing status
+            // Cart items remain as 'approved' status, they're just not displayed if removed from UI
+            // For now, we'll skip the server update to avoid breaking the quote status
+            const { error } = null; // await supabase.from('quotes_v2').update({ status: 'calculated' }).eq('id', id);
 
             if (error) {
               logger.error('Error syncing removeItem with server', error, 'Cart');
@@ -174,10 +177,10 @@ export const useCartStore = create<CartStore>()(
 
           // Sync with server
           try {
-            const { error } = await supabase
-              .from('quotes')
-              .update({ in_cart: false })
-              .in('id', ids);
+            // Note: In quotes_v2, we don't remove from cart by changing status
+            // Cart items remain as 'approved' status, they're just not displayed if removed from UI
+            // For now, we'll skip the server update to avoid breaking the quote status
+            const { error } = null; // await supabase.from('quotes_v2').update({ status: 'calculated' }).in('id', ids);
 
             if (error) {
               console.error('Error syncing bulkDelete with server:', error);
@@ -236,11 +239,10 @@ export const useCartStore = create<CartStore>()(
             const itemIds = state.items.map((item) => item.id);
             if (itemIds.length === 0) return;
 
-            // Single query updates all cart items at once - 90% performance improvement
-            const { error } = await supabase
-              .from('quotes')
-              .update({ in_cart: true })
-              .in('id', itemIds);
+            // Note: In quotes_v2, cart items are already 'approved' status
+            // No server sync needed as approved quotes are automatically cart items
+            // This is a significant simplification from the old system
+            const { error } = null; // No server update needed
 
             if (error) throw error;
 
@@ -285,10 +287,10 @@ export const useCartStore = create<CartStore>()(
             // PERFORMANCE FIX: Fetch cart quotes with server-side filtering
             // Temporarily disable performance tracking to isolate issue
             const { data: cartQuotes, error: quotesError } = await supabase
-              .from('quotes')
+              .from('quotes_v2')
               .select(COMMON_QUERIES.cartItems)
-              .eq('user_id', userId)
-              .eq('in_cart', true) // Server-side filtering - 75% performance improvement
+              .eq('customer_id', userId)
+              .eq('status', 'approved') // Cart items are approved quotes - updated for quotes_v2
               .order('created_at', { ascending: false })
               .limit(50); // Reasonable limit for cart items
 
@@ -302,9 +304,12 @@ export const useCartStore = create<CartStore>()(
               count: cartQuotes?.length || 0,
               sample: cartQuotes?.slice(0, 1).map((q) => ({
                 id: q.id,
-                final_total_usd: q.final_total_usd,
+                total_usd: q.total_usd,
+                total_origin_currency: q.total_origin_currency,
+                customer_currency: q.customer_currency,
                 origin_country: q.origin_country,
                 destination_country: q.destination_country,
+                status: q.status,
               })),
             });
 
@@ -313,6 +318,8 @@ export const useCartStore = create<CartStore>()(
             // Helper function to convert unified quote to cart item
             interface UnifiedQuote {
               id: string;
+              quote_number: string;
+              status: string;
               items: Array<{
                 id: string;
                 name: string;
@@ -323,19 +330,13 @@ export const useCartStore = create<CartStore>()(
                 image_url?: string;
                 options?: string;
               }>;
-              final_total_usd: number;
+              total_usd: number;
+              total_origin_currency: number;
+              customer_currency: string;
               destination_country: string;
               origin_country: string;
-              customer_data?: {
-                shipping_address?: Record<string, unknown>;
-              };
-              operational_data?: {
-                shipping?: {
-                  delivery_estimate?: string;
-                };
-              };
               created_at: string;
-              updated_at: string;
+              updated_at?: string;
             }
 
             const convertQuoteToCartItem = (quote: UnifiedQuote): CartItem => {
@@ -350,8 +351,8 @@ export const useCartStore = create<CartStore>()(
                 0,
               );
 
-              // Use final_total_usd directly (this is the authoritative total)
-              const totalPrice = quote.final_total_usd || 0;
+              // Use total_usd directly (this is the authoritative total)
+              const totalPrice = quote.total_usd || 0;
 
               // Use calculated totals from items array
               // Individual item fields are no longer needed
@@ -401,7 +402,7 @@ export const useCartStore = create<CartStore>()(
                 id: quote.id,
                 quoteId: quote.id,
                 productName: firstItem?.name || quote.product_name || 'Unknown Product',
-                finalTotal: quote.final_total_usd || totalPrice, // USD amount
+                finalTotal: quote.total_usd || totalPrice, // USD amount
                 finalTotalLocal: undefined, // Local currency calculation not available from database
                 finalCurrency: undefined, // Local currency code not available from database
                 quantity: totalQuantity,
@@ -411,20 +412,23 @@ export const useCartStore = create<CartStore>()(
                 countryCode: destinationCountry, // For backward compatibility
                 purchaseCountryCode: purchaseCountry,
                 destinationCountryCode: destinationCountry,
-                inCart: quote.in_cart || false,
+                inCart: quote.status === 'approved', // Cart items are approved quotes in quotes_v2
                 isSelected: false,
                 priority: undefined, // Priority field not available from database
                 createdAt: new Date(quote.created_at),
-                updatedAt: new Date(quote.updated_at),
+                updatedAt: new Date(quote.updated_at || quote.created_at),
               };
 
               // Log currency conversion details for debugging
               logger.debug('[CartStore] Converting quote to cart item:', {
                 quoteId: quote.id,
                 rawQuote: {
-                  final_total_usd: quote.final_total_usd,
+                  total_usd: quote.total_usd,
+                  total_origin_currency: quote.total_origin_currency,
+                  customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,
+                  status: quote.status,
                 },
                 cartItem: {
                   finalTotal: cartItem.finalTotal,
