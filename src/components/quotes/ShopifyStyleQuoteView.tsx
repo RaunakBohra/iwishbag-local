@@ -204,6 +204,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     totalNumeric: 0,
     itemsConverted: false
   });
+  
+  // State to receive shared total from CustomerBreakdown
+  const [sharedTotal, setSharedTotal] = useState<{
+    formatted: string;
+    numeric: number;
+    currency: string;
+  } | null>(null);
 
   // Helper function to format individual item quote price in display currency
   const formatItemQuotePrice = useCallback(async (item: any, items: any[]) => {
@@ -258,28 +265,38 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   // Convert currency amounts when quote or display currency changes
   useEffect(() => {
-    if (!quote || !displayCurrency) return;
+    if (!quote) return;
     
     const convertAmounts = async () => {
       try {
         // Use origin currency system
         const sourceCurrency = getBreakdownSourceCurrency(quote);
-        const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+        const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd || 0;
         
-        console.log(`[ShopifyStyleQuoteView] Origin currency conversion: ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        console.log(`[ShopifyStyleQuoteView] Converting quote ${quote.id}:`, {
+          sourceCurrency,
+          displayCurrency: displayCurrency || sourceCurrency,
+          quoteTotal,
+          total_origin_currency: quote.total_origin_currency,
+          origin_total_amount: quote.origin_total_amount,
+          total_usd: quote.total_usd
+        });
         
-        if (sourceCurrency === displayCurrency) {
+        // Use source currency as display currency if none provided
+        const targetCurrency = displayCurrency || sourceCurrency;
+        
+        if (sourceCurrency === targetCurrency) {
           setConvertedAmounts({
-            total: formatCurrency(quoteTotal, displayCurrency),
+            total: formatCurrency(quoteTotal, targetCurrency),
             totalNumeric: quoteTotal,
             itemsConverted: true
           });
           return;
         }
 
-        const convertedTotal = await convertCurrency(quoteTotal, sourceCurrency, displayCurrency);
+        const convertedTotal = await convertCurrency(quoteTotal, sourceCurrency, targetCurrency);
         setConvertedAmounts({
-          total: formatCurrency(convertedTotal, displayCurrency),
+          total: formatCurrency(convertedTotal, targetCurrency),
           totalNumeric: convertedTotal,
           itemsConverted: true
         });
@@ -878,6 +895,18 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               quote={quote}
               formatCurrency={formatCurrency}
               displayCurrency={displayCurrency}
+              onTotalCalculated={(formattedTotal, numericTotal, currency) => {
+                console.log('[ShopifyStyleQuoteView] Received total from CustomerBreakdown:', {
+                  formattedTotal,
+                  numericTotal,
+                  currency
+                });
+                setSharedTotal({
+                  formatted: formattedTotal,
+                  numeric: numericTotal,
+                  currency: currency
+                });
+              }}
             />
           </div>
 
@@ -893,14 +922,39 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
                     <div className="text-3xl font-bold">
-                      {convertedAmounts.total || formatCurrency(
-                        quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, 
-                        displayCurrency
-                      )}
+                      {(() => {
+                        // Priority 1: Use shared total from CustomerBreakdown (connected approach)
+                        if (sharedTotal?.formatted) {
+                          console.log('[QuoteSummary] Using shared total from CustomerBreakdown:', sharedTotal.formatted);
+                          return sharedTotal.formatted;
+                        }
+                        
+                        // Priority 2: Use converted amounts (legacy approach)
+                        if (convertedAmounts.total) {
+                          console.log('[QuoteSummary] Using converted amounts:', convertedAmounts.total);
+                          return convertedAmounts.total;
+                        }
+                        
+                        // Priority 3: Direct calculation fallback
+                        const total = quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd || 0;
+                        const currency = displayCurrency || getBreakdownSourceCurrency(quote);
+                        
+                        console.log('[QuoteSummary] Using direct fallback:', { total, currency, quote: quote.id });
+                        
+                        return formatCurrency(total, currency);
+                      })()} 
                     </div>
                     {displayCurrency !== getBreakdownSourceCurrency(quote) && (
                       <div className="text-sm text-muted-foreground">
-                        Original: {formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
+                        Original: {(() => {
+                          // Use shared total's numeric value for consistency
+                          if (sharedTotal?.numeric && displayCurrency !== sharedTotal.currency) {
+                            const sourceCurrency = getBreakdownSourceCurrency(quote);
+                            return formatCurrency(sharedTotal.numeric, sourceCurrency);
+                          }
+                          // Fallback to quote data
+                          return formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote));
+                        })()}
                       </div>
                     )}
                     {displayCurrency !== 'USD' && (

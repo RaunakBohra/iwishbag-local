@@ -23,13 +23,15 @@ interface CustomerBreakdownProps {
   formatCurrency: (amount: number, currency: string) => string;
   className?: string;
   displayCurrency?: string; // Override currency for display
+  onTotalCalculated?: (total: string, numericTotal: number, currency: string) => void; // Callback to share total with parent
 }
 
 export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   quote,
   formatCurrency,
   className = "",
-  displayCurrency
+  displayCurrency,
+  onTotalCalculated
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
@@ -250,6 +252,14 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
 
   const totalSavings = getAmount('total_savings', steps.total_savings || 0);
   const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0);
+  
+  // Share calculated total with parent component (Quote Summary)
+  React.useEffect(() => {
+    if (onTotalCalculated && finalTotal !== undefined) {
+      const formattedTotal = formatCurrency(finalTotal, currency);
+      onTotalCalculated(formattedTotal, finalTotal, currency);
+    }
+  }, [onTotalCalculated, finalTotal, currency, formatCurrency]);
 
   return (
     <Card className={className}>
