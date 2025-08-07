@@ -266,7 +266,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         const sourceCurrency = getBreakdownSourceCurrency(quote);
         const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
         
-        console.log(`[ShopifyStyleQuoteView] Converting ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        console.log(`[ShopifyStyleQuoteView] Origin currency conversion: ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
         
         if (sourceCurrency === displayCurrency) {
           setConvertedAmounts({
@@ -413,9 +413,10 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   const handleApprove = async () => {
     try {
-      // Use adjusted total if options have been changed
-      const finalTotal = quoteOptions.adjustedTotal || quote.total_usd;
-      const finalTotalLocal = quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount;
+      // Use adjusted total if options have been changed - Origin currency system
+      const finalTotalOrigin = quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+      const finalTotal = quoteOptions.adjustedTotal || quote.total_usd || quote.total_origin_currency;
+      const finalTotalLocal = finalTotalOrigin;
 
       // Add to cart with selected options
       const cartItem = {
@@ -904,7 +905,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     )}
                     {displayCurrency !== 'USD' && (
                       <div className="text-sm text-muted-foreground">
-                        ≈ {formatCurrency(quoteOptions.adjustedTotal || quote.total_usd, 'USD')}
+                        ≈ {formatCurrency(quoteOptions.adjustedTotal || quote.total_usd || quote.total_origin_currency, 'USD')}
                       </div>
                     )}
                   </div>

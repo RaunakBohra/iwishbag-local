@@ -1,7 +1,6 @@
 // ============================================================================
 // COMPACT CALCULATION BREAKDOWN - World-Class E-commerce Admin Layout
-// Based on Shopify Polaris & Amazon Seller Central design patterns 2025
-// Features: Ultra-compact cost display, smart insights, collapsible details
+// Fixed for Origin Currency System - Simplified Structure
 // ============================================================================
 
 import React, { useState } from 'react';
@@ -45,7 +44,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('breakdown');
 
-  // Get standardized currency display info
+  // Get standardized currency display info using new hook
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const isDualCurrency = currencyDisplay.originCurrency !== currencyDisplay.destinationCurrency;
 
@@ -58,6 +57,8 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = currencyDisplay.exchangeRate;
+  
+  // Use origin currency system for total cost
   const totalCost = quote.total_origin_currency || quote.origin_total_amount || quote.final_total_usd || 0;
 
   // Check HSN calculation data
@@ -74,14 +75,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     return quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
   };
 
-  // ✅ FIXED: Show actual calculated shipping cost instead of estimates
+  // Show actual calculated shipping cost instead of estimates
   const getActualShippingCost = () => {
-    // Use the actual calculated shipping cost from breakdown
     return breakdown.shipping || 0;
   };
 
   const getShippingDisplayInfo = () => {
-    // Return simplified display info based on actual data
     const totalWeight = getTotalWeight();
     const totalShipping = breakdown.shipping || 0;
 
@@ -112,29 +111,6 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     hsnCalculationData,
   });
 
-  // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
-  if (quote.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520') {
-    const feeBreakdownPreview = getAdminFeeBreakdown(quote);
-    console.log(`[DEBUG] Special quote tax and fee breakdown analysis:`, {
-      // Tax breakdown
-      breakdown_customs: breakdown.customs,
-      breakdown_taxes: breakdown.taxes, // Legacy sales tax
-      breakdown_destination_tax: breakdown.destination_tax,
-      sales_tax_price: quote.calculation_data?.sales_tax_price,
-      hsn_local_taxes: hsnCalculationData?.total_hsn_local_taxes,
-      total_taxes_calculated: totalTaxes,
-
-      // Fee breakdown
-      breakdown_shipping: breakdown.shipping,
-      breakdown_handling: breakdown.handling,
-      breakdown_insurance: breakdown.insurance,
-      breakdown_fees: breakdown.fees,
-      operational_handling: quote.operational_data?.handling_charge,
-      operational_insurance: quote.operational_data?.insurance_amount,
-      fee_breakdown_preview: feeBreakdownPreview,
-    });
-  }
-
   // Key cost components for compact view
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
@@ -154,160 +130,224 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const CompactHeader = () => (
     <div className="p-4">
       {/* HSN Calculation Status */}
-          {isHSNCalculation && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
-              <div className="flex items-center space-x-2">
-                <Tags className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">
-                  HSN Tax Calculation Active
-                </span>
-              </div>
-              <div className="text-xs text-purple-700 mt-1">
-                Customs and taxes calculated using HSN codes for{' '}
-                {hsnCalculationData?.total_items || 0} items
-              </div>
+      {isHSNCalculation && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+          <div className="flex items-center space-x-2">
+            <Tags className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-800">
+              HSN Tax Calculation Active
+            </span>
+          </div>
+          <div className="text-xs text-purple-700 mt-1">
+            Customs and taxes calculated using HSN codes for{' '}
+            {hsnCalculationData?.total_items || 0} items
+          </div>
+        </div>
+      )}
+
+      {/* HSN Available but Not Used Warning */}
+      {hasHSNItems &&
+        !isHSNCalculation &&
+        quote.calculation_method_preference !== 'route_based' &&
+        quote.calculation_method_preference !== 'manual' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-medium text-amber-800">
+                HSN codes available but not used
+              </span>
+            </div>
+            <div className="text-xs text-amber-700 mt-1">
+              Consider switching to HSN calculation method for more accurate taxes
+            </div>
+          </div>
+        )}
+
+      {/* Main Total Display */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <Calculator className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Total Cost</h3>
+            <p className="text-sm text-gray-600">
+              {isDualCurrency ? 'Origin → Destination' : 'Single Currency'}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold text-gray-900">
+            {currencyDisplay.formatOriginAmount(totalCost)}
+          </div>
+          {isDualCurrency && (
+            <div className="text-sm text-gray-600">
+              ≈ {currencyDisplay.formatDestinationAmount(totalCost)}
             </div>
           )}
+        </div>
+      </div>
 
-          {/* HSN Available but Not Used Warning */}
-          {hasHSNItems &&
-            !isHSNCalculation &&
-            quote.calculation_method_preference !== 'route_based' &&
-            quote.calculation_method_preference !== 'manual' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+      {/* Quick Component Overview */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {keyComponents.slice(0, 4).map((component, index) => (
+          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+            <span className={`text-sm font-medium ${component.color}`}>
+              {component.label}
+            </span>
+            <span className="text-sm font-mono">
+              {currencyDisplay.formatOriginAmount(component.amount)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Toggle Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp className="w-4 h-4 mr-2" />
+            Hide Details
+          </>
+        ) : (
+          <>
+            <ChevronDown className="w-4 h-4 mr-2" />
+            Show Details
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
+  // Expanded details view
+  const ExpandedDetails = () => (
+    <div className="border-t">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
+          {/* Detailed Breakdown */}
+          <div className="space-y-3">
+            {/* Items */}
+            {(breakdown.items_total || 0) > 0 && (
+              <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-800">
-                    HSN codes available but not used
-                  </span>
+                  <PieChart className="w-4 h-4 text-blue-600" />
+                  <span className="text-gray-700">Items Subtotal</span>
                 </div>
-                <div className="text-xs text-amber-700 mt-1">
-                  Consider switching to HSN calculation method for more accurate taxes
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatOriginAmount(breakdown.items_total || 0)}
+                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(breakdown.items_total || 0)}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-          {/* Valuation Information */}
-                {quote.calculation_data?.valuation_applied && (
-                  <div className="mt-2 pt-2 border-t border-current/20">
-                    <div className="flex justify-between items-center text-xs">
-                      <span>Product Total:</span>
-                      <span className="font-mono">
-                        {currencyDisplay.formatSingleAmount(
-                          quote.calculation_data.valuation_applied.original_items_total,
-                          'origin'
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs font-medium">
-                      <span>Customs Basis:</span>
-                      <span className="font-mono">
-                        {currencyDisplay.formatSingleAmount(
-                          quote.calculation_data.valuation_applied.customs_calculation_base || 
-                          quote.calculation_data.valuation_applied.original_items_total,
-                          'origin'
-                        )}
-                      </span>
-                    </div>
-                    <div className="text-xs opacity-75 mt-1">
-                      {quote.calculation_data.valuation_applied.basis_explanation || 
-                       (quote.calculation_data.valuation_applied.adjustment_applied
-                        ? 'Customs calculated on adjusted valuation basis'
-                        : 'Customs calculated on actual product value')}
-                    </div>
+            {/* Shipping */}
+            {(breakdown.shipping || 0) > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <ExternalLink className="w-4 h-4 text-green-600" />
+                  <span className="text-gray-700">Shipping</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatOriginAmount(breakdown.shipping || 0)}
                   </div>
-                )}
-                
-                {hsnCalculationData?.items_with_minimum_valuation &&
-                  hsnCalculationData.items_with_minimum_valuation > 0 && (
-                    <span className="block mt-1 font-medium">
-                      {hsnCalculationData.items_with_minimum_valuation} items using minimum
-                      valuation
-                    </span>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(breakdown.shipping || 0)}
+                    </div>
                   )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Sales Tax Display */}
+            {/* Customs */}
+            {(breakdown.customs || 0) > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-purple-600" />
+                  <span className="text-gray-700">Customs Duty</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatOriginAmount(breakdown.customs || 0)}
+                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(breakdown.customs || 0)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Sales Tax */}
             {(breakdown.taxes || quote.calculation_data?.sales_tax_price) && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <Calculator className="w-4 h-4 text-orange-600" />
                   <span className="text-gray-700">Sales Tax</span>
-                  <Badge
-                    variant="outline"
-                    className="text-xs h-4 px-1 text-orange-600 border-orange-300"
-                  >
+                  <Badge variant="outline" className="text-xs h-4 px-1 text-orange-600 border-orange-300">
                     Origin
                   </Badge>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0),
-                      'origin',
+                    {currencyDisplay.formatOriginAmount(
+                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0)
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0),
-                      'destination',
-                    )}
-                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(
+                        Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0)
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* HSN Local Taxes Display */}
+            {/* HSN Local Taxes */}
             {isHSNCalculation && hsnCalculationData && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <Tags className="w-4 h-4 text-purple-600" />
                   <span className="text-gray-700">HSN Local Taxes</span>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Badge
-                        variant="outline"
-                        className="text-xs h-4 px-1 text-purple-600 border-purple-300"
-                      >
-                        <Tags className="w-3 h-3 mr-1" />
-                        HSN
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs space-y-1">
-                        <p>Calculated using HSN codes</p>
-                        <p>
-                          Local taxes:{' '}
-                          {currencyDisplay.formatSingleAmount(
-                            hsnCalculationData.total_hsn_local_taxes,
-                            'origin',
-                          )}
-                        </p>
-                        <p>Method: {quote.calculation_method_preference || 'auto'}</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  <Badge variant="outline" className="text-xs h-4 px-1 text-purple-600 border-purple-300">
+                    <Tags className="w-3 h-3 mr-1" />
+                    HSN
+                  </Badge>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(
-                      hsnCalculationData.total_hsn_local_taxes || 0,
-                      'origin',
-                    )}
+                    {currencyDisplay.formatOriginAmount(hsnCalculationData.total_hsn_local_taxes || 0)}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      hsnCalculationData.total_hsn_local_taxes || 0,
-                      'destination',
-                    )}
-                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(hsnCalculationData.total_hsn_local_taxes || 0)}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Standardized Fee Components */}
+            {/* Fees */}
             {feeBreakdown.expandedDisplay.map((feeComponent, index) => (
               <div key={index} className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
@@ -320,11 +360,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(feeComponent.amount, 'origin')}
+                    {currencyDisplay.formatOriginAmount(feeComponent.amount)}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(feeComponent.amount, 'destination')}
-                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      {currencyDisplay.formatDestinationAmount(feeComponent.amount)}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -338,30 +380,28 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-red-600">
-                    -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'origin')}
+                    -{currencyDisplay.formatOriginAmount(Number(breakdown.discount || 0))}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    -
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.discount || 0),
-                      'destination',
-                    )}
-                  </div>
+                  {isDualCurrency && (
+                    <div className="text-xs text-gray-500">
+                      -{currencyDisplay.formatDestinationAmount(Number(breakdown.discount || 0))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Total */}
-            <div className="pt-3 border-t border-gray-100">
-              <div className="flex items-center justify-between text-lg font-semibold">
-                <span className="text-gray-900">Final Total</span>
+            <div className="pt-3 border-t">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-900">Final Total</span>
                 <div className="text-right">
-                  <div className="text-blue-600">
-                    {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
+                  <div className="text-lg font-bold text-gray-900">
+                    {currencyDisplay.formatOriginAmount(totalCost)}
                   </div>
                   {isDualCurrency && (
-                    <div className="text-sm text-gray-500 font-normal">
-                      ≈ {currencyDisplay.formatSingleAmount(totalCost)}
+                    <div className="text-sm text-gray-600">
+                      ≈ {currencyDisplay.formatDestinationAmount(totalCost)}
                     </div>
                   )}
                 </div>
@@ -372,67 +412,35 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
         <TabsContent value="insights" className="p-4 pt-3 space-y-3">
           {/* Smart Insights */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center bg-green-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Shipping Cost</div>
-              <div className="text-lg font-bold text-green-600">
-                {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'destination')}
-              </div>
-              <div className="text-xs text-gray-500">
-                {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}
-              </div>
-            </div>
-            <div className="text-center bg-blue-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Optimization Score</div>
-              <div className="text-2xl font-bold text-blue-600">
-                {quote.optimization_score?.toFixed(0) || '0'}%
-              </div>
-              <div className="text-xs text-gray-500">efficiency</div>
-            </div>
-          </div>
-
-          {/* Cost Analysis */}
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700">Cost Analysis</div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Item cost ratio:</span>
-                <span className="font-medium">{getPercentage(breakdown.items_total || 0)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Shipping efficiency:</span>
-                <span
-                  className={`font-medium ${
-                    parseFloat(getPercentage(breakdown.shipping || 0)) < 20
-                      ? 'text-green-600'
-                      : 'text-orange-600'
-                  }`}
-                >
-                  {parseFloat(getPercentage(breakdown.shipping || 0)) < 20 ? 'Excellent' : 'High'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total overhead:</span>
-                <span className="font-medium">
-                  {getPercentage(totalCost - (breakdown.items_total || 0))}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Smart Recommendations */}
-          {quote.operational_data?.customs?.smart_tier && (
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="flex items-center text-sm text-blue-800 mb-1">
-                <Zap className="w-3 h-3 mr-1" />
-                <span className="font-medium">Smart Optimization Applied</span>
+          <div className="space-y-3">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Info className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">Cost Analysis</span>
               </div>
               <div className="text-xs text-blue-700">
-                Customs rate optimized using AI:{' '}
-                {quote.operational_data?.customs?.smart_tier?.tier_name || 'Default tier'}
+                <p>• Items make up {Math.round(((breakdown.items_total || 0) / totalCost) * 100)}% of total cost</p>
+                <p>• Total weight: {getTotalWeight().toFixed(2)}kg</p>
+                <p>• Method: {quote.calculation_method_preference || 'auto'}</p>
               </div>
             </div>
-          )}
+
+            {isHSNCalculation && (
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Tags className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-800">HSN Classification</span>
+                </div>
+                <div className="text-xs text-purple-700">
+                  <p>• Using HSN codes for tax calculation</p>
+                  <p>• {hsnCalculationData?.total_items || 0} items classified</p>
+                  {hsnCalculationData?.items_with_minimum_valuation && (
+                    <p>• {hsnCalculationData.items_with_minimum_valuation} items using minimum valuation</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

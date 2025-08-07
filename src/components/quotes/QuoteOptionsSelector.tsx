@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { QuoteOptionsCore, type QuoteOptionsCoreProps } from './QuoteOptionsCore';
 import { formatCurrency } from '@/lib/utils';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 interface QuoteOptionsSelectorProps {
   quote: any;
@@ -29,6 +31,9 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
   onQuoteUpdate,
   displayCurrency
 }) => {
+  // Get standardized admin currency display
+  const currencyDisplay = useAdminQuoteCurrency(quote);
+  const sourceCurrency = getBreakdownSourceCurrency(quote);
 
   // Hook to track quote options changes and notify parent
   const handleQuoteOptionsUpdate = (optionsState: any) => {
@@ -60,7 +65,7 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
     quoteId: quote.id,
     quote,
     userType: 'admin',
-    displayCurrency: displayCurrency || quote.customer_currency || 'USD',
+    displayCurrency: displayCurrency || sourceCurrency,
     onQuoteUpdate: () => {
       // Trigger the parent's quote update callback
       if (onQuoteUpdate) {
@@ -116,6 +121,11 @@ export const QuoteOptionsSelector: React.FC<QuoteOptionsSelectorProps> = ({
         <p className="text-gray-600 text-sm">
           Configure shipping, insurance, and discount options. Changes sync in real-time with customer interfaces.
         </p>
+        {currencyDisplay.isDualCurrency && (
+          <div className="mt-2 text-xs text-gray-500">
+            Amounts displayed: {currencyDisplay.originLabel} → {currencyDisplay.destinationLabel}
+          </div>
+        )}
       </div>
 
       {/* Core Options Interface */}

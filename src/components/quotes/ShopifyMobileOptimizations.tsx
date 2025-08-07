@@ -331,13 +331,13 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
     }
   }, []);
 
-  // Convert amounts when displayCurrency or quote changes
+  // Convert amounts when displayCurrency or quote changes - Updated for origin currency system
   useEffect(() => {
     const convertAmounts = async () => {
       const sourceCurrency = getBreakdownSourceCurrency(quote);
       
       if (!displayCurrency || displayCurrency === sourceCurrency) {
-        // No conversion needed
+        // No conversion needed - use origin currency amounts
         setConvertedAmounts({
           total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
           itemsTotal: breakdown.items_total || 0,
@@ -350,7 +350,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
       }
 
       try {
-        console.log(`[MobileBreakdown] Converting ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        console.log(`[MobileBreakdown] Origin currency conversion: ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
         
         const [
           convertedTotal,
@@ -384,7 +384,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
         });
       } catch (error) {
         console.error('Failed to convert mobile breakdown amounts:', error);
-        // Fallback to original amounts
+        // Fallback to original amounts using origin currency system
         setConvertedAmounts({
           total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
           itemsTotal: breakdown.items_total || 0,
@@ -421,7 +421,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
 
         {getBreakdownSourceCurrency(quote) !== 'USD' && (
           <div className="text-sm text-muted-foreground text-center mb-3">
-            ≈ {formatCurrency(quote.total_usd, 'USD')}
+            ≈ {formatCurrency(quote.total_usd || quote.total_origin_currency, 'USD')}
           </div>
         )}
 
