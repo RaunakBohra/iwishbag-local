@@ -163,7 +163,7 @@ class QuoteOptionsService {
       const updatedQuoteInput = await this.buildUpdatedQuoteInput(currentQuote, updates);
       
       // Recalculate quote with new options
-      const recalculationResult = await simplifiedQuoteCalculator.calculateQuote(updatedQuoteInput);
+      const recalculationResult = await simplifiedQuoteCalculator.calculate(updatedQuoteInput);
       
       // Prepare database update
       const dbUpdates: any = {
@@ -178,6 +178,9 @@ class QuoteOptionsService {
       for (const update of updates) {
         switch (update.type) {
           case 'shipping':
+            if (update.data.shipping_option_id) {
+              dbUpdates.selected_shipping_option_id = update.data.shipping_option_id;
+            }
             if (update.data.shipping_method) {
               dbUpdates.shipping_method = update.data.shipping_method;
             }
@@ -186,11 +189,43 @@ class QuoteOptionsService {
           case 'insurance':
             if (update.data.insurance_enabled !== undefined) {
               dbUpdates.insurance_required = update.data.insurance_enabled;
+              // Also update insurance coverage amount and rate
+              if (update.data.insurance_enabled) {
+                dbUpdates.insurance_coverage_amount = currentQuote.total_usd || 0;
+                dbUpdates.insurance_rate_percentage = 1.5; // Standard rate
+              }
             }
             break;
             
           case 'discount':
-            // Discount codes stored in calculation_data
+            if (update.data.discount_code) {
+              // Get current applied codes
+              const currentCodes = currentQuote.applied_discount_codes || [];
+              const currentAmounts = currentQuote.discount_amounts || {};
+              
+              if (update.data.discount_action === 'apply') {
+                // Add new discount code
+                if (!currentCodes.includes(update.data.discount_code)) {
+                  dbUpdates.applied_discount_codes = [...currentCodes, update.data.discount_code];
+                  
+                  // Calculate discount amount (basic implementation)
+                  const discountPercentages = { 'FIRST10': 0.1, 'WELCOME5': 0.05, 'SAVE15': 0.15, 'BUNDLE20': 0.2 };
+                  const discountAmount = (currentQuote.total_customer_currency || currentQuote.total_usd || 0) * 
+                                       (discountPercentages[update.data.discount_code] || 0);
+                  
+                  dbUpdates.discount_amounts = {
+                    ...currentAmounts,
+                    [update.data.discount_code]: discountAmount
+                  };
+                }
+              } else if (update.data.discount_action === 'remove') {
+                // Remove discount code
+                dbUpdates.applied_discount_codes = currentCodes.filter(code => code !== update.data.discount_code);
+                const newAmounts = { ...currentAmounts };
+                delete newAmounts[update.data.discount_code];
+                dbUpdates.discount_amounts = newAmounts;
+              }
+            }
             break;
         }
       }
@@ -408,13 +443,35 @@ class QuoteOptionsService {
       destination_state: quote.destination_state,
       shipping_method: quote.shipping_method || 'standard',
       insurance_enabled: quote.insurance_required || false,
-      discount_codes: []
+      discount_codes: [],
+      quote_id: quote.id // Add quote ID for better logging
     };
 
     // Apply updates to input
     for (const update of updates) {
       switch (update.type) {
         case 'shipping':
+          if (update.data.shipping_option_id) {
+            // Get available shipping options for this route
+            const availableOptions = await this.getAvailableShippingOptions(quote.id);
+            const selectedOption = availableOptions.find(opt => opt.id === update.data.shipping_option_id);
+            
+            if (selectedOption) {
+              // Map shipping option to method that calculator understands
+              const carrierToMethod = {
+                'DHL': 'express',
+                'FedEx': 'express', 
+                'JE': 'express',
+                'apple': 'standard',
+                'Standard': 'standard'
+              };
+              
+              input.shipping_method = carrierToMethod[selectedOption.carrier] || 
+                                    (selectedOption.max_days <= 5 ? 'express' : 'standard');
+              
+              logger.info(`🚚 [QuoteOptions] Mapped shipping option ${update.data.shipping_option_id} (${selectedOption.carrier}) to method: ${input.shipping_method}`);
+            }
+          }
           if (update.data.shipping_method) {
             input.shipping_method = update.data.shipping_method;
           }
@@ -433,6 +490,13 @@ class QuoteOptionsService {
           break;
       }
     }
+
+    logger.info(`📋 [QuoteOptions] Built updated quote input:`, {
+      shipping_method: input.shipping_method,
+      insurance_enabled: input.insurance_enabled,
+      discount_codes: input.discount_codes,
+      items_count: input.items.length
+    });
 
     return input;
   }
