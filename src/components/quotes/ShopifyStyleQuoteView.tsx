@@ -43,6 +43,8 @@ import {
 } from './ShopifyMobileOptimizations';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -143,15 +145,19 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     enabled: !!user?.id,
   });
 
-  // Determine display currency: Priority 1: User profile preference, Priority 2: Quote currency
+  // Determine display currency: Priority 1: User profile preference, Priority 2: Destination currency
   const getDisplayCurrency = useCallback(() => {
     // For authenticated users, check profile preference first
     if (user?.id && userProfile?.preferred_display_currency) {
       return userProfile.preferred_display_currency;
     }
-    // Fall back to quote's stored currency
-    return quote?.customer_currency || 'USD';
-  }, [user?.id, userProfile?.preferred_display_currency, quote?.customer_currency]);
+    // Fall back to destination country currency (customer's country)
+    if (quote?.destination_country) {
+      const { getDestinationCurrency } = require('@/utils/originCurrency');
+      return getDestinationCurrency(quote.destination_country);
+    }
+    return 'USD';
+  }, [user?.id, userProfile?.preferred_display_currency, quote?.destination_country]);
 
   const displayCurrency = getDisplayCurrency();
 
@@ -172,7 +178,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   // Enhanced formatCurrency function that handles currency conversion
   const formatDisplayCurrency = useCallback(async (amount: number, sourceCurrency?: string) => {
-    const fromCurrency = sourceCurrency || quote?.customer_currency || 'USD';
+    // Use actual breakdown source currency for accurate conversion
+    const fromCurrency = sourceCurrency || getBreakdownSourceCurrency(quote);
     
     if (fromCurrency === displayCurrency) {
       return formatCurrency(amount, displayCurrency);
@@ -185,7 +192,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       console.warn('Currency formatting failed, using original:', error);
       return formatCurrency(amount, fromCurrency);
     }
-  }, [quote?.customer_currency, displayCurrency, convertCurrency]);
+  }, [quote, displayCurrency, convertCurrency]);
 
   // State to hold converted amounts for display
   const [convertedAmounts, setConvertedAmounts] = useState<{
@@ -203,20 +210,27 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     try {
       const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
       const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
-      const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
       
-      if (quote.customer_currency === displayCurrency) {
+      // Use the appropriate total based on origin currency system
+      const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+      const itemQuotePrice = quoteTotal * itemProportion;
+      
+      // Get source currency for conversion
+      const sourceCurrency = getBreakdownSourceCurrency(quote);
+      
+      if (sourceCurrency === displayCurrency) {
         return formatCurrency(itemQuotePrice, displayCurrency);
       }
       
-      const convertedPrice = await convertCurrency(itemQuotePrice, quote.customer_currency || 'USD', displayCurrency);
+      const convertedPrice = await convertCurrency(itemQuotePrice, sourceCurrency, displayCurrency);
       return formatCurrency(convertedPrice, displayCurrency);
     } catch (error) {
       console.warn('Failed to convert item quote price:', error);
       const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
       const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
-      const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
-      return formatCurrency(itemQuotePrice, quote.customer_currency || 'USD');
+      const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+      const itemQuotePrice = quoteTotal * itemProportion;
+      return formatCurrency(itemQuotePrice, getBreakdownSourceCurrency(quote));
     }
   }, [quote, displayCurrency, convertCurrency]);
 
@@ -248,10 +262,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     
     const convertAmounts = async () => {
       try {
-        const quoteCurrency = quote.customer_currency || 'USD';
-        const quoteTotal = quote.total_customer_currency || quote.total_usd;
+        // Use origin currency system
+        const sourceCurrency = getBreakdownSourceCurrency(quote);
+        const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
         
-        if (quoteCurrency === displayCurrency) {
+        console.log(`[ShopifyStyleQuoteView] Converting ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        
+        if (sourceCurrency === displayCurrency) {
           setConvertedAmounts({
             total: formatCurrency(quoteTotal, displayCurrency),
             totalNumeric: quoteTotal,
@@ -260,7 +277,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           return;
         }
 
-        const convertedTotal = await convertCurrency(quoteTotal, quoteCurrency, displayCurrency);
+        const convertedTotal = await convertCurrency(quoteTotal, sourceCurrency, displayCurrency);
         setConvertedAmounts({
           total: formatCurrency(convertedTotal, displayCurrency),
           totalNumeric: convertedTotal,
@@ -269,9 +286,10 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       } catch (error) {
         console.warn('Failed to convert currency amounts:', error);
         // Fallback to original currency
-        const fallbackTotal = quote.total_customer_currency || quote.total_usd;
+        const fallbackTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+        const fallbackCurrency = getBreakdownSourceCurrency(quote);
         setConvertedAmounts({
-          total: formatCurrency(fallbackTotal, quote.customer_currency || 'USD'),
+          total: formatCurrency(fallbackTotal, fallbackCurrency),
           totalNumeric: fallbackTotal,
           itemsConverted: false
         });
@@ -300,7 +318,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     
     setLoadingCoupons(true);
     try {
-      const orderTotal = quote.total_customer_currency || quote.total_usd;
+      const orderTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
       const handlingFee = quote.calculation_data?.calculation_steps?.handling_fee || 0;
       
       const { data, error } = await supabase.rpc('calculate_applicable_discounts', {
@@ -397,7 +415,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     try {
       // Use adjusted total if options have been changed
       const finalTotal = quoteOptions.adjustedTotal || quote.total_usd;
-      const finalTotalLocal = quoteOptions.adjustedTotal || quote.total_customer_currency;
+      const finalTotalLocal = quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount;
 
       // Add to cart with selected options
       const cartItem = {
@@ -406,7 +424,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         productName: quote.items?.[0]?.name || 'Quote Items',
         finalTotal: finalTotal,
         finalTotalLocal: finalTotalLocal,
-        finalCurrency: quote.customer_currency,
+        finalCurrency: getBreakdownSourceCurrency(quote),
         quantity: 1,
         itemWeight: quote.items?.reduce((sum: number, item: any) => sum + (item.weight || 0), 0) || 0,
         imageUrl: quote.items?.[0]?.images?.[0],
@@ -739,9 +757,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <span className="font-medium">
-                          Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
+                          Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
                           <span className="text-blue-700 ml-2">
-                            → {convertedAmounts.total || formatCurrency(quote.total_customer_currency || quote.total_usd, displayCurrency)}
+                            → {convertedAmounts.total || formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, displayCurrency)}
                           </span>
                         </span>
                       </div>
@@ -817,7 +835,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <span>{item.weight || 0}kg</span>
                           <span>•</span>
                           <span className="font-medium">
-                            {formatCurrency(item.costprice_origin, quote.calculation_data?.inputs?.origin_currency || quote.origin_currency || 'USD')}
+                            {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))}
                             {(() => {
                               // Calculate proportional quote price for this item using converted total
                               const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
@@ -832,11 +850,12 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                                   </span>
                                 );
                               } else {
-                                // Fallback to original currency
-                                const itemQuotePrice = (quote.total_customer_currency || quote.total_usd) * itemProportion;
+                                // Fallback to origin currency total
+                                const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+                                const itemQuotePrice = quoteTotal * itemProportion;
                                 return (
                                   <span className="text-blue-700 ml-2">
-                                    → {formatCurrency(itemQuotePrice, quote.customer_currency)}
+                                    → {formatCurrency(itemQuotePrice, getBreakdownSourceCurrency(quote))}
                                   </span>
                                 );
                               }
@@ -874,13 +893,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
                     <div className="text-3xl font-bold">
                       {convertedAmounts.total || formatCurrency(
-                        quoteOptions.adjustedTotal || quote.total_customer_currency || quote.total_usd, 
+                        quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, 
                         displayCurrency
                       )}
                     </div>
-                    {displayCurrency !== quote.customer_currency && (
+                    {displayCurrency !== getBreakdownSourceCurrency(quote) && (
                       <div className="text-sm text-muted-foreground">
-                        Original: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                        Original: {formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
                       </div>
                     )}
                     {displayCurrency !== 'USD' && (
@@ -1033,7 +1052,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             <div className="text-center p-6 bg-green-50 rounded-lg">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
               <div className="text-2xl font-bold text-green-900 mb-1">
-                {convertedAmounts.total || formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+                {convertedAmounts.total || formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
               </div>
               <div className="text-sm text-green-700">
                 Quote #{quote.quote_number || quote.id.slice(0, 8)}

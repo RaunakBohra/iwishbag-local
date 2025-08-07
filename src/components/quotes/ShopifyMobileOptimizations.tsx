@@ -22,6 +22,8 @@ import {
   Zap
 } from 'lucide-react';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface MobileStickyBarProps {
   quote: any;
@@ -50,14 +52,14 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
         {/* Price Summary */}
         <div className="text-center">
           <div className="text-2xl font-bold">
-            {convertedTotal || formatCurrency(adjustedTotal || quote.total_customer_currency || quote.total_usd, displayCurrency || quote.customer_currency)}
+            {convertedTotal || formatCurrency(adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, displayCurrency || getBreakdownSourceCurrency(quote))}
           </div>
-          {displayCurrency && displayCurrency !== quote.customer_currency && (
+          {displayCurrency && displayCurrency !== getBreakdownSourceCurrency(quote) && (
             <div className="text-sm text-muted-foreground">
-              Original: {formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency)}
+              Original: {formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
             </div>
           )}
-          {(displayCurrency || quote.customer_currency) !== 'USD' && (
+          {(displayCurrency || getBreakdownSourceCurrency(quote)) !== 'USD' && (
             <div className="text-sm text-muted-foreground">
               ≈ {formatCurrency(adjustedTotal || quote.total_usd, 'USD')}
             </div>
@@ -212,7 +214,7 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
                     <span>•</span>
                     <span>{item.weight || 0}kg</span>
                     <span>•</span>
-                    <span>{formatCurrency(item.costprice_origin, quote.origin_currency || 'USD')}</span>
+                    <span>{formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))}</span>
                   </div>
                 </div>
               </div>
@@ -332,10 +334,12 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
   // Convert amounts when displayCurrency or quote changes
   useEffect(() => {
     const convertAmounts = async () => {
-      if (!displayCurrency || displayCurrency === quote.customer_currency) {
+      const sourceCurrency = getBreakdownSourceCurrency(quote);
+      
+      if (!displayCurrency || displayCurrency === sourceCurrency) {
         // No conversion needed
         setConvertedAmounts({
-          total: quote.total_customer_currency || quote.total_usd,
+          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
           itemsTotal: breakdown.items_total || 0,
           itemDiscounts: breakdown.item_discounts || 0,
           shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
@@ -346,7 +350,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
       }
 
       try {
-        const fromCurrency = quote.customer_currency || 'USD';
+        console.log(`[MobileBreakdown] Converting ${sourceCurrency} → ${displayCurrency} for quote ${quote.id}`);
         
         const [
           convertedTotal,
@@ -359,15 +363,15 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
           convertedHandlingFee,
           convertedDomesticDelivery,
         ] = await Promise.all([
-          convertCurrency(quote.total_customer_currency || quote.total_usd, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.items_total || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.item_discounts || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.shipping || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.insurance || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.customs || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.local_tax || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.handling_fee || 0, fromCurrency, displayCurrency),
-          convertCurrency(breakdown.domestic_delivery || 0, fromCurrency, displayCurrency),
+          convertCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.items_total || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.item_discounts || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.shipping || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.insurance || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.customs || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.local_tax || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.handling_fee || 0, sourceCurrency, displayCurrency),
+          convertCurrency(breakdown.domestic_delivery || 0, sourceCurrency, displayCurrency),
         ]);
 
         setConvertedAmounts({
@@ -382,7 +386,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
         console.error('Failed to convert mobile breakdown amounts:', error);
         // Fallback to original amounts
         setConvertedAmounts({
-          total: quote.total_customer_currency || quote.total_usd,
+          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
           itemsTotal: breakdown.items_total || 0,
           itemDiscounts: breakdown.item_discounts || 0,
           shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
@@ -399,7 +403,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
     <Card className="md:hidden mb-6">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Total: {formatCurrency(convertedAmounts.total, displayCurrency || quote.customer_currency)}</h3>
+          <h3 className="font-semibold">Total: {formatCurrency(convertedAmounts.total, displayCurrency || getBreakdownSourceCurrency(quote))}</h3>
           <Button variant="ghost" size="sm" onClick={onToggle} className="p-1 h-auto">
             {expanded ? (
               <>
@@ -415,7 +419,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
           </Button>
         </div>
 
-        {quote.customer_currency !== 'USD' && (
+        {getBreakdownSourceCurrency(quote) !== 'USD' && (
           <div className="text-sm text-muted-foreground text-center mb-3">
             ≈ {formatCurrency(quote.total_usd, 'USD')}
           </div>
@@ -425,29 +429,29 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
           <div className="space-y-3 pt-3 border-t">
             <div className="flex justify-between text-sm">
               <span>Products</span>
-              <span>{formatCurrency(convertedAmounts.itemsTotal, displayCurrency || quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.itemsTotal, displayCurrency || getBreakdownSourceCurrency(quote))}</span>
             </div>
             
             {convertedAmounts.itemDiscounts > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>Bundle savings</span>
-                <span>-{formatCurrency(convertedAmounts.itemDiscounts, displayCurrency || quote.customer_currency)}</span>
+                <span>-{formatCurrency(convertedAmounts.itemDiscounts, displayCurrency || getBreakdownSourceCurrency(quote))}</span>
               </div>
             )}
             
             <div className="flex justify-between text-sm">
               <span>Shipping & Insurance</span>
-              <span>{formatCurrency(convertedAmounts.shippingAndInsurance, displayCurrency || quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.shippingAndInsurance, displayCurrency || getBreakdownSourceCurrency(quote))}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span>Duties & Taxes</span>
-              <span>{formatCurrency(convertedAmounts.dutiesAndTaxes, displayCurrency || quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.dutiesAndTaxes, displayCurrency || getBreakdownSourceCurrency(quote))}</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span>Service fees</span>
-              <span>{formatCurrency(convertedAmounts.serviceFees, displayCurrency || quote.customer_currency)}</span>
+              <span>{formatCurrency(convertedAmounts.serviceFees, displayCurrency || getBreakdownSourceCurrency(quote))}</span>
             </div>
           </div>
         )}

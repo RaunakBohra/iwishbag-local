@@ -135,9 +135,7 @@ interface CalculationResult {
     discounted_tax_amount?: number; // NEW: Final tax after discount
     subtotal_before_gateway: number;
     payment_gateway_fee: number;
-    total_usd: number; // DEPRECATED: Actually in origin currency now - use total_origin_currency
-    total_origin_currency: number; // NEW: Total amount in origin currency
-    total_customer_currency: number;
+    total_origin_currency: number; // Total amount in origin currency (single source of truth)
     total_savings: number; // Total discount amount
     component_discounts?: { // NEW: Breakdown by component
       [component: string]: {
@@ -1196,10 +1194,9 @@ class SimplifiedQuoteCalculator {
     const gatewayFees = PAYMENT_GATEWAY_FEES[gateway as keyof typeof PAYMENT_GATEWAY_FEES] || PAYMENT_GATEWAY_FEES.stripe;
     const paymentGatewayFee = (subtotalBeforeGateway * (gatewayFees.percentage / 100)) + gatewayFees.fixed;
 
-    // Step 14: Calculate final totals
-    // Note: totalUSD is now actually totalOriginCurrency after our origin currency integration
+    // Step 14: Calculate final total in origin currency (single source of truth)
+    // All breakdown amounts are in origin currency, customer/admin views convert on-demand
     const totalOriginCurrency = subtotalBeforeGateway + paymentGatewayFee;
-    const totalCustomerCurrency = totalOriginCurrency * exchangeRate;
     
     // Calculate total savings (including all component discounts)
     const totalSavings = totalItemDiscounts + orderDiscountAmount + shippingDiscountAmount + 
@@ -1264,9 +1261,7 @@ class SimplifiedQuoteCalculator {
         discounted_tax_amount: this.round(discountedTaxAmount),
         subtotal_before_gateway: this.round(subtotalBeforeGateway),
         payment_gateway_fee: this.round(paymentGatewayFee),
-        total_usd: this.round(totalOriginCurrency), // Note: renamed from totalUSD, now in origin currency
-        total_origin_currency: this.round(totalOriginCurrency), // NEW: Explicit origin currency total
-        total_customer_currency: this.round(totalCustomerCurrency),
+        total_origin_currency: this.round(totalOriginCurrency), // Single source of truth
         total_savings: this.round(totalSavings),
         component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined,
         weight_analysis: {

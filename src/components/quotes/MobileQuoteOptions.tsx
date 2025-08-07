@@ -16,6 +16,7 @@ import { QuoteOptionsCore, type QuoteOptionsCoreProps } from './QuoteOptionsCore
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 interface MobileQuoteOptionsProps {
   quote: any;
@@ -85,7 +86,7 @@ export const MobileQuoteOptions: React.FC<MobileQuoteOptionsProps> = ({
     quoteId: quote.id,
     quote,
     userType: 'customer',
-    displayCurrency: displayCurrency || quote.customer_currency || 'USD',
+    displayCurrency: displayCurrency || getBreakdownSourceCurrency(quote),
     onQuoteUpdate: () => {
       // Trigger the parent's quote update callback
       if (onQuoteUpdate) {

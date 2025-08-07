@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Truck, DollarSign } from 'lucide-react';
 import { CartItem } from '@/stores/cartStore';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 interface CheckoutItemPriceProps {
   item: CartItem;
@@ -11,14 +12,17 @@ interface CheckoutItemPriceProps {
 
 const CheckoutItemPrice: React.FC<CheckoutItemPriceProps> = ({ item }) => {
   const { formatAmount } = useQuoteCurrency(item.quote);
-
+  
+  // Get calculation steps from origin currency system
+  const calc = item.quote.calculation_data?.calculation_steps || {};
+  
   return (
     <div className="text-sm text-gray-600">
-      <div>Item: {formatAmount(item.quote.calculation_data?.item_cost_usd || 0)}</div>
-      <div>Shipping: {formatAmount(item.quote.calculation_data?.shipping_cost_usd || 0)}</div>
-      <div>Tax: {formatAmount(item.quote.calculation_data?.customs_duty_usd || 0)}</div>
+      <div>Items: {formatAmount(calc.items_subtotal || calc.discounted_items_subtotal || 0)}</div>
+      <div>Shipping: {formatAmount((calc.shipping_cost || calc.discounted_shipping_cost || 0) + (calc.insurance_amount || 0))}</div>
+      <div>Tax: {formatAmount((calc.customs_duty || calc.discounted_customs_duty || 0) + (calc.local_tax_amount || calc.discounted_tax_amount || 0))}</div>
       <div className="font-semibold text-black">
-        Total: {formatAmount(item.quote.calculation_data?.total_cost_usd || 0)}
+        Total: {formatAmount(item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0)}
       </div>
     </div>
   );
@@ -30,7 +34,7 @@ interface CheckoutTotalProps {
 
 const CheckoutTotal: React.FC<CheckoutTotalProps> = ({ items }) => {
   const totalAmount = items.reduce((sum, item) => {
-    return sum + (item.quote.calculation_data?.total_cost_usd || 0);
+    return sum + (item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0);
   }, 0);
 
   // Use the first item's quote for currency formatting (assumes all quotes in cart have same currency)
@@ -55,7 +59,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
   onRemoveItem
 }) => {
   const totalAmount = items.reduce((sum, item) => {
-    return sum + (item.quote.calculation_data?.total_cost_usd || 0);
+    return sum + (item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0);
   }, 0);
 
   const { formatAmount } = useQuoteCurrency(items[0]?.quote);

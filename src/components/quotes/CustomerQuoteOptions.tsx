@@ -16,6 +16,7 @@ import { QuoteOptionsCore, type QuoteOptionsCoreProps } from './QuoteOptionsCore
 import { formatCurrency } from '@/lib/utils';
 import { currencyService } from '@/services/CurrencyService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 interface CustomerQuoteOptionsProps {
   quote: any;
@@ -50,7 +51,7 @@ export const CustomerQuoteOptions: React.FC<CustomerQuoteOptionsProps> = ({
     quoteId: quote.id,
     quote,
     userType: 'customer',
-    displayCurrency: displayCurrency || quote.customer_currency || 'USD',
+    displayCurrency: displayCurrency || getBreakdownSourceCurrency(quote),
     onQuoteUpdate,
     
     // UI variant and styling

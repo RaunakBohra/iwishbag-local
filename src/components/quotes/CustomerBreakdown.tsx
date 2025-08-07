@@ -15,6 +15,8 @@ import {
   Tag,
   Info
 } from 'lucide-react';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface CustomerBreakdownProps {
   quote: any;
@@ -71,7 +73,12 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       }
 
       try {
-        const fromCurrency = quote.customer_currency || 'USD';
+        // CRITICAL FIX: Get the actual breakdown source currency (origin currency)
+        // Previously assumed breakdown was in customer_currency, but it's actually in origin currency
+        const fromCurrency = getBreakdownSourceCurrency(quote);
+        
+        console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        console.log(`[CustomerBreakdown] Origin: ${quote.origin_country}, Destination: ${quote.destination_country}`);
         const stepsToConvert = {
           'items_subtotal': steps.discounted_items_subtotal || steps.items_subtotal || 0,
           'shipping_total': (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
@@ -81,7 +88,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                         (steps.discounted_tax_amount || steps.local_tax_amount || 0),
           'service_fees': (steps.discounted_handling_fee || steps.handling_fee || 0) + 
                          (steps.payment_gateway_fee || 0),
-          'final_total': steps.total_customer_currency || quote.total_customer_currency || 0,
+          'final_total': steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0,
           'total_savings': steps.total_savings || 0,
           'total_usd': steps.total_usd || 0,
           // Detailed breakdown items
@@ -238,7 +245,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   ];
 
   const totalSavings = getAmount('total_savings', steps.total_savings || 0);
-  const finalTotal = getAmount('final_total', steps.total_customer_currency || quote.total_customer_currency || 0);
+  const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0);
 
   return (
     <Card className={className}>
