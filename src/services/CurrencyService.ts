@@ -761,26 +761,91 @@ class CurrencyService {
   }
 
   /**
-   * Get currency formatting options
+   * Get currency value category based on minimum payment amount (purchasing power indicator)
    */
-  getCurrencyFormatOptions(currencyCode: string): {
+  private getCurrencyValueCategory(currencyCode: string): 'ultra_low' | 'low' | 'medium' | 'high' {
+    const minPayment = this.getMinimumPaymentAmountSync(currencyCode);
+    
+    // Ultra-low value currencies (high minimum payments indicate low value per unit)
+    if (minPayment >= 1000) return 'ultra_low';  // KRW ₩6000, NPR ₨665, INR ₹415, etc.
+    
+    // Low value currencies  
+    if (minPayment >= 100) return 'low';         // RUB ₽450, THB ฿150, etc.
+    
+    // Medium value currencies
+    if (minPayment >= 20) return 'medium';       // Many standard currencies
+    
+    // High value currencies (low minimum payments indicate high value per unit)
+    return 'high';                               // USD $5-10, EUR €5-10, GBP £5-8
+  }
+
+  /**
+   * Get smart rounding rules based on currency value category and amount size
+   */
+  private getSmartRoundingRules(currencyCode: string, amount: number): {
+    decimalPlaces: number;
+    roundToNearest: number;
+  } {
+    const category = this.getCurrencyValueCategory(currencyCode);
+    const dbDecimalPlaces = this.getCurrencyDecimalPlacesSync(currencyCode);
+    
+    // For zero-decimal currencies, keep database configuration
+    if (dbDecimalPlaces === 0) {
+      return {
+        decimalPlaces: 0,
+        roundToNearest: amount >= 10000 ? 100 : (amount >= 1000 ? 10 : 1)
+      };
+    }
+
+    switch (category) {
+      case 'ultra_low': // KRW, NPR, INR - need aggressive rounding for readability
+        if (amount >= 10000) return { decimalPlaces: 0, roundToNearest: 100 };
+        if (amount >= 1000) return { decimalPlaces: 0, roundToNearest: 10 };
+        return { decimalPlaces: dbDecimalPlaces, roundToNearest: 1 };
+        
+      case 'low': // RUB, THB - moderate rounding
+        if (amount >= 1000) return { decimalPlaces: 0, roundToNearest: 10 };
+        if (amount >= 100) return { decimalPlaces: 0, roundToNearest: 1 };
+        return { decimalPlaces: dbDecimalPlaces, roundToNearest: 1 };
+        
+      case 'medium': // Standard currencies - balanced approach
+        if (amount >= 1000) return { decimalPlaces: 0, roundToNearest: 10 };
+        if (amount >= 100) return { decimalPlaces: 0, roundToNearest: 1 };
+        return { decimalPlaces: dbDecimalPlaces, roundToNearest: 1 };
+        
+      case 'high': // USD, EUR, GBP - preserve precision for smaller amounts
+        if (amount >= 1000) return { decimalPlaces: 0, roundToNearest: 10 };
+        if (amount >= 100) return { decimalPlaces: 0, roundToNearest: 1 };
+        return { decimalPlaces: dbDecimalPlaces, roundToNearest: 1 };
+        
+      default:
+        return { decimalPlaces: dbDecimalPlaces, roundToNearest: 1 };
+    }
+  }
+
+  /**
+   * Get currency formatting options with database integration and smart rounding
+   */
+  getCurrencyFormatOptions(currencyCode: string, amount?: number): {
     decimalPlaces: number;
     thousandSeparator: string;
     decimalSeparator: string;
+    roundToNearest?: number;
   } {
-    // Default formatting
+    // Get smart rounding rules if amount is provided
+    const smartRules = amount !== undefined 
+      ? this.getSmartRoundingRules(currencyCode, amount)
+      : { decimalPlaces: this.getCurrencyDecimalPlacesSync(currencyCode), roundToNearest: 1 };
+
+    // Default formatting with smart decimal places
     const options = {
-      decimalPlaces: 2,
+      decimalPlaces: smartRules.decimalPlaces,
       thousandSeparator: ',',
       decimalSeparator: '.',
+      roundToNearest: smartRules.roundToNearest,
     };
 
-    // Currency-specific overrides
-    if (['JPY', 'KRW', 'VND', 'IDR'].includes(currencyCode)) {
-      options.decimalPlaces = 0;
-    }
-
-    // Some currencies use different separators
+    // Currency-specific separator overrides
     if (['EUR'].includes(currencyCode)) {
       options.thousandSeparator = '.';
       options.decimalSeparator = ',';
@@ -790,22 +855,27 @@ class CurrencyService {
   }
 
   /**
-   * Format amount according to currency rules
+   * Format amount according to currency rules with smart rounding
    */
   formatAmount(amount: number, currencyCode: string): string {
     const currency = this.getCurrencySymbolSync(currencyCode);
-    const options = this.getCurrencyFormatOptions(currencyCode);
-
+    
     // Handle null, undefined, or NaN values
     const safeAmount = amount == null || isNaN(amount) ? 0 : amount;
+    
+    // Get smart formatting options based on amount
+    const options = this.getCurrencyFormatOptions(currencyCode, safeAmount);
 
-    // Round to appropriate decimal places
-    const rounded =
-      Math.round(safeAmount * Math.pow(10, options.decimalPlaces)) /
+    // Apply smart rounding first (round to nearest specified value)
+    const smartRounded = Math.round(safeAmount / (options.roundToNearest || 1)) * (options.roundToNearest || 1);
+
+    // Then apply decimal place rounding
+    const finalRounded =
+      Math.round(smartRounded * Math.pow(10, options.decimalPlaces)) /
       Math.pow(10, options.decimalPlaces);
 
     // Format with separators
-    const parts = rounded.toFixed(options.decimalPlaces).split('.');
+    const parts = finalRounded.toFixed(options.decimalPlaces).split('.');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, options.thousandSeparator);
 
     const formatted = parts.join(options.decimalSeparator);
