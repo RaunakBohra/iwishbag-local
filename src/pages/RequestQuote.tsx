@@ -210,7 +210,7 @@ export default function RequestQuote() {
           name: product.product_name,
           url: product.product_url,
           quantity: product.quantity,
-          unit_price_usd: product.estimated_price || 0,
+          unit_price_origin: product.estimated_price || 0,
           notes: product.product_notes || null,
           category: null, // We'll determine this later
         })),
@@ -245,7 +245,7 @@ export default function RequestQuote() {
         name: product.product_name,
         url: product.product_url,
         quantity: product.quantity,
-        unit_price_usd: product.estimated_price || 0,
+        unit_price_origin: product.estimated_price || 0,
         notes: product.product_notes || null,
       }));
       

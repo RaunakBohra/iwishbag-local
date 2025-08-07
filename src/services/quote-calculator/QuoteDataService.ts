@@ -394,7 +394,7 @@ export class QuoteDataService {
     try {
       let queryBuilder = supabase
         .from('quotes')
-        .select('id, customer_name, customer_email, status, total_usd, created_at, updated_at')
+        .select('id, customer_name, customer_email, status, final_total_origin, total_origin_currency, created_at, updated_at')
         .order('updated_at', { ascending: false });
 
       // Apply filters
@@ -464,8 +464,8 @@ export class QuoteDataService {
       destination_address: formData.destinationAddress,
       
       // Pricing
-      total_usd: calculation?.total_usd || 0,
-      total_customer_currency: calculation?.total_customer_currency || 0,
+      total_origin_currency: calculation?.total_origin_currency || 0,
+      total_destination_currency: calculation?.total_destination_currency || 0,
       
       // Discounts
       order_discount_type: formData.orderDiscountType,
@@ -504,7 +504,7 @@ export class QuoteDataService {
       name: item.name,
       url: item.url,
       quantity: item.quantity,
-      unit_price_usd: item.unit_price_usd,
+      unit_price_origin: item.unit_price_origin,
       weight_kg: item.weight_kg,
       category: item.category,
       notes: item.notes,
@@ -549,7 +549,7 @@ export class QuoteDataService {
         name: item.name,
         url: item.url,
         quantity: item.quantity,
-        unit_price_usd: item.unit_price_usd,
+        unit_price_origin: item.unit_price_origin,
         weight_kg: item.weight_kg,
         category: item.category,
         notes: item.notes,
@@ -611,7 +611,7 @@ export class QuoteDataService {
 
   private convertToCSV(formData: QuoteFormData): string {
     const headers = [
-      'Item Name', 'URL', 'Quantity', 'Unit Price (USD)', 
+      'Item Name', 'URL', 'Quantity', 'Unit Price (Origin)', 
       'Weight (kg)', 'Category', 'Notes', 'HSN Code'
     ];
 
@@ -619,7 +619,7 @@ export class QuoteDataService {
       item.name,
       item.url || '',
       item.quantity.toString(),
-      item.unit_price_usd.toString(),
+      item.unit_price_origin.toString(),
       (item.weight_kg || 0).toString(),
       item.category || '',
       item.notes || '',
@@ -641,7 +641,7 @@ export class QuoteDataService {
         ...item,
         id: crypto.randomUUID(), // Generate new IDs
         quantity: Number(item.quantity) || 1,
-        unit_price_usd: Number(item.unit_price_usd) || 0,
+        unit_price_origin: Number(item.unit_price_origin) || 0,
         weight_kg: Number(item.weight_kg) || 0
       }))
     };

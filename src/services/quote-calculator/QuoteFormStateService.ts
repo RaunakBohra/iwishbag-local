@@ -12,7 +12,7 @@ export interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -187,7 +187,7 @@ export class QuoteFormStateService {
         name: '',
         url: '',
         quantity: 1,
-        unit_price_usd: 0,
+        unit_price_origin: 0,
         weight_kg: undefined,
         category: '',
         notes: ''
@@ -354,7 +354,7 @@ export class QuoteFormStateService {
       name: '',
       url: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: undefined,
       category: '',
       notes: ''
@@ -474,7 +474,7 @@ export class QuoteFormStateService {
     }
     
     const invalidItems = this.state.items.filter(item => 
-      !item.name || item.unit_price_usd <= 0 || item.quantity <= 0
+      !item.name || item.unit_price_origin <= 0 || item.quantity <= 0
     );
     
     if (invalidItems.length > 0) {

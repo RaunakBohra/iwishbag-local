@@ -34,7 +34,7 @@ interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -103,7 +103,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
       id: `item-${Date.now()}`,
       name: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: 0.1,
       category: '',
       notes: '',
@@ -175,7 +175,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
       
       // Update price
       if (data.price && typeof data.price === 'number' && data.price > 0 && isFinite(data.price)) {
-        updateItem(itemId, 'unit_price_usd', data.price);
+        updateItem(itemId, 'unit_price_origin', data.price);
         updatedFields.push('price');
       }
       
@@ -476,8 +476,8 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
                     type="number"
                     min="0"
                     step="0.01"
-                    value={item.unit_price_usd || ''}
-                    onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                    value={item.unit_price_origin || ''}
+                    onChange={(e) => updateItem(item.id, 'unit_price_origin', parseFloat(e.target.value) || 0)}
                     placeholder="25.99"
                     className="h-8 text-center border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-200 text-sm text-gray-900 font-normal"
                   />

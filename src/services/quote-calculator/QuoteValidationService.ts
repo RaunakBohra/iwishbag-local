@@ -225,15 +225,15 @@ export class QuoteValidationService {
       }
 
       // Price validation
-      if (item.unit_price_usd <= 0) {
+      if (item.unit_price_origin <= 0) {
         errors.push({
-          field: `items.${index}.unit_price_usd`,
+          field: `items.${index}.unit_price_origin`,
           message: `Item ${index + 1}: Price must be greater than 0`,
           severity: 'error'
         });
-      } else if (item.unit_price_usd > 50000) {
+      } else if (item.unit_price_origin > 50000) {
         errors.push({
-          field: `items.${index}.unit_price_usd`,
+          field: `items.${index}.unit_price_origin`,
           message: `Item ${index + 1}: Price seems unusually high`,
           severity: 'warning'
         });
@@ -458,7 +458,7 @@ export class QuoteValidationService {
         message: 'Order value seems unusually high',
         validator: (items) => {
           if (!Array.isArray(items)) return true;
-          const total = items.reduce((sum, item) => sum + (item.unit_price_usd * item.quantity), 0);
+          const total = items.reduce((sum, item) => sum + (item.unit_price_origin * item.quantity), 0);
           return total <= 100000; // $100k threshold
         },
         severity: 'warning'
@@ -568,7 +568,7 @@ export class QuoteValidationService {
 
     // Minimum order value
     const totalValue = formData.items.reduce((sum, item) => 
-      sum + (item.unit_price_usd * item.quantity), 0);
+      sum + (item.unit_price_origin * item.quantity), 0);
     
     if (totalValue < 10) {
       errors.push({

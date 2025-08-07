@@ -51,6 +51,10 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
     }
   }, []);
 
+  // Check if quote has proportional rounding applied
+  const hasProportionalRounding = quote.calculation_data?._proportional_rounding_applied || 
+                                 quote.calculation_data?.calculation_steps?._rounding_metadata;
+
   if (!quote || !quote.calculation_data) {
     return (
       <Card className={className}>
@@ -79,8 +83,8 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       }
 
       try {
-        // CRITICAL FIX: Get the actual origin currency from country mapping
-        // Previously assumed breakdown was in customer_currency, but it's actually in origin currency
+        // CRITICAL FIX: Get the origin currency from origin_country column (this is correct)
+        // All calculations are done in origin currency, then converted for display
         const fromCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
         
         console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
@@ -119,15 +123,21 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
         
         for (const [key, amount] of Object.entries(stepsToConvert)) {
           if (amount !== 0) {
-            // Convert currency and apply smart rounding via CurrencyService
+            // Convert currency
             const rawConverted = await convertCurrency(amount, fromCurrency, displayCurrency);
-            // Apply admin-level smart rounding by re-formatting with CurrencyService
-            const { currencyService } = await import('@/services/CurrencyService');
-            // Extract numeric value by formatting and parsing (to apply smart rounding)
-            const formattedAmount = currencyService.formatAmount(rawConverted, displayCurrency);
-            // Extract just the number from the formatted string (remove currency symbol)
-            const numericValue = parseFloat(formattedAmount.replace(/[^\d.-]/g, ''));
-            converted[key] = isNaN(numericValue) ? rawConverted : numericValue;
+            
+            if (hasProportionalRounding) {
+              // For proportionally rounded quotes, don't apply additional rounding to preserve proportions
+              converted[key] = rawConverted;
+            } else {
+              // Legacy quotes: Apply smart rounding via CurrencyService
+              const { currencyService } = await import('@/services/CurrencyService');
+              // Extract numeric value by formatting and parsing (to apply smart rounding)
+              const formattedAmount = currencyService.formatAmount(rawConverted, displayCurrency);
+              // Extract just the number from the formatted string (remove currency symbol)
+              const numericValue = parseFloat(formattedAmount.replace(/[^\d.-]/g, ''));
+              converted[key] = isNaN(numericValue) ? rawConverted : numericValue;
+            }
           } else {
             converted[key] = 0;
           }
@@ -396,6 +406,9 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                         <li>• Shipping calculated based on total weight: {calc.inputs?.total_weight_kg || 0}kg</li>
                         <li>• Exchange rates are updated daily for accurate pricing</li>
                         {steps.insurance_amount > 0 && <li>• Insurance covers full package value and shipping costs</li>}
+                        {hasProportionalRounding && (
+                          <li className="text-green-700">• ✓ Enhanced breakdown accuracy with proportional rounding</li>
+                        )}
                       </ul>
                     </div>
                   </div>

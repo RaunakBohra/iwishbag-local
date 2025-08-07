@@ -87,7 +87,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
         }
         
         if (price && typeof price === 'number' && price > 0) {
-          form.setValue(`items.${index}.price_usd`, price, { shouldValidate: false, shouldDirty: false });
+          form.setValue(`items.${index}.price_origin`, price, { shouldValidate: false, shouldDirty: false });
         }
         
         if (weight && typeof weight === 'number' && weight > 0) {
@@ -298,7 +298,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
         />
         <FormField
           control={form.control}
-          name={`items.${index}.price_usd`}
+          name={`items.${index}.price_origin`}
           render={({ field }) => (
             <FormItem>
               <FormLabel>
@@ -374,7 +374,7 @@ const createQuoteRequestSchema = (isLoggedIn: boolean) => z.object({
     product_url: z.string().url().optional().or(z.literal('')),
     origin_country: z.string().min(1, 'Please select origin country'),
     quantity: z.number().min(1, 'Quantity must be at least 1'),
-    price_usd: z.number().min(0, 'Price must be positive'),
+    price_origin: z.number().min(0, 'Price must be positive'),
     weight_kg: z.number().min(0, 'Weight must be positive'),
     notes: z.string().optional(),
   })).min(1, 'At least one product is required'),
@@ -415,7 +415,7 @@ export default function QuoteRequestPage() {
         product_url: '',
         origin_country: 'US',
         quantity: 1,
-        price_usd: 0,
+        price_origin: 0,
         weight_kg: 0,
         notes: '',
       }],
@@ -434,7 +434,7 @@ export default function QuoteRequestPage() {
       product_url: '',
       origin_country: 'US',
       quantity: 1,
-      price_usd: 0,
+      price_origin: 0,
       weight_kg: 0,
       notes: '',
     });
@@ -470,12 +470,12 @@ export default function QuoteRequestPage() {
           name: item.product_name,
           url: item.product_url || '',
           quantity: item.quantity,
-          costprice_origin: item.price_usd,
+          costprice_origin: item.price_origin,
           weight: item.weight_kg,
           customer_notes: item.notes || '',
         }));
 
-        const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.price_usd), 0);
+        const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.price_origin), 0);
 
         const quoteData = {
           ...baseQuoteData,
@@ -503,12 +503,12 @@ export default function QuoteRequestPage() {
             name: item.product_name,
             url: item.product_url || '',
             quantity: item.quantity,
-            costprice_origin: item.price_usd,
+            costprice_origin: item.price_origin,
             weight: item.weight_kg,
             customer_notes: item.notes || '',
           };
 
-          const itemTotal = item.quantity * item.price_usd;
+          const itemTotal = item.quantity * item.price_origin;
 
           const quoteData = {
             ...baseQuoteData,

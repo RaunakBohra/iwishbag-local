@@ -27,7 +27,7 @@ export interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -253,7 +253,7 @@ export class QuoteCalculationService {
       const item = items[i];
       
       // Calculate item total price
-      const itemPrice = item.unit_price_usd * item.quantity;
+      const itemPrice = item.unit_price_origin * item.quantity;
       
       // Apply item-level discounts
       let discountAmount = 0;
@@ -289,7 +289,7 @@ export class QuoteCalculationService {
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        unit_price: item.unit_price_usd,
+        unit_price: item.unit_price_origin,
         total_price: itemPrice,
         discount_amount: discountAmount,
         final_price: finalItemPrice,
@@ -422,7 +422,7 @@ export class QuoteCalculationService {
           try {
             const hsnData = await NCMService.getHSNData(item.hsn_code!, route.destination_country);
             if (hsnData) {
-              const itemValue = item.unit_price_usd * item.quantity;
+              const itemValue = item.unit_price_origin * item.quantity;
               const itemTax = itemValue * (hsnData.tax_rate / 100);
               
               totalTax += itemTax;
@@ -492,7 +492,7 @@ export class QuoteCalculationService {
 
     // Calculate item-level discounts (already calculated, but get total)
     for (const item of inputs.items) {
-      const itemPrice = item.unit_price_usd * item.quantity;
+      const itemPrice = item.unit_price_origin * item.quantity;
       
       if (item.discount_type === 'percentage' && item.discount_percentage) {
         const discount = itemPrice * (item.discount_percentage / 100);
@@ -686,7 +686,7 @@ export class QuoteCalculationService {
 
     for (const item of inputs.items) {
       if (!item.name) errors.push(`Item name is required for item ${item.id}`);
-      if (!item.unit_price_usd || item.unit_price_usd <= 0) {
+      if (!item.unit_price_origin || item.unit_price_origin <= 0) {
         errors.push(`Valid price is required for item ${item.name}`);
       }
       if (!item.quantity || item.quantity <= 0) {
@@ -704,7 +704,7 @@ export class QuoteCalculationService {
     const key = JSON.stringify({
       items: inputs.items.map(i => ({ 
         id: i.id, 
-        price: i.unit_price_usd, 
+        price: i.unit_price_origin, 
         quantity: i.quantity, 
         weight: i.weight_kg,
         hsn: i.hsn_code

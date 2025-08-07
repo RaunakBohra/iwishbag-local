@@ -13,12 +13,13 @@ import { QuoteDetailsAnalysis } from '@/components/quotes-v2/QuoteDetailsAnalysi
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import { ShippingRouteDebug } from '@/components/admin/ShippingRouteDebug';
 import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface QuoteItem {
   id: string;
   name: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
 }
 
@@ -94,7 +95,7 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
   shippingError,
   onNavigateToShippingRoutes
 }) => {
-  const hasValidItems = items.some(item => item.unit_price_usd > 0);
+  const hasValidItems = items.some(item => item.unit_price_origin > 0);
 
   const generateQuoteData = () => ({
     id: quoteId || 'temp-' + Date.now(),
@@ -104,10 +105,17 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
     customer_name: customerName,
     origin_country: originCountry,
     destination_country: destinationCountry,
-    items: items.filter(item => item.unit_price_usd > 0),
-    calculation_data: calculationResult,
-    total_usd: calculationResult?.calculation_steps?.total_usd || 0,
-    total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency || 0,
+    items: items.filter(item => item.unit_price_origin > 0),
+    calculation_data: {
+      ...calculationResult,
+      // Ensure origin_currency is set based on origin_country
+      origin_currency: calculationResult?.origin_currency || getOriginCurrency(originCountry)
+    },
+    // Use origin currency total instead of USD total
+    total_origin_currency: calculationResult?.calculation_steps?.total_origin_currency || calculationResult?.calculation_steps?.total_usd || 0,
+    // Keep legacy fields for backward compatibility but don't prioritize them
+    total_usd: calculationResult?.calculation_steps?.total_usd,
+    total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency,
     customer_currency: customerCurrency,
     created_at: new Date().toISOString(),
     calculated_at: calculationResult?.calculation_timestamp
@@ -118,7 +126,7 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
   };
 
   const getTotalValue = () => {
-    return items.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0);
+    return items.reduce((sum, item) => sum + item.unit_price_origin * item.quantity, 0);
   };
 
   return (
@@ -219,7 +227,7 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
           originCountry={originCountry}
           destinationCountry={destinationCountry}
           weight={getTotalWeight()}
-          itemValueUSD={getTotalValue()}
+          itemValueOrigin={getTotalValue()}
           fallbackUsed={!calculationResult.route_calculations}
         />
       )}

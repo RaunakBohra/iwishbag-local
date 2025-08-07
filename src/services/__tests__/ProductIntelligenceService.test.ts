@@ -141,7 +141,7 @@ describe('ProductIntelligenceService', () => {
         product_name: 'iPhone 14',
         category: 'Electronics',
         destination_country: 'IN',
-        price_usd: 800
+        price_origin: 800
       });
       
       expect(suggestion).not.toBeNull();
@@ -171,7 +171,7 @@ describe('SmartQuoteEnhancementService', () => {
     it('should enhance quote item with smart suggestions', async () => {
       const originalItem = {
         name: 'iPhone 14',
-        unit_price_usd: 800,
+        unit_price_origin: 800,
         quantity: 1,
         category: 'Electronics'
       };
@@ -192,7 +192,7 @@ describe('SmartQuoteEnhancementService', () => {
       );
 
       expect(enhanced.name).toBe(originalItem.name);
-      expect(enhanced.unit_price_usd).toBe(originalItem.unit_price_usd);
+      expect(enhanced.unit_price_origin).toBe(originalItem.unit_price_origin);
       expect(enhanced.enhancement_applied).toBeDefined();
       
       if (enhanced.enhancement_applied) {
@@ -204,7 +204,7 @@ describe('SmartQuoteEnhancementService', () => {
     it('should gracefully handle disabled enhancements', async () => {
       const originalItem = {
         name: 'Test Product',
-        unit_price_usd: 100,
+        unit_price_origin: 100,
         quantity: 1
       };
 
@@ -231,9 +231,9 @@ describe('SmartQuoteEnhancementService', () => {
   describe('enhanceQuoteItems', () => {
     it('should enhance multiple items in batch', async () => {
       const items = [
-        { name: 'iPhone 14', unit_price_usd: 800, quantity: 1 },
-        { name: 'Samsung Galaxy', unit_price_usd: 700, quantity: 1 },
-        { name: 'T-shirt', unit_price_usd: 20, quantity: 2 }
+        { name: 'iPhone 14', unit_price_origin: 800, quantity: 1 },
+        { name: 'Samsung Galaxy', unit_price_origin: 700, quantity: 1 },
+        { name: 'T-shirt', unit_price_origin: 20, quantity: 2 }
       ];
 
       const options = {
@@ -342,7 +342,7 @@ describe('Performance and Edge Cases', () => {
 
       const item = {
         name: 'generic product',
-        unit_price_usd: 50,
+        unit_price_origin: 50,
         quantity: 1
       };
 

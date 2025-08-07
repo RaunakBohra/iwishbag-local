@@ -62,7 +62,7 @@ export interface QuoteValidationContext {
   };
   business_rules?: {
     max_items?: number;
-    max_value_usd?: number;
+    max_value_origin?: number;
     min_weight_kg?: number;
     max_weight_kg?: number;
     restricted_countries?: string[];
@@ -71,8 +71,8 @@ export interface QuoteValidationContext {
 }
 
 export interface ItemValidationRules {
-  min_price_usd: number;
-  max_price_usd: number;
+  min_price_origin: number;
+  max_price_origin: number;
   min_weight_kg: number;
   max_weight_kg: number;
   max_quantity: number;
@@ -91,12 +91,12 @@ export class QuoteValidationService {
   private readonly cacheTTL = 10 * 60 * 1000; // 10 minutes
 
   private readonly defaultItemRules: ItemValidationRules = {
-    min_price_usd: 0.01,
-    max_price_usd: 50000,
+    min_price_origin: 0.01,
+    max_price_origin: 50000,
     min_weight_kg: 0.001,
     max_weight_kg: 100,
     max_quantity: 999,
-    required_fields: ['name', 'unit_price_usd', 'quantity'],
+    required_fields: ['name', 'unit_price_origin', 'quantity'],
     restricted_categories: ['weapons', 'drugs', 'adult'],
     hsn_validation: {
       required_for_countries: ['IN', 'BD', 'LK'],
@@ -297,35 +297,35 @@ export class QuoteValidationService {
     }
 
     // Price validation
-    if (item.unit_price_usd) {
-      if (item.unit_price_usd < rules.min_price_usd) {
+    if (item.unit_price_origin) {
+      if (item.unit_price_origin < rules.min_price_origin) {
         errors.push({
-          field: `items.${item.id}.unit_price_usd`,
+          field: `items.${item.id}.unit_price_origin`,
           code: 'PRICE_TOO_LOW',
-          message: `Price must be at least $${rules.min_price_usd} for item "${item.name}"`,
+          message: `Price must be at least ${rules.min_price_origin} in origin currency for item "${item.name}"`,
           severity: 'high',
-          context: { current: item.unit_price_usd, min: rules.min_price_usd }
+          context: { current: item.unit_price_origin, min: rules.min_price_origin }
         });
       }
 
-      if (item.unit_price_usd > rules.max_price_usd) {
+      if (item.unit_price_origin > rules.max_price_origin) {
         warnings.push({
-          field: `items.${item.id}.unit_price_usd`,
+          field: `items.${item.id}.unit_price_origin`,
           code: 'HIGH_VALUE_ITEM',
-          message: `High-value item detected: $${item.unit_price_usd}. Additional documentation may be required.`,
+          message: `High-value item detected: ${item.unit_price_origin} in origin currency. Additional documentation may be required.`,
           impact: 'medium',
-          context: { current: item.unit_price_usd, max: rules.max_price_usd }
+          context: { current: item.unit_price_origin, max: rules.max_price_origin }
         });
       }
 
       // Unusual pricing patterns
-      if (item.unit_price_usd % 1 === 0 && item.unit_price_usd > 100) {
+      if (item.unit_price_origin % 1 === 0 && item.unit_price_origin > 100) {
         suggestions.push({
-          field: `items.${item.id}.unit_price_usd`,
+          field: `items.${item.id}.unit_price_origin`,
           type: 'enhancement',
           message: 'Consider verifying the exact price for high-value round numbers',
           confidence: 60,
-          context: { price: item.unit_price_usd }
+          context: { price: item.unit_price_origin }
         });
       }
     }
@@ -474,7 +474,7 @@ export class QuoteValidationService {
       }
 
       if (item.discount_type === 'amount' && item.discount_amount) {
-        const itemTotal = item.unit_price_usd * item.quantity;
+        const itemTotal = item.unit_price_origin * item.quantity;
         if (item.discount_amount > itemTotal) {
           errors.push({
             field: `items.${item.id}.discount_amount`,
@@ -647,14 +647,14 @@ export class QuoteValidationService {
     const suggestions: ValidationSuggestion[] = [];
 
     // Total value check
-    const totalValue = context.items.reduce((sum, item) => sum + (item.unit_price_usd * item.quantity), 0);
-    const maxValue = context.business_rules?.max_value_usd || 10000;
+    const totalValue = context.items.reduce((sum, item) => sum + (item.unit_price_origin * item.quantity), 0);
+    const maxValue = context.business_rules?.max_value_origin || 10000;
 
     if (totalValue > maxValue) {
       warnings.push({
         field: 'quote',
         code: 'HIGH_VALUE_QUOTE',
-        message: `High-value quote ($${totalValue.toFixed(2)}). Additional documentation may be required.`,
+        message: `High-value quote (${totalValue.toFixed(2)} in origin currency). Additional documentation may be required.`,
         impact: 'high',
         context: { total: totalValue, threshold: maxValue }
       });
@@ -765,7 +765,7 @@ export class QuoteValidationService {
       items: context.items.map(i => ({
         id: i.id,
         name: i.name,
-        price: i.unit_price_usd,
+        price: i.unit_price_origin,
         quantity: i.quantity,
         weight: i.weight_kg
       })),

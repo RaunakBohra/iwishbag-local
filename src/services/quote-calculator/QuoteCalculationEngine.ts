@@ -261,7 +261,7 @@ export class QuoteCalculationEngine {
    */
   private calculateItemsSubtotal(items: QuoteItem[]): number {
     return items.reduce((sum, item) => {
-      const itemTotal = item.unit_price_usd * item.quantity;
+      const itemTotal = item.unit_price_origin * item.quantity;
       
       // Apply item-level discounts
       if (item.discount_type === 'percentage' && item.discount_percentage) {
@@ -558,7 +558,7 @@ export class QuoteCalculationEngine {
     // Validate items
     formData.items.forEach((item, index) => {
       if (!item.name) errors.push(`Item ${index + 1}: Name is required`);
-      if (item.unit_price_usd <= 0) errors.push(`Item ${index + 1}: Price must be greater than 0`);
+      if (item.unit_price_origin <= 0) errors.push(`Item ${index + 1}: Price must be greater than 0`);
       if (item.quantity <= 0) errors.push(`Item ${index + 1}: Quantity must be greater than 0`);
     });
 
@@ -576,7 +576,7 @@ export class QuoteCalculationEngine {
       items: formData.items.map(item => ({
         name: item.name,
         quantity: item.quantity,
-        unit_price_usd: item.unit_price_usd,
+        unit_price_origin: item.unit_price_origin,
         weight_kg: item.weight_kg
       })),
       originCountry: formData.originCountry,

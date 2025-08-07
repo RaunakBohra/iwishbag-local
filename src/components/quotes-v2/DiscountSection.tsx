@@ -21,7 +21,7 @@ import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltip
 interface QuoteItem {
   id: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
 }
 
 interface DiscountSectionProps {
@@ -132,7 +132,7 @@ export const DiscountSection: React.FC<DiscountSectionProps> = ({
   const calculateOrderTotal = () => {
     return calculationResult?.calculation_steps?.subtotal || 
            calculationResult?.calculation_steps?.items_subtotal ||
-           items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+           items.reduce((sum, item) => sum + (item.quantity * item.unit_price_origin), 0) ||
            0;
   };
 

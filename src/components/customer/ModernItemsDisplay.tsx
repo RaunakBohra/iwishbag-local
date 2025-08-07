@@ -135,10 +135,10 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
                     <div className="flex flex-col items-end gap-3">
                       <div className="text-right">
                         <p className="text-2xl font-bold text-gray-900">
-                          {formatPrice((item.costprice_origin || 0) * item.quantity)}
+                          {formatPrice((item.unit_price_origin || item.costprice_origin || 0) * item.quantity)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {formatPrice(item.costprice_origin || 0)} × {item.quantity}
+                          {formatPrice(item.unit_price_origin || item.costprice_origin || 0)} × {item.quantity}
                         </p>
                       </div>
 

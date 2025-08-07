@@ -110,7 +110,7 @@ interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -326,7 +326,7 @@ const QuoteCalculatorV2: React.FC = () => {
       name: '',
       url: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: undefined,
       category: '',
       notes: ''
@@ -456,7 +456,7 @@ const QuoteCalculatorV2: React.FC = () => {
 
   // Auto-calculate on changes (but not during initial quote loading)
   useEffect(() => {
-    const hasValidItems = items.some(item => item.name && item.unit_price_usd > 0);
+    const hasValidItems = items.some(item => item.name && item.unit_price_origin > 0);
     logger.debug({
       loadingQuote,
       hasValidItems,
@@ -785,7 +785,7 @@ const QuoteCalculatorV2: React.FC = () => {
             name: item.name || '',
             url: item.url || '',
             quantity: item.quantity || 1,
-            unit_price_usd: item.costprice_origin || item.unit_price_usd || 0, // V2 uses costprice_origin
+            unit_price_origin: item.costprice_origin || item.unit_price_origin || 0, // V2 uses costprice_origin
             weight_kg: item.weight || item.weight_kg || undefined,
             category: item.category || '',
             notes: item.notes || item.customer_notes || '',
@@ -880,7 +880,7 @@ const QuoteCalculatorV2: React.FC = () => {
       name: '',
       url: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: undefined,
       category: '',
       notes: '',
@@ -916,7 +916,7 @@ const QuoteCalculatorV2: React.FC = () => {
       console.log('📋 Updated items array:', updatedItems.map(item => ({ 
         id: item.id, 
         name: item.name, 
-        price: item.unit_price_usd, 
+        price: item.unit_price_origin, 
         weight: item.weight_kg 
       })));
       
@@ -1274,7 +1274,7 @@ const QuoteCalculatorV2: React.FC = () => {
     logger.debug({
       totalItems: items.length,
       itemsWithNames: items.filter(item => item.name).length,
-      itemsWithPrices: items.filter(item => item.unit_price_usd > 0).length,
+      itemsWithPrices: items.filter(item => item.unit_price_origin > 0).length,
       isEditMode,
       currentCalculationResult: !!calculationResult
     });
@@ -1282,9 +1282,9 @@ const QuoteCalculatorV2: React.FC = () => {
     setCalculating(true);
     try {
       // Filter valid items and map to new interface
-      const validItems = items.filter(item => item.unit_price_usd > 0).map(item => ({
+      const validItems = items.filter(item => item.unit_price_origin > 0).map(item => ({
         ...item,
-        costprice_origin: item.unit_price_usd, // Map unit_price_usd to costprice_origin
+        costprice_origin: item.unit_price_origin, // Map unit_price_origin to costprice_origin
         weight_kg: item.weight_kg || 0
       }));
       
@@ -1292,7 +1292,7 @@ const QuoteCalculatorV2: React.FC = () => {
         validItemsCount: validItems.length,
         validItems: validItems.map(item => ({ 
           name: item.name, 
-          unit_price_usd: item.unit_price_usd,
+          unit_price_origin: item.unit_price_origin,
           costprice_origin: item.costprice_origin,
           weight_kg: item.weight_kg
         })),
@@ -1394,7 +1394,7 @@ const QuoteCalculatorV2: React.FC = () => {
         errorStack: error instanceof Error ? error.stack : null,
         originCountry,
         destinationCountry,
-        validItemsCount: items.filter(item => item.unit_price_usd > 0).length
+        validItemsCount: items.filter(item => item.unit_price_origin > 0).length
       });
       
       // Check if it's a shipping route error
@@ -1475,9 +1475,9 @@ const QuoteCalculatorV2: React.FC = () => {
         destination_country: destinationCountry,
         shipping_method: shippingMethod,
         insurance_required: insuranceEnabled, // Save insurance preference
-        items: items.filter(item => item.unit_price_usd > 0).map(item => ({
+        items: items.filter(item => item.unit_price_origin > 0).map(item => ({
           ...item,
-          costprice_origin: item.unit_price_usd, // Map back to V2 format
+          costprice_origin: item.unit_price_origin, // Map back to V2 format
           weight: item.weight_kg,
           customer_notes: item.notes
         })),
@@ -2533,7 +2533,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               product_name: item.name,
                               destination_country: destinationCountry,
                               category: item.category,
-                              price_usd: item.unit_price_usd
+                              price_usd: item.unit_price_origin
                             });
                             if (suggestion) {
                               const confidence = Math.round(suggestion.confidence_score * 100);
@@ -2668,7 +2668,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                 console.log('🎯 Current item before auto-fill:', { 
                                   id: item.id, 
                                   name: currentItem?.name || item.name, 
-                                  price: currentItem?.unit_price_usd || item.unit_price_usd, 
+                                  price: currentItem?.unit_price_origin || item.unit_price_origin, 
                                   weight: currentItem?.weight_kg || item.weight_kg 
                                 });
                                 
@@ -2694,11 +2694,11 @@ const QuoteCalculatorV2: React.FC = () => {
                                 // Update price with validation (ALWAYS overwrite if new data is valid)
                                 if (data.price && typeof data.price === 'number' && data.price > 0 && isFinite(data.price)) {
                                   console.log('🎯 AUTO-FILL: Overwriting price:', {
-                                    old: currentItem?.unit_price_usd || item.unit_price_usd, 
+                                    old: currentItem?.unit_price_origin || item.unit_price_origin, 
                                     new: data.price, 
                                     itemId: item.id
                                   });
-                                  updateItem(item.id, 'unit_price_usd', data.price);
+                                  updateItem(item.id, 'unit_price_origin', data.price);
                                   updatedFields.push('price');
                                 } else {
                                   logger.warn(data.price);
@@ -2875,8 +2875,8 @@ const QuoteCalculatorV2: React.FC = () => {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={item.unit_price_usd || ''}
-                        onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                        value={item.unit_price_origin || ''}
+                        onChange={(e) => updateItem(item.id, 'unit_price_origin', parseFloat(e.target.value) || 0)}
                         placeholder="25.99"
                         className="h-10 text-center text-sm font-medium border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                       />
@@ -3160,7 +3160,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
                             <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300">
                               Save {currencySymbol}{item.discount_type === 'percentage' 
-                                ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
+                                ? ((item.quantity * item.unit_price_origin * (item.discount_percentage || 0)) / 100).toFixed(2)
                                 : (item.discount_amount || 0).toFixed(2)
                               }
                             </Badge>
@@ -3215,7 +3215,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   orderTotal={
                     calculationResult?.calculation_steps?.subtotal || 
                     calculationResult?.calculation_steps?.items_subtotal ||
-                    items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                    items.reduce((sum, item) => sum + (item.quantity * item.unit_price_origin), 0) ||
                     0
                   }
                   countryCode={destinationCountry}
@@ -3260,7 +3260,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     quoteTotal={
                       calculationResult?.calculation_steps?.subtotal || 
                       calculationResult?.calculation_steps?.items_subtotal ||
-                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_origin), 0) ||
                       0
                     }
                     componentBreakdown={{
@@ -3309,7 +3309,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     orderTotal={
                       calculationResult?.calculation_steps?.subtotal || 
                       calculationResult?.calculation_steps?.items_subtotal ||
-                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_origin), 0) ||
                       0
                     }
                     countryCode={destinationCountry}
@@ -3409,7 +3409,7 @@ const QuoteCalculatorV2: React.FC = () => {
               <Button 
                 onClick={calculateQuote} 
                 className="w-full"
-                disabled={calculating || !items.some(item => item.unit_price_usd > 0)}
+                disabled={calculating || !items.some(item => item.unit_price_origin > 0)}
               >
                 <Calculator className="w-4 h-4 mr-2" />
                 {calculating ? 'Calculating...' : 'Calculate Quote'}
@@ -3492,7 +3492,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 customer_name: customerName,
                 origin_country: originCountry,
                 destination_country: destinationCountry,
-                items: items.filter(item => item.unit_price_usd > 0),
+                items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
                 total_usd: calculationResult.calculation_steps.total_usd || 0,
                 total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
@@ -3514,7 +3514,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 customer_name: customerName,
                 origin_country: originCountry,
                 destination_country: destinationCountry,
-                items: items.filter(item => item.unit_price_usd > 0),
+                items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
                 total_usd: calculationResult.calculation_steps.total_usd || 0,
                 total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
@@ -3532,7 +3532,7 @@ const QuoteCalculatorV2: React.FC = () => {
               originCountry={originCountry}
               destinationCountry={destinationCountry}
               weight={items.reduce((sum, item) => sum + (item.weight_kg || 0.5) * item.quantity, 0)}
-              itemValueUSD={items.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0)}
+              itemValueUSD={items.reduce((sum, item) => sum + item.unit_price_origin * item.quantity, 0)}
               fallbackUsed={!calculationResult.route_calculations}
             />
           )}

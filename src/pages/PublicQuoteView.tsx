@@ -26,7 +26,7 @@ interface QuoteItem {
   id: string;
   name: string;
   quantity: number;
-  costprice_origin: number;
+  unit_price_origin: number;
   weight: number;
   url?: string;
   image?: string;
@@ -292,7 +292,7 @@ export default function PublicQuoteView() {
                     <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                       <span>Qty: {item.quantity}</span>
                       <span>Weight: {item.weight}kg</span>
-                      <span>Price: {formatCurrency(item.costprice_origin, quote.customer_currency || 'USD')}</span>
+                      <span>Price: {formatCurrency(item.unit_price_origin || item.costprice_origin, quote.customer_currency || 'USD')}</span>
                     </div>
                   </div>
                 </div>

@@ -93,7 +93,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
 
   // Calculate key values using new system
   const itemsSubtotal = steps.items_subtotal || quote.items.reduce((sum: number, item: any) => {
-    const price = item.costprice_origin || item.unit_price_usd || 0;
+    const price = item.costprice_origin || item.unit_price_origin || 0;
     const quantity = item.quantity || 1;
     return sum + (price * quantity);
   }, 0);
@@ -149,7 +149,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     console.error(`🚨 [VALIDATION ERROR] Total (${formatCurrency(finalTotalOrigin)}) is less than items cost (${formatCurrency(itemsSubtotal)}) - this is impossible!`);
     console.error(`🔍 [DEBUG] Quote ID: ${quote.id}, Items:`, quote.items.map((item: any) => ({
       name: item.name,
-      price: item.costprice_origin || item.unit_price_usd || 0,
+      price: item.costprice_origin || item.unit_price_origin || 0,
       quantity: item.quantity,
       valuation_preference: item.valuation_preference
     })));
@@ -346,7 +346,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
               const itemId = item.id || `item-${index}`;
               const isExpanded = expandedItems.has(itemId);
               const itemWeight = item.weight || item.weight_kg || 0;
-              const itemPrice = item.costprice_origin || item.unit_price_usd || 0;
+              const itemPrice = item.costprice_origin || item.unit_price_origin || 0;
               const itemTotal = (item.quantity || 1) * itemPrice;
 
               return (

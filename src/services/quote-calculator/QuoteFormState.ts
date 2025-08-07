@@ -10,7 +10,7 @@ export interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -166,7 +166,7 @@ export function createInitialFormState(): QuoteFormData {
       id: crypto.randomUUID(),
       name: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: 0,
       category: '',
       notes: ''
@@ -286,7 +286,7 @@ export class QuoteFormStateService {
       id: crypto.randomUUID(),
       name: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: 0,
       category: '',
       notes: ''
@@ -350,7 +350,7 @@ export class QuoteFormStateService {
       id: crypto.randomUUID(),
       name: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: 0,
       category: '',
       notes: ''
@@ -546,7 +546,7 @@ export class QuoteFormStateService {
 
   getTotalItemValue(): number {
     return this.state.items.reduce((sum, item) => 
-      sum + (item.unit_price_usd * item.quantity), 0);
+      sum + (item.unit_price_origin * item.quantity), 0);
   }
 
   getTotalWeight(): number {
@@ -559,7 +559,7 @@ export class QuoteFormStateService {
   }
 
   hasEmptyRequiredFields(): boolean {
-    return this.state.items.some(item => !item.name || item.unit_price_usd <= 0);
+    return this.state.items.some(item => !item.name || item.unit_price_origin <= 0);
   }
 
   /**

@@ -24,11 +24,11 @@ import type { UnifiedQuote } from '@/types/unified-quote';
 export interface PackageForwardingPaymentSummary {
   quote_id: string;
   base_quote_total: number;
-  storage_fees_usd: number;
-  consolidation_fees_usd: number;
-  service_fees_usd: number;
-  forwarding_total_usd: number;
-  grand_total_usd: number;
+  storage_fees_origin: number;
+  consolidation_fees_origin: number;
+  service_fees_origin: number;
+  forwarding_total_origin: number;
+  grand_total_origin: number;
   payment_breakdown: {
     main_quote: number;
     package_forwarding: number;
@@ -43,7 +43,7 @@ export interface PackageForwardingPaymentSummary {
 
 export interface StorageFeePaymentResult {
   fees_processed: number;
-  total_amount_usd: number;
+  total_amount_origin: number;
   payment_method: string;
   transaction_id?: string;
   fees_marked_paid: boolean;
@@ -82,27 +82,27 @@ export class IntegratedPaymentService {
         throw new Error(`Quote not found: ${quoteError?.message}`);
       }
 
-      const baseQuoteTotal = quote.final_total_usd || 0;
+      const baseQuoteTotal = quote.final_total_origin || 0;
       let storageFees = 0;
       let consolidationFees = 0;
       let serviceFees = 0;
 
       // Extract forwarding fees from quote data
       if (quote.forwarding_data) {
-        storageFees = quote.forwarding_data.storage_fees_usd || 0;
-        consolidationFees = quote.forwarding_data.consolidation_fee_usd || 0;
-        serviceFees = quote.forwarding_data.service_fee_usd || 0;
+        storageFees = quote.forwarding_data.storage_fees_origin || quote.forwarding_data.storage_fees_usd || 0;
+        consolidationFees = quote.forwarding_data.consolidation_fee_origin || quote.forwarding_data.consolidation_fee_usd || 0;
+        serviceFees = quote.forwarding_data.service_fee_origin || quote.forwarding_data.service_fee_usd || 0;
       }
 
       // If quote includes storage fees, get actual storage fee amounts
       if (quote.storage_fees_included) {
         const { data: actualStorageFees } = await supabase
           .from('storage_fees')
-          .select('total_fee_usd')
+          .select('total_fee_origin, total_fee_usd')
           .eq('quote_id', quoteId)
           .eq('is_paid', false);
 
-        const actualTotal = actualStorageFees?.reduce((sum, fee) => sum + (fee.total_fee_usd || 0), 0) || 0;
+        const actualTotal = actualStorageFees?.reduce((sum, fee) => sum + (fee.total_fee_origin || fee.total_fee_usd || 0), 0) || 0;
         if (actualTotal > 0) {
           storageFees = actualTotal;
         }
@@ -114,11 +114,11 @@ export class IntegratedPaymentService {
       return {
         quote_id: quoteId,
         base_quote_total: baseQuoteTotal,
-        storage_fees_usd: storageFees,
-        consolidation_fees_usd: consolidationFees,
-        service_fees_usd: serviceFees,
-        forwarding_total_usd: forwardingTotal,
-        grand_total_usd: grandTotal,
+        storage_fees_origin: storageFees,
+        consolidation_fees_origin: consolidationFees,
+        service_fees_origin: serviceFees,
+        forwarding_total_origin: forwardingTotal,
+        grand_total_origin: grandTotal,
         payment_breakdown: {
           main_quote: baseQuoteTotal,
           package_forwarding: consolidationFees + serviceFees,
@@ -197,11 +197,11 @@ export class IntegratedPaymentService {
         await this.updatePackageStatusAfterPayment(quoteId);
       }
 
-      logger.info(`✅ Package forwarding payment processed successfully: $${paymentSummary.grand_total_usd}`);
+      logger.info(`✅ Package forwarding payment processed successfully: $${paymentSummary.grand_total_origin}`);
 
       return {
         fees_processed: feesProcessed,
-        total_amount_usd: paymentSummary.grand_total_usd,
+        total_amount_origin: paymentSummary.grand_total_origin,
         payment_method: paymentMethod,
         transaction_id: paymentGatewayResult?.transaction_id,
         fees_marked_paid: feesMarkedPaid,
@@ -213,7 +213,7 @@ export class IntegratedPaymentService {
       
       return {
         fees_processed: 0,
-        total_amount_usd: 0,
+        total_amount_origin: 0,
         payment_method: paymentMethod,
         fees_marked_paid: false,
         integration_status: 'failed',
@@ -235,7 +235,7 @@ export class IntegratedPaymentService {
       // Check if user has unpaid storage fees
       const { data: unpaidFees, error: feesError } = await supabase
         .from('storage_fees')
-        .select('total_fee_usd, package_id')
+        .select('total_fee_origin, total_fee_usd, package_id')
         .eq('user_id', userId)
         .eq('is_paid', false)
         .is('quote_id', null);
@@ -252,7 +252,7 @@ export class IntegratedPaymentService {
         };
       }
 
-      const totalStorageFees = unpaidFees.reduce((sum, fee) => sum + (fee.total_fee_usd || 0), 0);
+      const totalStorageFees = unpaidFees.reduce((sum, fee) => sum + (fee.total_fee_origin || fee.total_fee_usd || 0), 0);
 
       // Create a storage fees only quote
       const { data: quote, error: quoteError } = await supabase
@@ -264,13 +264,14 @@ export class IntegratedPaymentService {
           destination_country: 'US', // Storage fees don't require shipping
           items: [],
           costprice_total_usd: 0,
-          final_total_usd: totalStorageFees,
+          final_total_origin: totalStorageFees,
           forwarding_type: 'storage_fees',
           storage_fees_included: true,
           in_cart: true, // Add to cart
           quote_source: 'storage_fees_cart',
           forwarding_data: {
-            storage_fees_usd: totalStorageFees,
+            storage_fees_origin: totalStorageFees,
+            storage_fees_usd: totalStorageFees, // Keep for backward compatibility
             fees_count: unpaidFees.length,
           }
         })
@@ -371,7 +372,7 @@ export class IntegratedPaymentService {
     payment_history: Array<{
       quote_id: string;
       payment_date: string;
-      amount_usd: number;
+      amount_origin: number;
       type: 'storage_fees' | 'individual_package' | 'consolidation';
       status: 'paid' | 'pending' | 'failed';
       description: string;
@@ -395,7 +396,7 @@ export class IntegratedPaymentService {
       const paymentHistory: any[] = [];
 
       for (const quote of quotes || []) {
-        const amount = quote.final_total_usd || 0;
+        const amount = quote.final_total_origin || 0;
         const isPaid = quote.status === 'paid';
         
         if (isPaid) {
@@ -422,7 +423,7 @@ export class IntegratedPaymentService {
         paymentHistory.push({
           quote_id: quote.id,
           payment_date: quote.updated_at,
-          amount_usd: amount,
+          amount_origin: amount,
           type: quote.forwarding_type,
           status: quote.status,
           description: description,

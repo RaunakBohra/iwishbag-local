@@ -18,12 +18,12 @@ const createMockQuote = (overrides: Partial<UnifiedQuote> = {}): UnifiedQuote =>
   origin_country: 'US',
   destination_country: 'IN',
   currency: 'USD',
-  final_total_usd: 0,
+  final_total_origin: 0,
   items: [
     {
       id: 'item-1',
       name: 'Test Product',
-      price_usd: 100,
+      unit_price_origin: 100,
       weight_kg: 2,
       quantity: 1,
       sku: 'TEST-001',
@@ -95,7 +95,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Laptop',
-            price_usd: 500,
+            unit_price_origin: 500,
             weight_kg: 3,
             quantity: 1,
             sku: 'LAPTOP-001',
@@ -131,7 +131,7 @@ describe('SmartCalculationEngine', () => {
       expect(breakdown?.items_total).toBe(500);
       expect(breakdown?.shipping).toBe(40); // Base shipping cost for 3kg
       expect(breakdown?.customs).toBe(81); // (500 + 40) * 0.15 = 81
-      expect(result.updated_quote.final_total_usd).toBeGreaterThan(500);
+      expect(result.updated_quote.final_total_origin).toBeGreaterThan(500);
     });
   });
 
@@ -142,7 +142,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Free Sample',
-            price_usd: 50,
+            unit_price_origin: 50,
             weight_kg: 0.5,
             quantity: 1,
             sku: 'SAMPLE-001',
@@ -192,7 +192,7 @@ describe('SmartCalculationEngine', () => {
       // So customs won't actually be 0 - it will use the default 10% from the mock or fallback
       expect(breakdown?.customs).toBeGreaterThanOrEqual(0);
       expect(breakdown?.taxes).toBeGreaterThanOrEqual(0);
-      expect(result.updated_quote.final_total_usd).toBeGreaterThanOrEqual(50);
+      expect(result.updated_quote.final_total_origin).toBeGreaterThanOrEqual(50);
     });
   });
 
@@ -203,7 +203,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Product',
-            price_usd: 200,
+            unit_price_origin: 200,
             weight_kg: 1,
             quantity: 1,
             sku: 'PROD-001',
@@ -292,7 +292,7 @@ describe('SmartCalculationEngine', () => {
       expect(result.success).toBe(true);
       // The engine uses the percentage as-is, so 1500% would be a very high customs rate
       // This reflects the current implementation behavior
-      expect(result.updated_quote.final_total_usd).toBeGreaterThan(1000);
+      expect(result.updated_quote.final_total_origin).toBeGreaterThan(1000);
     });
 
     it('should handle high customs percentage without capping', () => {
@@ -302,7 +302,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Product',
-            price_usd: 100,
+            unit_price_origin: 100,
             weight_kg: 1, // 1kg item
             quantity: 1,
             sku: 'PROD-001',
@@ -400,8 +400,8 @@ describe('SmartCalculationEngine', () => {
 
       // The actual calculation will be close to this, but we need to account for
       // dynamic payment gateway fee calculation
-      expect(result.updated_quote.final_total_usd).toBeGreaterThan(150);
-      expect(result.updated_quote.final_total_usd).toBeLessThan(180);
+      expect(result.updated_quote.final_total_origin).toBeGreaterThan(150);
+      expect(result.updated_quote.final_total_origin).toBeLessThan(180);
     });
   });
 
@@ -532,7 +532,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Electronics Item',
-            price_usd: 100,
+            unit_price_origin: 100,
             weight_kg: 1,
             quantity: 1,
             sku: 'TEST-001',
@@ -591,7 +591,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Product',
-            price_usd: 100,
+            unit_price_origin: 100,
             weight_kg: 1,
             quantity: 1,
             sku: 'TEST-001',
@@ -631,7 +631,7 @@ describe('SmartCalculationEngine', () => {
           {
             id: 'item-1',
             name: 'Laptop',
-            price_usd: 500,
+            unit_price_origin: 500,
             weight_kg: 3,
             quantity: 1,
             sku: 'LAPTOP-001',

@@ -4223,28 +4223,39 @@ class BrightDataProductService {
         const targetUnit = isUSMarket ? 'lbs' : 'kg';
         
         console.log(`🏋️ Weight conversion: ${weight} ${unit} → ${targetUnit} (${isUSMarket ? 'US marketplace' : 'International marketplace'})`);
+        console.log(`🔍 Debug unit analysis: unit="${unit}", includes('kg')=${unit.includes('kg')}, includes('kilogram')=${unit.includes('kilogram')}, includes('g')=${unit.includes('g')}`);
         
         if (targetUnit === 'lbs') {
           // Convert to pounds (US/North American markets)
           if (unit.includes('kg') || unit.includes('kilogram')) {
             weight *= 2.20462; // kg to lbs
-          } else if (unit.includes('g') && !unit.includes('kg')) {
+            console.log(`🔄 Applied kg → lbs conversion`);
+          } else if (unit === 'g' || unit === 'gram' || unit === 'grams') {
             weight *= 0.00220462; // grams to lbs
+            console.log(`🔄 Applied grams → lbs conversion`);
           } else if (unit.includes('oz') || unit.includes('ounce')) {
             weight *= 0.0625; // oz to lbs
+            console.log(`🔄 Applied oz → lbs conversion`);
+          } else {
+            console.log(`🔄 No conversion needed (already in lbs/pounds)`);
           }
-          // If already in lbs/pounds, no conversion needed
           
         } else {
           // Convert to kg (International markets)
           if (unit.includes('lb') || unit.includes('pound')) {
             weight *= 0.453592; // lbs to kg
+            console.log(`🔄 Applied lbs → kg conversion`);
           } else if (unit.includes('oz') || unit.includes('ounce')) {
             weight *= 0.0283495; // oz to kg
-          } else if (unit.includes('g') && !unit.includes('kg')) {
+            console.log(`🔄 Applied oz → kg conversion`);
+          } else if (unit === 'g' || unit === 'gram' || unit === 'grams') {
             weight *= 0.001; // grams to kg
+            console.log(`🔄 Applied grams → kg conversion`);
+          } else if (unit.includes('kg') || unit.includes('kilogram')) {
+            console.log(`🔄 No conversion needed (already in kg)`);
+          } else {
+            console.log(`🔄 Unknown unit, no conversion applied`);
           }
-          // If already in kg, no conversion needed
         }
         
         console.log(`🏋️ Final weight: ${weight.toFixed(3)} ${targetUnit}`);

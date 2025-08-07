@@ -1203,6 +1203,168 @@ class CurrencyService {
 
     console.log(`[CurrencyService] Batch updated ${Object.keys(rates).length} rates`);
   }
+
+  /**
+   * Format a group of amounts with proportional rounding to ensure they sum to the target total
+   * This solves the cumulative rounding error problem where individual rounded components
+   * don't sum to the rounded total.
+   * 
+   * @param components - Array of {label, amount} objects to format
+   * @param targetTotal - The precise total that components should sum to
+   * @param currencyCode - Currency for formatting
+   * @returns Object with formatted components and total
+   */
+  formatAmountGroup(
+    components: Array<{ label: string; amount: number }>,
+    targetTotal: number,
+    currencyCode: string
+  ): {
+    components: Array<{ label: string; amount: number; formatted: string }>;
+    total: { amount: number; formatted: string };
+    adjustments: Array<{ label: string; adjustment: number }>;
+  } {
+    console.log(`[CurrencyService] Proportional rounding for ${currencyCode}:`, {
+      targetTotal,
+      componentsCount: components.length,
+      componentsSum: components.reduce((sum, c) => sum + c.amount, 0)
+    });
+
+    // Step 1: Get the desired display total (rounded)
+    const roundedTotal = this.getRoundedAmount(targetTotal, currencyCode);
+    console.log(`[CurrencyService] Target total: ${targetTotal} → Rounded: ${roundedTotal}`);
+
+    // Step 2: Calculate each component's share of the total
+    const totalPrecise = components.reduce((sum, component) => sum + component.amount, 0);
+    const componentShares = components.map(component => ({
+      ...component,
+      share: totalPrecise > 0 ? component.amount / totalPrecise : 0
+    }));
+
+    // Step 3: Allocate the rounded total proportionally
+    const allocatedComponents = componentShares.map(component => ({
+      ...component,
+      allocatedAmount: roundedTotal * component.share
+    }));
+
+    // Step 4: Round individual components using standard rounding
+    const roundedComponents = allocatedComponents.map(component => ({
+      ...component,
+      roundedAmount: this.getRoundedAmount(component.allocatedAmount, currencyCode)
+    }));
+
+    // Step 5: Calculate rounding error and distribute it
+    const sumOfRounded = roundedComponents.reduce((sum, c) => sum + c.roundedAmount, 0);
+    const roundingError = roundedTotal - sumOfRounded;
+    console.log(`[CurrencyService] Rounding error: ${roundingError}`);
+
+    // Step 6: Distribute the error proportionally to largest components
+    const finalComponents = [...roundedComponents];
+    if (Math.abs(roundingError) > 0.001) {
+      // Sort by allocated amount (largest first) to distribute error fairly
+      const sortedIndices = finalComponents
+        .map((c, index) => ({ index, allocatedAmount: c.allocatedAmount }))
+        .sort((a, b) => b.allocatedAmount - a.allocatedAmount)
+        .map(item => item.index);
+
+      // Get the smallest currency unit for this currency
+      const minUnit = this.getMinimumCurrencyUnit(currencyCode);
+      let remainingError = roundingError;
+
+      // Distribute the error across components, starting with the largest ones
+      let componentIndex = 0;
+      while (Math.abs(remainingError) >= minUnit / 2 && componentIndex < sortedIndices.length) {
+        const index = sortedIndices[componentIndex];
+        
+        // Calculate how much error this component should absorb
+        // For large errors, distribute more to larger components
+        let adjustmentSteps = Math.floor(Math.abs(remainingError) / minUnit);
+        
+        // Don't adjust more than reasonable for any single component
+        const maxStepsForComponent = Math.max(1, Math.floor(adjustmentSteps / (sortedIndices.length - componentIndex)));
+        adjustmentSteps = Math.min(adjustmentSteps, maxStepsForComponent);
+        
+        const adjustment = (remainingError > 0 ? minUnit : -minUnit) * adjustmentSteps;
+        finalComponents[index].roundedAmount += adjustment;
+        remainingError -= adjustment;
+
+        console.log(`[CurrencyService] Adjusted ${finalComponents[index].label} by ${adjustment} (${adjustmentSteps} steps)`);
+        
+        componentIndex++;
+      }
+    }
+
+    // Step 7: Format all amounts and track adjustments
+    const result = {
+      components: finalComponents.map((component, index) => ({
+        label: component.label,
+        amount: component.roundedAmount,
+        formatted: this.formatExactAmount(component.roundedAmount, currencyCode)
+      })),
+      total: {
+        amount: roundedTotal,
+        formatted: this.formatExactAmount(roundedTotal, currencyCode)
+      },
+      adjustments: finalComponents.map((component, index) => ({
+        label: component.label,
+        adjustment: component.roundedAmount - components[index].amount
+      })).filter(adj => Math.abs(adj.adjustment) > 0.001)
+    };
+
+    // Verification: Ensure components sum to total
+    const verificationSum = result.components.reduce((sum, c) => sum + c.amount, 0);
+    if (Math.abs(verificationSum - roundedTotal) > 0.001) {
+      console.error(`[CurrencyService] Proportional rounding failed verification:`, {
+        expectedTotal: roundedTotal,
+        actualSum: verificationSum,
+        difference: verificationSum - roundedTotal
+      });
+    } else {
+      console.log(`[CurrencyService] ✅ Proportional rounding successful - components sum exactly to total`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Get the rounded amount using the currency's smart rounding rules
+   * @private
+   */
+  private getRoundedAmount(amount: number, currencyCode: string): number {
+    const options = this.getCurrencyFormatOptions(currencyCode, amount);
+    
+    // Apply smart rounding first (round to nearest specified value)
+    const smartRounded = Math.round(amount / (options.roundToNearest || 1)) * (options.roundToNearest || 1);
+    
+    // Then apply decimal place rounding
+    const finalRounded = Math.round(smartRounded * Math.pow(10, options.decimalPlaces)) / Math.pow(10, options.decimalPlaces);
+    
+    return finalRounded;
+  }
+
+  /**
+   * Get the minimum currency unit (smallest denomination)
+   * @private
+   */
+  private getMinimumCurrencyUnit(currencyCode: string): number {
+    const decimalPlaces = this.getCurrencyDecimalPlacesSync(currencyCode);
+    return Math.pow(10, -decimalPlaces);
+  }
+
+  /**
+   * Format an exact amount without additional rounding
+   * @private
+   */
+  private formatExactAmount(amount: number, currencyCode: string): string {
+    const currency = this.getCurrencySymbolSync(currencyCode);
+    const options = this.getCurrencyFormatOptions(currencyCode);
+    
+    // Use the amount as-is, just format with separators
+    const parts = amount.toFixed(options.decimalPlaces).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, options.thousandSeparator);
+    
+    const formatted = parts.join(options.decimalSeparator);
+    return `${currency}${formatted}`;
+  }
 }
 
 // Export singleton instance
@@ -1224,6 +1386,11 @@ export const getCurrencyDisplayInfo = (currencyCode: string) =>
   currencyService.getCurrencyDisplayInfo(currencyCode);
 export const formatAmount = (amount: number, currencyCode: string) =>
   currencyService.formatAmount(amount, currencyCode);
+export const formatAmountGroup = (
+  components: Array<{ label: string; amount: number }>,
+  targetTotal: number,
+  currencyCode: string
+) => currencyService.formatAmountGroup(components, targetTotal, currencyCode);
 export const convertAmount = (amount: number, fromCurrency: string, toCurrency: string) =>
   currencyService.convertAmount(amount, fromCurrency, toCurrency);
 export const getCurrencyByCountry = (countryCode: string) =>

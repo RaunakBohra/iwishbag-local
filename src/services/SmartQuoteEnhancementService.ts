@@ -16,7 +16,7 @@ import { productIntelligenceService, SmartSuggestion, ProductSuggestionRequest }
 export interface QuoteItem {
   id?: string;
   name: string;
-  unit_price_usd: number;
+  unit_price_origin: number;
   quantity: number;
   weight_kg?: number;
   category?: string;
@@ -108,7 +108,7 @@ class SmartQuoteEnhancementService {
           category: item.category,
           destination_country: options.destination_country,
           product_url: item.product_url,
-          price_usd: item.unit_price_usd,
+          price_origin: item.unit_price_origin,
           description: item.description,
           weight_kg: item.weight_kg,
           dimensions: item.dimensions

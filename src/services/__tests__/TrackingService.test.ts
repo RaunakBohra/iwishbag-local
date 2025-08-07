@@ -481,8 +481,8 @@ describe('TrackingService', () => {
         id: 'quote-123',
         iwish_tracking_id: 'IWB20251007',
         tracking_status: 'shipped',
-        final_total_usd: 150,
-        items: [{ name: 'Test Product', price_usd: 100 }],
+        final_total_origin: 150,
+        items: [{ name: 'Test Product', unit_price_origin: 100 }],
       };
 
       // Mock the first select to get quote ID

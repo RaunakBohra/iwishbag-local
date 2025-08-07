@@ -7,7 +7,7 @@ interface QuoteItem {
   name: string;
   url?: string;
   quantity: number;
-  unit_price_usd: number;
+  unit_price_origin: number;
   weight_kg?: number;
   category?: string;
   notes?: string;
@@ -22,7 +22,9 @@ interface QuoteData {
   customer_phone?: string;
   status: string;
   items: QuoteItem[];
-  total_usd: number;
+  final_total_origin: number;
+  total_origin_currency?: number;
+  total_usd?: number; // Kept for backward compatibility
   total_customer_currency?: number;
   customer_currency?: string;
   origin_country?: string;
@@ -141,7 +143,7 @@ export class QuoteExportService {
     doc.setFont('helvetica', 'normal');
     for (const item of quote.items || []) {
       const quantity = item.quantity || 0;
-      const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+      const unitPrice = item.unit_price_origin || 0;
       const subtotal = quantity * unitPrice;
       const discountAmount = item.discount_percentage ? (subtotal * item.discount_percentage / 100) : 0;
       const finalSubtotal = subtotal - discountAmount;
@@ -180,10 +182,10 @@ export class QuoteExportService {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     
-    const totalUsd = quote.total_usd || quote.total || 0;
+    const totalOrigin = quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0;
     const totalText = quote.customer_currency && quote.total_customer_currency 
       ? `Total: ${await currencyService.formatAmount(quote.total_customer_currency, quote.customer_currency)}`
-      : `Total: $${totalUsd.toFixed(2)} USD`;
+      : `Total: ${totalOrigin.toFixed(2)} ${quote.origin_country || 'USD'}`;
     
     doc.text(totalText, pageWidth - margin - 60, currentY);
     currentY += 15;
@@ -237,7 +239,8 @@ export class QuoteExportService {
     summarySheet.addRow(['Origin Country', quote.origin_country || 'N/A']);
     summarySheet.addRow(['Destination Country', quote.destination_country || 'N/A']);
     summarySheet.addRow([]);
-    summarySheet.addRow(['Total (USD)', `$${(quote.total_usd || quote.total || 0).toFixed(2)}`]);
+    const totalAmount = quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0;
+    summarySheet.addRow(['Total (Origin Currency)', `${totalAmount.toFixed(2)} ${quote.origin_country || 'USD'}`]);
 
     if (quote.customer_currency && quote.total_customer_currency) {
       summarySheet.addRow(['Total (Customer Currency)', 
@@ -259,8 +262,8 @@ export class QuoteExportService {
     
     // Add headers
     const itemsHeaders = [
-      'Item Name', 'URL', 'Quantity', 'Unit Price (USD)', 'Weight (kg)', 
-      'Category', 'HSN Code', 'Discount %', 'Subtotal (USD)', 'Notes'
+      'Item Name', 'URL', 'Quantity', 'Unit Price (Origin)', 'Weight (kg)', 
+      'Category', 'HSN Code', 'Discount %', 'Subtotal (Origin)', 'Notes'
     ];
     itemsSheet.addRow(itemsHeaders);
 
@@ -276,7 +279,7 @@ export class QuoteExportService {
     // Add items data
     (quote.items || []).forEach(item => {
       const quantity = item.quantity || 0;
-      const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+      const unitPrice = item.unit_price_origin || 0;
       const subtotal = quantity * unitPrice;
       const discountAmount = item.discount_percentage ? (subtotal * item.discount_percentage / 100) : 0;
       const finalSubtotal = subtotal - discountAmount;
@@ -313,7 +316,7 @@ export class QuoteExportService {
       
       calcSheet.addRow(['Calculation Breakdown']);
       calcSheet.addRow([]);
-      calcSheet.addRow(['Component', 'Amount (USD)']);
+      calcSheet.addRow(['Component', `Amount (${quote.origin_country || 'USD'})`]);
 
       const calc = quote.calculation_data;
       if (calc.subtotal) calcSheet.addRow(['Subtotal', calc.subtotal]);
@@ -397,7 +400,7 @@ export class QuoteExportService {
         quote.id?.slice(-8).toUpperCase() || 'Unknown',
         quote.customer_name || 'Unknown Customer',
         quote.status?.toUpperCase() || 'Unknown',
-        quote.total_usd || quote.total || 0,
+        quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0,
         quote.created_at ? new Date(quote.created_at).toLocaleDateString() : 'Unknown'
       ]);
     });
@@ -429,7 +432,7 @@ export class QuoteExportService {
       // Add items
       (quote.items || []).forEach(item => {
         const quantity = item.quantity || 0;
-        const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+        const unitPrice = item.unit_price_origin || 0;
         quoteSheet.addRow([
           item.name || 'Unknown Item',
           quantity,

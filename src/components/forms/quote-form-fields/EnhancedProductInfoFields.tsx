@@ -117,7 +117,7 @@ export const EnhancedProductInfoFields: React.FC<EnhancedProductInfoFieldsProps>
     try {
       const currentItem = {
         name: productName,
-        unit_price_usd: costPrice ? parseFloat(costPrice) : 0,
+        unit_price_origin: costPrice ? parseFloat(costPrice) : 0,
         quantity: 1,
         description: '',
         product_url: productUrl || undefined,

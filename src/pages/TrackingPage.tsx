@@ -475,7 +475,7 @@ export const TrackingPage: React.FC = () => {
                           <p className="font-medium text-gray-900">{item.name}</p>
                           <p className="text-sm text-gray-600">
                             Qty: {item.quantity} × $
-                            {typeof item.price_usd === 'number' ? item.price_usd : 0}
+                            {typeof item.price_origin === 'number' ? item.price_origin : 0}
                           </p>
                           {item.customer_notes && (
                             <p className="text-xs text-gray-500">{item.customer_notes}</p>
@@ -484,8 +484,8 @@ export const TrackingPage: React.FC = () => {
                         <div className="text-right">
                           <p className="font-semibold">
                             $
-                            {typeof item.price_usd === 'number' && typeof item.quantity === 'number'
-                              ? (item.price_usd * item.quantity).toFixed(2)
+                            {typeof item.price_origin === 'number' && typeof item.quantity === 'number'
+                              ? (item.price_origin * item.quantity).toFixed(2)
                               : '0.00'}
                           </p>
                           <p className="text-sm text-gray-600">{item.weight_kg}kg</p>

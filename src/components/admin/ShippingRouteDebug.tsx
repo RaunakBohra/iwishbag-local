@@ -9,7 +9,8 @@ interface ShippingRouteDebugProps {
   originCountry: string;
   destinationCountry: string;
   weight: number;
-  itemValueUSD: number;
+  itemValueUSD?: number; // Deprecated: use itemValueOrigin
+  itemValueOrigin?: number; // New: item value in origin currency
   fallbackUsed?: boolean;
   className?: string;
 }
@@ -20,9 +21,12 @@ export function ShippingRouteDebug({
   destinationCountry, 
   weight, 
   itemValueUSD,
+  itemValueOrigin,
   fallbackUsed = false,
   className = ""
 }: ShippingRouteDebugProps) {
+  // Use new prop with fallback to old prop for backward compatibility
+  const itemValue = itemValueOrigin ?? itemValueUSD ?? 0;
   const [isExpanded, setIsExpanded] = useState(false);
   
   const formatCurrency = (amount: number | null, currency = 'INR') => {

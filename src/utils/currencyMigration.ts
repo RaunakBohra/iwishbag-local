@@ -97,12 +97,33 @@ export function detectBreakdownCurrency(quote: LegacyQuoteData): {
     }
   }
   
-  // Fallback: assume USD for legacy data (medium confidence)
+  // Check if we have origin currency calculation indicators
+  const hasOriginCurrencyCalculation = quote.calculation_data?.inputs?.origin_currency === originCurrency ||
+                                       quote.calculation_data?.applied_rates?.origin_currency === originCurrency;
+  
+  if (hasOriginCurrencyCalculation) {
+    return {
+      currency: originCurrency,
+      confidence: 'high',
+      reasoning: 'Origin currency found in calculation inputs/rates'
+    };
+  }
+  
+  // For non-USD origin countries, prefer origin currency over USD (medium confidence)
+  if (originCurrency !== 'USD') {
+    return {
+      currency: originCurrency,
+      confidence: 'medium',
+      reasoning: `Non-USD origin country (${quote.origin_country}), using origin currency ${originCurrency}`
+    };
+  }
+  
+  // Fallback: assume USD for USD origin countries (medium confidence)
   if (quote.total_usd) {
     return {
       currency: 'USD',
       confidence: 'medium',
-      reasoning: 'Legacy quote with total_usd present, assuming USD breakdown'
+      reasoning: 'USD origin country with total_usd present, assuming USD breakdown'
     };
   }
   

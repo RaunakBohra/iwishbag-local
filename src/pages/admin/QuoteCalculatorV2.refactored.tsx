@@ -131,7 +131,7 @@ const QuoteCalculatorV2: React.FC = () => {
    * Auto-calculate when key dependencies change
    */
   useEffect(() => {
-    const hasValidItems = formState.items.some(item => item.name && item.unit_price_usd > 0);
+    const hasValidItems = formState.items.some(item => item.name && item.unit_price_origin > 0);
     
     if (hasValidItems && !formState.loadingQuote && !formState.isEditMode) {
       const timeoutId = setTimeout(() => calculateQuote(), 100);
@@ -251,7 +251,7 @@ const QuoteCalculatorV2: React.FC = () => {
         destination_country: formState.destinationCountry,
         items: formState.items.map(item => ({
           name: item.name,
-          unit_price_usd: item.unit_price_usd,
+          unit_price_origin: item.unit_price_origin,
           quantity: item.quantity,
           weight_kg: item.weight_kg || item.ai_weight_suggestion?.weight || 0.5,
           category: item.category || 'general'
@@ -639,8 +639,8 @@ const QuoteCalculatorV2: React.FC = () => {
                           <Input
                             type="number"
                             step="0.01"
-                            value={item.unit_price_usd}
-                            onChange={(e) => handleUpdateItem(item.id, { unit_price_usd: parseFloat(e.target.value) || 0 })}
+                            value={item.unit_price_origin}
+                            onChange={(e) => handleUpdateItem(item.id, { unit_price_origin: parseFloat(e.target.value) || 0 })}
                           />
                         </div>
                         <div>

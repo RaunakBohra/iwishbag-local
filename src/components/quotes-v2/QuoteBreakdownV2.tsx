@@ -99,8 +99,32 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   const breakdownCurrency = getBreakdownSourceCurrency(quote);
   
   // Helper function to format amounts in breakdown currency (now origin currency)
+  // Since values are now already proportionally rounded, we use exact formatting to avoid additional rounding
   const formatBreakdownAmount = (amount: number): string => {
-    return currencyService.formatAmount(amount, breakdownCurrency);
+    // Check if this quote has proportional rounding applied
+    const hasProportionalRounding = calc._proportional_rounding_applied || 
+                                   calc.calculation_steps?._rounding_metadata;
+    
+    if (hasProportionalRounding) {
+      // Use exact formatting to preserve the proportionally rounded values
+      return formatExactAmount(amount, breakdownCurrency);
+    } else {
+      // Legacy quotes: apply individual rounding
+      return currencyService.formatAmount(amount, breakdownCurrency);
+    }
+  };
+  
+  // Helper function for exact formatting without additional rounding
+  const formatExactAmount = (amount: number, currencyCode: string): string => {
+    const symbol = currencyService.getCurrencySymbol(currencyCode);
+    const decimalPlaces = currencyService.getCurrencyFormatOptions(currencyCode).decimalPlaces;
+    
+    // Format with exact precision
+    const parts = amount.toFixed(decimalPlaces).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    
+    const formatted = parts.join('.');
+    return `${symbol}${formatted}`;
   };
   
   // Get total from new system (origin currency) with fallback
@@ -656,9 +680,16 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
 
           {/* Calculation Info */}
           <div className="text-xs text-gray-600 pt-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <Clock className="w-3 h-3 mr-1" />
-              <span>Calculated: {new Date(calc.calculation_timestamp).toLocaleString()}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center">
+                <Clock className="w-3 h-3 mr-1" />
+                <span>Calculated: {new Date(calc.calculation_timestamp).toLocaleString()}</span>
+              </div>
+              {(calc._proportional_rounding_applied || calc.calculation_steps?._rounding_metadata) && (
+                <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
+                  ✓ Proportional Rounding Applied
+                </Badge>
+              )}
             </div>
             <Badge variant="outline">Version: {calc.calculation_version}</Badge>
           </div>

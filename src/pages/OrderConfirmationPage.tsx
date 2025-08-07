@@ -32,7 +32,7 @@ import { Separator } from '@/components/ui/separator';
 interface QuoteItem {
   product_name: string;
   quantity: number;
-  item_price: number;
+  item_price: number; // This represents unit_price_origin after database lookup
 }
 
 interface OrderDetails {

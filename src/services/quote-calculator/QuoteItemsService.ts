@@ -115,7 +115,7 @@ export class QuoteItemsService {
       name: '',
       url: '',
       quantity: 1,
-      unit_price_usd: 0,
+      unit_price_origin: 0,
       weight_kg: undefined,
       category: '',
       notes: '',
@@ -136,7 +136,7 @@ export class QuoteItemsService {
       errors.push('Item name is required');
     }
 
-    if (item.unit_price_usd <= 0) {
+    if (item.unit_price_origin <= 0) {
       errors.push('Item price must be greater than 0');
     }
 
@@ -157,9 +157,9 @@ export class QuoteItemsService {
     // Price range validations
     if (item.category && this.CATEGORY_PRICE_RANGES[item.category]) {
       const range = this.CATEGORY_PRICE_RANGES[item.category];
-      if (item.unit_price_usd < range.min) {
+      if (item.unit_price_origin < range.min) {
         warnings.push(`Price seems low for ${item.category} (typically $${range.typical})`);
-      } else if (item.unit_price_usd > range.max) {
+      } else if (item.unit_price_origin > range.max) {
         warnings.push(`Price seems high for ${item.category} (typically $${range.typical})`);
       }
     }
@@ -288,7 +288,7 @@ export class QuoteItemsService {
       // Validate price against category
       if (item.category && this.CATEGORY_PRICE_RANGES[item.category]) {
         const range = this.CATEGORY_PRICE_RANGES[item.category];
-        if (item.unit_price_usd < range.min * 0.5 || item.unit_price_usd > range.max * 2) {
+        if (item.unit_price_origin < range.min * 0.5 || item.unit_price_origin > range.max * 2) {
           enhancement.suggestedPrice = range.typical;
         }
       }
@@ -420,7 +420,7 @@ export class QuoteItemsService {
 
     for (const item of items) {
       // Value calculations
-      const itemValue = item.unit_price_usd * item.quantity;
+      const itemValue = item.unit_price_origin * item.quantity;
       analytics.totalValue += itemValue;
 
       // Weight calculations
@@ -477,7 +477,7 @@ export class QuoteItemsService {
 
     const analytics = this.calculateAnalytics(items);
     const categories = Object.keys(analytics.categoriesCount);
-    const prices = items.map(item => item.unit_price_usd);
+    const prices = items.map(item => item.unit_price_origin);
     const hasImages = items.some(item => item.images && item.images.length > 0);
 
     const summary = items.length === 1
@@ -564,7 +564,7 @@ export class QuoteItemsService {
       item.name,
       item.url || '',
       item.quantity,
-      item.unit_price_usd,
+      item.unit_price_origin,
       item.weight_kg || item.ai_weight_suggestion?.weight || '',
       item.category || '',
       item.notes || '',
@@ -590,7 +590,7 @@ export class QuoteItemsService {
         name: item.name || '',
         url: item.url || '',
         quantity: Number(item.quantity) || 1,
-        unit_price_usd: Number(item.unit_price_usd) || 0,
+        unit_price_origin: Number(item.unit_price_origin) || 0,
         weight_kg: item.weight_kg ? Number(item.weight_kg) : undefined,
         category: item.category || '',
         notes: item.notes || ''
@@ -617,7 +617,7 @@ export class QuoteItemsService {
         name: values[headers.indexOf('name')] || '',
         url: values[headers.indexOf('url')] || '',
         quantity: Number(values[headers.indexOf('quantity')]) || 1,
-        unit_price_usd: Number(values[headers.indexOf('unit price (usd)')]) || 0,
+        unit_price_origin: Number(values[headers.indexOf('unit price (usd)')]) || 0,
         weight_kg: values[headers.indexOf('weight (kg)')] ? Number(values[headers.indexOf('weight (kg)')]) : undefined,
         category: values[headers.indexOf('category')] || '',
         notes: values[headers.indexOf('notes')] || ''

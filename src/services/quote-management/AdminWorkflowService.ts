@@ -250,7 +250,7 @@ export class AdminWorkflowService {
       // Get quote statistics
       const { data: quoteStats } = await supabase
         .from('quotes_v2')
-        .select('status, total_usd, created_at, updated_at')
+        .select('status, final_total_origin, total_origin_currency, created_at, updated_at')
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
       // Calculate statistics
@@ -258,7 +258,7 @@ export class AdminWorkflowService {
       const reviewRequired = quoteStats?.filter(q => q.status === 'sent').length || 0;
       const approved = quoteStats?.filter(q => q.status === 'approved').length || 0;
       const rejected = quoteStats?.filter(q => q.status === 'rejected').length || 0;
-      const totalValue = quoteStats?.reduce((sum, q) => sum + (q.total_usd || 0), 0) || 0;
+      const totalValue = quoteStats?.reduce((sum, q) => sum + (q.final_total_origin || q.total_origin_currency || 0), 0) || 0;
 
       // Calculate average processing time
       const processedQuotes = quoteStats?.filter(q => 
@@ -450,8 +450,8 @@ export class AdminWorkflowService {
       // Process analytics
       const analytics = {
         totalQuotes: quotes.length,
-        totalValue: quotes.reduce((sum, q) => sum + (q.total_usd || 0), 0),
-        averageValue: quotes.length > 0 ? quotes.reduce((sum, q) => sum + (q.total_usd || 0), 0) / quotes.length : 0,
+        totalValue: quotes.reduce((sum, q) => sum + (q.final_total_origin || q.total_origin_currency || 0), 0),
+        averageValue: quotes.length > 0 ? quotes.reduce((sum, q) => sum + (q.final_total_origin || q.total_origin_currency || 0), 0) / quotes.length : 0,
         statusBreakdown: this.calculateStatusBreakdown(quotes),
         countryBreakdown: this.calculateCountryBreakdown(quotes),
         monthlyTrends: this.calculateMonthlyTrends(quotes),
@@ -650,7 +650,7 @@ export class AdminWorkflowService {
     try {
       const { data: customerStats } = await supabase
         .from('quotes_v2')
-        .select('customer_data, total_usd, created_at')
+        .select('customer_data, final_total_origin, total_origin_currency, created_at')
         .not('customer_data', 'is', null)
         .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
 
@@ -798,7 +798,7 @@ export class AdminWorkflowService {
           
           const data = itemCounts.get(name)!;
           data.count += item.quantity || 1;
-          data.totalValue += (item.unit_price_usd || 0) * (item.quantity || 1);
+          data.totalValue += (item.unit_price_origin || 0) * (item.quantity || 1);
         });
       }
     });
