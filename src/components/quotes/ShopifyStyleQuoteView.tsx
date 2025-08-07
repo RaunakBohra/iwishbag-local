@@ -41,9 +41,9 @@ import {
   MobileProductSummary, 
   MobileBreakdown, 
   MobileTrustSignals, 
-  MobileProgress,
-  MobileQuoteOptions 
+  MobileProgress
 } from './ShopifyMobileOptimizations';
+import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
 
 interface ShopifyStyleQuoteViewProps {
