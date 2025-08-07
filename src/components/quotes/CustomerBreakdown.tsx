@@ -63,15 +63,15 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
 
   const calc = quote.calculation_data;
   const steps = calc.calculation_steps || {};
-  // FIXED: Use breakdown source currency instead of customer_currency
-  const sourceCurrency = getBreakdownSourceCurrency(quote);
+  // FIXED: Use origin country mapping instead of breakdown detection
+  const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
   const currency = displayCurrency || sourceCurrency;
 
   // Convert amounts when displayCurrency changes
   useEffect(() => {
     const convertAmounts = async () => {
-      // FIXED: Check against breakdown source currency, not customer_currency
-      const sourceCurrency = getBreakdownSourceCurrency(quote);
+      // FIXED: Check against origin country mapping, not breakdown detection
+      const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
       if (!displayCurrency || displayCurrency === sourceCurrency) {
         // No conversion needed, reset converted amounts
         setConvertedAmounts({});
@@ -79,9 +79,9 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       }
 
       try {
-        // CRITICAL FIX: Get the actual breakdown source currency (origin currency)
+        // CRITICAL FIX: Get the actual origin currency from country mapping
         // Previously assumed breakdown was in customer_currency, but it's actually in origin currency
-        const fromCurrency = getBreakdownSourceCurrency(quote);
+        const fromCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
         
         console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
         console.log(`[CustomerBreakdown] Origin: ${quote.origin_country}, Destination: ${quote.destination_country}`);

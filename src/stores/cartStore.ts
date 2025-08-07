@@ -9,9 +9,6 @@ export interface CartItem {
   id: string;
   quoteId: string;
   productName: string;
-  finalTotal: number; // Amount in USD (base currency)
-  finalTotalLocal?: number; // Amount in customer's local currency
-  finalCurrency?: string; // Customer's local currency code
   quantity: number;
   itemWeight: number;
   imageUrl?: string;
@@ -24,6 +21,31 @@ export interface CartItem {
   priority?: number; // Optional priority field (may not exist in database)
   createdAt: Date;
   updatedAt: Date;
+  // Full quote object for currency context - REQUIRED for currency calculations
+  quote: {
+    id: string;
+    total_origin_currency?: number;
+    origin_total_amount?: number;
+    total_usd?: number;
+    destination_currency?: string;
+    customer_currency?: string;
+    exchange_rate?: number;
+    origin_country?: string;
+    destination_country?: string;
+    calculation_data?: any; // For accessing origin currency from calculation_data
+    items?: any[]; // Quote items for display
+  };
+  // Legacy options for approval flow
+  selectedOptions?: {
+    shipping?: string;
+    insurance?: boolean;
+    discountCode?: string;
+    adjustments?: {
+      shippingAdjustment?: number;
+      insuranceAdjustment?: number;
+      discountAmount?: number;
+    };
+  };
 }
 
 interface CartStore {
@@ -335,6 +357,11 @@ export const useCartStore = create<CartStore>()(
               customer_currency: string;
               destination_country: string;
               origin_country: string;
+              exchange_rate?: number;
+              product_name?: string;
+              image_url?: string;
+              delivery_date?: string;
+              shipping_address?: any;
               created_at: string;
               updated_at?: string;
             }
@@ -402,9 +429,6 @@ export const useCartStore = create<CartStore>()(
                 id: quote.id,
                 quoteId: quote.id,
                 productName: firstItem?.name || quote.product_name || 'Unknown Product',
-                finalTotal: quote.total_usd || totalPrice, // USD amount
-                finalTotalLocal: undefined, // Local currency calculation not available from database
-                finalCurrency: undefined, // Local currency code not available from database
                 quantity: totalQuantity,
                 itemWeight: totalWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
@@ -417,6 +441,20 @@ export const useCartStore = create<CartStore>()(
                 priority: undefined, // Priority field not available from database
                 createdAt: new Date(quote.created_at),
                 updatedAt: new Date(quote.updated_at || quote.created_at),
+                // Full quote object with complete currency context
+                quote: {
+                  id: quote.id,
+                  total_origin_currency: quote.total_origin_currency,
+                  origin_total_amount: quote.total_origin_currency, // Alias for compatibility
+                  total_usd: quote.total_usd,
+                  destination_currency: quote.customer_currency,
+                  customer_currency: quote.customer_currency,
+                  exchange_rate: quote.exchange_rate,
+                  origin_country: quote.origin_country,
+                  destination_country: quote.destination_country,
+                  // Include items array for display and calculation
+                  items: quote.items || [],
+                },
               };
 
               // Log currency conversion details for debugging
@@ -439,14 +477,9 @@ export const useCartStore = create<CartStore>()(
                 },
               });
 
-              // FIXED: Final safety check to ensure all numeric values are valid
+              // Final safety check to ensure all numeric values are valid
               const validatedCartItem = {
                 ...cartItem,
-                finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
-                finalTotalLocal:
-                  cartItem.finalTotalLocal && !isNaN(cartItem.finalTotalLocal)
-                    ? cartItem.finalTotalLocal
-                    : undefined,
                 quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
                 itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight,
               };

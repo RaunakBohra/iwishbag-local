@@ -294,8 +294,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     
     const convertAmounts = async () => {
       try {
-        // Use origin currency system
-        const sourceCurrency = getBreakdownSourceCurrency(quote);
+        // Use origin currency system - FIXED: Use origin country mapping directly
+        const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
         const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd || 0;
         
         console.log(`[ShopifyStyleQuoteView] Converting quote ${quote.id}:`, {

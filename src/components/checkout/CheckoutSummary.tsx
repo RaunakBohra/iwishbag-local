@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Truck, DollarSign } from 'lucide-react';
 import { CartItem } from '@/stores/cartStore';
-import { useQuoteCurrency } from '@/hooks/useCurrency';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 interface CheckoutItemPriceProps {
@@ -11,18 +11,65 @@ interface CheckoutItemPriceProps {
 }
 
 const CheckoutItemPrice: React.FC<CheckoutItemPriceProps> = ({ item }) => {
-  const { formatAmount } = useQuoteCurrency(item.quote);
+  // Add debugging for checkout item currency detection
+  console.log('🏪 [CHECKOUT ITEM DEBUG] CheckoutItemPrice processing:', {
+    itemId: item.id,
+    quoteId: item.quote?.id,
+    originCountry: item.quote?.origin_country,
+    totalOriginCurrency: item.quote?.total_origin_currency,
+    totalUSD: item.quote?.total_usd,
+    hasQuote: !!item.quote
+  });
   
-  // Get calculation steps from origin currency system
-  const calc = item.quote.calculation_data?.calculation_steps || {};
+  const { formatAmountWithConversion, formatAmountSync, getSourceCurrency } = useDisplayCurrency(item.quote);
+  const [prices, setPrices] = useState({
+    items: formatAmountSync(0),
+    shipping: formatAmountSync(0),
+    tax: formatAmountSync(0),
+    total: formatAmountSync(0)
+  });
+  
+  useEffect(() => {
+    const convertPrices = async () => {
+      // Quote is now required in CartItem interface, but add safety check
+      if (!item.quote) {
+        console.warn('CheckoutItemPrice: Missing quote data for item:', item.id);
+        return;
+      }
+      
+      try {
+        // Get calculation steps from origin currency system
+        const calc = item.quote.calculation_data?.calculation_steps || {};
+        const sourceCurrency = getSourceCurrency(item.quote);
+        
+        const [itemsPrice, shippingPrice, taxPrice, totalPrice] = await Promise.all([
+          formatAmountWithConversion(calc.items_subtotal || calc.discounted_items_subtotal || 0, sourceCurrency),
+          formatAmountWithConversion((calc.shipping_cost || calc.discounted_shipping_cost || 0) + (calc.insurance_amount || 0), sourceCurrency),
+          formatAmountWithConversion((calc.customs_duty || calc.discounted_customs_duty || 0) + (calc.local_tax_amount || calc.discounted_tax_amount || 0), sourceCurrency),
+          formatAmountWithConversion(item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0, sourceCurrency)
+        ]);
+        
+        setPrices({
+          items: itemsPrice,
+          shipping: shippingPrice,
+          tax: taxPrice,
+          total: totalPrice
+        });
+      } catch (error) {
+        console.warn('Checkout item price conversion failed:', error);
+      }
+    };
+    
+    convertPrices();
+  }, [item, formatAmountWithConversion, getSourceCurrency]);
   
   return (
     <div className="text-sm text-gray-600">
-      <div>Items: {formatAmount(calc.items_subtotal || calc.discounted_items_subtotal || 0)}</div>
-      <div>Shipping: {formatAmount((calc.shipping_cost || calc.discounted_shipping_cost || 0) + (calc.insurance_amount || 0))}</div>
-      <div>Tax: {formatAmount((calc.customs_duty || calc.discounted_customs_duty || 0) + (calc.local_tax_amount || calc.discounted_tax_amount || 0))}</div>
+      <div>Items: {prices.items}</div>
+      <div>Shipping: {prices.shipping}</div>
+      <div>Tax: {prices.tax}</div>
       <div className="font-semibold text-black">
-        Total: {formatAmount(item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0)}
+        Total: {prices.total}
       </div>
     </div>
   );
@@ -33,16 +80,60 @@ interface CheckoutTotalProps {
 }
 
 const CheckoutTotal: React.FC<CheckoutTotalProps> = ({ items }) => {
-  const totalAmount = items.reduce((sum, item) => {
-    return sum + (item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0);
-  }, 0);
-
-  // Use the first item's quote for currency formatting (assumes all quotes in cart have same currency)
-  const { formatAmount } = useQuoteCurrency(items[0]?.quote);
-
+  const firstItemQuote = items.find(item => item.quote)?.quote;
+  const [convertedTotal, setConvertedTotal] = useState<string>('$0.00');
+  
+  // CRITICAL FIX: Only call useDisplayCurrency if we have quote data
+  const { formatAmountWithConversion, formatAmountSync, getSourceCurrency } = useDisplayCurrency(
+    firstItemQuote || undefined // Ensure we pass undefined instead of null
+  );
+  
+  // Add debug logging
+  console.log(`💳 [CHECKOUT TOTAL DEBUG] Items count: ${items.length}, First item has quote: ${!!firstItemQuote}`);
+  
+  useEffect(() => {
+    const convertTotal = async () => {
+      if (items.length === 0) {
+        setConvertedTotal(formatAmountSync(0));
+        return;
+      }
+      
+      // CRITICAL FIX: Don't try currency conversion if no quotes available
+      if (!firstItemQuote) {
+        console.warn('💳 [CHECKOUT DEBUG] No quote data available for checkout total - cannot calculate');
+        setConvertedTotal(formatAmountSync(0));
+        return;
+      }
+      
+      try {
+        console.log('💳 [CHECKOUT DEBUG] Converting checkout total with quote data:', {
+          itemCount: items.length,
+          firstQuoteId: firstItemQuote.id,
+          originCountry: firstItemQuote.origin_country
+        });
+        
+        const totalAmount = items.reduce((sum, item) => {
+          return sum + (item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0);
+        }, 0);
+        
+        const sourceCurrency = getSourceCurrency(firstItemQuote);
+        const formatted = await formatAmountWithConversion(totalAmount, sourceCurrency);
+        setConvertedTotal(formatted);
+      } catch (error) {
+        console.warn('Checkout total conversion failed:', error);
+        const totalAmount = items.reduce((sum, item) => {
+          return sum + (item.quote?.total_origin_currency || item.quote?.total_usd || 0);
+        }, 0);
+        setConvertedTotal(formatAmountSync(totalAmount));
+      }
+    };
+    
+    convertTotal();
+  }, [items, formatAmountWithConversion, formatAmountSync, getSourceCurrency, firstItemQuote]);
+  
   return (
     <div className="text-lg font-bold">
-      Total: {formatAmount(totalAmount)}
+      Total: {convertedTotal}
     </div>
   );
 };
@@ -62,7 +153,9 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
     return sum + (item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0);
   }, 0);
 
-  const { formatAmount } = useQuoteCurrency(items[0]?.quote);
+  // Use the new display currency hook for consistency
+  const firstItemQuote = items.find(item => item.quote)?.quote;
+  const { formatAmountSync, getSourceCurrency } = useDisplayCurrency(firstItemQuote || undefined);
 
   if (loading) {
     return (
@@ -165,7 +258,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                 <span className="font-medium">Total Amount</span>
               </div>
               <div className="text-xl font-bold">
-                {formatAmount(totalAmount)}
+                <CheckoutTotal items={items} />
               </div>
             </div>
           </div>

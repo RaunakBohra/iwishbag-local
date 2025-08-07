@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,44 +17,115 @@ import {
   Plus,
   Minus,
 } from 'lucide-react';
-import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/useCart';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
 import { CartItem } from '@/stores/cartStore';
 import { Tables } from '@/integrations/supabase/types';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
-// Component to display cart item price with proper currency conversion
+// Component to display cart item price with same currency logic as quote page
 const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number }) => {
-  // Use cart item's currency data directly - no mock quotes needed
-  const { formatAmount } = useQuoteCurrency({
-    origin_country: item.purchaseCountryCode,
-    destination_country: item.destinationCountryCode,
-    destination_currency: item.finalCurrency || 'USD',
-  });
-
-  return <>{formatAmount(item.finalTotal * quantity)}</>;
+  const { formatAmountWithConversion, formatAmountSync, displayCurrency, getSourceCurrency } = useDisplayCurrency(item.quote);
+  const [convertedAmount, setConvertedAmount] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const convertPrice = async () => {
+      try {
+        // Get the total amount to display from quote data
+        const baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0;
+        const totalWithQuantity = baseAmount * quantity;
+        
+        // Get source currency (origin country currency)
+        const sourceCurrency = item.quote ? getSourceCurrency(item.quote) : 'USD';
+        
+        console.log(`💰 [CART ITEM] Converting: ${totalWithQuantity} ${sourceCurrency} → ${displayCurrency}`, {
+          itemId: item.id,
+          baseAmount,
+          quantity,
+          sourceCurrency,
+          displayCurrency,
+          quote: item.quote ? { id: item.quote.id, origin_country: item.quote.origin_country } : null
+        });
+        
+        // Convert and format using the same logic as quote page
+        const formatted = await formatAmountWithConversion(totalWithQuantity, sourceCurrency);
+        setConvertedAmount(formatted);
+        console.log(`✅ [CART ITEM] Converted result: ${formatted}`);
+      } catch (error) {
+        console.warn('❌ [CART ITEM] Cart item price conversion failed:', error);
+        // Fallback to sync formatting - THIS IS THE PROBLEM!
+        const baseAmount = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
+        const fallbackAmount = formatAmountSync(baseAmount * quantity);
+        console.warn(`⚠️ [CART ITEM] Using fallback (no conversion): ${fallbackAmount}`);
+        setConvertedAmount(fallbackAmount);
+      }
+    };
+    
+    convertPrice();
+  }, [item, quantity, formatAmountWithConversion, formatAmountSync, getSourceCurrency]);
+  
+  return <>{convertedAmount || formatAmountSync(0)}</>;
 };
 
-// Component to display cart total with proper currency conversion
+// Component to display cart total with same currency logic as quote page
 const CartTotal = ({ items }: { items: CartItem[] }) => {
-  // Get default currency for empty cart display
-  const { formatAmount: formatEmptyAmount } = useQuoteCurrency({
-    destination_currency: 'USD' // Default fallback - could be enhanced with user geo-detection
-  });
+  const firstItemQuote = items.find(item => item.quote)?.quote;
+  const [convertedTotal, setConvertedTotal] = useState<string>('$0.00');
   
-  if (items.length === 0) return <>{formatEmptyAmount(0)}</>;
-
-  // Use the first item's currency context for the total - all items should have same destination
-  const firstItem = items[0];
-  const { formatAmount } = useQuoteCurrency({
-    origin_country: firstItem.purchaseCountryCode,
-    destination_country: firstItem.destinationCountryCode,
-    destination_currency: firstItem.finalCurrency || 'USD',
-  });
-
-  const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
-
-  return <>{formatAmount(totalAmount)}</>;
+  // CRITICAL FIX: Only call useDisplayCurrency if we have quote data
+  const { formatAmountWithConversion, formatAmountSync, getSourceCurrency } = useDisplayCurrency(
+    firstItemQuote || undefined // Ensure we pass undefined instead of null
+  );
+  
+  useEffect(() => {
+    const convertTotal = async () => {
+      if (items.length === 0) {
+        setConvertedTotal(formatAmountSync(0));
+        return;
+      }
+      
+      // CRITICAL FIX: Don't try currency conversion if no quotes available
+      if (!firstItemQuote) {
+        console.warn('💰 [CART DEBUG] No quote data available for cart total - cannot calculate');
+        setConvertedTotal(formatAmountSync(0));
+        return;
+      }
+      
+      try {
+        console.log('💰 [CART DEBUG] Converting cart total with quote data:', {
+          itemCount: items.length,
+          firstQuoteId: firstItemQuote.id,
+          originCountry: firstItemQuote.origin_country
+        });
+        
+        // Calculate total using same logic as quote page
+        const totalAmount = items.reduce((sum, item) => {
+          const baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || item.finalTotal || 0;
+          return sum + (baseAmount * item.quantity);
+        }, 0);
+        
+        // Use source currency from first quote
+        const sourceCurrency = getSourceCurrency(firstItemQuote);
+        
+        // Convert and format using the same logic as quote page
+        const formatted = await formatAmountWithConversion(totalAmount, sourceCurrency);
+        setConvertedTotal(formatted);
+      } catch (error) {
+        console.warn('Cart total conversion failed:', error);
+        // Fallback to sync formatting with quote data only
+        const totalAmount = items.reduce((sum, item) => {
+          const baseAmount = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
+          return sum + (baseAmount * item.quantity);
+        }, 0);
+        setConvertedTotal(formatAmountSync(totalAmount));
+      }
+    };
+    
+    convertTotal();
+  }, [items, formatAmountWithConversion, formatAmountSync, getSourceCurrency, firstItemQuote]);
+  
+  return <>{convertedTotal}</>;
 };
 
 export const Cart = () => {

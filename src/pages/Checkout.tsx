@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tables } from '@/integrations/supabase/types';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useQuoteCurrency } from '@/hooks/useCurrency';
+import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
@@ -107,11 +107,72 @@ export default function Checkout() {
   const guestQuoteId = searchParams.get('quotes');
   const isGuestCheckout = !user || user.is_anonymous;
   const shippingCountry = addressFormData.country || detectedCountry || 'US';
-  const cartQuoteIds = cartItems.map(item => item.quote.id);
-  const totalAmount = cartItems.reduce((sum, item) => sum + (item.quote.calculation_data?.total_cost_usd || 0), 0);
-
-  // Currency formatting (use first quote for currency context)
-  const { formatAmount, quoteCurrency: paymentCurrency } = useQuoteCurrency(cartItems[0]?.quote);
+  const cartQuoteIds = cartItems.map(item => item.quote?.id || item.quoteId).filter(Boolean);
+  
+  // Use display currency hook for consistent currency handling
+  const firstItemQuote = cartItems.find(item => item.quote)?.quote;
+  const { displayCurrency, formatAmountSync, formatAmountWithConversion, getSourceCurrency } = useDisplayCurrency(firstItemQuote);
+  
+  // Calculate total amount using same logic as cart components - UNIFIED APPROACH
+  const [convertedTotal, setConvertedTotal] = useState<number>(0);
+  const [totalFormatted, setTotalFormatted] = useState<string>('$0.00');
+  
+  // Calculate and convert total amount
+  useEffect(() => {
+    const calculateTotal = async () => {
+      if (cartItems.length === 0) {
+        setConvertedTotal(0);
+        setTotalFormatted(formatAmountSync(0));
+        return;
+      }
+      
+      if (!firstItemQuote) {
+        console.warn('💳 [CHECKOUT DEBUG] No quote data available for checkout total');
+        setConvertedTotal(0);
+        setTotalFormatted(formatAmountSync(0));
+        return;
+      }
+      
+      try {
+        // Calculate total using same logic as cart components
+        const totalAmount = cartItems.reduce((sum, item) => {
+          const baseAmount = item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0;
+          return sum + baseAmount;
+        }, 0);
+        
+        // Get source currency from first quote
+        const sourceCurrency = getSourceCurrency(firstItemQuote);
+        
+        // Convert to display currency
+        const formatted = await formatAmountWithConversion(totalAmount, sourceCurrency);
+        setTotalFormatted(formatted);
+        
+        // Store numeric value for payment processing
+        if (sourceCurrency === displayCurrency) {
+          setConvertedTotal(totalAmount);
+        } else {
+          // Get converted numeric value
+          const { currencyService } = await import('@/services/CurrencyService');
+          const convertedAmount = await currencyService.convertAmount(totalAmount, sourceCurrency, displayCurrency);
+          setConvertedTotal(convertedAmount);
+        }
+      } catch (error) {
+        console.warn('Checkout total conversion failed:', error);
+        const totalAmount = cartItems.reduce((sum, item) => {
+          const baseAmount = item.quote?.total_origin_currency || item.quote?.total_usd || 0;
+          return sum + baseAmount;
+        }, 0);
+        setConvertedTotal(totalAmount);
+        setTotalFormatted(formatAmountSync(totalAmount));
+      }
+    };
+    
+    calculateTotal();
+  }, [cartItems, firstItemQuote, displayCurrency, formatAmountWithConversion, formatAmountSync, getSourceCurrency]);
+  
+  // Use converted total for payment processing
+  const totalAmount = convertedTotal;
+  const paymentCurrency = displayCurrency;
 
   // Payment gateways
   const { 
