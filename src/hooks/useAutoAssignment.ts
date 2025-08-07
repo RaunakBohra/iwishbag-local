@@ -3,7 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { autoAssignmentService, type AutoAssignmentRule } from '@/services/AutoAssignmentService';
+import { autoAssignmentService, type AutoAssignmentRule } from '@/services/support-engine/AutoAssignmentService';
 import { useToast } from '@/hooks/use-toast';
 
 /**

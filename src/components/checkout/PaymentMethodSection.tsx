@@ -24,7 +24,7 @@ export const PaymentMethodSection: React.FC<PaymentMethodSectionProps> = ({
   isProcessing,
   loading = false
 }) => {
-  const selectedGateway = availableGateways.find(g => g.id === paymentMethod);
+  const selectedGateway = availableGateways?.find(g => g.id === paymentMethod);
 
   if (loading) {
     return (
@@ -58,7 +58,7 @@ export const PaymentMethodSection: React.FC<PaymentMethodSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {availableGateways.length === 0 ? (
+        {(availableGateways?.length || 0) === 0 ? (
           <div className="flex items-center space-x-2 text-orange-600 p-4 bg-orange-50 rounded-lg">
             <AlertCircle className="h-5 w-5" />
             <div>

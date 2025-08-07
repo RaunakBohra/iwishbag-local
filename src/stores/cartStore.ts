@@ -75,6 +75,7 @@ interface CartStore {
   syncWithServer: () => Promise<void>;
   debouncedSync: () => void;
   clearCart: () => void;
+  forceReload: (userId: string) => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -556,6 +557,19 @@ export const useCartStore = create<CartStore>()(
               isLoading: false,
             });
           }
+        },
+
+        forceReload: async (userId: string) => {
+          console.log('🔄 [CartStore] Force reloading cart with new fixes...');
+          set({
+            items: [],
+            selectedItems: [],
+            isLoading: true,
+            hasLoadedFromServer: false,
+            error: null
+          });
+          await get().loadFromServer(userId);
+          console.log('✅ [CartStore] Force reload complete');
         },
 
         debouncedSync: debouncedSync,

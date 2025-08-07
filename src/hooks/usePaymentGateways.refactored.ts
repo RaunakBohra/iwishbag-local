@@ -29,9 +29,10 @@ import PaymentProcessingService, {
   type PaymentResponse, 
   type PaymentStatus 
 } from '@/services/payment-gateways/PaymentProcessingService';
-import PaymentValidationService, { 
-  type ValidationResult 
-} from '@/services/payment-gateways/PaymentValidationService';
+import { 
+  UnifiedPaymentValidationService,
+  type UnifiedValidationResult as ValidationResult 
+} from '@/services/UnifiedPaymentValidationService';
 
 // Re-export types for external use
 export type { 

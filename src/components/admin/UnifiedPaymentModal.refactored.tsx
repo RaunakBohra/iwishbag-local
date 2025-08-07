@@ -61,11 +61,12 @@ import {
   PaymentSummaryData,
 } from '@/services/payment-modal/PaymentDataService';
 
-import PaymentValidationService, {
+import {
+  UnifiedPaymentValidationService,
   PaymentMethodType,
-  PaymentRecordData,
-  PaymentVerificationData,
-} from '@/services/payment-modal/PaymentValidationService';
+  PaymentRecordRequest as PaymentRecordData,
+  PaymentVerificationRequest as PaymentVerificationData,
+} from '@/services/UnifiedPaymentValidationService';
 
 import PaymentActionsService from '@/services/payment-modal/PaymentActionsService';
 

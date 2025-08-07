@@ -17,7 +17,7 @@ import {
   Receipt,
   RefreshCw
 } from 'lucide-react';
-import { PaymentMethodType } from './PaymentValidationService';
+import { PaymentMethodType } from '@/services/UnifiedPaymentValidationService';
 import { PaymentSummaryData } from './PaymentDataService';
 
 // UI state types

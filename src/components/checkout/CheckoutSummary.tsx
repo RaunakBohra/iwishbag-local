@@ -150,7 +150,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
   onRemoveItem
 }) => {
   const totalAmount = items.reduce((sum, item) => {
-    return sum + (item.quote.total_origin_currency || item.quote.origin_total_amount || item.quote.total_usd || 0);
+    return sum + (item.quote?.total_origin_currency || item.quote?.origin_total_amount || item.quote?.total_usd || 0);
   }, 0);
 
   // Use the new display currency hook for consistency
@@ -203,11 +203,11 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item) => (
-            <div key={item.quote.id} className="flex justify-between items-start border-b pb-4">
+            <div key={item.quote?.id || item.id} className="flex justify-between items-start border-b pb-4">
               <div className="flex-1">
-                <h4 className="font-medium">{item.quote.customer_data?.project_name || 'Quote'}</h4>
+                <h4 className="font-medium">{item.quote?.customer_data?.project_name || 'Quote'}</h4>
                 <p className="text-sm text-gray-600 mt-1">
-                  Quote ID: {item.quote.id}
+                  Quote ID: {item.quote?.id || item.id}
                 </p>
                 
                 {/* Quote details */}
@@ -215,11 +215,11 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                   <div className="flex items-center space-x-2">
                     <Truck className="h-3 w-3" />
                     <span>
-                      From {item.quote.origin_country} to {item.quote.destination_country}
+                      From {item.quote?.origin_country || 'Unknown'} to {item.quote?.destination_country || 'Unknown'}
                     </span>
                   </div>
                   
-                  {item.quote.customer_data?.items && (
+                  {item.quote?.customer_data?.items && (
                     <div className="text-xs">
                       {item.quote.customer_data.items.slice(0, 2).map((quoteItem: any, idx: number) => (
                         <div key={idx}>
@@ -240,7 +240,7 @@ export const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                 <CheckoutItemPrice item={item} />
                 {onRemoveItem && (
                   <button
-                    onClick={() => onRemoveItem(item.quote.id)}
+                    onClick={() => onRemoveItem(item.quote?.id || item.id)}
                     className="text-xs text-red-600 hover:text-red-700 mt-2"
                   >
                     Remove

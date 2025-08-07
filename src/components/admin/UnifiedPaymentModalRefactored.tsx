@@ -47,7 +47,7 @@ import PaymentLedgerService from '@/services/payment-management/PaymentLedgerSer
 import PaymentProofService from '@/services/payment-management/PaymentProofService';
 import RefundProcessingService from '@/services/payment-management/RefundProcessingService';
 import PaymentLinkService from '@/services/payment-management/PaymentLinkService';
-import PaymentValidationService from '@/services/payment-management/PaymentValidationService';
+import { UnifiedPaymentValidationService } from '@/services/UnifiedPaymentValidationService';
 import PaymentNotificationService from '@/services/payment-management/PaymentNotificationService';
 
 // Component imports for specialized payment UI

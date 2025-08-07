@@ -6,7 +6,7 @@
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
-import { PaymentMethodType } from './PaymentValidationService';
+import { PaymentMethodType } from '@/services/UnifiedPaymentValidationService';
 import { format } from 'date-fns';
 
 // Action result interfaces
