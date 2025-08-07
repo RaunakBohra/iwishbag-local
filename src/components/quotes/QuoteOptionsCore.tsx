@@ -341,7 +341,7 @@ export const QuoteOptionsCore: React.FC<QuoteOptionsCoreProps> = ({
           )}
           <CardContent>
             {/* Applied discounts */}
-            {appliedDiscountCodes.length > 0 && (
+            {Array.isArray(appliedDiscountCodes) && appliedDiscountCodes.length > 0 && (
               <div className="mb-4 space-y-2">
                 <p className="text-sm font-medium text-green-700">Applied discounts:</p>
                 {appliedDiscountCodes.map((code) => (
