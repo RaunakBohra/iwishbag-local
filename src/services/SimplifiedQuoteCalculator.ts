@@ -9,6 +9,7 @@ import NCMService from './NCMService';
 import type { NCMRateRequest, NCMMultiRateResponse } from './NCMService';
 import { ncmBranchMappingService } from './NCMBranchMappingService';
 import { DynamicShippingService, type RouteCalculations } from './DynamicShippingService';
+import { domesticDeliveryConfigService } from './DomesticDeliveryConfigService';
 
 interface CalculationInput {
   items: Array<{
@@ -262,13 +263,8 @@ const HANDLING_FEES = {
   percentage: 2   // 2% of order value
 };
 
-// Domestic delivery rates (USD)
-const DOMESTIC_DELIVERY_RATES: Record<string, { urban: number; rural: number }> = {
-  'IN': { urban: 5, rural: 10 },     // India
-  'NP': { urban: 3, rural: 7 },      // Nepal  
-  'US': { urban: 15, rural: 25 },    // United States
-  'DEFAULT': { urban: 10, rural: 20 }
-};
+// DEPRECATED: Hardcoded rates replaced with dynamic database configuration
+// See DomesticDeliveryConfigService for the new scalable approach
 
 // Simple HSN rates lookup (can be moved to database later)
 // Only activated when use_hsn_rates is true
@@ -919,37 +915,73 @@ class SimplifiedQuoteCalculator {
           };
           
         } else {
-          logger.warn('🚚 [Delhivery] Invalid or missing pincode, using fallback rates');
-          // Fallback to fixed rates if no valid pincode
-          const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-          const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
-          domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+          logger.warn('🚚 [Delhivery] Invalid or missing pincode, using dynamic fallback rates');
           
+          // Use dynamic configuration service for fallback rates
+          const areaType = input.destination_state === 'rural' ? 'rural' : 'urban';
+          domesticDelivery = await domesticDeliveryConfigService.getDomesticRate(
+            input.destination_country,
+            areaType,
+            input.origin_currency
+          );
+          
+          const config = await domesticDeliveryConfigService.getDomesticDeliveryConfig(input.destination_country);
+          const baseRate = areaType === 'urban' ? config.urban_rate : config.rural_rate;
+          
+          console.log(`🚚 [Dynamic Fallback] ${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
           domesticDeliveryDetails = {
             amount: this.round(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: fallbackRate,
-            original_currency: 'USD',
-            provider: 'Fallback',
-            conversion_rate: this.round(exchangeRate, 6),
-            debug_info: `Fallback rate: $${fallbackRate} USD → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+            original_amount: this.round(baseRate),
+            original_currency: config.currency, // Dynamic currency based on provider
+            provider: `${config.provider} Fallback`,
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `${config.provider} Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
         }
       } catch (error) {
-        logger.error('❌ [Delhivery] API error, using fallback rates:', error);
-        // Fallback to fixed rates on API failure
-        const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-        const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
-        domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+        logger.error('❌ [Delhivery] API error, using dynamic fallback rates:', error);
         
-        domesticDeliveryDetails = {
-          amount: this.round(domesticDelivery),
-          currency: customerCurrency,
-          original_amount: fallbackRate,
-          original_currency: 'USD',
-          provider: 'Fallback',
-          conversion_rate: exchangeRate
-        };
+        try {
+          // Use dynamic configuration service for API error fallback
+          const areaType = input.destination_state === 'rural' ? 'rural' : 'urban';
+          domesticDelivery = await domesticDeliveryConfigService.getDomesticRate(
+            input.destination_country,
+            areaType,
+            input.origin_currency
+          );
+          
+          const config = await domesticDeliveryConfigService.getDomesticDeliveryConfig(input.destination_country);
+          const baseRate = areaType === 'urban' ? config.urban_rate : config.rural_rate;
+          
+          console.log(`🚚 [Dynamic Error Fallback] ${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: this.round(baseRate),
+            original_currency: config.currency, // Dynamic currency based on provider
+            provider: `${config.provider} Error Fallback`,
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `${config.provider} Error Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
+        } catch (fallbackError) {
+          logger.error('❌ [Domestic] Both API and fallback failed, using emergency default:', fallbackError);
+          // Last resort: use emergency default from config service
+          domesticDelivery = 10; // Emergency USD rate
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency,
+            original_amount: 10,
+            original_currency: 'USD',
+            provider: 'Emergency Fallback',
+            conversion_rate: 1,
+            debug_info: `Emergency fallback - using default rate: $10 USD (both API and config failed)`
+          };
+        }
       }
     } else if (input.destination_country === 'NP') {
       // Use NCM for Nepal deliveries
@@ -1004,51 +1036,97 @@ class SimplifiedQuoteCalculator {
           };
           
         } else {
-          logger.warn('🏔️ [NCM] No branch mapping found, using fallback rates');
-          // Fallback to fixed rates if no branches found
-          const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-          const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
-          domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+          logger.warn('🏔️ [NCM] No branch mapping found, using dynamic fallback rates');
           
+          // Use dynamic configuration service for fallback rates
+          const areaType = input.destination_state === 'rural' ? 'rural' : 'urban';
+          domesticDelivery = await domesticDeliveryConfigService.getDomesticRate(
+            input.destination_country,
+            areaType,
+            input.origin_currency
+          );
+          
+          const config = await domesticDeliveryConfigService.getDomesticDeliveryConfig(input.destination_country);
+          const baseRate = areaType === 'urban' ? config.urban_rate : config.rural_rate;
+          
+          console.log(`🏔️ [Dynamic Fallback] ${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
           domesticDeliveryDetails = {
             amount: this.round(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: fallbackRate,
-            original_currency: 'USD',
-            provider: 'Fallback',
-            conversion_rate: this.round(exchangeRate, 6),
-            debug_info: `Fallback rate: $${fallbackRate} USD → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+            original_amount: this.round(baseRate),
+            original_currency: config.currency, // Dynamic currency based on provider
+            provider: `${config.provider} Fallback`,
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `${config.provider} Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
         }
       } catch (error) {
-        logger.error('❌ [NCM] API error, using fallback rates:', error);
-        // Fallback to fixed rates on API failure
-        const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-        const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
-        domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+        logger.error('❌ [NCM] API error, using dynamic fallback rates:', error);
         
-        domesticDeliveryDetails = {
-          amount: this.round(domesticDelivery),
-          currency: customerCurrency,
-          original_amount: fallbackRate,
-          original_currency: 'USD',
-          provider: 'Fallback',
-          conversion_rate: exchangeRate
-        };
+        try {
+          // Use dynamic configuration service for API error fallback
+          const areaType = input.destination_state === 'rural' ? 'rural' : 'urban';
+          domesticDelivery = await domesticDeliveryConfigService.getDomesticRate(
+            input.destination_country,
+            areaType,
+            input.origin_currency
+          );
+          
+          const config = await domesticDeliveryConfigService.getDomesticDeliveryConfig(input.destination_country);
+          const baseRate = areaType === 'urban' ? config.urban_rate : config.rural_rate;
+          
+          console.log(`🏔️ [Dynamic Error Fallback] ${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`);
+          
+          const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency, // Admin shows origin currency
+            original_amount: this.round(baseRate),
+            original_currency: config.currency, // Dynamic currency based on provider
+            provider: `${config.provider} Error Fallback`,
+            conversion_rate: this.round(conversionRate, 6),
+            debug_info: `${config.provider} Error Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
+          };
+        } catch (fallbackError) {
+          logger.error('❌ [Domestic] Both API and fallback failed, using emergency default:', fallbackError);
+          // Last resort: use emergency default from config service
+          domesticDelivery = 10; // Emergency USD rate
+          domesticDeliveryDetails = {
+            amount: this.round(domesticDelivery),
+            currency: input.origin_currency,
+            original_amount: 10,
+            original_currency: 'USD',
+            provider: 'Emergency Fallback',
+            conversion_rate: 1,
+            debug_info: `Emergency fallback - using default rate: $10 USD (both API and config failed)`
+          };
+        }
       }
     } else {
-      // Use existing logic for other destinations
-      const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-      const fallbackRate = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
-      domesticDelivery = fallbackRate * exchangeRate; // Convert from USD to customer currency
+      // Use dynamic configuration service for other destinations
+      const areaType = input.destination_state === 'rural' ? 'rural' : 'urban';
+      domesticDelivery = await domesticDeliveryConfigService.getDomesticRate(
+        input.destination_country,
+        areaType,
+        input.origin_currency
+      );
       
+      const config = await domesticDeliveryConfigService.getDomesticDeliveryConfig(input.destination_country);
+      const baseRate = areaType === 'urban' ? config.urban_rate : config.rural_rate;
+      
+      logger.info(`📦 [Domestic Delivery] ${config.provider} for ${input.destination_country}: ${baseRate} ${config.currency} → ${domesticDelivery} ${input.origin_currency}`);
+      
+      const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
       domesticDeliveryDetails = {
         amount: this.round(domesticDelivery),
-        currency: customerCurrency,
-        original_amount: fallbackRate,
-        original_currency: 'USD',
-        provider: 'Default',
-        conversion_rate: exchangeRate
+        currency: input.origin_currency, // Admin shows origin currency
+        original_amount: this.round(baseRate),
+        original_currency: config.currency, // Dynamic currency based on provider
+        provider: config.provider,
+        conversion_rate: this.round(conversionRate, 6),
+        debug_info: `${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
       };
     }
 
