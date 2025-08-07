@@ -741,8 +741,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </div>
         <MobileProgress currentStep={currentStep} />
 
-        {/* Expiry Warning */}
-        {daysLeft && daysLeft <= 7 && (
+        {/* Expiry Warning - Only show for non-approved quotes */}
+        {daysLeft && daysLeft <= 7 && quote.status !== 'approved' && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
