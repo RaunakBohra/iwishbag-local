@@ -26,6 +26,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import { getAdminFeeBreakdown } from '@/utils/feeGroupingUtils';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface CompactCalculationBreakdownProps {
   quote: UnifiedQuote;
@@ -56,9 +58,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = currencyDisplay.exchangeRate;
-  const totalCost = quote.final_total_usd || 0;
+  const totalCost = quote.total_origin_currency || quote.origin_total_amount || quote.final_total_usd || 0;
 
-  // Check if );
+  // Check HSN calculation data
+  const hsnCalculationData = quote.calculation_data?.hsn_calculation || null;
+  const isHSNCalculation = quote.calculation_method_preference === 'hsn_only';
+  const hasHSNItems = quote.items?.some((item: any) => item.hsn_code) || false;
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
@@ -104,7 +109,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     final_total: totalCost,
     taxes: breakdown.taxes,
     customs: breakdown.customs,
-    ishsnCalculationData,
+    hsnCalculationData,
   });
 
   // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
@@ -148,7 +153,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // Compact header view
   const CompactHeader = () => (
     <div className="p-4">
-      {}
+      {/* HSN Calculation Status */}
           {isHSNCalculation && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
               <div className="flex items-center space-x-2">
@@ -164,7 +169,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
           )}
 
-          {}
+          {/* HSN Available but Not Used Warning */}
           {hasHSNItems &&
             !isHSNCalculation &&
             quote.calculation_method_preference !== 'route_based' &&
@@ -182,7 +187,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
-          {}
+          {/* Valuation Information */}
                 {quote.calculation_data?.valuation_applied && (
                   <div className="mt-2 pt-2 border-t border-current/20">
                     <div className="flex justify-between items-center text-xs">
@@ -224,7 +229,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
           )}
 
-          {}
+          {/* Sales Tax Display */}
             {(breakdown.taxes || quote.calculation_data?.sales_tax_price) && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
@@ -254,7 +259,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
-            {}
+            {/* HSN Local Taxes Display */}
             {isHSNCalculation && hsnCalculationData && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
