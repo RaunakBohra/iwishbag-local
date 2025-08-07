@@ -291,7 +291,7 @@ export class ServiceUtils {
     return {
       name: serviceName,
       version: '1.0.0',
-      environment: (process.env.NODE_ENV as any) || 'development',
+      environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') || 'development',
       cacheEnabled: true,
       cacheTTL: 10 * 60 * 1000, // 10 minutes
       retryAttempts: 3,

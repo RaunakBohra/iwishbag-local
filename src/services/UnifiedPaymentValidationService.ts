@@ -309,7 +309,7 @@ export class UnifiedPaymentValidationService {
       this.validatePaymentRecordBusiness(data, paymentSummary, quoteCurrency, errors, warnings);
 
       // Risk assessment for the payment
-      let riskScore = this.calculatePaymentRecordRisk(data, paymentSummary);
+      const riskScore = this.calculatePaymentRecordRisk(data, paymentSummary);
 
       // Generate recommendations
       recommendations.push(...this.generatePaymentRecordRecommendations(data, paymentSummary, riskScore));
@@ -344,7 +344,7 @@ export class UnifiedPaymentValidationService {
       // Business validation
       this.validateVerificationBusiness(data, paymentSummary, quoteCurrency, errors, warnings);
 
-      let riskScore = this.calculateVerificationRisk(data, paymentSummary);
+      const riskScore = this.calculateVerificationRisk(data, paymentSummary);
 
       return this.buildValidationResult(errors, warnings, recommendations, complianceChecks, riskScore);
 
@@ -373,7 +373,7 @@ export class UnifiedPaymentValidationService {
       // Basic refund validation
       this.validateRefundFields(data, availableRefundAmount, originalCurrency, errors);
 
-      let riskScore = this.calculateRefundRisk(data, availableRefundAmount);
+      const riskScore = this.calculateRefundRisk(data, availableRefundAmount);
 
       return this.buildValidationResult(errors, warnings, recommendations, complianceChecks, riskScore);
 
