@@ -51,8 +51,31 @@ export async function calculatePaymentSummary(
 
     if (error) {
       console.error('Error fetching payment transactions:', error);
+      // Return empty totals if there's an error
+      return calculateSummary(
+        finalTotal,
+        finalTotalUsd,
+        0,
+        0,
+        currency,
+        exchangeRate,
+      );
+    }
 
-      const totals = transactions?.reduce(
+    // Handle the case where paymentLedger exists but could be null
+    if (!paymentLedger) {
+      const totals = { localPaid: 0, usdPaid: 0 };
+      return calculateSummary(
+        finalTotal,
+        finalTotalUsd,
+        totals.localPaid,
+        totals.usdPaid,
+        currency,
+        exchangeRate,
+      );
+    }
+
+    const totals = paymentLedger.reduce(
         (acc, tx) => {
           const localAmount = parseFloat(tx.amount) || 0;
 
@@ -69,19 +92,16 @@ export async function calculatePaymentSummary(
           };
         },
         { localPaid: 0, usdPaid: 0 },
-      ) || { localPaid: 0, usdPaid: 0 };
-
-      return calculateSummary(
-        finalTotal,
-        finalTotalUsd,
-        totals.localPaid,
-        totals.usdPaid,
-        currency,
-        exchangeRate,
       );
-    }
 
-    const totals = paymentLedger?.reduce(
+    return calculateSummary(
+      finalTotal,
+      finalTotalUsd,
+      totals.localPaid,
+      totals.usdPaid,
+      currency,
+      exchangeRate,
+    );
       (acc, entry) => {
         const type = entry.transaction_type || entry.payment_type;
         const localAmount = parseFloat(entry.amount) || 0;
@@ -113,7 +133,7 @@ export async function calculatePaymentSummary(
         return acc;
       },
       { localPaid: 0, usdPaid: 0 },
-    ) || { localPaid: 0, usdPaid: 0 };
+    );
 
     return calculateSummary(
       finalTotal,
