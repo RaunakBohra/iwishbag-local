@@ -181,7 +181,7 @@ class QuoteOptionsService {
         // Map SimplifiedQuoteCalculator result to database fields
         total_usd: calculatedTotal,
         total_customer_currency: calculatedTotal,
-        customer_currency: updatedQuoteInput.origin_currency || 'USD',
+        customer_currency: updatedQuoteInput.origin_currency,
         updated_at: new Date().toISOString()
       };
 
@@ -343,6 +343,9 @@ class QuoteOptionsService {
       if (validCodes.includes(code.toUpperCase())) {
         const percentage = discountPercentages[code.toUpperCase()];
         const discountAmount = (quote.total_customer_currency || quote.total_usd || 0) * percentage;
+        
+        // Get origin currency dynamically
+        const originCurrency = quote.origin_currency || getOriginCurrency(quote.origin_country);
 
         return {
           valid: true,
@@ -351,7 +354,7 @@ class QuoteOptionsService {
             type: 'percentage',
             value: percentage,
             amount: discountAmount,
-            currency: quote.customer_currency || 'USD'
+            currency: originCurrency
           }
         };
       } else {

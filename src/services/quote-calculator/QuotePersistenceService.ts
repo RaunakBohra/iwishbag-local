@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { autoSaveService } from '@/services/AutoSaveService';
 import type { QuoteItem } from './QuoteFormStateService';
 import { toast } from '@/hooks/use-toast';
+import { getOriginCurrency } from '@/utils/originCurrency';
 
 export interface QuoteData {
   id?: string;
@@ -113,7 +114,7 @@ export class QuotePersistenceService {
         items: data.items || [],
         shipping_method: data.shipping_method || 'standard',
         payment_gateway: data.payment_gateway || 'stripe',
-        customer_currency: data.customer_currency || 'USD',
+        customer_currency: data.customer_currency || getOriginCurrency(data.origin_country),
         order_discount_type: data.order_discount_type || 'percentage',
         order_discount_value: data.order_discount_value || 0,
         order_discount_code: data.order_discount_code || '',
