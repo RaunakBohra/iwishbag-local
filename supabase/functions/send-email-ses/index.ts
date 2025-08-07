@@ -68,8 +68,8 @@ serve(async (req) => {
       subject,
       html,
       text,
-      from = 'iwishBag <noreply@mail.iwishbag.com>',
-      replyTo = 'support@mail.iwishbag.com',
+      from = 'iwishBag <noreply@iwishbag.store>',
+      replyTo = 'support@iwishbag.store',
     }: EmailRequest = body as EmailRequest;
 
     // Validation
@@ -86,7 +86,7 @@ serve(async (req) => {
     // Get AWS credentials from environment
     const awsAccessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-    const awsRegion = Deno.env.get('AWS_REGION') || 'us-east-1';
+    const awsRegion = Deno.env.get('AWS_REGION') || 'ap-southeast-1';
 
     if (!awsAccessKeyId || !awsSecretAccessKey) {
       console.error('❌ AWS credentials not configured');
@@ -113,7 +113,7 @@ serve(async (req) => {
     // Prepare recipients
     const toAddresses = Array.isArray(to) ? to : [to];
 
-    // Create send email command
+    // Create send email command with configuration set for tracking
     const command = new SendEmailCommand({
       Source: from,
       Destination: {
@@ -140,6 +140,7 @@ serve(async (req) => {
         },
       },
       ReplyToAddresses: [replyTo],
+      ConfigurationSetName: 'iwishbag-transactional',
     });
 
     console.log('📧 Sending email via AWS SES...');

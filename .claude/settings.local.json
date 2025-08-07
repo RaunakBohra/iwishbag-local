@@ -271,7 +271,27 @@
       "Bash(wrangler secret put:*)",
       "Bash(compgen:*)",
       "Bash(wrangler tail:*)",
-      "WebFetch(domain:brightdata.com)"
+      "WebFetch(domain:brightdata.com)",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--region ap-southeast-1)",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--event-destination-name \"cloudwatch-events\" )",
+      "Bash(--event-destination '{\n    \"\"Enabled\"\": true,\n    \"\"MatchingEventTypes\"\": [\"\"send\"\", \"\"bounce\"\", \"\"complaint\"\", \"\"delivery\"\"],\n    \"\"CloudWatchDestination\"\": {\n      \"\"DimensionConfigurations\"\": [\n        {\n          \"\"DimensionName\"\": \"\"EmailAddress\"\",\n          \"\"DimensionValueSource\"\": \"\"messageTag\"\",\n          \"\"DefaultDimensionValue\"\": \"\"default\"\"\n        }\n      ]\n    }\n  }' )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--event-destination-name \"cloudwatch-events\" )",
+      "Bash(--event-destination '{\n    \"\"Enabled\"\": true,\n    \"\"MatchingEventTypes\"\": [\"\"send\"\", \"\"bounce\"\", \"\"complaint\"\", \"\"delivery\"\"],\n    \"\"CloudWatchDestination\"\": {\n      \"\"DimensionConfigurations\"\": [\n        {\n          \"\"DimensionName\"\": \"\"EmailAddress\"\",\n          \"\"DimensionValueSource\"\": \"\"messageTag\"\",\n          \"\"DefaultDimensionValue\"\": \"\"default\"\"\n        }\n      ]\n    }\n  }' )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--event-destination-name \"cloudwatch-events\" )",
+      "Bash(--event-destination '{\n    \"\"Enabled\"\": true,\n    \"\"MatchingEventTypes\"\": [\"\"SEND\"\", \"\"BOUNCE\"\", \"\"COMPLAINT\"\", \"\"DELIVERY\"\"],\n    \"\"CloudWatchDestination\"\": {\n      \"\"DimensionConfigurations\"\": [\n        {\n          \"\"DimensionName\"\": \"\"EmailAddress\"\",\n          \"\"DimensionValueSource\"\": \"\"MESSAGE_TAG\"\",\n          \"\"DefaultDimensionValue\"\": \"\"default\"\"\n        }\n      ]\n    }\n  }' )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--reputation-metrics-enabled )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--custom-redirect-domain \"iwishbag.store\" )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--configuration-set-name \"iwishbag-transactional\" )",
+      "Bash(--suppressed-reasons \"BOUNCE\" \"COMPLAINT\" )"
     ],
     "deny": []
   }
