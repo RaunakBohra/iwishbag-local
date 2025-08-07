@@ -142,7 +142,7 @@ class SimplifiedSmartCalculationEngine {
     const { quote, selectedShipping, itemsTotal, taxCalculationPreferences } = params;
 
     // Get exchange rate
-    const exchangeRate = await currencyService.getExchangeRate(
+    const exchangeRate = await currencyService.getExchangeRateByCurrency(
       'USD', 
       quote.customer_currency || 'USD'
     );

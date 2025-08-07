@@ -319,7 +319,7 @@ export class QuoteCalculationEngine {
         return 1.0;
       }
       
-      const rate = await currencyService.getExchangeRate(originCurrency, customerCurrency);
+      const rate = await currencyService.getExchangeRateByCurrency(originCurrency, customerCurrency);
       return rate || 1.0;
       
     } catch (error) {

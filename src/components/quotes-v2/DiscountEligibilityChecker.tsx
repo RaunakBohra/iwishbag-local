@@ -76,7 +76,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
     setIsLoading(true);
     try {
       // Convert USD thresholds to origin currency
-      const exchangeRate = await currencyService.getExchangeRate('USD', originCurrency);
+      const exchangeRate = await currencyService.getExchangeRateByCurrency('USD', originCurrency);
       const volumeThresholdUSD = 1000;
       const volumeThresholdOrigin = volumeThresholdUSD * exchangeRate;
 

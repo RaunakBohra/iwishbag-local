@@ -402,7 +402,7 @@ export class ShippingCostService {
     // Convert to USD if needed
     if (request.originCurrency !== 'USD') {
       try {
-        const rate = await currencyService.getExchangeRate(request.originCurrency, 'USD');
+        const rate = await currencyService.getExchangeRateByCurrency(request.originCurrency, 'USD');
         costUSD = totalCost * rate;
       } catch (error) {
         logger.warn('Currency conversion failed for base rate:', error);

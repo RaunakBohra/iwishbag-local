@@ -462,7 +462,7 @@ export class CountrySelectionService {
     if (cached) return cached;
 
     try {
-      const rate = await currencyService.getExchangeRate(fromCurrency, toCurrency);
+      const rate = await currencyService.getExchangeRateByCurrency(fromCurrency, toCurrency);
       const conversion: CurrencyConversion = {
         fromCurrency,
         toCurrency,

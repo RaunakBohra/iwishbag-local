@@ -225,8 +225,8 @@ class DelhiveryService {
     try {
       // Use your existing currency service
       const { currencyService } = await import('./CurrencyService');
-      const rate = await currencyService.getExchangeRate('INR', 'USD');
-      return amountINR * (rate?.rate || 0.012); // Fallback: 1 INR = 0.012 USD
+      const rate = await currencyService.getExchangeRateByCurrency('INR', 'USD');
+      return amountINR * (rate || 0.012); // Fallback: 1 INR = 0.012 USD
     } catch (error) {
       console.error('Currency conversion error:', error);
       return amountINR * 0.012; // Fallback conversion

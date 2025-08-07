@@ -269,7 +269,7 @@ export class CurrencyCalculationService {
       }
 
       // Fetch fresh rate
-      const rate = await currencyService.getExchangeRate(fromCurrency, toCurrency);
+      const rate = await currencyService.getExchangeRateByCurrency(fromCurrency, toCurrency);
       
       // Cache the result
       if (useCache) {

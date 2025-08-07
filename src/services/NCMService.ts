@@ -408,8 +408,8 @@ class NCMService {
     try {
       // Use your existing currency service
       const { currencyService } = await import('./CurrencyService');
-      const rate = await currencyService.getExchangeRate('NPR', 'USD');
-      return amountNPR * (rate?.rate || 0.0075); // Fallback: 1 NPR = 0.0075 USD
+      const rate = await currencyService.getExchangeRateByCurrency('NPR', 'USD');
+      return amountNPR * (rate || 0.0075); // Fallback: 1 NPR = 0.0075 USD
     } catch (error) {
       console.error('Currency conversion error:', error);
       return amountNPR * 0.0075; // Fallback conversion

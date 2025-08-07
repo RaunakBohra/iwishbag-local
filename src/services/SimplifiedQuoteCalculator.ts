@@ -284,6 +284,18 @@ const HSN_CUSTOMS_RATES: Record<string, Record<string, number>> = {
 };
 
 class SimplifiedQuoteCalculator {
+  private currencyService: any;
+  
+  constructor() {
+    // Initialize currency service - import dynamically to avoid circular dependencies
+    this.initializeCurrencyService();
+  }
+  
+  private async initializeCurrencyService() {
+    const { default: CurrencyCalculationService } = await import('./quote-calculator/CurrencyCalculationService');
+    this.currencyService = new CurrencyCalculationService();
+  }
+
   // Safe method to get customs rate - HSN only if explicitly enabled
   private async getCustomsRateForItem(item: any, destinationCountry: string, defaultRate: number): Promise<number> {
     // Only use HSN if explicitly enabled for this item
@@ -351,7 +363,7 @@ class SimplifiedQuoteCalculator {
         if (!error && hsnData && hsnData.minimum_valuation_usd) {
           // CRITICAL FIX: Convert minimum valuation from USD to origin currency for proper comparison
           const minimumValuationUSD = hsnData.minimum_valuation_usd * item.quantity;
-          const exchangeRate = await currencyService.getExchangeRate('USD', input.origin_currency);
+          const exchangeRate = await currencyService.getExchangeRateByCurrency('USD', input.origin_currency);
           minimumValuation = minimumValuationUSD * exchangeRate; // Now in origin currency
           
           // Apply valuation method logic based on admin choice
@@ -513,7 +525,7 @@ class SimplifiedQuoteCalculator {
     
     const customerCurrency = await this.getCustomerCurrency(input.destination_country, input.customer_id);
     // CRITICAL FIX: Exchange rate should be from origin currency to customer currency, not USD to customer
-    const exchangeRate = await currencyService.getExchangeRate(input.origin_currency, customerCurrency);
+    const exchangeRate = await currencyService.getExchangeRateByCurrency(input.origin_currency, customerCurrency);
 
     // Step 3: Apply order-level discount
     let orderDiscountAmount = 0;
@@ -1097,6 +1109,11 @@ class SimplifiedQuoteCalculator {
   }
 
   private async getCustomerCurrency(countryCode: string, customerId?: string): Promise<string> {
+    // Ensure currency service is initialized
+    if (!this.currencyService) {
+      await this.initializeCurrencyService();
+    }
+    
     // Use CurrencyCalculationService for consistent customer currency resolution
     return await this.currencyService.getCustomerCurrency(countryCode, customerId);
   }
@@ -1110,7 +1127,7 @@ class SimplifiedQuoteCalculator {
     }
     
     // Convert USD to origin currency
-    const exchangeRate = await currencyService.getExchangeRate('USD', originCurrency);
+    const exchangeRate = await currencyService.getExchangeRateByCurrency('USD', originCurrency);
     return amountUSD * exchangeRate;
   }
 

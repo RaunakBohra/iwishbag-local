@@ -117,18 +117,25 @@ class CurrencyService {
         const response = await fetch(`${EDGE_API_URL}${d1Endpoint}`);
         if (response.ok) {
           const data = await response.json();
-          console.log(`[CurrencyService] D1 edge cache hit: ${key}`);
           
-          // Cache in memory
-          this.memoryCache.set(key, {
-            data,
-            expires: Date.now() + this.MEMORY_TTL
-          });
-          
-          // Also cache in localStorage
-          this.cacheToLocalStorage(key, data, ttl);
-          
-          return data;
+          // Check if D1 cache returned null/invalid data for exchange rates
+          if (key.startsWith('rate_') && data && typeof data === 'object' && 'rate' in data && data.rate === null) {
+            console.log(`[CurrencyService] D1 edge cache returned null rate, skipping to database: ${key}`);
+            // Don't return null data, fall through to database fetch
+          } else {
+            console.log(`[CurrencyService] D1 edge cache hit: ${key}`);
+            
+            // Cache in memory
+            this.memoryCache.set(key, {
+              data,
+              expires: Date.now() + this.MEMORY_TTL
+            });
+            
+            // Also cache in localStorage
+            this.cacheToLocalStorage(key, data, ttl);
+            
+            return data;
+          }
         }
       } catch (error) {
         logger?.warn('D1 edge cache error, falling back', { error, key });
