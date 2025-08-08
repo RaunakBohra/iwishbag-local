@@ -5,6 +5,8 @@ import { CheckCircle, XCircle, ShoppingCart, Clock } from 'lucide-react';
 import { QuoteExpirationTimer } from './QuoteExpirationTimer';
 
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { useCartItem } from '@/stores/cartStore';
+import { useAuth } from '@/contexts/AuthContext';
 import { Quote } from '@/types/quote';
 
 interface StickyActionBarProps {
@@ -26,17 +28,18 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
   onAddToCart,
   onRenewed,
 }) => {
-  // Cart functionality has been removed
-  // const cartItems = useCartStore((state) => state.items);
+  const { user } = useAuth();
   const { getStatusConfig } = useStatusManagement();
 
   if (!isOwner) return null;
 
-  // Helper function to check if this quote is in cart
-  const isQuoteInCart = (quoteId: string) => {
-    // Cart functionality removed - check database flag instead
-    return quote.in_cart || false;
-  };
+  // Check if this quote is in cart - reactive to cart state changes
+  const cartItem = useCartItem(quote.id);
+  
+  // Only consider database in_cart flag if quote belongs to current user
+  const userOwnsQuote = quote.customer_id === user?.id || quote.customer_email === user?.email;
+  const databaseInCartFlag = userOwnsQuote ? (quote.in_cart || false) : false;
+  const isQuoteInCart = Boolean(cartItem) || databaseInCartFlag;
 
   // Get dynamic status configuration
   const statusConfig = getStatusConfig(quote.status, 'quote');
@@ -86,7 +89,7 @@ export const StickyActionBar: React.FC<StickyActionBarProps> = ({
 
     // Show cart actions for approved quotes
     if (statusConfig.allowCartActions) {
-      if (!isQuoteInCart(quote.id)) {
+      if (!isQuoteInCart) {
         return (
           <Button
             className="w-full hover:scale-105 transition-all duration-200 bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 shadow-lg hover:shadow-xl"

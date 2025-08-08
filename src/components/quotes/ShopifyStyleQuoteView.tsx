@@ -46,6 +46,8 @@ import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
+import { useCart } from '@/hooks/useCart';
+import { useCartItem, ensureInitialized } from '@/stores/cartStore';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -104,6 +106,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { id: quoteId, shareToken } = useParams<{ id: string; shareToken: string }>();
+  const { addItem, syncWithServer } = useCart();
   
   const queryClient = useQueryClient();
   
@@ -238,9 +241,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
       const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
       
-      // Use the appropriate total based on origin currency system
-      const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
-      const itemQuotePrice = quoteTotal * itemProportion;
+      // Use the appropriate total based on origin currency system - CLEAR: This is in origin country currency
+      const totalOriginCurrency = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+      const itemQuotePrice = totalOriginCurrency * itemProportion;
       
       // Get source currency for conversion
       const sourceCurrency = getBreakdownSourceCurrency(quote);
@@ -255,8 +258,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       console.warn('Failed to convert item quote price:', error);
       const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
       const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
-      const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
-      const itemQuotePrice = quoteTotal * itemProportion;
+      const totalOriginCurrency = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+      const itemQuotePrice = totalOriginCurrency * itemProportion;
       return formatCurrency(itemQuotePrice, getBreakdownSourceCurrency(quote));
     }
   }, [quote, displayCurrency, convertCurrency]);
@@ -282,9 +285,19 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [discountError, setDiscountError] = useState('');
   const [couponsModalOpen, setCouponsModalOpen] = useState(false);
   
-  // Cart functionality removed - check database flag instead
-  // const { items: cartItems } = useCartStore(); // REMOVED
-  const isInCart = quote?.in_cart || false;
+  // Cart functionality - reactive to cart state changes
+  const cartItem = useCartItem(quote?.id || '');
+  
+  // Only consider database in_cart flag if quote belongs to current user
+  const userOwnsQuote = quote?.customer_id === user?.id || quote?.customer_email === user?.email;
+  const databaseInCartFlag = userOwnsQuote ? (quote?.in_cart || false) : false;
+  const isInCart = Boolean(cartItem) || databaseInCartFlag;
+  
+
+  // Ensure cart is initialized
+  useEffect(() => {
+    ensureInitialized().catch(console.error);
+  }, []);
 
   // Convert currency amounts when quote or display currency changes
   useEffect(() => {
@@ -292,32 +305,32 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     
     const convertAmounts = async () => {
       try {
-        // Use origin currency system - FIXED: Use origin country mapping directly
-        const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
-        const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd || 0;
+        // Use origin currency system - CLEAR: Always use origin country to determine source currency
+        const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+        const totalOriginCurrency = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
         
         console.log(`[ShopifyStyleQuoteView] Converting quote ${quote.id}:`, {
-          sourceCurrency,
-          displayCurrency: displayCurrency || sourceCurrency,
-          quoteTotal,
-          total_origin_currency: quote.total_origin_currency,
-          origin_total_amount: quote.origin_total_amount,
-          total_usd: quote.total_usd
+          originCurrency,
+          displayCurrency: displayCurrency || originCurrency,
+          totalOriginCurrency,
+          origin_country: quote.origin_country,
+          total_quote_origincurrency: quote.total_quote_origincurrency,
+          total_origin_currency: quote.total_origin_currency
         });
         
-        // Use source currency as display currency if none provided
-        const targetCurrency = displayCurrency || sourceCurrency;
+        // Use origin currency as display currency if none provided
+        const targetCurrency = displayCurrency || originCurrency;
         
-        if (sourceCurrency === targetCurrency) {
+        if (originCurrency === targetCurrency) {
           setConvertedAmounts({
-            total: formatCurrency(quoteTotal, targetCurrency),
-            totalNumeric: quoteTotal,
+            total: formatCurrency(totalOriginCurrency, targetCurrency),
+            totalNumeric: totalOriginCurrency,
             itemsConverted: true
           });
           return;
         }
 
-        const convertedTotal = await convertCurrency(quoteTotal, sourceCurrency, targetCurrency);
+        const convertedTotal = await convertCurrency(totalOriginCurrency, originCurrency, targetCurrency);
         setConvertedAmounts({
           total: formatCurrency(convertedTotal, targetCurrency),
           totalNumeric: convertedTotal,
@@ -326,7 +339,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       } catch (error) {
         console.warn('Failed to convert currency amounts:', error);
         // Fallback to original currency
-        const fallbackTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+        const fallbackTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
         const fallbackCurrency = getBreakdownSourceCurrency(quote);
         setConvertedAmounts({
           total: formatCurrency(fallbackTotal, fallbackCurrency),
@@ -358,7 +371,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     
     setLoadingCoupons(true);
     try {
-      const orderTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+      const orderTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
       const handlingFee = quote.calculation_data?.calculation_steps?.handling_fee || 0;
       
       const { data, error } = await supabase.rpc('calculate_applicable_discounts', {
@@ -454,7 +467,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const handleSelectCoupon = (couponCode: string) => {
     // Calculate discount amount based on the selected coupon
     let discountAmount = 0;
-    const baseTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+    const baseTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
     
     // Find the selected coupon to get actual discount amount
     const selectedCoupon = availableCoupons.find(c => c.code === couponCode);
@@ -492,49 +505,17 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   const handleApprove = async () => {
     try {
-      // Use adjusted total if options have been changed - Origin currency system
-      const finalTotalOrigin = quoteOptions.adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
-      const finalTotal = quoteOptions.adjustedTotal || quote.total_usd || quote.total_origin_currency;
-      const finalTotalLocal = finalTotalOrigin;
+      // Use adjusted total if options have been changed - CLEAR: This is in origin currency
+      const finalTotalOriginCurrency = quoteOptions.adjustedTotal || quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+      const finalTotal = finalTotalOriginCurrency; // Same value, clearer naming
 
-      // Add to cart with selected options
-      const cartItem = {
-        id: quote.id,
-        quoteId: quote.id,
-        productName: quote.items?.[0]?.name || 'Quote Items',
-        finalTotal: finalTotal,
-        finalTotalLocal: finalTotalLocal,
-        finalCurrency: getBreakdownSourceCurrency(quote),
-        quantity: 1,
-        itemWeight: quote.items?.reduce((sum: number, item: any) => sum + (item.weight || 0), 0) || 0,
-        imageUrl: quote.items?.[0]?.images?.[0],
-        countryCode: quote.destination_country,
-        purchaseCountryCode: quote.origin_country,
-        destinationCountryCode: quote.destination_country,
-        inCart: true,
-        isSelected: false,
-        selectedOptions: {
-          shipping: quoteOptions.shipping,
-          insurance: quoteOptions.insurance,
-          discountCode: quoteOptions.discountCode,
-          adjustments: {
-            shippingAdjustment: quoteOptions.shippingAdjustment,
-            insuranceAdjustment: quoteOptions.insuranceAdjustment,
-            discountAmount: quoteOptions.discountAmount
-          }
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      addItem(cartItem);
-
-      // Update quote status with selected options
+      // Update quote status to approved with selected options
       await supabase
         .from('quotes_v2')
         .update({ 
           status: 'approved',
           approved_at: new Date().toISOString(),
+          final_total_origincurrency: finalTotal,
           // Store selected options in applied_discounts JSONB field
           applied_discounts: {
             shipping: quoteOptions.shipping,
@@ -554,10 +535,13 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           insurance_required: quoteOptions.insurance
         })
         .eq('id', quote.id);
-
+      
+      // Invalidate queries to refresh quote data and show new button state
+      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+      
       toast({
-        title: "Success",
-        description: "Quote approved and added to cart",
+        title: "Quote Approved",
+        description: "Quote has been approved! You can now add it to your cart.",
       });
       
     } catch (error) {
@@ -619,6 +603,28 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       toast({
         title: "Error",
         description: "Failed to reject quote. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddToCart = async () => {
+    try {
+      if (!quote || !user) return;
+
+      // Add to cart using the cart store
+      await addItem(quote);
+      
+      toast({
+        title: "Added to Cart",
+        description: "Quote has been added to your cart.",
+      });
+
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add to cart. Please try again.",
         variant: "destructive",
       });
     }
@@ -859,7 +865,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         <span className="font-medium">
                           Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
                           <span className="text-blue-700 ml-2">
-                            → {convertedAmounts.total || formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, displayCurrency)}
+                            → {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
                           </span>
                         </span>
                       </div>
@@ -951,7 +957,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                                 );
                               } else {
                                 // Fallback to origin currency total
-                                const quoteTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+                                const quoteTotal = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
                                 const itemQuotePrice = quoteTotal * itemProportion;
                                 return (
                                   <span className="text-blue-700 ml-2">
@@ -992,7 +998,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'standard',
                       shippingAdjustment: 0,
-                      adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
                                     (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                     }))}
                   >
@@ -1005,7 +1011,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'standard',
                           shippingAdjustment: 0,
-                          adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
                                         (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
@@ -1033,7 +1039,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'express',
                       shippingAdjustment: 25,
-                      adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 25 + 
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 + 
                                     (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                     }))}
                   >
@@ -1046,7 +1052,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'express',
                           shippingAdjustment: 25,
-                          adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 25 + 
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 + 
                                         (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
@@ -1074,7 +1080,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'priority',
                       shippingAdjustment: 45,
-                      adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 45 + 
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 + 
                                     (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                     }))}
                   >
@@ -1087,7 +1093,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'priority',
                           shippingAdjustment: 45,
-                          adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 45 + 
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 + 
                                         (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
@@ -1160,7 +1166,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         }
                         
                         // Priority 4: Direct calculation fallback
-                        const total = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd || 0;
+                        const total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
                         const currency = displayCurrency || getBreakdownSourceCurrency(quote);
                         
                         return formatCurrency(total, currency);
@@ -1224,7 +1230,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                               ...prev,
                               insurance: insuranceEnabled,
                               insuranceAdjustment: insuranceCost,
-                              adjustedTotal: (quote.total_origin_currency || quote.origin_total_amount || quote.total_usd) + 
+                              adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
                                             (prev.shippingAdjustment || 0) + insuranceCost - (prev.discountAmount || 0)
                             }));
                           }}
@@ -1255,7 +1261,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             if (quoteOptions.discountCode) {
                               // Simple discount calculation for demo
                               let discountAmount = 0;
-                              const baseTotal = quote.total_origin_currency || quote.origin_total_amount || quote.total_usd;
+                              const baseTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
                               
                               // Apply discount based on code
                               if (quoteOptions.discountCode.toUpperCase().includes('10')) {
@@ -1309,27 +1315,36 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                   <Separator />
 
-                  {/* Actions - Conditional based on quote status */}
+                  {/* Actions - Dynamic buttons based on quote status and cart state */}
                   <div className="space-y-3">
                     {/* Primary Action Button */}
                     {quote.status === 'approved' ? (
-                      // Show Add to Cart or Added to Cart for approved quotes
+                      // For approved quotes: Show Add to Cart / Added to Cart
                       <Button 
                         className="w-full h-12 text-base font-medium"
-                        onClick={() => {
+                        onClick={async () => {
                           if (isInCart) {
                             navigate('/cart');
                           } else {
-                            handleApprove();
+                            await handleAddToCart();
                           }
                         }}
                         variant={isInCart ? 'outline' : 'default'}
                       >
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        {isInCart ? 'Added to Cart - View Cart' : 'Add to Cart'}
+                        {isInCart ? (
+                          <>
+                            <CheckCircle className="w-5 h-5 mr-2" />
+                            Added to Cart - View Cart
+                          </>
+                        ) : (
+                          <>
+                            <Package className="w-5 h-5 mr-2" />
+                            Add to Cart
+                          </>
+                        )}
                       </Button>
-                    ) : quote.status === 'rejected' ? (
-                      // Show Approve button for rejected quotes  
+                    ) : (
+                      // For pending/rejected quotes: Show Approve button
                       <Button 
                         className="w-full h-12 text-base font-medium"
                         onClick={handleApprove}
@@ -1337,34 +1352,26 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         <CheckCircle className="w-5 h-5 mr-2" />
                         Approve Quote
                       </Button>
-                    ) : (
-                      // Show Approve & Add to Cart for pending quotes
-                      <Button 
-                        className="w-full h-12 text-base font-medium"
-                        onClick={handleApprove}
-                      >
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        Add to Cart
-                      </Button>
                     )}
 
                     {/* Secondary Actions */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Only show Reject button for non-approved quotes */}
-                      {quote.status !== 'approved' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Reject button - only show for pending quotes, not for rejected quotes */}
+                      {quote.status === 'pending' && (
                         <Button 
                           variant="destructive" 
                           className="h-12"
                           onClick={() => setRejectModalOpen(true)}
                         >
+                          <X className="w-4 h-4 mr-2" />
                           Reject Quote
                         </Button>
                       )}
                       
-                      {/* Always show Ask Question button */}
+                      {/* Ask Question button - always visible, full width when reject not shown */}
                       <Button 
                         variant="outline" 
-                        className={quote.status === 'approved' ? 'col-span-2 h-12' : 'h-12'}
+                        className={quote.status === 'pending' ? 'h-12' : 'col-span-2 h-12'}
                         onClick={() => setQuestionModalOpen(true)}
                       >
                         <MessageCircle className="w-4 h-4 mr-2" />
@@ -1440,7 +1447,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             <div className="text-center p-6 bg-green-50 rounded-lg">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
               <div className="text-2xl font-bold text-green-900 mb-1">
-                {convertedAmounts.total || formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
+                {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, getBreakdownSourceCurrency(quote))}
               </div>
               <div className="text-sm text-green-700">
                 Quote #{quote.quote_number || quote.id.slice(0, 8)}
