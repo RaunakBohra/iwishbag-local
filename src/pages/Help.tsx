@@ -21,7 +21,8 @@ import {
   ArrowRight,
   CheckCircle,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +85,39 @@ const Help = () => {
         {
           question: 'Do I need an account to get a quote?',
           answer: 'No, you can request quotes without an account. However, creating an account lets you track orders, save addresses, and access order history.'
+        }
+      ]
+    },
+    {
+      id: 'weight-variations',
+      title: 'Weight & Pricing Variations',
+      icon: Scale,
+      description: 'Understanding weight changes and additional costs',
+      color: 'orange',
+      faqs: [
+        {
+          question: 'Why do product weights often increase from what\'s listed?',
+          answer: 'Seller websites typically list product weight only, not including packaging. Actual shipped weight includes protective packaging (bubble wrap, foam), retail packaging, boxes, and sometimes unexpected accessories. Weight increases of 10-30% are common and expected.'
+        },
+        {
+          question: 'What happens if the actual weight is higher than quoted?',
+          answer: 'We\'ll notify you within 2 hours of receiving your goods with the exact weight and any additional shipping/customs costs. You have 48 hours to approve the additional charges, request optimization, or discuss alternatives with our team.'
+        },
+        {
+          question: 'How much do weight increases typically cost?',
+          answer: 'Additional costs vary by weight increase and destination. Generally, expect $8-12 per kg for additional shipping, plus 10-15% customs duty on the extra amount. Use our Weight Variance Calculator on the quote page for estimates.'
+        },
+        {
+          question: 'Can I get weight protection insurance?',
+          answer: 'Yes! For just $5 extra, our Weight Protection Plan covers weight increases up to 25%. This protects you from unexpected additional shipping costs and gives peace of mind.'
+        },
+        {
+          question: 'What if I think the weight increase is unreasonable?',
+          answer: 'Our customer service team will review any disputed weight increases within 24 hours. We can provide photos, explore repackaging options, or find alternative solutions. We\'re committed to fair and transparent pricing.'
+        },
+        {
+          question: 'How can I minimize weight surprises?',
+          answer: 'Look for products with detailed packaging info, choose sellers with accurate descriptions, consider Weight Protection, and use our calculator to prepare for worst-case scenarios. Electronics and clothing often have the most packaging variations.'
         }
       ]
     },

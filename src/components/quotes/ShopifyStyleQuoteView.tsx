@@ -44,6 +44,7 @@ import {
 } from './ShopifyMobileOptimizations';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
+import { WeightPolicySection } from './WeightPolicySection';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import { useCart } from '@/hooks/useCart';
@@ -282,6 +283,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
   const [couponsModalOpen, setCouponsModalOpen] = useState(false);
+  const [weightPolicyAccepted, setWeightPolicyAccepted] = useState(false);
   
   // Cart functionality - reactive to cart state changes
   const cartItem = useCartItem(quote?.id || '');
@@ -1122,6 +1124,17 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               displayCurrency={displayCurrency}
               onTotalCalculated={handleTotalCalculated}
             />
+
+            {/* Weight Policy Section - Only show for pending/rejected quotes that need approval */}
+            {(quote.status === 'pending' || quote.status === 'rejected') && (
+              <WeightPolicySection
+                currentWeight={items.reduce((sum, item) => sum + (item.weight || 0), 0)}
+                currentTotal={quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0}
+                currency={displayCurrency}
+                onPolicyAccepted={setWeightPolicyAccepted}
+                isAccepted={weightPolicyAccepted}
+              />
+            )}
           </div>
 
           {/* Right Column - Summary & Actions */}
@@ -1313,9 +1326,10 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       <Button 
                         className="w-full h-12 text-base font-medium"
                         onClick={handleApprove}
+                        disabled={!weightPolicyAccepted}
                       >
                         <CheckCircle className="w-5 h-5 mr-2" />
-                        Approve Quote
+                        {weightPolicyAccepted ? 'Approve Quote' : 'Accept Policy First'}
                       </Button>
                     )}
 

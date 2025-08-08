@@ -92,49 +92,48 @@ const Cart: React.FC = React.memo(() => {
 
   return (
     <div className={`min-h-screen ${cartDesignTokens.colors.background.secondary}`}>
-      {/* Header */}
-      <div className={cartDesignTokens.colors.background.primary}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`${cartDesignTokens.layout.flex.spaceBetween} h-16`}>
+      {/* Clean Cart Header */}
+      <div className={`${cartDesignTokens.colors.background.primary} border-b border-gray-200`}>
+        <div className="max-w-7xl mx-auto">
+          {/* Navigation Bar */}
+          <div className="flex items-center px-4 sm:px-6 lg:px-8 py-3 border-b border-gray-100">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(-1)}
+              className={`${cartDesignTokens.layout.flex.itemRow} ${cartDesignTokens.colors.text.secondary} hover:${cartDesignTokens.colors.text.primary}`}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
+          
+          {/* Cart Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
             <div className={cartDesignTokens.layout.flex.itemRow}>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate(-1)}
-                className={cartDesignTokens.layout.flex.itemRow}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              
-              <div className={cartDesignTokens.layout.flex.itemRow}>
-                <ShoppingCart className="w-6 h-6 text-blue-600" />
-                <div>
-                  <h1 className={cartDesignTokens.typography.title.large}>Shopping Cart</h1>
-                  <p className={`${cartDesignTokens.typography.body.small} ${cartDesignTokens.colors.text.muted}`}>
-                    {items.length} {items.length === 1 ? 'item' : 'items'}
-                  </p>
-                </div>
+              <ShoppingCart className="w-7 h-7 text-blue-600 mr-3" />
+              <div>
+                <h1 className={`${cartDesignTokens.typography.title.large} mb-1`}>
+                  Shopping Cart
+                </h1>
+                <p className={`${cartDesignTokens.typography.body.medium} ${cartDesignTokens.colors.text.muted}`}>
+                  {items.length} {items.length === 1 ? 'item' : 'items'}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                
-                {items.length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleClearCart}
-                    disabled={clearingCart}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Clear Cart
-                  </Button>
-                )}
-              </div>
-            </div>
+            {/* Actions - Only show when cart has items */}
+            {items.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleClearCart}
+                disabled={clearingCart}
+                className="text-red-600 border-red-200 hover:text-red-700 hover:border-red-300 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Cart
+              </Button>
+            )}
           </div>
         </div>
       </div>
