@@ -19,7 +19,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { 
   ChevronDown,
   ChevronUp,
@@ -34,7 +33,18 @@ import {
 import { getOriginCurrency } from '@/utils/originCurrency';
 
 interface ProfessionalBreakdownProps {
-  quote: any;
+  quote: {
+    id: string;
+    calculation_data?: {
+      calculation_steps?: Record<string, any>;
+      inputs?: Record<string, any>;
+      _proportional_rounding_applied?: boolean;
+    };
+    origin_country?: string;
+    destination_country?: string;
+    total_quote_origincurrency?: number;
+    total_origin_currency?: number;
+  };
   formatCurrency: (amount: number, currency: string) => string;
   className?: string;
   displayCurrency?: string;
@@ -147,6 +157,7 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
+  const [lastSharedTotal, setLastSharedTotal] = React.useState<{total: number, currency: string} | null>(null);
 
   // Currency conversion function
   const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
@@ -163,27 +174,13 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
     }
   }, []);
 
-  if (!quote || !quote.calculation_data) {
-    return (
-      <Card className={`${className} border-slate-200 shadow-sm`}>
-        <CardContent className="p-8">
-          <div className="flex items-center justify-center text-slate-500">
-            <FileText className="w-5 h-5 mr-2" />
-            <span className="text-sm">Breakdown not available</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const calc = quote.calculation_data;
-  const steps = calc.calculation_steps || {};
-  const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+  // Derived values
+  const calc = quote?.calculation_data;
+  const steps = calc?.calculation_steps || {};
+  const originCurrency = quote?.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
   const currency = displayCurrency || originCurrency;
-
-  // Check if quote has proportional rounding applied
-  const hasProportionalRounding = quote.calculation_data?._proportional_rounding_applied || 
-                                 quote.calculation_data?.calculation_steps?._rounding_metadata;
+  const hasProportionalRounding = quote?.calculation_data?._proportional_rounding_applied || 
+                                 quote?.calculation_data?.calculation_steps?._rounding_metadata;
 
   // Convert amounts when displayCurrency changes
   useEffect(() => {
@@ -245,6 +242,36 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
     convertAmounts();
   }, [quote.id, quote.origin_country, displayCurrency, hasProportionalRounding, convertCurrency]);
 
+  // Share calculated total with parent component
+  const finalTotal = steps.total_origin_currency || quote?.total_quote_origincurrency || quote?.total_origin_currency || 0;
+  React.useEffect(() => {
+    if (onTotalCalculated && finalTotal !== undefined && quote?.calculation_data) {
+      const convertedTotal = displayCurrency && convertedAmounts['final_total'] !== undefined 
+        ? convertedAmounts['final_total'] 
+        : finalTotal;
+      
+      if (!lastSharedTotal || lastSharedTotal.total !== convertedTotal || lastSharedTotal.currency !== currency) {
+        const formattedTotal = formatCurrency(convertedTotal, currency);
+        onTotalCalculated(formattedTotal, convertedTotal, currency);
+        setLastSharedTotal({ total: convertedTotal, currency });
+      }
+    }
+  }, [finalTotal, currency, onTotalCalculated, formatCurrency, lastSharedTotal, convertedAmounts, displayCurrency, quote?.calculation_data]);
+
+  // Early return after all hooks are declared
+  if (!quote || !quote.calculation_data) {
+    return (
+      <Card className={`${className} border-slate-200 shadow-sm`}>
+        <CardContent className="p-8">
+          <div className="flex items-center justify-center text-slate-500">
+            <FileText className="w-5 h-5 mr-2" />
+            <span className="text-sm">Breakdown not available</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Helper function to get amounts
   const getAmount = (key: string, originalAmount: number) => {
     const itemCostKeys = ['items_subtotal', 'item_discounts', 'order_discount_amount'];
@@ -293,21 +320,8 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
     }
   ];
 
-  const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency || 0);
+  const convertedFinalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency || 0);
   const totalSavings = getAmount('total_savings', steps.total_savings || 0);
-
-  // Share calculated total with parent component
-  const [lastSharedTotal, setLastSharedTotal] = React.useState<{total: number, currency: string} | null>(null);
-  
-  React.useEffect(() => {
-    if (onTotalCalculated && finalTotal !== undefined) {
-      if (!lastSharedTotal || lastSharedTotal.total !== finalTotal || lastSharedTotal.currency !== currency) {
-        const formattedTotal = formatCurrency(finalTotal, currency);
-        onTotalCalculated(formattedTotal, finalTotal, currency);
-        setLastSharedTotal({ total: finalTotal, currency });
-      }
-    }
-  }, [finalTotal, currency, onTotalCalculated, formatCurrency, lastSharedTotal]);
 
   // Detailed breakdown sections for expanded view
   const getLocalTaxName = (countryCode: string) => {
@@ -418,7 +432,7 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
           <BreakdownLineItem
             icon={<CheckCircle className="w-5 h-5" />}
             label="Total"
-            amount={finalTotal}
+            amount={convertedFinalTotal}
             currency={currency}
             formatCurrency={formatCurrency}
             isTotal={true}
