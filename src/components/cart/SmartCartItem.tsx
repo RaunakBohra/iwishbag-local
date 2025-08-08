@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cartDesignTokens } from '@/styles/cart-design-system';
 
 import { useCartItem } from '@/hooks/useCart';
 import { useCurrency } from '@/hooks/unified';
@@ -238,9 +239,9 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
 
   // Full view for cart page
   return (
-    <Card className={`transition-all duration-200 hover:shadow-lg ${className}`}>
-      <CardContent className="p-6">
-        <div className="flex gap-4">
+    <Card className={`${cartDesignTokens.components.card.interactive} ${cartDesignTokens.animations.transition.all} ${className}`}>
+      <CardContent className={cartDesignTokens.spacing.component.comfortable}>
+        <div className={cartDesignTokens.layout.flex.itemRow}>
           {/* Product Image */}
           <div className="flex-shrink-0">
             {itemDetails.imageUrl ? (
@@ -261,13 +262,13 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
             {/* Header */}
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">
+                <h3 className={`${cartDesignTokens.typography.title.small} mb-1`}>
                   {itemDetails.productUrl ? (
                     <a 
                       href={itemDetails.productUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      className={`${cartDesignTokens.colors.interactive.primary} ${cartDesignTokens.layout.flex.itemRow} ${cartDesignTokens.animations.transition.colors}`}
                     >
                       {itemDetails.displayName}
                       <ExternalLink className="w-4 h-4" />
@@ -277,12 +278,12 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                   )}
                 </h3>
 
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className={`${cartDesignTokens.layout.flex.itemRow} ${cartDesignTokens.typography.body.small} ${cartDesignTokens.colors.text.muted}`}>
                   <span>Quote {item.quote.display_id || `#${item.id.slice(0, 8)}`}</span>
                   {item.quote.origin_country && (
                     <>
                       <span>•</span>
-                      <span className="flex items-center gap-1">
+                      <span className={cartDesignTokens.layout.flex.itemRow}>
                         <MapPin className="w-3 h-3" />
                         {item.quote.origin_country} → {item.quote.destination_country}
                       </span>
@@ -337,7 +338,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                 )}
               </div>
 
-              <div className="text-2xl font-bold text-green-600">
+              <div className={`${cartDesignTokens.typography.price.primary} ${cartDesignTokens.colors.interactive.success}`}>
                 {displayPrice}
               </div>
             </div>

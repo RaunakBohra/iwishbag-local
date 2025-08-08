@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cartDesignTokens } from '@/styles/cart-design-system';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -459,21 +460,21 @@ export const CartSummary = memo<CartSummaryProps>(({
   } = calculations;
 
   return (
-    <Card className={`${className} sticky top-4 shadow-sm border-gray-100`}>
-      <CardHeader className="pb-4 px-4 sm:px-6">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">
+    <Card className={`${className} ${cartDesignTokens.components.card.elevated} sticky top-4`}>
+      <CardHeader className={`${cartDesignTokens.spacing.component.comfortable} pb-4`}>
+        <CardTitle className={cartDesignTokens.typography.title.medium}>
           Order Summary
-          <span className="text-sm font-normal text-gray-500 ml-2">
+          <span className={`${cartDesignTokens.typography.body.small} ${cartDesignTokens.colors.text.muted} ml-2`}>
             ({items.length} {items.length === 1 ? 'item' : 'items'})
           </span>
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
+      <CardContent className={`${cartDesignTokens.spacing.stack.normal} ${cartDesignTokens.spacing.component.comfortable} pt-0`}>
         {/* Subtotal */}
-        <div className="flex justify-between items-center py-2">
-          <span className="text-gray-700">Subtotal</span>
-          <span className="font-medium text-gray-900">{subtotalFormatted}</span>
+        <div className={cartDesignTokens.layout.flex.spaceBetween}>
+          <span className={cartDesignTokens.typography.body.medium}>Subtotal</span>
+          <span className={cartDesignTokens.typography.price.secondary}>{subtotalFormatted}</span>
         </div>
 
         {/* Compact Package Protection - Shopify/Amazon Style */}
@@ -513,45 +514,44 @@ export const CartSummary = memo<CartSummaryProps>(({
 
         {/* Discount */}
         {discount > 0 && (
-          <div className="flex justify-between items-center py-2">
-            <span className="text-gray-700 flex items-center gap-2">
+          <div className={cartDesignTokens.layout.flex.spaceBetween}>
+            <span className={`${cartDesignTokens.typography.body.medium} ${cartDesignTokens.layout.flex.itemRow}`}>
               <Percent className="w-4 h-4 text-green-600" />
               Discount Applied
             </span>
-            <span className="font-medium text-green-600">
+            <span className={`${cartDesignTokens.typography.price.secondary} text-green-600`}>
               -{discountFormatted}
             </span>
           </div>
         )}
 
-        {/* Total Section - Enhanced & Responsive */}
-        <div className="border-t border-gray-200 pt-4 mt-6">
-          <div className="flex justify-between items-center">
-            <span className="text-lg sm:text-xl font-semibold text-gray-900">Total</span>
-            <span className="text-xl sm:text-2xl font-bold text-gray-900">
-              {totalFormatted}
-            </span>
-          </div>
+        {/* Total Section - International Standard */}
+        <Separator className="my-4" />
+        <div className={cartDesignTokens.layout.flex.spaceBetween}>
+          <span className={cartDesignTokens.typography.title.small}>Total</span>
+          <span className={cartDesignTokens.typography.price.primary}>
+            {totalFormatted}
+          </span>
         </div>
 
-        {/* Checkout Button - Enhanced & Responsive */}
+        {/* Checkout Button - International Standard */}
         {onCheckout && onCheckout.toString() !== '() => {}' && (
           <div className="pt-6">
             <Button 
               onClick={onCheckout}
-              className="w-full h-12 sm:h-14 text-base sm:text-lg font-medium bg-green-600 hover:bg-green-700 text-white transition-colors duration-200 shadow-sm hover:shadow-md"
+              className={`w-full ${cartDesignTokens.components.button.primary} ${cartDesignTokens.animations.transition.all} h-12 text-base`}
               size="lg"
             >
-              <Package className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <Package className="w-5 h-5 mr-2" />
               Proceed to Checkout
             </Button>
           </div>
         )}
 
-        {/* Minimal Additional Info */}
+        {/* Additional Info */}
         {!compact && !onCheckout && (
           <div className="pt-3 text-center">
-            <p className="text-xs text-gray-500">
+            <p className={`${cartDesignTokens.typography.body.small} ${cartDesignTokens.colors.text.muted}`}>
               Final shipping and taxes calculated at checkout
             </p>
           </div>

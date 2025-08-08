@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cartDesignTokens } from '@/styles/cart-design-system';
 
 import { SmartCartItem, SmartCartItemSkeleton } from '@/components/cart/SmartCartItem';
 import { CartSummary } from '@/components/cart/CartSummary';
@@ -90,30 +91,28 @@ const Cart: React.FC = React.memo(() => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${cartDesignTokens.colors.background.secondary}`}>
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className={cartDesignTokens.colors.background.primary}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+          <div className={`${cartDesignTokens.layout.flex.spaceBetween} h-16`}>
+            <div className={cartDesignTokens.layout.flex.itemRow}>
               <Button 
                 variant="ghost" 
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2"
+                className={cartDesignTokens.layout.flex.itemRow}
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
               
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
-                  <ShoppingCart className="w-6 h-6 text-teal-600" />
-                  <div>
-                    <h1 className="text-2xl font-bold">Shopping Cart</h1>
-                    <p className="text-sm text-gray-500">
-                      {items.length} {items.length === 1 ? 'item' : 'items'}
-                    </p>
-                  </div>
+              <div className={cartDesignTokens.layout.flex.itemRow}>
+                <ShoppingCart className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h1 className={cartDesignTokens.typography.title.large}>Shopping Cart</h1>
+                  <p className={`${cartDesignTokens.typography.body.small} ${cartDesignTokens.colors.text.muted}`}>
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -178,9 +177,9 @@ const Cart: React.FC = React.memo(() => {
           </div>
         ) : (
           // Main Content
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className={cartDesignTokens.layout.grid.cartMain}>
             {/* Cart Items */}
-            <div className="lg:col-span-2">
+            <div className={cartDesignTokens.layout.grid.cartItems}>
               {/* Simple Sort Options */}
               {items.length > 1 && (
                 <Card className="mb-4">
@@ -225,7 +224,7 @@ const Cart: React.FC = React.memo(() => {
             </div>
 
             {/* Cart Summary Sidebar */}
-            <div className="lg:col-span-1">
+            <div className={cartDesignTokens.layout.grid.cartSummary}>
               <CartSummary
                 onCheckout={handleCheckout}
                 showShippingEstimate={false}
