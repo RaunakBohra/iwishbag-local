@@ -21,7 +21,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StandardModal } from '@/components/patterns';
 import { cn } from '@/lib/utils';
 import { UnifiedPaymentModal } from './UnifiedPaymentModal';
 import { currencyService } from '@/services/CurrencyService';
@@ -481,13 +481,18 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
         </CardContent>
       </Card>
 
-      {/* Transaction Details Dialog */}
-      <Dialog open={showTransactionDetails} onOpenChange={setShowTransactionDetails}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Payment Transaction Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      {/* Transaction Details Modal */}
+      <StandardModal
+        isOpen={showTransactionDetails}
+        onClose={() => setShowTransactionDetails(false)}
+        title="Payment Transaction Details"
+        config={{
+          size: 'lg',
+          variant: 'default',
+          scrollable: true
+        }}
+      >
+        <div className="space-y-4">
             {/* Transaction Summary */}
             <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
               <div>
@@ -596,8 +601,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               </details>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </StandardModal>
 
       {/* Unified Payment Management Modal */}
       <UnifiedPaymentModal

@@ -9,7 +9,7 @@
  * - Performance optimized
  */
 
-import React, { memo, useMemo, useState, useEffect } from 'react';
+import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import { ShoppingCart, Package, Percent, AlertCircle, Shield } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -525,6 +525,28 @@ export const CartSummary = memo<CartSummaryProps>(({
                 Updating insurance coverage...
               </div>
             )}
+          </div>
+        )}
+
+        {/* Coupon Input */}
+        {calculations && (
+          <div className="space-y-2">
+            <CouponCodeInput
+              customerId={user?.id}
+              quoteTotal={calculations.subtotal + calculations.insurance}
+              currency={displayCurrency}
+              countryCode={items.length > 0 ? items[0].quote.destination_country : undefined}
+              componentBreakdown={{
+                shipping_cost: calculations.estimatedShipping,
+                handling_fee: 0, // No handling fee in cart
+                insurance_amount: calculations.insurance,
+              }}
+              onDiscountApplied={handleDiscountApplied}
+              onDiscountRemoved={handleDiscountRemoved}
+              appliedCodes={appliedCoupons.map(c => c.code)}
+              disabled={calculationLoading || isLoading}
+              hideQuoteTotal={false}
+            />
           </div>
         )}
 

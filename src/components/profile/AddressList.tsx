@@ -7,7 +7,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { StateProvinceService } from '@/services/StateProvinceService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StandardModal, ConfirmationModal } from '@/components/patterns';
 import { Plus, Edit, Trash2, MoreVertical, MapPin, Phone, CheckCircle, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddressForm } from './AddressForm';
@@ -18,16 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+// Removed - using ConfirmationModal instead
 import { Badge } from '@/components/ui/badge';
 import { Body, BodySmall } from '@/components/ui/typography';
 
@@ -385,41 +376,30 @@ export function AddressList() {
         ) : null}
       </div>
 
-      {/* Dialogs */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900">
-              {selectedAddress ? 'Edit Address' : 'Add New Address'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Address Form Modal */}
+      <StandardModal
+        isOpen={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={selectedAddress ? 'Edit Address' : 'Add New Address'}
+        config={{
+          size: 'lg',
+          variant: 'form',
+          showCloseButton: true
+        }}
+      >
           <AddressForm address={selectedAddress} onSuccess={() => setDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      </StandardModal>
 
-      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-semibold text-gray-900">
-              Delete Address?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              This action cannot be undone. This will permanently delete your address.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-300 text-gray-700 hover:bg-gray-50">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationModal
+        isOpen={deleteAlertOpen}
+        onClose={() => setDeleteAlertOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Address?"
+        description="This action cannot be undone. This will permanently delete your address."
+        variant="warning"
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

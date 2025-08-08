@@ -14,10 +14,12 @@ import {
 } from 'lucide-react';
 import { getDiscountService } from '@/services/unified/DiscountService';
 import { toast } from '@/hooks/use-toast';
+import { currencyService } from '@/services/CurrencyService';
 
 interface CouponCodeInputProps {
   customerId?: string;
   quoteTotal: number;
+  currency?: string; // Add currency for proper formatting
   countryCode?: string; // Add country code for validation
   componentBreakdown?: {
     shipping_cost?: number;
@@ -38,11 +40,13 @@ interface CouponCodeInputProps {
   currentCode?: string;
   appliedCodes?: string[]; // New prop to show multiple applied codes
   disabled?: boolean;
+  hideQuoteTotal?: boolean; // Add option to hide the quote total display
 }
 
 export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
   customerId,
   quoteTotal,
+  currency = 'USD',
   countryCode,
   componentBreakdown,
   onDiscountApplied,
@@ -50,6 +54,7 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
   currentCode,
   appliedCodes = [],
   disabled = false,
+  hideQuoteTotal = false,
 }) => {
   const [code, setCode] = useState(currentCode || '');
   const [isValidating, setIsValidating] = useState(false);
@@ -304,9 +309,9 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
       )}
 
       {/* Show available conditions */}
-      {!validatedDiscount && !error && quoteTotal > 0 && (
+      {!validatedDiscount && !error && quoteTotal > 0 && !hideQuoteTotal && (
         <p className="text-xs text-gray-500">
-          Quote total: ${quoteTotal.toFixed(2)}
+          Quote total: {currencyService.formatAmount(quoteTotal, currency)}
         </p>
       )}
       

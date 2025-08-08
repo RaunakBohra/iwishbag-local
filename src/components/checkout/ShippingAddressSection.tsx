@@ -126,20 +126,26 @@ export function ShippingAddressSection({
             </div>
 
             {/* Change Address Button */}
-            <Dialog open={changeModalOpen} onOpenChange={setChangeModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-shrink-0 ml-3">
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Change
-                </Button>
-              </DialogTrigger>
-              
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Choose shipping address</DialogTitle>
-                </DialogHeader>
-                
-                <div className="space-y-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-shrink-0 ml-3"
+              onClick={() => setChangeModalOpen(true)}
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Change
+            </Button>
+
+            <StandardModal
+              isOpen={changeModalOpen}
+              onClose={() => setChangeModalOpen(false)}
+              title="Choose shipping address"
+              config={{
+                size: 'md',
+                variant: 'default'
+              }}
+            >
+              <div className="space-y-4">
                   <RadioGroup
                     value={selectedAddress.id}
                     onValueChange={handleAddressSelect}
@@ -208,8 +214,8 @@ export function ShippingAddressSection({
                     </Button>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
+              </div>
+            </StandardModal>
           </div>
         </CardContent>
       </Card>

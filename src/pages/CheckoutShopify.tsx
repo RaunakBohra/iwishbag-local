@@ -18,18 +18,15 @@ import {
   AlertCircle,
   Loader2,
   Package,
-  Truck,
   CreditCard,
   Lock,
   ShoppingBag,
   MapPin,
   User,
-  Shield,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,30 +38,17 @@ import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
 import { CheckoutService } from '@/services/CheckoutService';
-import { currencyService } from '@/services/CurrencyService';
 import { supabase } from '@/integrations/supabase/client';
 
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CheckoutAddressDisplay } from '@/components/checkout/CheckoutAddressDisplay';
+import { CartSummary } from '@/components/cart/CartSummary';
 import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
 
-interface OrderSummary {
-  itemsTotal: number;
-  shippingTotal: number;
-  taxesTotal: number;
-  serviceFeesTotal: number;
-  finalTotal: number;
-  currency: string;
-  savings?: number;
-}
 
 
-// Helper function for simple currency formatting - matches CartSummary approach
-const formatCheckoutAmount = (amount: number, currency: string): string => {
-  return currencyService.formatAmount(amount || 0, currency);
-};
 
 const CheckoutShopify: React.FC = React.memo(() => {
   const navigate = useNavigate();
@@ -73,9 +57,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
   const { displayCurrency } = useCartCurrency();
   
   // State management
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [processingOrder, setProcessingOrder] = useState(false);
   
   // Form data
@@ -115,53 +97,17 @@ const CheckoutShopify: React.FC = React.memo(() => {
     fetchAddresses();
   }, [user]);
 
-  // Calculate order summary
-  useEffect(() => {
-    const calculateOrderSummary = async () => {
-      if (items.length === 0) return;
-      
-      try {
-        setLoading(true);
-        setError(null); // Clear previous errors
-        
-        // Validate items before calculation
-        const hasValidItems = items.every(item => 
-          item.quote && 
-          typeof item.quote.final_total_origincurrency === 'number' &&
-          !isNaN(item.quote.final_total_origincurrency)
-        );
-        
-        if (!hasValidItems) {
-          throw new Error('Some items in your cart have invalid pricing data. Please refresh and try again.');
-        }
-
-        // Ensure we have a valid destination country
-        const destinationCountry = selectedAddress?.destination_country || user?.profile?.country || 'US';
-        const summary = await checkoutService.calculateOrderSummary(items, destinationCountry);
-        setOrderSummary(summary);
-      } catch (error) {
-        logger.error('Failed to calculate order summary:', error);
-        const message = error instanceof Error ? error.message : 'Failed to calculate order total. Please try again.';
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    calculateOrderSummary();
-  }, [items, selectedAddress?.destination_country, user?.profile?.country, checkoutService]);
-
   // Redirect if cart is empty
   useEffect(() => {
-    if (!loading && items.length === 0) {
+    if (items.length === 0) {
       navigate('/cart', { replace: true });
     }
-  }, [items.length, loading, navigate]);
+  }, [items.length, navigate]);
 
   // Form validation
   const isAddressValid = selectedAddress !== null;
   const isPaymentValid = selectedPaymentMethod !== null;
-  const canPlaceOrder = isAddressValid && isPaymentValid && orderSummary && !processingOrder;
+  const canPlaceOrder = isAddressValid && isPaymentValid && items.length > 0 && !processingOrder;
 
   const handleAddressSelect = useCallback((address: Tables<'delivery_addresses'>) => {
     setSelectedAddress(address);
@@ -296,7 +242,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 <PaymentMethodSelector
                   selectedMethod={selectedPaymentMethod}
                   onMethodChange={setSelectedPaymentMethod}
-                  amount={orderSummary?.finalTotal || 0}
+                  amount={0} // Will be calculated at payment time
                   currency={displayCurrency}
                   country={selectedAddress?.destination_country || user?.profile?.country || 'US'}
                 />
@@ -370,7 +316,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-sm">
-                          {formatCheckoutAmount(item.quote.final_total_origincurrency || 0, displayCurrency)}
+                          ${(item.quote.final_total_origincurrency || 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -378,72 +324,15 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 </CardContent>
               </Card>
 
-              {/* Order Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <StandardLoading
-                    isLoading={loading}
-                    config={{ variant: 'skeleton' }}
-                  >
-                    {orderSummary ? (
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span>Items ({items.length})</span>
-                          <span>
-                            {formatCheckoutAmount(orderSummary.itemsTotal, displayCurrency)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <Truck className="w-3 h-3" />
-                            Shipping
-                          </span>
-                          <span>
-                            {formatCheckoutAmount(orderSummary.shippingTotal, displayCurrency)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Taxes & Duties</span>
-                          <span>
-                            {formatCheckoutAmount(orderSummary.taxesTotal, displayCurrency)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="flex items-center gap-1">
-                            <Shield className="w-3 h-3" />
-                            Service Fees
-                          </span>
-                          <span>
-                            {formatCheckoutAmount(orderSummary.serviceFeesTotal, displayCurrency)}
-                          </span>
-                        </div>
-                        
-                        {orderSummary.savings && orderSummary.savings > 0 && (
-                          <div className="flex justify-between text-sm text-green-600">
-                            <span>Savings</span>
-                            <span>
-                              -{formatCheckoutAmount(orderSummary.savings, displayCurrency)}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <Separator />
-                        <div className="flex justify-between font-semibold text-lg">
-                          <span>Total</span>
-                          <span>
-                            {formatCheckoutAmount(orderSummary.finalTotal, displayCurrency)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">Calculating totals...</p>
-                    )}
-                  </StandardLoading>
-                </CardContent>
-              </Card>
+              {/* Order Summary - Reuse CartSummary component */}
+              <CartSummary
+                onCheckout={() => {}} // No checkout button needed in checkout page
+                showShippingEstimate={false}
+                showTaxEstimate={false}
+                showInsuranceOption={true}
+                compact={false}
+                className="order-summary"
+              />
 
               {/* Place Order Button - Desktop */}
               <div className="hidden lg:block mt-6">
