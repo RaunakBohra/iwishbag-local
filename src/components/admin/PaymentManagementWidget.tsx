@@ -30,7 +30,7 @@ interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
 }
 
-export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = ({ quote }) => {
+export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = React.memo(({ quote }) => {
   const { toast: _toast } = useToast();
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
   const [showUnifiedPaymentModal, setShowUnifiedPaymentModal] = useState(false);
@@ -612,4 +612,6 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
       />
     </>
   );
-};
+});
+
+PaymentManagementWidget.displayName = 'PaymentManagementWidget';

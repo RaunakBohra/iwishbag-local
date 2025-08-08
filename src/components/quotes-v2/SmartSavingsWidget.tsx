@@ -24,7 +24,7 @@ interface SmartSavingsWidgetProps {
   onDiscountApplied?: (discount: any) => void;
 }
 
-export const SmartSavingsWidget: React.FC<SmartSavingsWidgetProps> = ({
+export const SmartSavingsWidget: React.FC<SmartSavingsWidgetProps> = React.memo(({
   customerId,
   orderTotal,
   countryCode,
@@ -409,4 +409,6 @@ export const SmartSavingsWidget: React.FC<SmartSavingsWidgetProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+SmartSavingsWidget.displayName = 'SmartSavingsWidget';

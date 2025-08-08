@@ -36,7 +36,7 @@ interface AdminDiscountControlsProps {
   countryCode?: string;
 }
 
-export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
+export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = React.memo(({
   currencySymbol = '$',
   currency,
   onDiscountChange,
@@ -363,4 +363,6 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+AdminDiscountControls.displayName = 'AdminDiscountControls';

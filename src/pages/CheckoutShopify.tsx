@@ -48,8 +48,6 @@ import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
 
 
-
-
 const CheckoutShopify: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -59,6 +57,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
   // State management
   const [error, setError] = useState<string | null>(null);
   const [processingOrder, setProcessingOrder] = useState(false);
+  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   
   // Form data
   const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | null>(null);
@@ -129,12 +128,16 @@ const CheckoutShopify: React.FC = React.memo(() => {
       setProcessingOrder(true);
       setError(null);
       
+      // Calculate order summary on demand for order creation
+      const destinationCountry = selectedAddress?.destination_country || user?.profile?.country || 'US';
+      const orderSummary = await checkoutService.calculateOrderSummary(items, destinationCountry);
+      
       // Create order
       const order = await checkoutService.createOrder({
         items,
         address: selectedAddress!,
         paymentMethod: selectedPaymentMethod!,
-        orderSummary: orderSummary!,
+        orderSummary,
         userId: user!.id
       });
       
@@ -150,20 +153,8 @@ const CheckoutShopify: React.FC = React.memo(() => {
     } finally {
       setProcessingOrder(false);
     }
-  }, [canPlaceOrder, checkoutService, items, selectedAddress, selectedPaymentMethod, orderSummary, user, clearCart, navigate]);
+  }, [canPlaceOrder, checkoutService, items, selectedAddress, selectedPaymentMethod, user, clearCart, navigate]);
 
-  // Show loading state while initializing
-  if (loading && items.length === 0) {
-    return (
-      <StandardLoading
-        isLoading={true}
-        config={{ fullScreen: true, variant: 'spinner', size: 'lg' }}
-        loadingText="Loading checkout..."
-      >
-        <div />
-      </StandardLoading>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
