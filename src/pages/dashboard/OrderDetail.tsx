@@ -61,11 +61,14 @@ export default function OrderDetail() {
     queryFn: async () => {
       if (!id || !user) return null;
       const { data, error } = await supabase
-        .from('quotes_v2')
+        .from('orders')
         .select(
           `
           *,
-          quote_items (*)
+          order_items (
+            *,
+            quotes_v2 (id, quote_number, status, customer_email)
+          )
         `,
         )
         .eq('id', id)
