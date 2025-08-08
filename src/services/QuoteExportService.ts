@@ -24,8 +24,8 @@ interface QuoteData {
   items: QuoteItem[];
   final_total_origin: number;
   total_origin_currency?: number;
-  total_usd?: number; // Kept for backward compatibility
-  total_customer_currency?: number;
+  total_quote_origincurrency?: number; // Kept for backward compatibility
+  total_customer_display_currency?: number;
   customer_currency?: string;
   origin_country?: string;
   destination_country?: string;
@@ -182,9 +182,9 @@ export class QuoteExportService {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     
-    const totalOrigin = quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0;
-    const totalText = quote.customer_currency && quote.total_customer_currency 
-      ? `Total: ${await currencyService.formatAmount(quote.total_customer_currency, quote.customer_currency)}`
+    const totalOrigin = quote.final_total_origin || quote.total_origin_currency || quote.total_quote_origincurrency || quote.total || 0;
+    const totalText = quote.customer_currency && quote.total_customer_display_currency 
+      ? `Total: ${await currencyService.formatAmount(quote.total_customer_display_currency, quote.customer_currency)}`
       : `Total: ${totalOrigin.toFixed(2)} ${quote.origin_country || 'USD'}`;
     
     doc.text(totalText, pageWidth - margin - 60, currentY);
@@ -239,12 +239,12 @@ export class QuoteExportService {
     summarySheet.addRow(['Origin Country', quote.origin_country || 'N/A']);
     summarySheet.addRow(['Destination Country', quote.destination_country || 'N/A']);
     summarySheet.addRow([]);
-    const totalAmount = quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0;
+    const totalAmount = quote.final_total_origin || quote.total_origin_currency || quote.total_quote_origincurrency || quote.total || 0;
     summarySheet.addRow(['Total (Origin Currency)', `${totalAmount.toFixed(2)} ${quote.origin_country || 'USD'}`]);
 
-    if (quote.customer_currency && quote.total_customer_currency) {
+    if (quote.customer_currency && quote.total_customer_display_currency) {
       summarySheet.addRow(['Total (Customer Currency)', 
-        `${await currencyService.formatAmount(quote.total_customer_currency, quote.customer_currency)}`]);
+        `${await currencyService.formatAmount(quote.total_customer_display_currency, quote.customer_currency)}`]);
     }
 
     if (quote.notes) {
@@ -400,7 +400,7 @@ export class QuoteExportService {
         quote.id?.slice(-8).toUpperCase() || 'Unknown',
         quote.customer_name || 'Unknown Customer',
         quote.status?.toUpperCase() || 'Unknown',
-        quote.final_total_origin || quote.total_origin_currency || quote.total_usd || quote.total || 0,
+        quote.final_total_origin || quote.total_origin_currency || quote.total_quote_origincurrency || quote.total || 0,
         quote.created_at ? new Date(quote.created_at).toLocaleDateString() : 'Unknown'
       ]);
     });

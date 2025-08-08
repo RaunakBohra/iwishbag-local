@@ -14,9 +14,9 @@ interface EmailQuoteData {
   share_token: string;
   expires_at?: string;
   validity_days: number;
-  total_usd: number;
+  total_quote_origincurrency: number;
   customer_currency: string;
-  total_customer_currency?: number;
+  total_customer_display_currency?: number;
   items: any[];
   customer_message?: string;
   payment_terms?: string;
@@ -149,7 +149,7 @@ export class QuoteEmailService {
   // Generate HTML email for quote
   private generateQuoteEmailHtml(quote: EmailQuoteData, shareUrl: string, expiryDate: Date | null): string {
     const totalAmount = formatCurrency(
-      quote.total_customer_currency || quote.total_usd,
+      quote.total_customer_display_currency || quote.total_quote_origincurrency,
       quote.customer_currency || 'USD'
     );
 
@@ -237,7 +237,7 @@ export class QuoteEmailService {
   // Generate plain text email for quote
   private generateQuoteEmailText(quote: EmailQuoteData, shareUrl: string, expiryDate: Date | null): string {
     const totalAmount = formatCurrency(
-      quote.total_customer_currency || quote.total_usd,
+      quote.total_customer_display_currency || quote.total_quote_origincurrency,
       quote.customer_currency || 'USD'
     );
 
@@ -270,7 +270,7 @@ The iwishBag Team
   // Generate HTML reminder email
   private generateReminderEmailHtml(quote: EmailQuoteData, shareUrl: string, reminderNumber: number): string {
     const totalAmount = formatCurrency(
-      quote.total_customer_currency || quote.total_usd,
+      quote.total_customer_display_currency || quote.total_quote_origincurrency,
       quote.customer_currency || 'USD'
     );
 
@@ -323,7 +323,7 @@ The iwishBag Team
   // Generate plain text reminder email
   private generateReminderEmailText(quote: EmailQuoteData, shareUrl: string, reminderNumber: number): string {
     const totalAmount = formatCurrency(
-      quote.total_customer_currency || quote.total_usd,
+      quote.total_customer_display_currency || quote.total_quote_origincurrency,
       quote.customer_currency || 'USD'
     );
 

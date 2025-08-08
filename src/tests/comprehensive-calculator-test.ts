@@ -275,7 +275,7 @@
 
       if (result.success) {
         console.log('   ✅ Calculation successful');
-        console.log(`   💰 Total: $${result.final_total_usd?.toFixed(2) || 'N/A'}`);
+        console.log(`   💰 Total: $${result.final_total_origincurrency?.toFixed(2) || 'N/A'}`);
         console.log(`   📦 Shipping options: ${result.shipping_options?.length || 0}`);
         console.log(`   📊 Item breakdowns: ${testResult.itemBreakdowns?.length || 0}`);
         

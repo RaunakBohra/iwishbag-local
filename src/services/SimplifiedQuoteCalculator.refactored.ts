@@ -130,9 +130,9 @@ interface CalculationResult {
     discounted_tax_amount?: number;
     subtotal_before_gateway: number;
     payment_gateway_fee: number;
-    total_usd: number;
+    total_quote_origincurrency: number;
     total_origin_currency: number;
-    total_customer_currency: number;
+    total_customer_display_currency: number;
     total_savings: number;
     component_discounts?: { [component: string]: any };
     weight_analysis?: any;
@@ -307,7 +307,7 @@ class SimplifiedQuoteCalculatorRefactored {
       );
 
       const calculationTime = Date.now() - startTime;
-      logger.info(`Quote calculation completed in ${calculationTime}ms: $${result.calculation_steps.total_customer_currency.toFixed(2)} ${currencyConfig.customerCurrency}`);
+      logger.info(`Quote calculation completed in ${calculationTime}ms: $${result.calculation_steps.total_customer_display_currency.toFixed(2)} ${currencyConfig.customerCurrency}`);
 
       return result;
 
@@ -480,9 +480,9 @@ class SimplifiedQuoteCalculatorRefactored {
         discounted_tax_amount: discountResult?.components.taxes.final_amount,
         subtotal_before_gateway: taxResult.taxable_value + taxResult.tax_amount,
         payment_gateway_fee: calculated.paymentGatewayFee,
-        total_usd: calculated.multiCurrencyAmounts.usd,
+        total_quote_origincurrency: calculated.multiCurrencyAmounts.usd,
         total_origin_currency: calculated.multiCurrencyAmounts.originCurrency,
-        total_customer_currency: calculated.multiCurrencyAmounts.customerCurrency,
+        total_customer_display_currency: calculated.multiCurrencyAmounts.customerCurrency,
         total_savings: totalSavings,
         component_discounts: discountResult?.components,
         weight_analysis: processedItems.weight_analysis,

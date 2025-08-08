@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
+import { getDestinationCurrency } from '@/utils/originCurrency';
 
 export default function CustomerQuotesList() {
   const navigate = useNavigate();
@@ -204,8 +205,8 @@ export default function CustomerQuotesList() {
                               <span>Total:</span>
                               <span>
                                 {formatCurrency(
-                                  quote.total_customer_currency || quote.total_usd,
-                                  quote.customer_currency || 'USD'
+                                  quote.total_customer_display_currency || quote.total_quote_origincurrency,
+                                  quote.customer_currency || getDestinationCurrency(quote.destination_country)
                                 )}
                               </span>
                             </div>

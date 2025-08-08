@@ -45,7 +45,7 @@ interface QuoteDetails {
   id: string;
   display_id: string;
   status: string;
-  final_total_usd: number;
+  final_total_origincurrency: number;
   currency: string;
   items: QuoteItem[];
   created_at: string;
@@ -142,7 +142,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
       if (quoteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         const result = await supabase
           .from('quotes')
-          .select('id, display_id, status, final_total_usd, currency, items, created_at, iwish_tracking_id')
+          .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .eq('id', quoteId)
           .eq('user_id', user?.id)
           .single();
@@ -152,7 +152,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
         // Second try: search by display_id or tracking_id
         const result = await supabase
           .from('quotes')
-          .select('id, display_id, status, final_total_usd, currency, items, created_at, iwish_tracking_id')
+          .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .or(`display_id.eq.${quoteId},iwish_tracking_id.eq.${quoteId}`)
           .eq('user_id', user?.id)
           .single();

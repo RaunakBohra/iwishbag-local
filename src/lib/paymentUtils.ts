@@ -212,14 +212,14 @@ export async function detectDueAmount(
   // For due amount detection, we need to fetch quote details to get USD amounts
   const { data: quote } = await supabase
     .from('quotes')
-    .select('final_total_usd, currency')
+    .select('final_total_origincurrency, currency')
     .eq('id', quoteId)
     .single();
 
   const paymentSummary = await calculatePaymentSummary(
     quoteId,
     newTotal,
-    quote?.final_total_usd || newTotal,
+    quote?.final_total_origincurrency || newTotal,
     quote?.currency || 'USD',
   );
 

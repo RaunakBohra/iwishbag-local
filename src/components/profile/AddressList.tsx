@@ -58,18 +58,32 @@ const AddressCard = ({
   const isNepal = address.destination_country === 'NP';
   
   return (
-  <div className="border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors h-full flex flex-col w-full">
+  <div className={`border p-6 rounded-lg transition-all h-full flex flex-col w-full ${
+    address.is_default 
+      ? 'border-green-300 bg-green-50 hover:border-green-400 shadow-sm' 
+      : 'border-gray-200 hover:border-gray-300'
+  }`}>
     {/* Header with name */}
     <div className="flex items-center gap-2 mb-4">
-      <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
-        <div className="w-2 h-2 rounded-full bg-teal-600"></div>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+        address.is_default 
+          ? 'bg-green-100' 
+          : 'bg-teal-50'
+      }`}>
+        {address.is_default ? (
+          <CheckCircle className="w-4 h-4 text-green-600" />
+        ) : (
+          <div className="w-2 h-2 rounded-full bg-teal-600"></div>
+        )}
       </div>
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <Body className="font-semibold text-gray-900 truncate">{address.recipient_name}</Body>
+        <Body className={`font-semibold truncate ${
+          address.is_default ? 'text-green-900' : 'text-gray-900'
+        }`}>{address.recipient_name}</Body>
         {address.is_default && (
-          <Badge className="bg-green-50 text-green-700 border-green-200 text-xs flex-shrink-0">
+          <Badge className="bg-green-100 text-green-800 border-green-300 text-xs flex-shrink-0 font-medium">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Default
+            Primary Address
           </Badge>
         )}
       </div>

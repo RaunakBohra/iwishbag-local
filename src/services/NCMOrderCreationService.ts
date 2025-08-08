@@ -234,7 +234,7 @@ class NCMOrderCreationService {
       const serviceType: 'Pickup' | 'Collect' = options?.service_type || 'Pickup';
 
       // Calculate COD amount if payment is cash-on-delivery
-      const codAmount = orderData.payment_method === 'cod' ? quote.final_total_usd * 133 : 0; // Rough USD to NPR conversion
+      const codAmount = orderData.payment_method === 'cod' ? quote.final_total_origincurrency * 133 : 0; // Rough USD to NPR conversion
 
       const request: NCMOrderCreationRequest = {
         iwishbag_order_id,

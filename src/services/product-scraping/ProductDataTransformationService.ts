@@ -233,7 +233,7 @@ export class ProductDataTransformationService {
       if (images.length > 0) transformedFields.push('images');
 
       // Extract and enhance brand
-      let brand = data.brand || this.extractBrandFromTitle(data.title || '');
+      const brand = data.brand || this.extractBrandFromTitle(data.title || '');
       if (brand) transformedFields.push('brand');
 
       // Determine category

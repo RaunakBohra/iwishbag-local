@@ -111,11 +111,9 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
       // Ensure origin_currency is set based on origin_country
       origin_currency: calculationResult?.origin_currency || getOriginCurrency(originCountry)
     },
-    // Use origin currency total instead of USD total
-    total_origin_currency: calculationResult?.calculation_steps?.total_origin_currency || calculationResult?.calculation_steps?.total_usd || 0,
-    // Keep legacy fields for backward compatibility but don't prioritize them
-    total_usd: calculationResult?.calculation_steps?.total_usd,
-    total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency,
+    // Use clear origin currency total  
+    total_quote_origincurrency: calculationResult?.calculation_steps?.total_origin_currency || calculationResult?.calculation_steps?.total_quote_origincurrency || 0,
+    total_origin_currency: calculationResult?.calculation_steps?.total_origin_currency || 0,
     customer_currency: customerCurrency,
     created_at: new Date().toISOString(),
     calculated_at: calculationResult?.calculation_timestamp

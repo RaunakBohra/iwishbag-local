@@ -602,7 +602,7 @@ export const TrackingPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Total Value</span>
-                        <span className="font-semibold">${trackingData?.final_total_usd?.toFixed(2)}</span>
+                        <span className="font-semibold">${trackingData?.final_total_origincurrency?.toFixed(2)}</span>
                       </div>
                     </>
                   )}

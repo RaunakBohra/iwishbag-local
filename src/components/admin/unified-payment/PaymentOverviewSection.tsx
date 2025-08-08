@@ -23,7 +23,7 @@ import { DueAmountInfo } from '@/lib/paymentUtils';
 interface Quote {
   id: string;
   display_id?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   currency?: string;
   payment_method?: string;
@@ -178,7 +178,7 @@ export const PaymentOverviewSection: React.FC<PaymentOverviewSectionProps> = ({
               <div>
                 <p className="text-sm text-muted-foreground">Order Total</p>
                 <p className="text-2xl font-bold">
-                  {formatAmount(parseFloat(quote.final_total_usd?.toString() || '0'))}
+                  {formatAmount(parseFloat(quote.final_total_origincurrency?.toString() || '0'))}
                 </p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">

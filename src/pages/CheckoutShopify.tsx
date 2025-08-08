@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
   ArrowLeft,
   AlertCircle,
@@ -39,6 +40,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { useCart } from '@/hooks/useCart';
 import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
@@ -51,6 +53,8 @@ import { supabase } from '@/integrations/supabase/client';
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
+import { ShippingAddressSection } from '@/components/checkout/ShippingAddressSection';
+import { AddressForm } from '@/components/profile/AddressForm';
 import { Tables } from '@/integrations/supabase/types';
 
 interface OrderSummary {
@@ -135,6 +139,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
   });
   
   const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
   
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState('');
@@ -142,6 +147,23 @@ const CheckoutShopify: React.FC = React.memo(() => {
   // Services
   const checkoutService = useMemo(() => CheckoutService.getInstance(), []);
 
+  // Fetch user addresses
+  const { data: addresses = [], isLoading: addressesLoading } = useQuery({
+    queryKey: ['delivery_addresses', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('delivery_addresses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!user,
+  });
 
   // Calculate order summary
   useEffect(() => {
@@ -201,6 +223,17 @@ const CheckoutShopify: React.FC = React.memo(() => {
     setSelectedAddress(address);
   }, []);
 
+  const handleAddNewAddress = useCallback(() => {
+    setShowAddressForm(true);
+  }, []);
+
+  // Auto-select default address
+  useEffect(() => {
+    if (!selectedAddress && addresses && addresses.length > 0) {
+      const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0];
+      setSelectedAddress(defaultAddress);
+    }
+  }, [addresses, selectedAddress]);
 
   // Handle order placement
   const handlePlaceOrder = useCallback(async () => {
@@ -316,14 +349,15 @@ const CheckoutShopify: React.FC = React.memo(() => {
                     <h2 className="text-lg font-semibold">Shipping address</h2>
                   </div>
                   
-                  <CompactAddressSelector
-                    selectedAddressId={selectedAddress?.id}
-                    onSelectAddress={handleAddressSelect}
-                    showAddButton={true}
-                    autoSelectDefault={true}
+                  <ShippingAddressSection
+                    selectedAddress={selectedAddress}
+                    addresses={addresses}
+                    onAddressChange={handleAddressSelect}
+                    onAddNewAddress={handleAddNewAddress}
+                    loading={addressesLoading}
                   />
                   
-                  {!selectedAddress && (
+                  {!selectedAddress && !addressesLoading && (
                     <Alert className="mt-4">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
@@ -429,7 +463,6 @@ const CheckoutShopify: React.FC = React.memo(() => {
                     </div>
                   ))}
                 </div>
-              </div>
 
               <Separator className="my-6" />
 
@@ -536,6 +569,19 @@ const CheckoutShopify: React.FC = React.memo(() => {
         </div>
       </div>
 
+      <Dialog open={showAddressForm} onOpenChange={setShowAddressForm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Address</DialogTitle>
+          </DialogHeader>
+          <AddressForm onSuccess={(newAddress) => {
+            setShowAddressForm(false);
+            if (newAddress) {
+              handleAddressSelect(newAddress);
+            }
+          }} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

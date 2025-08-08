@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
+import { getDestinationCurrency } from '@/utils/originCurrency';
 import { QuoteV2, CreateQuoteV2Input, UpdateQuoteV2Input, QuoteShareInfo, ActiveQuote } from '@/types/quotes-v2';
 
 export class QuoteV2Service {
@@ -32,8 +33,8 @@ export class QuoteV2Service {
         origin_country: input.origin_country,
         destination_country: input.destination_country,
         items: input.items,
-        costprice_total_usd: input.items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0),
-        final_total_usd: input.items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0) * 1.5, // Simple 50% markup for testing
+        costprice_total_quote_origincurrency: input.items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0),
+        final_total_origincurrency: input.items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0) * 1.5, // Simple 50% markup for testing
         calculation_data: {
           breakdown: {
             items_total: input.items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0),
@@ -328,7 +329,7 @@ export class QuoteV2Service {
 
       // Check if approval is required based on amount
       if (quote.approval_required_above && 
-          quote.final_total_usd > quote.approval_required_above) {
+          quote.final_total_origincurrency > quote.approval_required_above) {
         return {
           requiresApproval: true,
           reason: `Quote amount exceeds approval threshold of $${quote.approval_required_above}`,
@@ -337,7 +338,7 @@ export class QuoteV2Service {
 
       // Check if discount exceeds allowed limit
       const discountAmount = quote.calculation_data?.breakdown?.discount || 0;
-      const discountPercentage = (discountAmount / quote.costprice_total_usd) * 100;
+      const discountPercentage = (discountAmount / quote.costprice_total_quote_origincurrency) * 100;
       
       if (quote.max_discount_allowed && 
           discountPercentage > quote.max_discount_allowed) {
@@ -376,9 +377,9 @@ export class QuoteV2Service {
         user_id: quote.customer_id || quote.customer_email, // Handle both authenticated and guest users
         quote_id: quoteId,
         status: 'payment_pending',
-        total_amount: quote.calculation_data?.calculation_steps?.total_usd || 0,
-        customer_currency_amount: quote.calculation_data?.calculation_steps?.total_customer_currency || 0,
-        customer_currency: quote.customer_currency || 'USD',
+        total_amount: quote.calculation_data?.calculation_steps?.total_quote_origincurrency || 0,
+        customer_currency_amount: quote.calculation_data?.calculation_steps?.total_customer_display_currency || 0,
+        customer_currency: quote.customer_currency || getDestinationCurrency(quote.destination_country),
         origin_country: quote.origin_country,
         destination_country: quote.destination_country,
         shipping_method: quote.shipping_method || 'standard',

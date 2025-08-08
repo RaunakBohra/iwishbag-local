@@ -79,7 +79,7 @@ export const CustomerNotificationManager: React.FC = () => {
     queryKey: ['customers-with-preferences', searchTerm, filterChannel],
     queryFn: async () => {
       // Use manual JOIN query since Supabase nested queries have issues with auth.users references
-      let baseQuery = `
+      const baseQuery = `
         SELECT 
           p.id,
           p.email,

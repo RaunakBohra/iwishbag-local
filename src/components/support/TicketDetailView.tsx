@@ -722,7 +722,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Total Amount</label>
                     <p className="text-sm font-semibold">
-                      ${ticket.quote.final_total_usd?.toFixed(2) || '0.00'} USD
+                      ${ticket.quote.final_total_origincurrency?.toFixed(2) || '0.00'} USD
                     </p>
                   </div>
 

@@ -109,7 +109,7 @@ async function quickTest() {
   });
   
   console.log('Result:', result);
-  console.log('Final Total:', result.final_total_usd);
+  console.log('Final Total:', result.final_total_origincurrency);
   console.log('Shipping Options:', result.shipping_options);
   console.log('Item Breakdowns:', result.updated_quote?.calculation_data?.item_breakdowns);
   

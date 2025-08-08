@@ -24,8 +24,8 @@ export interface CalculationResult {
 export interface QuoteCalculationData {
   // Basic totals
   items_subtotal: number;
-  total_usd: number;
-  total_customer_currency: number;
+  total_quote_origincurrency: number;
+  total_customer_display_currency: number;
   
   // Breakdown components
   shipping_cost: number;
@@ -149,7 +149,7 @@ export class QuoteCalculationEngine {
       }
 
       logger.info('Quote calculation completed', {
-        totalUSD: calculationData.total_usd,
+        totalUSD: calculationData.total_quote_origincurrency,
         processingTime: result.processingTime
       });
 
@@ -213,8 +213,8 @@ export class QuoteCalculationEngine {
     // Step 11: Build calculation data
     const calculationData: QuoteCalculationData = {
       items_subtotal: itemsSubtotal,
-      total_usd: totalUSD,
-      total_customer_currency: totalCustomerCurrency,
+      total_quote_origincurrency: totalUSD,
+      total_customer_display_currency: totalCustomerCurrency,
       
       shipping_cost: shippingResult.cost,
       insurance_cost: insuranceCost,
@@ -348,7 +348,7 @@ export class QuoteCalculationEngine {
       
       // Get additional service-specific costs
       let additionalCosts = 0;
-      let serviceDetails: any = {};
+      const serviceDetails: any = {};
       
       // Add Delhivery costs for India
       if (formData.destinationCountry === 'IN' && formData.destinationPincode) {
@@ -478,7 +478,7 @@ export class QuoteCalculationEngine {
   } {
     let orderDiscount = 0;
     let shippingDiscount = 0;
-    let componentDiscounts = 0;
+    const componentDiscounts = 0;
     const appliedCodes: string[] = [];
 
     // Order discount

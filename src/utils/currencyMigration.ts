@@ -2,7 +2,7 @@
  * Currency Migration Utilities
  * 
  * Provides utilities for migrating from the old dual-currency system
- * (total_usd, total_customer_currency, customer_currency) to the new
+ * (total_quote_origincurrency, total_customer_display_currency, customer_currency) to the new
  * simplified origin-currency system.
  * 
  * Handles backward compatibility and data conversion logic.
@@ -18,8 +18,8 @@ export interface LegacyQuoteData {
   id: string;
   origin_country: string;
   destination_country: string;
-  total_usd?: number;
-  total_customer_currency?: number;
+  total_quote_origincurrency?: number;
+  total_customer_display_currency?: number;
   customer_currency?: string;
   calculation_data?: any;
 }
@@ -66,8 +66,8 @@ export function detectBreakdownCurrency(quote: LegacyQuoteData): {
     };
   }
   
-  // If we have both total_usd and total_customer_currency, compare ratios
-  if (quote.total_usd && quote.total_customer_currency) {
+  // If we have both total_quote_origincurrency and total_customer_display_currency, compare ratios
+  if (quote.total_quote_origincurrency && quote.total_customer_display_currency) {
     const breakdown = quote.calculation_data?.breakdown;
     
     if (breakdown) {
@@ -76,14 +76,14 @@ export function detectBreakdownCurrency(quote: LegacyQuoteData): {
       );
       
       // Check which total the breakdown is closer to
-      const usdRatio = Math.abs(breakdownTotal - quote.total_usd) / quote.total_usd;
-      const customerRatio = Math.abs(breakdownTotal - quote.total_customer_currency) / quote.total_customer_currency;
+      const usdRatio = Math.abs(breakdownTotal - quote.total_quote_origincurrency) / quote.total_quote_origincurrency;
+      const customerRatio = Math.abs(breakdownTotal - quote.total_customer_display_currency) / quote.total_customer_display_currency;
       
       if (usdRatio < 0.05) { // Within 5% of USD total
         return {
           currency: 'USD',
           confidence: 'high',
-          reasoning: `Breakdown total (${breakdownTotal}) matches USD total (${quote.total_usd}) within 5%`
+          reasoning: `Breakdown total (${breakdownTotal}) matches USD total (${quote.total_quote_origincurrency}) within 5%`
         };
       }
       
@@ -91,7 +91,7 @@ export function detectBreakdownCurrency(quote: LegacyQuoteData): {
         return {
           currency: quote.customer_currency || destinationCurrency,
           confidence: 'high',
-          reasoning: `Breakdown total (${breakdownTotal}) matches customer currency total (${quote.total_customer_currency}) within 5%`
+          reasoning: `Breakdown total (${breakdownTotal}) matches customer currency total (${quote.total_customer_display_currency}) within 5%`
         };
       }
     }
@@ -119,11 +119,11 @@ export function detectBreakdownCurrency(quote: LegacyQuoteData): {
   }
   
   // Fallback: assume USD for USD origin countries (medium confidence)
-  if (quote.total_usd) {
+  if (quote.total_quote_origincurrency) {
     return {
       currency: 'USD',
       confidence: 'medium',
-      reasoning: 'USD origin country with total_usd present, assuming USD breakdown'
+      reasoning: 'USD origin country with total_quote_origincurrency present, assuming USD breakdown'
     };
   }
   
@@ -162,10 +162,10 @@ export function migrateLegacyQuoteData(legacyQuote: LegacyQuoteData): {
   
   if (detectedCurrency.currency === originCurrency) {
     // Breakdown is already in origin currency
-    if (originCurrency === 'USD' && legacyQuote.total_usd) {
-      totalOriginCurrency = legacyQuote.total_usd;
-    } else if (legacyQuote.total_customer_currency && legacyQuote.customer_currency === originCurrency) {
-      totalOriginCurrency = legacyQuote.total_customer_currency;
+    if (originCurrency === 'USD' && legacyQuote.total_quote_origincurrency) {
+      totalOriginCurrency = legacyQuote.total_quote_origincurrency;
+    } else if (legacyQuote.total_customer_display_currency && legacyQuote.customer_currency === originCurrency) {
+      totalOriginCurrency = legacyQuote.total_customer_display_currency;
     } else {
       // Calculate from breakdown if available
       const breakdown = legacyQuote.calculation_data?.breakdown;
@@ -175,17 +175,17 @@ export function migrateLegacyQuoteData(legacyQuote: LegacyQuoteData): {
         );
         conversionNotes.push('Used breakdown sum as total_origin_currency');
       } else {
-        totalOriginCurrency = legacyQuote.total_usd || legacyQuote.total_customer_currency || 0;
+        totalOriginCurrency = legacyQuote.total_quote_origincurrency || legacyQuote.total_customer_display_currency || 0;
         conversionNotes.push('Used fallback total for total_origin_currency');
       }
     }
   } else {
     // Will need conversion - use detected currency amount as-is for now
-    if (detectedCurrency.currency === 'USD' && legacyQuote.total_usd) {
-      totalOriginCurrency = legacyQuote.total_usd;
+    if (detectedCurrency.currency === 'USD' && legacyQuote.total_quote_origincurrency) {
+      totalOriginCurrency = legacyQuote.total_quote_origincurrency;
       conversionNotes.push('Using USD total as basis for conversion');
     } else {
-      totalOriginCurrency = legacyQuote.total_customer_currency || legacyQuote.total_usd || 0;
+      totalOriginCurrency = legacyQuote.total_customer_display_currency || legacyQuote.total_quote_origincurrency || 0;
       conversionNotes.push('Using customer currency total as basis for conversion');
     }
   }
@@ -224,9 +224,9 @@ export function migrateLegacyQuoteData(legacyQuote: LegacyQuoteData): {
 export function needsMigration(quote: any): boolean {
   // If it already has origin_currency in calculation_data and no legacy fields, it's modern
   const hasOriginCurrency = quote.calculation_data?.origin_currency;
-  const hasLegacyFields = quote.total_customer_currency !== undefined || 
+  const hasLegacyFields = quote.total_customer_display_currency !== undefined || 
                          quote.customer_currency !== undefined ||
-                         quote.total_usd !== undefined;
+                         quote.total_quote_origincurrency !== undefined;
   
   return !hasOriginCurrency || hasLegacyFields;
 }
@@ -267,7 +267,7 @@ export function getMigrationStatus(quote: any): {
   issues: string[];
 } {
   const hasOriginCurrency = !!quote.calculation_data?.origin_currency;
-  const hasLegacyFields = !!(quote.total_customer_currency || quote.customer_currency || quote.total_usd);
+  const hasLegacyFields = !!(quote.total_customer_display_currency || quote.customer_currency || quote.total_quote_origincurrency);
   const breakdownCurrency = getBreakdownSourceCurrency(quote);
   const expectedOriginCurrency = getOriginCurrency(quote.origin_country);
   

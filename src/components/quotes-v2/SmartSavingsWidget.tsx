@@ -275,7 +275,7 @@ export const SmartSavingsWidget: React.FC<SmartSavingsWidgetProps> = ({
             </div>
             {autoDiscounts.map((discount, index) => {
               // Calculate display amount in origin currency
-              let discountAmount = discount.discount_amount > 0 
+              const discountAmount = discount.discount_amount > 0 
                 ? discount.discount_amount 
                 : discount.discount_type === 'percentage'
                   ? (orderTotal * (discount.discount_value / 100))

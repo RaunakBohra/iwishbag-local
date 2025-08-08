@@ -67,28 +67,29 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
 
   const calc = quote.calculation_data;
   const steps = calc.calculation_steps || {};
-  // FIXED: Use origin country mapping instead of breakdown detection
-  const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
-  const currency = displayCurrency || sourceCurrency;
+  // CLEAR: Always use origin country to determine source currency (not breakdown detection)
+  // This ensures amounts stored as "total_quote_origincurrency" are correctly identified as origin currency (e.g., INR for India)
+  const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+  const currency = displayCurrency || originCurrency;
 
   // Convert amounts when displayCurrency changes
   useEffect(() => {
     const convertAmounts = async () => {
-      // FIXED: Check against origin country mapping, not breakdown detection
-      const sourceCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
-      if (!displayCurrency || displayCurrency === sourceCurrency) {
+      // CLEAR: Always use origin country mapping for currency detection
+      const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+      if (!displayCurrency || displayCurrency === originCurrency) {
         // No conversion needed, reset converted amounts
         setConvertedAmounts({});
         return;
       }
 
       try {
-        // CRITICAL FIX: Get the origin currency from origin_country column (this is correct)
-        // All calculations are done in origin currency, then converted for display
+        // CLEAR: Get the origin currency from origin_country column 
+        // All amounts are stored in origin currency (e.g., INR for India), then converted for display
         const fromCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
         
-        console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
-        console.log(`[CustomerBreakdown] Origin: ${quote.origin_country}, Destination: ${quote.destination_country}`);
+        // console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
+        // console.log(`[CustomerBreakdown] Origin: ${quote.origin_country}, Destination: ${quote.destination_country}`);
         const stepsToConvert = {
           'items_subtotal': steps.discounted_items_subtotal || steps.items_subtotal || 0,
           'shipping_total': (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
@@ -98,9 +99,9 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                         (steps.discounted_tax_amount || steps.local_tax_amount || 0),
           'service_fees': (steps.discounted_handling_fee || steps.handling_fee || 0) + 
                          (steps.payment_gateway_fee || 0),
-          'final_total': steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0,
+          'final_total': steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency  || 0,
           'total_savings': steps.total_savings || 0,
-          'total_usd': steps.total_usd || 0,
+          'total_quote_origincurrency': steps.total_quote_origincurrency || 0,
           // Detailed breakdown items
           'item_discounts': steps.item_discounts || 0,
           'order_discount_amount': steps.order_discount_amount || 0,
@@ -152,7 +153,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
     };
     
     convertAmounts();
-  }, [quote, displayCurrency, convertCurrency, steps]);
+  }, [quote.id, quote.origin_country, displayCurrency, hasProportionalRounding]);
 
   // Helper to get converted amount or original - FIXED for origin currency system
   const getAmount = (key: string, originalAmount: number) => {
@@ -269,7 +270,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   ];
 
   const totalSavings = getAmount('total_savings', steps.total_savings || 0);
-  const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_origin_currency || steps.total_usd || quote.total_usd || 0);
+  const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency  || 0);
   
   // Share calculated total with parent component (Quote Summary)
   const [lastSharedTotal, setLastSharedTotal] = React.useState<{total: number, currency: string} | null>(null);
@@ -338,9 +339,9 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
           </div>
 
           {/* USD Equivalent */}
-          {currency !== 'USD' && steps.total_usd && (
+          {currency !== 'USD' && steps.total_quote_origincurrency && (
             <div className="text-center text-sm text-muted-foreground">
-              ≈ {formatCurrency(getAmount('total_usd', steps.total_usd || 0), 'USD')}
+              ≈ {formatCurrency(getAmount('total_quote_origincurrency', steps.total_quote_origincurrency || 0), 'USD')}
             </div>
           )}
 

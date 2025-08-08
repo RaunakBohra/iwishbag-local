@@ -60,7 +60,7 @@ interface PaymentLink {
 interface Quote {
   id: string;
   display_id?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   created_at?: string;
 }
 
@@ -302,7 +302,7 @@ export const PaymentHistorySection: React.FC<PaymentHistorySectionProps> = ({
                       <h4 className="font-medium">Order Created</h4>
                       <p className="text-sm text-muted-foreground mt-1">
                         Quote #{quote.display_id} - Total:{' '}
-                        {formatAmount(quote.final_total_usd || 0)}
+                        {formatAmount(quote.final_total_origincurrency || 0)}
                       </p>
                       {quote.created_at && (
                         <p className="text-xs text-muted-foreground mt-2">

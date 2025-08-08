@@ -22,7 +22,7 @@ interface QuoteData {
   display_id?: string;
   order_display_id?: string;
   product_name?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   payment_status?: string;
   shipping_address?: {
@@ -157,8 +157,8 @@ export const usePaymentLinkGenerator = ({
 
     const orderId = quote.order_display_id || quote.display_id || quoteId;
     const productName = quote.product_name;
-    const dueAmount = quote.final_total_usd! - (quote.amount_paid || 0);
-    const isPartialPayment = dueAmount < quote.final_total_usd! && dueAmount > 0;
+    const dueAmount = quote.final_total_origincurrency! - (quote.amount_paid || 0);
+    const isPartialPayment = dueAmount < quote.final_total_origincurrency! && dueAmount > 0;
 
     let description = `Payment for ${orderId}`;
     

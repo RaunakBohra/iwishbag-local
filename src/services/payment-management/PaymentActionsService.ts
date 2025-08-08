@@ -373,7 +373,7 @@ export class PaymentActionsService {
     }
 
     const previousStatus = message.verification_status || 'pending';
-    const orderTotal = quote.final_total_usd || 0;
+    const orderTotal = quote.final_total_origincurrency || 0;
     const existingPaid = quote.amount_paid || 0;
     const approvedAmount = request.approvedAmount || (orderTotal - existingPaid);
 

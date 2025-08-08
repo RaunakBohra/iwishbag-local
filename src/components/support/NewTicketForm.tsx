@@ -191,7 +191,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
                             {selectedQuote.iwish_tracking_id || `Quote ${selectedQuote.id.slice(0, 8)}...`}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {selectedQuote.destination_country} • ${selectedQuote.final_total_usd?.toFixed(2) || 'N/A'}
+                            {selectedQuote.destination_country} • ${selectedQuote.final_total_origincurrency?.toFixed(2) || 'N/A'}
                           </div>
                         </div>
                       ) : (
@@ -248,7 +248,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
 
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
-                        <span>Total: ${selectedQuote.final_total_usd?.toFixed(2) || 'N/A'}</span>
+                        <span>Total: ${selectedQuote.final_total_origincurrency?.toFixed(2) || 'N/A'}</span>
                       </div>
 
                       {selectedQuote.estimated_delivery_date && (

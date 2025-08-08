@@ -393,7 +393,7 @@ Return as valid JSON with this structure:
     }
 
     const claudeResponse = await response.json();
-    let responseText = claudeResponse.content[0].text;
+    const responseText = claudeResponse.content[0].text;
     
     // Extract JSON from markdown code blocks if present
     let jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
@@ -1220,7 +1220,7 @@ function getDatasetIdForWebsite(website: string): string | null {
 
 function extractStructuredData(data: any, website: string) {
   // Handle structured response from Bright Data scrapers
-  let extractedData = {
+  const extractedData = {
     title: 'Product (Title not found)',
     price: 0,
     weight: 0.5,

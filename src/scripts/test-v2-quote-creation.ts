@@ -40,8 +40,8 @@ async function testV2QuoteCreation() {
       }],
       
       // Pricing
-      total_usd: 100,
-      total_customer_currency: 100,
+      total_quote_origincurrency: 100,
+      total_customer_display_currency: 100,
       
       // V2 specific fields
       validity_days: 7,

@@ -20,7 +20,7 @@ export const QUERY_COLUMNS = {
    * Minimal columns for displaying quote summaries
    */
   QUOTE_LIST: `
-    id, display_id, status, final_total_usd, created_at,
+    id, display_id, status, final_total_origincurrency, created_at,
     destination_country
   `,
 
@@ -29,7 +29,7 @@ export const QUERY_COLUMNS = {
    * Includes all data needed for quote calculations and display
    */
   QUOTE_DETAIL: `
-    id, display_id, status, final_total_usd,
+    id, display_id, status, final_total_origincurrency,
     created_at, updated_at, items, shipping_address, breakdown, 
     destination_country, origin_country, customs_percentage, vat, discount, 
     exchange_rate, expires_at,
@@ -41,7 +41,7 @@ export const QUERY_COLUMNS = {
    * Basic columns only - JSONB extraction handled separately if needed
    */
   ADMIN_QUOTES: `
-    id, display_id, status, final_total_usd, created_at, updated_at,
+    id, display_id, status, final_total_origincurrency, created_at, updated_at,
     destination_country, origin_country, user_id, expires_at, in_cart,
     iwish_tracking_id, tracking_status, estimated_delivery_date,
     email_verified, quote_source, is_anonymous, customer_data, items
@@ -53,7 +53,7 @@ export const QUERY_COLUMNS = {
    * Updated for quotes_v2 table schema
    */
   CART_ITEMS: `
-    id, quote_number, total_usd, total_origin_currency, customer_currency,
+    id, quote_number, total_quote_origincurrency, total_origin_currency, customer_currency,
     created_at, destination_country, origin_country, items, status
   `,
 
@@ -62,7 +62,7 @@ export const QUERY_COLUMNS = {
    * User-focused columns for quote management
    */
   USER_QUOTES: `
-    id, display_id, status, final_total_usd,
+    id, display_id, status, final_total_origincurrency,
     created_at, destination_country,
     in_cart, expires_at, iwish_tracking_id, tracking_status, estimated_delivery_date
   `,
@@ -72,7 +72,7 @@ export const QUERY_COLUMNS = {
    * Orders (quotes with payment_status = 'paid')
    */
   ORDER_LIST: `
-    id, display_id, status, final_total_usd,
+    id, display_id, status, final_total_origincurrency,
     created_at, paid_at, shipped_at, destination_country, origin_country,
     iwish_tracking_id, tracking_status, shipping_carrier, tracking_number,
     estimated_delivery_date
@@ -83,7 +83,7 @@ export const QUERY_COLUMNS = {
    * Includes searchable fields with minimal data
    */
   SEARCH_RESULTS: `
-    id, display_id, status, final_total_usd, created_at,
+    id, display_id, status, final_total_origincurrency, created_at,
     destination_country, customer_data
   `,
 
@@ -92,7 +92,7 @@ export const QUERY_COLUMNS = {
    * Aggregation-friendly columns
    */
   ANALYTICS: `
-    id, status, final_total_usd, created_at, destination_country, 
+    id, status, final_total_origincurrency, created_at, destination_country, 
     origin_country
   `,
 
@@ -101,7 +101,7 @@ export const QUERY_COLUMNS = {
    * Payment-related information only
    */
   PAYMENT_DATA: `
-    id, display_id, final_total_usd,
+    id, display_id, final_total_origincurrency,
     paid_at, user_id, customer_data
   `,
 
@@ -169,7 +169,7 @@ export const COMMON_QUERIES = {
    * Quote detail with minimal profile info
    */
   quoteDetailWithProfile: buildSelectQuery(QUERY_COLUMNS.QUOTE_DETAIL, {
-    'profiles!quotes_user_id_fkey': QUERY_COLUMNS.PROFILE_MINIMAL,
+    'profiles!quotes_v2_customer_id_fkey': QUERY_COLUMNS.PROFILE_MINIMAL,
   }),
 } as const;
 

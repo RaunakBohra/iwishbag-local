@@ -494,7 +494,7 @@ export const PaymentManagementPage: React.FC = () => {
                         <Badge variant="outline">{payment.payment_method}</Badge>
                       </TableCell>
                       <TableCell>
-                        ${payment.final_total_usd.toFixed(2)}
+                        ${payment.final_total_origincurrency.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Badge

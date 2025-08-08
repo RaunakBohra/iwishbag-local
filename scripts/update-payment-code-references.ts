@@ -144,7 +144,7 @@ async function updateFiles() {
     
     for (const file of files) {
       let content = fs.readFileSync(file, 'utf8');
-      let originalContent = content;
+      const originalContent = content;
       let fileUpdates = 0;
       
       // Apply general replacements

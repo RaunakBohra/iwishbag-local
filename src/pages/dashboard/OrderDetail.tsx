@@ -369,7 +369,7 @@ export default function OrderDetail() {
                 <EnhancedBankTransferDetails
                   orderId={order.id}
                   orderDisplayId={order.display_id || order.id}
-                  amount={order.final_total_usd || 0}
+                  amount={order.final_total_origincurrency || 0}
                   currency={order.destination_currency || order.currency || 'USD'}
                 />
               </CardContent>
@@ -454,8 +454,8 @@ export default function OrderDetail() {
                   >
                     {order.payment_status === 'partial' &&
                     order.amount_paid &&
-                    order.final_total_usd
-                      ? `Partial: $${order.amount_paid} of $${order.final_total_usd}`
+                    order.final_total_origincurrency
+                      ? `Partial: $${order.amount_paid} of $${order.final_total_origincurrency}`
                       : order.payment_status === 'overpaid' && order.overpayment_amount
                         ? `Overpaid: +$${order.overpayment_amount}`
                         : order.payment_status.charAt(0).toUpperCase() +
@@ -466,7 +466,7 @@ export default function OrderDetail() {
 
               <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                 <span className="text-gray-500">Total Amount:</span>
-                <span className="font-medium">{formatAmount(order.final_total_usd)}</span>
+                <span className="font-medium">{formatAmount(order.final_total_origincurrency)}</span>
               </div>
 
               {order.amount_paid && order.amount_paid > 0 && (
@@ -478,11 +478,11 @@ export default function OrderDetail() {
                 </div>
               )}
 
-              {order.payment_status === 'partial' && order.final_total_usd && order.amount_paid && (
+              {order.payment_status === 'partial' && order.final_total_origincurrency && order.amount_paid && (
                 <div className="flex justify-between hover:bg-gray-50 p-2 rounded transition-colors duration-200">
                   <span className="text-gray-500">Outstanding:</span>
                   <span className="font-medium text-orange-600">
-                    {formatAmount(order.final_total_usd - order.amount_paid)}
+                    {formatAmount(order.final_total_origincurrency - order.amount_paid)}
                   </span>
                 </div>
               )}

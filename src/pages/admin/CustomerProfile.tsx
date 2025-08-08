@@ -108,7 +108,7 @@ interface CustomerOrder {
   id: string;
   display_id: string;
   status: string;
-  final_total_usd: number;
+  final_total_origincurrency: number;
   created_at: string;
   items: any[];
   destination_country: string;
@@ -205,7 +205,7 @@ export const CustomerProfile: React.FC = () => {
       ['paid', 'ordered', 'shipped', 'completed'].includes(order.status),
     );
 
-    const totalSpent = paidOrders.reduce((sum, order) => sum + (order.final_total_usd || 0), 0);
+    const totalSpent = paidOrders.reduce((sum, order) => sum + (order.final_total_origincurrency || 0), 0);
     const orderCount = paidOrders.length;
     const quoteCount = orders.length;
     const avgOrderValue = orderCount > 0 ? totalSpent / orderCount : 0;
@@ -602,7 +602,7 @@ export const CustomerProfile: React.FC = () => {
                             </div>
                             <div className="text-right">
                               <Body className="font-medium text-gray-900">
-                                ${order.final_total_usd?.toFixed(2) || '0.00'}
+                                ${order.final_total_origincurrency?.toFixed(2) || '0.00'}
                               </Body>
                               <Badge variant="outline" className="text-xs">
                                 {order.status}
@@ -642,7 +642,7 @@ export const CustomerProfile: React.FC = () => {
                           </div>
                           <div className="text-right space-y-1">
                             <Body className="font-medium text-gray-900">
-                              ${order.final_total_usd?.toFixed(2) || '0.00'}
+                              ${order.final_total_origincurrency?.toFixed(2) || '0.00'}
                             </Body>
                             <Badge variant="outline" className="text-xs">
                               {order.status}

@@ -8,8 +8,8 @@ interface QuoteSubmissionData {
   user_id: string | null;
   items: any[];
   customer_data: any;
-  costprice_total_usd: number;
-  final_total_usd: number;
+  costprice_total_quote_origincurrency: number;
+  final_total_origincurrency: number;
   // V2 specific fields
   validity_days?: number;
   customer_message?: string;
@@ -69,8 +69,8 @@ export class QuoteV2MigrationService {
           // quotes_v2 doesn't have separate address columns
           
           // Pricing - quotes_v2 uses different column names
-          total_usd: data.final_total_usd || data.costprice_total_usd,
-          total_customer_currency: data.final_total_usd || data.costprice_total_usd,
+          total_quote_origincurrency: data.final_total_origincurrency || data.costprice_total_quote_origincurrency,
+          total_customer_display_currency: data.final_total_origincurrency || data.costprice_total_quote_origincurrency,
           customer_currency: data.currency || 'USD',
           
           // V2 specific fields
@@ -149,8 +149,8 @@ export class QuoteV2MigrationService {
         user_id: originalQuote.user_id,
         items: originalQuote.items || [],
         customer_data: originalQuote.customer_data || {},
-        costprice_total_usd: originalQuote.costprice_total_usd || 0,
-        final_total_usd: originalQuote.final_total_usd || 0,
+        costprice_total_quote_origincurrency: originalQuote.costprice_total_quote_origincurrency || 0,
+        final_total_origincurrency: originalQuote.final_total_origincurrency || 0,
         customer_email: originalQuote.email,
         customer_name: originalQuote.customer_name,
         customer_phone: originalQuote.phone

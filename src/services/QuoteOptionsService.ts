@@ -180,8 +180,8 @@ class QuoteOptionsService {
         calculation_data: recalculationResult.calculation_data,
         // Map SimplifiedQuoteCalculator result to database fields
         total_origin_currency: calculatedTotal,  // Primary field components look for
-        total_usd: calculatedTotal,
-        total_customer_currency: calculatedTotal,
+        total_quote_origincurrency: calculatedTotal,
+        total_customer_display_currency: calculatedTotal,
         customer_currency: updatedQuoteInput.origin_currency,
         // Note: origin_currency is derived from origin_country, not stored separately
         updated_at: new Date().toISOString()
@@ -204,9 +204,9 @@ class QuoteOptionsService {
               dbUpdates.insurance_required = update.data.insurance_enabled;
               // Also update insurance coverage amount and rate
               if (update.data.insurance_enabled) {
-                // Use calculation_data origin total or fallback to total_usd
+                // Use calculation_data origin total or fallback to total_quote_origincurrency
                 const calculatedTotal = currentQuote.calculation_data?.calculation_steps?.total_origin_currency || 
-                                      currentQuote.total_usd || 0;
+                                      currentQuote.total_quote_origincurrency || 0;
                 dbUpdates.insurance_coverage_amount = calculatedTotal;
                 dbUpdates.insurance_rate_percentage = 1.5; // Standard rate
               }
@@ -229,8 +229,8 @@ class QuoteOptionsService {
                   
                   // Use calculation_data origin total or fallback to other totals
                   const calculatedTotal = currentQuote.calculation_data?.calculation_steps?.total_origin_currency || 
-                                        currentQuote.total_customer_currency || 
-                                        currentQuote.total_usd || 0;
+                                        currentQuote.total_customer_display_currency || 
+                                        currentQuote.total_quote_origincurrency || 0;
                   
                   const discountAmount = calculatedTotal * (discountPercentages[update.data.discount_code] || 0);
                   
@@ -344,7 +344,7 @@ class QuoteOptionsService {
 
       if (validCodes.includes(code.toUpperCase())) {
         const percentage = discountPercentages[code.toUpperCase()];
-        const discountAmount = (quote.total_customer_currency || quote.total_usd || 0) * percentage;
+        const discountAmount = (quote.total_customer_display_currency || quote.total_quote_origincurrency || 0) * percentage;
         
         // Get origin currency dynamically
         const originCurrency = quote.origin_currency || getOriginCurrency(quote.origin_country);
@@ -441,8 +441,8 @@ class QuoteOptionsService {
         cost: calcData.breakdown?.insurance || 0,
         cost_currency: originCurrency,
         coverage_amount: quote.calculation_data?.calculation_steps?.total_origin_currency || 
-                        quote.total_customer_currency || 
-                        quote.total_usd || 0,
+                        quote.total_customer_display_currency || 
+                        quote.total_quote_origincurrency || 0,
         rate_percentage: routeCalc.insurance?.percentage || 1.5
       },
       discounts: {
@@ -452,10 +452,10 @@ class QuoteOptionsService {
         available_codes: ['FIRST10', 'WELCOME5', 'SAVE15', 'BUNDLE20'] // TODO: Dynamic lookup
       },
       totals: {
-        base_total: calcData.breakdown?.items_total || quote.costprice_total_usd || 0,
+        base_total: calcData.breakdown?.items_total || quote.costprice_total_quote_origincurrency || 0,
         adjusted_total: quote.calculation_data?.calculation_steps?.total_origin_currency || 
-                       quote.total_customer_currency || 
-                       quote.total_usd || 0,
+                       quote.total_customer_display_currency || 
+                       quote.total_quote_origincurrency || 0,
         currency: originCurrency,
         savings: calcData.total_savings || 0
       }

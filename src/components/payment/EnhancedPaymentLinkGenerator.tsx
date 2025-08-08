@@ -31,7 +31,7 @@ interface QuoteData {
   display_id?: string;
   order_display_id?: string;
   product_name?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   payment_status?: string;
   shipping_address?: {

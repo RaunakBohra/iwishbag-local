@@ -41,7 +41,7 @@ interface RefundablePayment {
 
 interface Quote {
   id: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   payment_method?: string;
 }
 

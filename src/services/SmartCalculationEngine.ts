@@ -2,6 +2,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getDestinationCurrency } from '@/utils/originCurrency';
 
 import { shippingService } from '@/services/ShippingService';
 import { currencyService } from '@/services/CurrencyService';
@@ -144,7 +145,7 @@ class SimplifiedSmartCalculationEngine {
     // Get exchange rate
     const exchangeRate = await currencyService.getExchangeRateByCurrency(
       'USD', 
-      quote.customer_currency || 'USD'
+      quote.customer_currency || getDestinationCurrency(quote.destination_country)
     );
 
     // Convert amounts to customer currency
@@ -220,7 +221,7 @@ class SimplifiedSmartCalculationEngine {
       calculation_data: {
         ...quote.calculation_data,
         items_total_origin_currency: itemsTotal,
-        items_total_customer_currency: itemsTotalCustomerCurrency,
+        items_total_customer_display_currency: itemsTotalCustomerCurrency,
         shipping_cost_usd: selectedShipping.cost_usd,
         shipping_cost_customer_currency: shippingCostCustomerCurrency,
         insurance_usd: insuranceAmount,
@@ -232,12 +233,12 @@ class SimplifiedSmartCalculationEngine {
         local_taxes_customer_currency: localTaxesAmount * exchangeRate,
         vat_usd: vatAmount,
         vat_customer_currency: vatAmount * exchangeRate,
-        subtotal_usd: subtotalUSD,
-        subtotal_customer_currency: subtotalCustomerCurrency,
+        subtotal_quote_origincurrency: subtotalUSD,
+        subtotal_customer_display_currency: subtotalCustomerCurrency,
         total_taxes_usd: taxesUSD,
         total_taxes_customer_currency: taxesCustomerCurrency,
-        total_usd: totalUSD,
-        total_customer_currency: totalCustomerCurrency,
+        total_quote_origincurrency: totalUSD,
+        total_customer_display_currency: totalCustomerCurrency,
         exchange_rate: exchangeRate,
         calculation_method: calculationMethod,
         item_breakdowns: taxBreakdown,

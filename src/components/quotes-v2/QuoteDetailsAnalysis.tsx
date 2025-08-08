@@ -104,8 +104,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   // FIXED: Use origin currency total first, then fallback to USD
   const finalTotalOrigin = steps.total_origin_currency || 
                           quote.total_origin_currency || 
-                          steps.total_usd || 
-                          quote.total_usd || 
+                          steps.total_quote_origincurrency || 
+                          quote.total_quote_origincurrency || 
                           0;
 
   // Currency conversion for dual display (only when currencies are different)

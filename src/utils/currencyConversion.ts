@@ -42,7 +42,7 @@ export function getExchangeRateFromQuote(quote: UnifiedQuote): number {
 }
 
 /**
- * Calculate correct costprice_total_usd from items and exchange rate
+ * Calculate correct costprice_total_quote_origincurrency from items and exchange rate
  * @param quote - Quote with items and exchange rate data
  * @returns Correct cost price total in USD
  */

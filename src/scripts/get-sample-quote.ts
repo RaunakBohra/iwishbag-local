@@ -15,7 +15,7 @@ async function getSampleQuote() {
   const { data: quote, error } = await supabase
     .from('quotes')
     .select(
-      'id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name',
+      'id, display_id, status, final_total_origincurrency, destination_currency, user_id, email, customer_name',
     )
     .eq('status', 'approved')
     .is('payment_status', null)
@@ -31,7 +31,7 @@ async function getSampleQuote() {
     const { data: anyQuote, error: anyError } = await supabase
       .from('quotes')
       .select(
-        'id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name',
+        'id, display_id, status, final_total_origincurrency, destination_currency, user_id, email, customer_name',
       )
       .order('created_at', { ascending: false })
       .limit(1)
@@ -49,7 +49,7 @@ async function getSampleQuote() {
   console.log(`   Quote ID: ${finalQuote.id}`);
   console.log(`   Display ID: ${finalQuote.display_id}`);
   console.log(`   Status: ${finalQuote.status}`);
-  console.log(`   Amount: ${finalQuote.final_total_usd} ${finalQuote.destination_currency}`);
+  console.log(`   Amount: ${finalQuote.final_total_origincurrency} ${finalQuote.destination_currency}`);
   console.log(`   User ID: ${finalQuote.user_id}`);
   console.log(`   Customer: ${finalQuote.customer_name || finalQuote.email}`);
 
@@ -58,7 +58,7 @@ async function getSampleQuote() {
   console.log(`  --override "payment_intent:metadata.quote_ids=${finalQuote.id}" \\`);
   console.log(`  --override "payment_intent:metadata.user_id=${finalQuote.user_id}" \\`);
   console.log(
-    `  --override "payment_intent:amount=${Math.round(finalQuote.final_total_usd * 100)}" \\`,
+    `  --override "payment_intent:amount=${Math.round(finalQuote.final_total_origincurrency * 100)}" \\`,
   );
   console.log(
     `  --override "payment_intent:currency=${finalQuote.destination_currency.toLowerCase()}"`,

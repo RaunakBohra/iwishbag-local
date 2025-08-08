@@ -359,7 +359,7 @@ class UnifiedSupportEngine {
             display_id,
             destination_country,
             status,
-            final_total_usd,
+            final_total_origincurrency,
             iwish_tracking_id,
             tracking_status,
             estimated_delivery_date,

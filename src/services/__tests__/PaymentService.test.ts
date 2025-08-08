@@ -195,14 +195,14 @@ describe('PaymentService', () => {
 
       const quote = {
         id: 'quote-456',
-        total_usd: 1000,
+        total_quote_origincurrency: 1000,
         status: 'approved',
       };
 
       const isPaymentValid = (payment: any, quote: any) => {
         return (
           payment.quote_id === quote.id &&
-          payment.amount === quote.total_usd &&
+          payment.amount === quote.total_quote_origincurrency &&
           payment.status === 'completed' &&
           quote.status === 'approved'
         );

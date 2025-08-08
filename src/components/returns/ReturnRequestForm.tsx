@@ -45,7 +45,7 @@ interface QuoteDetails {
   id: string;
   display_id: string;
   status: string;
-  final_total_usd: number;
+  final_total_origincurrency: number;
   currency: string;
   items: any[];
   created_at: string;
@@ -121,7 +121,7 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({
       if (quoteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         const result = await supabase
           .from('quotes')
-          .select('id, display_id, status, final_total_usd, currency, items, created_at, iwish_tracking_id')
+          .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .eq('id', quoteId)
           .single();
         data = result.data;
@@ -130,7 +130,7 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({
         // Second try: search by display_id or tracking_id
         const result = await supabase
           .from('quotes')
-          .select('id, display_id, status, final_total_usd, currency, items, created_at, iwish_tracking_id')
+          .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .or(`display_id.eq.${quoteId},iwish_tracking_id.eq.${quoteId}`)
           .single();
         data = result.data;
@@ -411,7 +411,7 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Total Amount</Label>
                 <p className="font-semibold">
-                  {formatCurrency(quote.final_total_usd, quote.currency)}
+                  {formatCurrency(quote.final_total_origincurrency, quote.currency)}
                 </p>
               </div>
               <div>

@@ -101,8 +101,8 @@ export function useNCMAddressValidation({
 
       const branchMapping = await ncmBranchMappingService.findDestinationBranch(addressInput);
       
-      let issues: string[] = [];
-      let suggestions: string[] = [];
+      const issues: string[] = [];
+      const suggestions: string[] = [];
       let isValid = false;
 
       if (branchMapping) {

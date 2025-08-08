@@ -433,28 +433,28 @@ export const StatusConfigInitializer: React.FC = () => {
           user_id: user?.id,
           product_name: 'Test Product - Pending Quote',
           status: 'pending',
-          final_total_usd: 100.0,
+          final_total_origincurrency: 100.0,
           destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Approved Quote',
           status: 'approved',
-          final_total_usd: 150.0,
+          final_total_origincurrency: 150.0,
           destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Payment Pending Order',
           status: 'payment_pending',
-          final_total_usd: 200.0,
+          final_total_origincurrency: 200.0,
           destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Paid Order',
           status: 'paid',
-          final_total_usd: 250.0,
+          final_total_origincurrency: 250.0,
           destination_country: 'US'
         }
       ];

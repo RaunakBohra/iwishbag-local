@@ -29,7 +29,7 @@ export interface PaymentProofData {
   verified_by: string | null;
   // Joined data
   order_display_id: string;
-  final_total_usd: number;
+  final_total_origincurrency: number;
   destination_currency?: string;
   payment_method: string;
   payment_status: string;
@@ -292,7 +292,7 @@ export class PaymentDataService {
       const { data } = await supabase
         .from('quotes')
         .select(
-          'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
+          'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
         )
         .in('id', quoteIds);
       quotesData = data || [];
@@ -330,7 +330,7 @@ export class PaymentDataService {
         verified_by: item.verified_by,
         // Joined data
         order_display_id: quote?.order_display_id || 'N/A',
-        final_total_usd: quote?.final_total_usd || 0,
+        final_total_origincurrency: quote?.final_total_origincurrency || 0,
         destination_currency: quote?.destination_currency || 'USD',
         payment_method: quote?.payment_method || 'bank_transfer',
         payment_status: quote?.payment_status || 'unpaid',
@@ -393,7 +393,7 @@ export class PaymentDataService {
       const { data } = await supabase
         .from('quotes')
         .select(
-          'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
+          'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
         )
         .in('id', quoteIds);
       quotesData = data || [];
@@ -443,7 +443,7 @@ export class PaymentDataService {
         verified_by: null, // Auto-verified
         // Joined data
         order_display_id: quote?.order_display_id || 'N/A',
-        final_total_usd: quote?.final_total_usd || 0,
+        final_total_origincurrency: quote?.final_total_origincurrency || 0,
         destination_currency: quote?.destination_currency || 'USD',
         payment_method: item.payment_method || 'webhook',
         payment_status: quote?.payment_status || 'unpaid',
@@ -546,7 +546,7 @@ export class PaymentDataService {
       // Get amounts from quotes that have payments
       let query = supabase
         .from('quotes')
-        .select('final_total_usd, amount_paid')
+        .select('final_total_origincurrency, amount_paid')
         .gt('amount_paid', 0);
 
       if (filter?.dateRange?.from && filter?.dateRange?.to) {
@@ -684,7 +684,7 @@ export class PaymentDataService {
       verified_at: message.verified_at,
       verified_by: message.verified_by,
       order_display_id: quote?.order_display_id || 'N/A',
-      final_total_usd: quote?.final_total_usd || 0,
+      final_total_origincurrency: quote?.final_total_origincurrency || 0,
       destination_currency: quote?.destination_currency || 'USD',
       payment_method: quote?.payment_method || 'bank_transfer',
       payment_status: quote?.payment_status || 'unpaid',
@@ -743,7 +743,7 @@ export class PaymentDataService {
       verified_at: transaction.status === 'completed' ? transaction.updated_at : null,
       verified_by: null,
       order_display_id: quote?.order_display_id || 'N/A',
-      final_total_usd: quote?.final_total_usd || 0,
+      final_total_origincurrency: quote?.final_total_origincurrency || 0,
       destination_currency: quote?.destination_currency || 'USD',
       payment_method: transaction.payment_method || 'webhook',
       payment_status: quote?.payment_status || 'unpaid',

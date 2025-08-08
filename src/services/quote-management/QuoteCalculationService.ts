@@ -90,7 +90,7 @@ export interface CalculationResult {
     handling_fee_local: number;
     discount_total: number;
     discount_total_local: number;
-    total_usd: number;
+    total_quote_origincurrency: number;
     total_local: number;
     local_currency: string;
     breakdown: any;
@@ -600,7 +600,7 @@ export class QuoteCalculationService {
       handling_fee_local: convertToLocal(handlingUSD),
       discount_total: discountCalculation.total_discount,
       discount_total_local: convertToLocal(discountCalculation.total_discount),
-      total_usd: totalUSD,
+      total_quote_origincurrency: totalUSD,
       total_local: convertToLocal(totalUSD),
       local_currency: localCurrency,
       exchange_rate: exchangeRate,

@@ -295,7 +295,7 @@ export default function IntegrationTestRunner() {
       // Test various table connections
       const tests = await Promise.all([
         supabase.from('profiles').select('count').limit(1),
-        supabase.from('quotes').select('count').limit(1),
+        supabase.from('quotes_v2').select('count').limit(1),
         supabase.from('received_packages').select('count').limit(1),
         supabase.from('support_tickets').select('count').limit(1),
       ]);

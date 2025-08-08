@@ -2826,7 +2826,7 @@ class BrightDataProductService {
       }
 
       // Handle variants (sizes, colors)
-      let variants: any[] = [];
+      const variants: any[] = [];
       try {
         if (rawData.color && Array.isArray(rawData.color)) {
           variants.push(...rawData.color.map((color: string) => ({ type: 'color', value: color })));

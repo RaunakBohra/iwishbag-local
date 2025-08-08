@@ -81,7 +81,7 @@ const createMockQuote = (overrides: Partial<UnifiedQuote> = {}): UnifiedQuote =>
   origin_country: 'US',
   destination_country: 'IN',
   currency: 'USD',
-  final_total_usd: 150.0,
+  final_total_origincurrency: 150.0,
   iwish_tracking_id: null,
   tracking_status: null,
   shipping_carrier: null,

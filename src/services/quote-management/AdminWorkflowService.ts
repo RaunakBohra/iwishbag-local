@@ -678,7 +678,7 @@ export class AdminWorkflowService {
 
         const customer = customerMap.get(email)!;
         customer.totalQuotes++;
-        customer.totalValue += quote.total_usd || 0;
+        customer.totalValue += quote.total_quote_origincurrency || 0;
         
         if (new Date(quote.created_at) > new Date(customer.lastQuoteDate)) {
           customer.lastQuoteDate = quote.created_at;
@@ -775,7 +775,7 @@ export class AdminWorkflowService {
       
       const data = monthlyData.get(month)!;
       data.quotes++;
-      data.value += quote.total_usd || 0;
+      data.value += quote.total_quote_origincurrency || 0;
     });
 
     return Array.from(monthlyData.entries()).map(([month, data]) => ({

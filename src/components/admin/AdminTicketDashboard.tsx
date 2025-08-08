@@ -213,9 +213,9 @@ const TicketRow = ({
                 </Badge>
               )}
             </div>
-            {ticket.quote.final_total_usd && (
+            {ticket.quote.final_total_origincurrency && (
               <div className="text-xs text-gray-600">
-                ${ticket.quote.final_total_usd.toFixed(2)} USD
+                ${ticket.quote.final_total_origincurrency.toFixed(2)} USD
               </div>
             )}
           </div>

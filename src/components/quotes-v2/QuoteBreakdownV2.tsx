@@ -30,8 +30,8 @@ interface QuoteV2 {
   destination_country: string;
   items: any[];
   calculation_data: any;
-  total_usd?: number; // Legacy
-  total_customer_currency?: number; // Legacy
+  total_quote_origincurrency?: number; // Legacy
+  total_customer_display_currency?: number; // Legacy
   customer_currency?: string; // Legacy
   total_origin_currency?: number; // New system
   created_at: string;
@@ -131,8 +131,8 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   const getOriginTotal = () => {
     return calc.calculation_steps?.total_origin_currency || 
            quote.total_origin_currency || 
-           calc.calculation_steps?.total_usd || 
-           quote.total_usd || 
+           calc.calculation_steps?.total_quote_origincurrency || 
+           quote.total_quote_origincurrency || 
            0;
   };
   
@@ -171,8 +171,8 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
     local_tax_amount: 0,
     payment_gateway_fee: 0,
     total_savings: 0,
-    total_usd: 0,
-    total_customer_currency: 0
+    total_quote_origincurrency: 0,
+    total_customer_display_currency: 0
   };
   
   const steps = { ...defaultSteps, ...(calc.calculation_steps || {}) };

@@ -136,7 +136,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         origin_country: purchaseCountry,
         destination_country: destinationCountry,
         currency: countrySettings.currency || 'USD',
-        final_total_usd: 0,
+        final_total_origincurrency: 0,
         calculation_data: {
           breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 },
         },
@@ -175,7 +175,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         shippingCost: breakdown.shipping || 0,
         customsDuty: breakdown.customs || 0,
         serviceFee: breakdown.fees || 0,
-        total: result.updated_quote.final_total_usd || 0,
+        total: result.updated_quote.final_total_origincurrency || 0,
         breakdown: breakdown,
         currency: countrySettings.currency || 'USD',
       };

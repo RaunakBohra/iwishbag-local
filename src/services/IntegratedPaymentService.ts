@@ -263,7 +263,7 @@ export class IntegratedPaymentService {
           origin_country: 'US',
           destination_country: 'US', // Storage fees don't require shipping
           items: [],
-          costprice_total_usd: 0,
+          costprice_total_quote_origincurrency: 0,
           final_total_origin: totalStorageFees,
           forwarding_type: 'storage_fees',
           storage_fees_included: true,

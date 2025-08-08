@@ -261,9 +261,9 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
               </Badge>
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-600">
-              {quote.final_total_usd && (
+              {quote.final_total_origincurrency && (
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />${quote.final_total_usd.toFixed(2)}
+                  <DollarSign className="h-3 w-3" />${quote.final_total_origincurrency.toFixed(2)}
                 </div>
               )}
               {quote.email && (

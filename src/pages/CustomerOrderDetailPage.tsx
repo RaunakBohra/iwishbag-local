@@ -179,8 +179,8 @@ const CustomerOrderDetailPage = () => {
                     >
                       {order.payment_status === 'partial' &&
                       order.amount_paid &&
-                      order.final_total_usd
-                        ? `Partial: $${order.amount_paid} of $${order.final_total_usd}`
+                      order.final_total_origincurrency
+                        ? `Partial: $${order.amount_paid} of $${order.final_total_origincurrency}`
                         : order.payment_status.charAt(0).toUpperCase() +
                           order.payment_status.slice(1)}
                     </Badge>

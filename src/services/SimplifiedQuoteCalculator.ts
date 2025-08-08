@@ -412,7 +412,7 @@ class SimplifiedQuoteCalculator {
     let itemsTotal = 0;
     let totalItemDiscounts = 0;
     let customsValuationTotal = 0; // For customs calculation (may use minimum valuation)
-    let valuationAnalysis: any[] = [];
+    const valuationAnalysis: any[] = [];
     
     // Process each item for both pricing and valuation
     for (const item of input.items) {
@@ -680,7 +680,7 @@ class SimplifiedQuoteCalculator {
     const customsDuty = cifValueForCustoms * (effectiveCustomsRate / 100);
 
     // Step 9: Apply component-based discounts if enabled
-    let componentDiscounts: { [key: string]: any } = {};
+    const componentDiscounts: { [key: string]: any } = {};
     let discountedCustomsDuty = customsDuty;
     let customsDiscountAmount = 0;
     let discountedHandlingFee = 0;

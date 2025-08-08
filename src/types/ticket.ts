@@ -57,7 +57,7 @@ export interface TicketWithDetails extends SupportTicket {
     display_id?: string;
     destination_country: string;
     status: string;
-    final_total_usd?: number;
+    final_total_origincurrency?: number;
     iwish_tracking_id?: string;
     tracking_status?: string;
     estimated_delivery_date?: string;

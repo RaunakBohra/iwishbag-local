@@ -738,7 +738,7 @@ export const useEmailNotifications = () => {
       data: {
         quoteId: quote.display_id || quote.id,
         customerName: quote.customer_name,
-        totalAmount: quote.final_total_usd?.toFixed(2) || '0.00',
+        totalAmount: quote.final_total_origincurrency?.toFixed(2) || '0.00',
         currency: quote.currency || 'USD',
         bankDetails: bankDetails,
       },

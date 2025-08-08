@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns';
 import { QuoteExportButton } from '@/components/quotes-v2/QuoteExportControls';
 import { AvailableDiscounts } from '@/components/quotes-v2/AvailableDiscounts';
+import { getDestinationCurrency } from '@/utils/originCurrency';
 
 interface QuoteItem {
   id: string;
@@ -292,7 +293,7 @@ export default function PublicQuoteView() {
                     <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                       <span>Qty: {item.quantity}</span>
                       <span>Weight: {item.weight}kg</span>
-                      <span>Price: {formatCurrency(item.unit_price_origin || item.costprice_origin, quote.customer_currency || 'USD')}</span>
+                      <span>Price: {formatCurrency(item.unit_price_origin || item.costprice_origin, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
                     </div>
                   </div>
                 </div>
@@ -310,30 +311,30 @@ export default function PublicQuoteView() {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Items Total</span>
-                <span>{formatCurrency(breakdown.items_total || 0, quote.customer_currency || 'USD')}</span>
+                <span>{formatCurrency(breakdown.items_total || 0, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
               </div>
               {breakdown.shipping > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>{formatCurrency(breakdown.shipping, quote.customer_currency || 'USD')}</span>
+                  <span>{formatCurrency(breakdown.shipping, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
                 </div>
               )}
               {breakdown.customs > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Customs & Duties</span>
-                  <span>{formatCurrency(breakdown.customs, quote.customer_currency || 'USD')}</span>
+                  <span>{formatCurrency(breakdown.customs, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
                 </div>
               )}
               {breakdown.fees > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Processing Fees</span>
-                  <span>{formatCurrency(breakdown.fees, quote.customer_currency || 'USD')}</span>
+                  <span>{formatCurrency(breakdown.fees, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency || 'USD')}</span>
+                <span>{formatCurrency(quote.total_customer_display_currency || quote.total_quote_origincurrency, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
               </div>
             </div>
 
@@ -370,8 +371,8 @@ export default function PublicQuoteView() {
                   customer_phone: quote.customer_phone,
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
-                  total_usd: quote.total_usd,
-                  total_customer_currency: quote.total_customer_currency,
+                  total_quote_origincurrency: quote.total_quote_origincurrency,
+                  total_customer_display_currency: quote.total_customer_display_currency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,
@@ -393,8 +394,8 @@ export default function PublicQuoteView() {
                   customer_phone: quote.customer_phone,
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
-                  total_usd: quote.total_usd,
-                  total_customer_currency: quote.total_customer_currency,
+                  total_quote_origincurrency: quote.total_quote_origincurrency,
+                  total_customer_display_currency: quote.total_customer_display_currency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,

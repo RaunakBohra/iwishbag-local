@@ -228,7 +228,7 @@ export class CalculationDefaultsService {
     const handlingDefault = this.calculateHandlingDefault(quote, selectedOption);
     const insuranceDefault = this.calculateInsuranceDefault(quote, selectedOption, customerOptedIn);
     const itemsValue =
-      quote.base_total_usd ||
+      quote.base_total_quote_origincurrency ||
       quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     const currentHandling = quote.operational_data?.handling_charge || 0;

@@ -103,7 +103,7 @@ export class CampaignManagementService {
 
       const now = new Date().toISOString();
       
-      let query = supabase
+      const query = supabase
         .from('discount_campaigns')
         .select(`
           *,

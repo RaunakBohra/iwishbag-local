@@ -69,7 +69,7 @@ import { DueAmountInfo } from '@/lib/paymentUtils';
 interface Quote {
   id: string;
   display_id?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   currency?: string;
   payment_method?: string;
@@ -373,7 +373,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
     const totalPaid = totalPayments - totalRefunds;
 
-    const finalTotal = parseFloat(quote.final_total_usd) || 0;
+    const finalTotal = parseFloat(quote.final_total_origincurrency) || 0;
     const remaining = finalTotal - totalPaid;
 
     // Determine payment status with refund states
@@ -408,7 +408,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       currencyBreakdown,
       percentagePaid: finalTotal > 0 ? (totalPaid / finalTotal) * 100 : 0,
     };
-  }, [paymentLedger, quote.final_total_usd, currency]);
+  }, [paymentLedger, quote.final_total_origincurrency, currency]);
 
   // Payment recording state
   const [paymentAmount, setPaymentAmount] = useState<string>('');
@@ -481,10 +481,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   // Monitor quote changes for due amount detection
   useEffect(() => {
-    if (quote?.final_total_usd) {
-      handleOrderValueChange(parseFloat(quote.final_total_usd), quote);
+    if (quote?.final_total_origincurrency) {
+      handleOrderValueChange(parseFloat(quote.final_total_origincurrency), quote);
     }
-  }, [quote?.final_total_usd, handleOrderValueChange]);
+  }, [quote?.final_total_origincurrency, handleOrderValueChange]);
 
   // Utility functions for verification
   const isImage = (filename: string) => {
@@ -780,7 +780,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
       const csvContent = [
         `Payment History for Order ${quote.display_id}`,
         `Generated on ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`,
-        `Total Amount: ${currency} ${quote.final_total_usd?.toFixed(2)}`,
+        `Total Amount: ${currency} ${quote.final_total_origincurrency?.toFixed(2)}`,
         '',
         headers.join(','),
         ...rows.map((row) => row.join(',')),
@@ -1388,7 +1388,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               )}
                               onClick={() => {
                                 setVerifyProofId(proof.id);
-                                setVerifyAmount(quote.final_total_usd?.toString() || '');
+                                setVerifyAmount(quote.final_total_origincurrency?.toString() || '');
                               }}
                             >
                               <div className="flex items-center justify-between">
@@ -1899,7 +1899,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               <h4 className="font-medium">Order Created</h4>
                               <p className="text-sm text-muted-foreground mt-1">
                                 Quote #{quote.display_id} - Total:{' '}
-                                {formatAmount(quote.final_total_usd || 0)}
+                                {formatAmount(quote.final_total_origincurrency || 0)}
                               </p>
                               {quote.created_at && (
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -2127,7 +2127,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                 onClose={() => setShowRefundModal(false)}
                 quote={{
                   id: quote.id,
-                  final_total_usd: quote.final_total_usd || 0,
+                  final_total_origincurrency: quote.final_total_origincurrency || 0,
                   amount_paid: paymentSummary.totalPaid,
                   currency: currency,
                   payment_method: quote.payment_method || '',
@@ -2213,7 +2213,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
               onClose={() => setShowRefundModal(false)}
               quote={{
                 id: quote.id,
-                final_total_usd: quote.final_total_usd || 0,
+                final_total_origincurrency: quote.final_total_origincurrency || 0,
                 amount_paid: paymentSummary.totalPaid,
                 currency: currency,
                 payment_method: quote.payment_method || '',

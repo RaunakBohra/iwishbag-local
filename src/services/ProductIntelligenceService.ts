@@ -174,7 +174,7 @@ class ProductIntelligenceService {
       
       if (queryWords.length > 0) {
         // Try individual word matches in search keywords
-        let keywordResults: any[] = [];
+        const keywordResults: any[] = [];
         
         for (const word of queryWords) {
           const { data: wordResults } = await supabase

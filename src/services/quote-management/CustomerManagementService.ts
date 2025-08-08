@@ -573,13 +573,13 @@ export class CustomerManagementService {
       // Simplified implementation for now
       const { data: quotes } = await supabase
         .from('quotes_v2')
-        .select('total_usd, customer_currency')
+        .select('total_quote_origincurrency, customer_currency')
         .eq('customer_id', customerId)
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
       return {
         recentQuotes: quotes?.length || 0,
-        totalValue: quotes?.reduce((sum, q) => sum + (q.total_usd || 0), 0) || 0,
+        totalValue: quotes?.reduce((sum, q) => sum + (q.total_quote_origincurrency || 0), 0) || 0,
         preferredCurrency: quotes?.[0]?.customer_currency || 'USD'
       };
     } catch (error) {

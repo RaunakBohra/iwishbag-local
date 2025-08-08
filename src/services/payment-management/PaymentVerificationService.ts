@@ -130,7 +130,7 @@ export class PaymentVerificationService {
       let quotes: Tables<'quotes'>[] = [];
       if (quoteIds.length > 0) {
         const { data: quotesData, error: quotesError } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('*')
           .in('id', quoteIds);
 
@@ -146,7 +146,7 @@ export class PaymentVerificationService {
       for (const message of messages) {
         try {
           const quote = quotes.find(q => q.id === message.quote_id);
-          const orderTotal = quote?.final_total_usd || 0;
+          const orderTotal = quote?.final_total_origincurrency || 0;
           const existingPaid = quote?.amount_paid || 0;
           
           // Update message verification status
@@ -170,7 +170,7 @@ export class PaymentVerificationService {
             const newPaymentStatus = newAmountPaid >= orderTotal ? 'paid' : 'partial';
 
             const { error: quoteUpdateError } = await supabase
-              .from('quotes')
+              .from('quotes_v2')
               .update({
                 payment_status: newPaymentStatus,
                 amount_paid: newAmountPaid,
@@ -384,7 +384,7 @@ export class PaymentVerificationService {
     }
 
     const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', message.quote_id)
       .single();
@@ -410,7 +410,7 @@ export class PaymentVerificationService {
 
     // If verified, update quote payment status
     if (request.status === 'verified') {
-      const orderTotal = quote.final_total_usd || 0;
+      const orderTotal = quote.final_total_origincurrency || 0;
       const existingPaid = quote.amount_paid || 0;
       const verifiedAmount = request.verifiedAmount || orderTotal;
       
@@ -418,7 +418,7 @@ export class PaymentVerificationService {
       const newPaymentStatus = newAmountPaid >= orderTotal ? 'paid' : 'partial';
 
       const { error: quoteUpdateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           payment_status: newPaymentStatus,
           amount_paid: newAmountPaid,
@@ -476,7 +476,7 @@ export class PaymentVerificationService {
     }
 
     const { data: quote } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', message.quote_id)
       .single();
@@ -485,7 +485,7 @@ export class PaymentVerificationService {
       throw new Error('Quote not found');
     }
 
-    const orderTotal = quote.final_total_usd || 0;
+    const orderTotal = quote.final_total_origincurrency || 0;
     const existingPaid = quote.amount_paid || 0;
     const remainingBalance = Math.max(0, orderTotal - existingPaid);
     
@@ -539,12 +539,12 @@ export class PaymentVerificationService {
     }
 
     const { data: quote } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', transaction.quote_id)
       .single();
 
-    const orderTotal = quote?.final_total_usd || 0;
+    const orderTotal = quote?.final_total_origincurrency || 0;
     const existingPaid = quote?.amount_paid || 0;
     const transactionAmount = transaction.amount || 0;
 

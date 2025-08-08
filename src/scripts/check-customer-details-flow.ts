@@ -13,7 +13,7 @@ async function checkCustomerDetailsFlow() {
 
   // 1. Check what customer details are stored in quotes
   console.log('📋 1. Customer Details in Quotes Table:');
-  const { data: sampleQuote } = await supabase.from('quotes').select('*').limit(1).single();
+  const { data: sampleQuote } = await supabase.from('quotes_v2').select('*').limit(1).single();
 
   if (sampleQuote) {
     const customerFields = [

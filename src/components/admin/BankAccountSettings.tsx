@@ -64,7 +64,7 @@ export const BankAccountSettings = () => {
 
   // Filter bank accounts by country
   const filteredAccounts = (() => {
-    let filtered = countryFilter === 'all'
+    const filtered = countryFilter === 'all'
       ? bankAccounts
       : countryFilter === 'fallback'
         ? bankAccounts.filter((account) => account.is_fallback)

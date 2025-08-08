@@ -169,10 +169,10 @@ const TicketCard = ({
                 </div>
               </div>
             </div>
-            {ticket.quote.final_total_usd && (
+            {ticket.quote.final_total_origincurrency && (
               <div className="text-right">
                 <p className="text-sm font-semibold text-blue-900">
-                  ${ticket.quote.final_total_usd.toFixed(2)}
+                  ${ticket.quote.final_total_origincurrency.toFixed(2)}
                 </p>
                 <p className="text-xs text-blue-600">Total</p>
               </div>

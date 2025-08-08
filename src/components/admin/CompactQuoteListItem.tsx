@@ -27,7 +27,7 @@ export const CompactQuoteListItem: React.FC<CompactQuoteListItemProps> = ({
 
   // Get the appropriate currency - prefer origin currency for admin view
   const currency = quote.origin_currency || 'USD';
-  const amount = quote.origin_total_amount || quote.final_total_usd || 0;
+  const amount = quote.origin_total_amount || quote.final_total_origincurrency || 0;
 
   return (
     <div 

@@ -28,14 +28,14 @@ export const useDashboardState = () => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           `
           *,
-          profiles!quotes_user_id_fkey(preferred_display_currency)
+          profiles!quotes_v2_customer_id_fkey(preferred_display_currency)
         `,
         )
-        .eq('user_id', user.id)
+        .eq('customer_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -34,6 +34,7 @@ import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
 import { cn } from '@/lib/design-system';
 import { useToast } from '@/hooks/use-toast';
+import { useCartCount } from '@/stores/cartStore';
 
 const Header = () => {
   const { user, signOut, isAnonymous } = useAuth();
@@ -42,6 +43,7 @@ const Header = () => {
   const { toggleSidebar } = useSidebar();
   const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const cartCount = useCartCount();
 
 
   // Default homepage settings
@@ -321,23 +323,16 @@ const Header = () => {
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}
               <div className="hidden sm:flex items-center space-x-1 md:space-x-2 lg:space-x-3">
-                <CartDrawer>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    {cartItemCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium bg-red-500 text-white border-2 border-white"
-                      >
-                        {cartItemCount > 9 ? '9+' : cartItemCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </CartDrawer>
+                {/* Cart functionality removed - showing disabled button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled
+                  className="relative opacity-50 cursor-not-allowed flex-shrink-0 h-9 w-9"
+                  title="Cart system is being rebuilt"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                </Button>
 
                 {/* Messages with improved badge */}
                 <Button
@@ -363,23 +358,16 @@ const Header = () => {
 
               {/* Mobile View - Only show Cart and More menu */}
               <div className="flex sm:hidden items-center space-x-1">
-                <CartDrawer>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    {cartItemCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs font-medium bg-red-500 text-white border-2 border-white"
-                      >
-                        {cartItemCount > 9 ? '9+' : cartItemCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </CartDrawer>
+                {/* Cart functionality removed - showing disabled button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled
+                  className="relative opacity-50 cursor-not-allowed flex-shrink-0 h-9 w-9"
+                  title="Cart system is being rebuilt"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                </Button>
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
                     <Button
@@ -401,31 +389,47 @@ const Header = () => {
                       <SheetTitle>Menu</SheetTitle>
                     </SheetHeader>
                     <div className="py-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-3">
                         <Button
                           variant="outline"
-                          className="flex flex-col items-center justify-center h-24"
+                          className="flex flex-col items-center justify-center h-20"
                           onClick={() => {
                             navigate('/dashboard');
                             setIsSheetOpen(false);
                           }}
                         >
-                          <LayoutDashboard className="h-6 w-6 mb-2" />
-                          <span className="text-xs sm:text-sm">Dashboard</span>
+                          <LayoutDashboard className="h-5 w-5 mb-1" />
+                          <span className="text-xs">Dashboard</span>
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex flex-col items-center justify-center h-24 relative"
+                          className="flex flex-col items-center justify-center h-20 relative"
+                          onClick={() => {
+                            navigate('/cart');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <ShoppingCart className="h-5 w-5 mb-1" />
+                          <span className="text-xs">Cart</span>
+                          {cartCount > 0 && (
+                            <Badge variant="destructive" className="absolute top-1 right-1 text-xs h-4 w-4 rounded-full flex items-center justify-center p-0">
+                              {cartCount > 9 ? '9+' : cartCount}
+                            </Badge>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex flex-col items-center justify-center h-20 relative"
                           onClick={() => {
                             navigate('/messages');
                             setIsSheetOpen(false);
                           }}
                         >
-                          <MessageSquare className="h-6 w-6 mb-2" />
-                          <span className="text-xs sm:text-sm">Messages</span>
+                          <MessageSquare className="h-5 w-5 mb-1" />
+                          <span className="text-xs">Messages</span>
                           {unreadMessagesCount > 0 && (
-                            <Badge variant="destructive" className="absolute top-2 right-2">
-                              {unreadMessagesCount}
+                            <Badge variant="destructive" className="absolute top-1 right-1 text-xs h-4 w-4 rounded-full flex items-center justify-center p-0">
+                              {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                             </Badge>
                           )}
                         </Button>
@@ -575,6 +579,26 @@ const Header = () => {
                 </Sheet>
               </div>
 
+              {/* Cart Button - Desktop */}
+              <div className="hidden sm:flex items-center mr-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/cart')}
+                  className="relative p-2 hover:bg-gray-100 transition-colors"
+                >
+                  <ShoppingCart className="h-5 w-5 text-gray-700" />
+                  {cartCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-xs font-bold flex items-center justify-center min-w-[1.25rem] px-1"
+                    >
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+
               {/* Desktop User Menu - Enhanced with better styling */}
               <div className="hidden sm:block">
                 <DropdownMenu>
@@ -630,6 +654,27 @@ const Header = () => {
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-900">Dashboard</span>
                           <span className="text-xs text-gray-500">View your quotes and orders</span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
+                      <Link to="/cart" className="flex items-center w-full">
+                        <ShoppingCart className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col items-start">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">Cart</span>
+                            {cartCount > 0 && (
+                              <Badge variant="secondary" className="text-xs h-5">
+                                {cartCount}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {cartCount > 0 ? `${cartCount} ${cartCount === 1 ? 'item' : 'items'} ready to checkout` : 'Your cart is empty'}
+                          </span>
                         </div>
                       </Link>
                     </DropdownMenuItem>

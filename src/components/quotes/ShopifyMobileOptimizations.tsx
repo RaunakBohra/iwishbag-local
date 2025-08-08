@@ -52,16 +52,16 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
         {/* Price Summary */}
         <div className="text-center">
           <div className="text-2xl font-bold">
-            {convertedTotal || formatCurrency(adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, displayCurrency || getBreakdownSourceCurrency(quote))}
+            {convertedTotal || formatCurrency(adjustedTotal || quote.total_origin_currency || quote.origin_total_amount || quote.total_quote_origincurrency, displayCurrency || getBreakdownSourceCurrency(quote))}
           </div>
           {displayCurrency && displayCurrency !== getBreakdownSourceCurrency(quote) && (
             <div className="text-sm text-muted-foreground">
-              Original: {formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, getBreakdownSourceCurrency(quote))}
+              Original: {formatCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_quote_origincurrency, getBreakdownSourceCurrency(quote))}
             </div>
           )}
           {(displayCurrency || getBreakdownSourceCurrency(quote)) !== 'USD' && (
             <div className="text-sm text-muted-foreground">
-              ≈ {formatCurrency(adjustedTotal || quote.total_usd, 'USD')}
+              ≈ {formatCurrency(adjustedTotal || quote.total_quote_origincurrency, 'USD')}
             </div>
           )}
         </div>
@@ -339,7 +339,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
       if (!displayCurrency || displayCurrency === sourceCurrency) {
         // No conversion needed - use origin currency amounts
         setConvertedAmounts({
-          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
+          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_quote_origincurrency,
           itemsTotal: breakdown.items_total || 0,
           itemDiscounts: breakdown.item_discounts || 0,
           shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
@@ -361,7 +361,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
           convertedHandlingFee,
           convertedDomesticDelivery,
         ] = await Promise.all([
-          convertCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_usd, sourceCurrency, displayCurrency),
+          convertCurrency(quote.total_origin_currency || quote.origin_total_amount || quote.total_quote_origincurrency, sourceCurrency, displayCurrency),
           convertCurrency(breakdown.items_total || 0, sourceCurrency, displayCurrency),
           convertCurrency(breakdown.item_discounts || 0, sourceCurrency, displayCurrency),
           convertCurrency(breakdown.shipping || 0, sourceCurrency, displayCurrency),
@@ -384,7 +384,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
         console.error('Failed to convert mobile breakdown amounts:', error);
         // Fallback to original amounts using origin currency system
         setConvertedAmounts({
-          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_usd,
+          total: quote.total_origin_currency || quote.origin_total_amount || quote.total_quote_origincurrency,
           itemsTotal: breakdown.items_total || 0,
           itemDiscounts: breakdown.item_discounts || 0,
           shippingAndInsurance: (breakdown.shipping || 0) + (breakdown.insurance || 0),
@@ -399,7 +399,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
     quote.id, 
     quote.total_origin_currency, 
     quote.origin_total_amount, 
-    quote.total_usd,
+    quote.total_quote_origincurrency,
     quote.calculation_data?.origin_currency,
     breakdown.items_total,
     breakdown.item_discounts, 
@@ -434,7 +434,7 @@ export const MobileBreakdown: React.FC<MobileBreakdownProps> = ({
 
         {getBreakdownSourceCurrency(quote) !== 'USD' && (
           <div className="text-sm text-muted-foreground text-center mb-3">
-            ≈ {formatCurrency(quote.total_usd || quote.total_origin_currency, 'USD')}
+            ≈ {formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency, 'USD')}
           </div>
         )}
 

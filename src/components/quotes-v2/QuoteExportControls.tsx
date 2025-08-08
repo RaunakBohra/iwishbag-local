@@ -23,8 +23,8 @@ interface QuoteData {
   customer_phone?: string;
   status: string;
   items: any[];
-  total_usd: number;
-  total_customer_currency?: number;
+  total_quote_origincurrency: number;
+  total_customer_display_currency?: number;
   customer_currency?: string;
   origin_country?: string;
   destination_country?: string;
@@ -61,7 +61,7 @@ export const QuoteExportControls: React.FC<QuoteExportControlsProps> = ({
       // Debug log the quote data structure
       console.log('Quote data for PDF export:', {
         id: quote.id,
-        total_usd: quote.total_usd,
+        total_quote_origincurrency: quote.total_quote_origincurrency,
         items: quote.items,
         itemsLength: quote.items?.length
       });

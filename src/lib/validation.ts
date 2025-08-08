@@ -94,7 +94,7 @@ export const userProfileUpdateSchema = z.object({
 // Note: Status validation is now dynamic - use createAdminQuoteUpdateSchema() function instead
 export const adminQuoteUpdateSchema = z.object({
   status: z.string().optional(), // Simplified to string - validation happens elsewhere
-  final_total_usd: positiveNumberSchema.optional(),
+  final_total_origincurrency: positiveNumberSchema.optional(),
   final_total_local: positiveNumberSchema.optional(),
   payment_method: z.enum(['stripe', 'cod', 'bank_transfer']).optional(),
   rejection_reason_id: z.string().uuid().optional(),
@@ -109,7 +109,7 @@ export const createAdminQuoteUpdateSchema = (validStatuses: string[]) => {
       validStatuses.length > 0
         ? z.enum(validStatuses as [string, ...string[]]).optional()
         : z.string().optional(),
-    final_total_usd: positiveNumberSchema.optional(),
+    final_total_origincurrency: positiveNumberSchema.optional(),
     final_total_local: positiveNumberSchema.optional(),
     payment_method: z.enum(['stripe', 'cod', 'bank_transfer']).optional(),
     rejection_reason_id: z.string().uuid().optional(),

@@ -1301,12 +1301,12 @@ const QuoteCalculatorV2: React.FC = () => {
     const steps = result.calculation_steps;
     console.log('[ProportionalRounding] Original result:', {
       total_origin_currency: steps.total_origin_currency,
-      total_customer_currency: steps.total_customer_currency,
+      total_customer_display_currency: steps.total_customer_display_currency,
       steps: Object.keys(steps)
     });
 
     // Get the precise total that should be the target
-    const preciseTotal = steps.total_origin_currency || steps.total_usd || 0;
+    const preciseTotal = steps.total_origin_currency || steps.total_quote_origincurrency || 0;
     
     if (preciseTotal <= 0) {
       console.warn('[ProportionalRounding] Invalid total, skipping rounding:', preciseTotal);
@@ -1350,12 +1350,12 @@ const QuoteCalculatorV2: React.FC = () => {
 
     // Update totals with rounded values
     updatedSteps.total_origin_currency = roundingResult.total.amount;
-    updatedSteps.total_usd = roundingResult.total.amount; // Store rounded value for backward compatibility
+    updatedSteps.total_quote_origincurrency = roundingResult.total.amount; // Store rounded value for backward compatibility
     
     // If we have customer currency conversion, apply it to the rounded total
-    if (steps.total_customer_currency && steps.total_origin_currency) {
-      const conversionRate = steps.total_customer_currency / steps.total_origin_currency;
-      updatedSteps.total_customer_currency = roundingResult.total.amount * conversionRate;
+    if (steps.total_customer_display_currency && steps.total_origin_currency) {
+      const conversionRate = steps.total_customer_display_currency / steps.total_origin_currency;
+      updatedSteps.total_customer_display_currency = roundingResult.total.amount * conversionRate;
     }
 
     // Add rounding metadata for audit purposes
@@ -1609,8 +1609,8 @@ const QuoteCalculatorV2: React.FC = () => {
       const quoteData = calculationResult && calculationResult.calculation_steps ? {
         ...baseQuoteData,
         calculation_data: calculationResult,
-        total_usd: calculationResult.calculation_steps.total_usd || 0,
-        total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+        total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
+        total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
         status: 'calculated',
         calculated_at: new Date().toISOString(),
       } : {
@@ -2016,8 +2016,8 @@ const QuoteCalculatorV2: React.FC = () => {
                   customer_phone: customerPhone,
                   status: currentQuoteStatus,
                   items: items,
-                  total_usd: calculationResult?.calculation_steps?.total_usd || calculationResult?.total || 0,
-                  total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency || calculationResult?.totalCustomerCurrency || 0,
+                  total_quote_origincurrency: calculationResult?.calculation_steps?.total_quote_origincurrency || calculationResult?.total || 0,
+                  total_customer_display_currency: calculationResult?.calculation_steps?.total_customer_display_currency || calculationResult?.totalCustomerCurrency || 0,
                   customer_currency: customerCurrency,
                   origin_country: originCountry,
                   destination_country: destinationCountry,
@@ -2039,7 +2039,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   id: quoteId,
                   display_id: null,
                   email: customerEmail,
-                  final_total_usd: calculationResult?.total || 0,
+                  final_total_origincurrency: calculationResult?.total || 0,
                   status: currentQuoteStatus,
                   created_at: new Date().toISOString(),
                   share_token: shareToken,
@@ -3622,8 +3622,8 @@ const QuoteCalculatorV2: React.FC = () => {
                 destination_country: destinationCountry,
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
-                total_usd: calculationResult.calculation_steps.total_usd || 0,
-                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
+                total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp
@@ -3644,8 +3644,8 @@ const QuoteCalculatorV2: React.FC = () => {
                 destination_country: destinationCountry,
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
-                total_usd: calculationResult.calculation_steps.total_usd || 0,
-                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
+                total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp

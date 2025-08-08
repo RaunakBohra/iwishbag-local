@@ -191,7 +191,7 @@ export const useStatusTransitions = () => {
       // Get quote details for notification
       const { data: quote } = await supabase
         .from('quotes')
-        .select('display_id, final_total_usd, customer_data, items')
+        .select('display_id, final_total_origincurrency, customer_data, items')
         .eq('id', event.quoteId)
         .single();
 
@@ -223,7 +223,7 @@ export const useStatusTransitions = () => {
           .replace(/\{\{quote_id\}\}/g, quote.display_id || event.quoteId)
           .replace(/\{\{order_id\}\}/g, quote.display_id || event.quoteId)
           .replace(/\{\{product_name\}\}/g, productName)
-          .replace(/\{\{total_amount\}\}/g, `$${quote.final_total_usd?.toFixed(2) || '0.00'}`)
+          .replace(/\{\{total_amount\}\}/g, `$${quote.final_total_origincurrency?.toFixed(2) || '0.00'}`)
           .replace(/\{\{tracking_number\}\}/g, 'TBD')
           .replace(/\{\{dashboard_url\}\}/g, `${window.location.origin}/dashboard`)
           .replace(/\{\{payment_url\}\}/g, `${window.location.origin}/dashboard`) // Checkout removed

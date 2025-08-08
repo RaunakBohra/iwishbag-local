@@ -393,7 +393,7 @@ const PaymentSuccess: React.FC = () => {
       // First, verify the quotes exist and check their current status
       const { data: existingQuotes, error: fetchError } = await supabase
         .from('quotes')
-        .select('id, status, display_id, final_total_usd')
+        .select('id, status, display_id, final_total_origincurrency')
         .in('id', quoteIds);
 
       if (fetchError) {
@@ -705,8 +705,15 @@ const PaymentSuccess: React.FC = () => {
                     <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                       {paymentData.gateway === 'airwallex' && paymentData.amount > 0 ? (
                         <>
-                          {paymentData.currency === 'USD' ? '$' : paymentData.currency}
-                          <AnimatedCounter end={paymentData.amount} decimals={2} />
+                          {(() => {
+                            // Use proper currency formatting instead of hardcoded symbols
+                            const formatter = new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: paymentData.currency,
+                              minimumFractionDigits: 2,
+                            });
+                            return formatter.format(paymentData.amount);
+                          })()}
                         </>
                       ) : paymentData.gateway === 'airwallex' ? (
                         <span className="text-lg">Processing...</span>

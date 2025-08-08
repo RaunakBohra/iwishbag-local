@@ -18,7 +18,7 @@ export const OrderReceipt = ({ order }: OrderReceiptProps) => {
   const { formatAmount, currency } = useQuoteCurrency(order);
 
   // Apply customer-friendly rounding to final total only
-  const finalTotal = order.final_total_usd || 0;
+  const finalTotal = order.final_total_origincurrency || 0;
   const roundingResult = applyCustomerFriendlyRounding(finalTotal, currency);
   const roundingExplanation = getRoundingExplanation(finalTotal, currency);
 

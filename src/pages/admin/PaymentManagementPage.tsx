@@ -77,7 +77,7 @@ interface PaymentProofData {
   verified_by: string | null;
   // Joined data
   order_display_id: string;
-  final_total_usd: number;
+  final_total_origincurrency: number;
   destination_currency?: string;
   payment_method: string;
   payment_status: string;
@@ -164,7 +164,7 @@ const PaymentManagementPage = () => {
             const { data } = await supabase
               .from('quotes')
               .select(
-                'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
+                'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
               .in('id', quoteIds);
             quotesData = data || [];
@@ -202,7 +202,7 @@ const PaymentManagementPage = () => {
               verified_by: item.verified_by,
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
-              final_total_usd: quote?.final_total_usd_usd || 0,
+              final_total_origincurrency: quote?.final_total_origincurrency_usd || 0,
               destination_currency: quote?.destination_currency || 'USD',
               payment_method: quote?.payment_method || 'bank_transfer',
               payment_status: quote?.payment_status || 'unpaid',
@@ -266,7 +266,7 @@ const PaymentManagementPage = () => {
             const { data } = await supabase
               .from('quotes')
               .select(
-                'id, order_display_id, final_total_usd, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
+                'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
               .in('id', quoteIds);
             quotesData = data || [];
@@ -327,7 +327,7 @@ const PaymentManagementPage = () => {
               verified_by: null, // Webhook auto-verification
               // Joined data
               order_display_id: quote?.order_display_id || 'N/A',
-              final_total_usd: quote?.final_total_usd_usd || 0,
+              final_total_origincurrency: quote?.final_total_origincurrency_usd || 0,
               destination_currency: quote?.destination_currency || item.currency || 'USD',
               payment_method: item.payment_method || 'unknown',
               payment_status: quote?.payment_status || 'unpaid',
@@ -488,7 +488,7 @@ const PaymentManagementPage = () => {
       // For each message, calculate and set the verified amount
       const updatePromises = messages.map(async (message) => {
         const quote = quotes.find((q) => q.id === message.quote_id);
-        const orderTotal = quote?.final_total_usd || 0;
+        const orderTotal = quote?.final_total_origincurrency || 0;
         const existingPaid = quote?.amount_paid || 0;
         const _remainingBalance = orderTotal - existingPaid;
 
@@ -520,7 +520,7 @@ const PaymentManagementPage = () => {
           const quote = quotes.find((q) => q.id === message.quote_id);
           if (!quote) continue;
 
-          const orderTotal = quote.final_total_usd || 0;
+          const orderTotal = quote.final_total_origincurrency || 0;
           const existingPaid = quote.amount_paid || 0;
 
           // Use the remaining balance as the amount received
@@ -708,7 +708,7 @@ const PaymentManagementPage = () => {
       proof.order_display_id,
       proof.customer_name,
       proof.customer_email,
-      proof.final_total_usd,
+      proof.final_total_origincurrency,
       proof.destination_currency,
       proof.payment_method,
       format(new Date(proof.created_at), 'yyyy-MM-dd HH:mm'),
@@ -1082,7 +1082,7 @@ const PaymentManagementPage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          {proof.destination_currency} {proof.final_total_usd.toFixed(2)}
+                          {proof.destination_currency} {proof.final_total_origincurrency.toFixed(2)}
                         </div>
                         {proof.amount_paid > 0 && (
                           <div className="text-sm text-muted-foreground">

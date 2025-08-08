@@ -553,7 +553,7 @@ class DiscountServiceClass {
           } else {
             // Traditional order-level discount (applies to total)
             let discountAmount = 0;
-            let appliesTo = 'total';
+            const appliesTo = 'total';
             
             // Calculate discount amount for order-level discounts
             if (discountType.type === 'percentage') {
@@ -771,7 +771,7 @@ class DiscountServiceClass {
     try {
       const now = new Date().toISOString();
       
-      let query = supabase
+      const query = supabase
         .from('discount_campaigns')
         .select(`
           *,

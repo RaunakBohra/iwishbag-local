@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 export interface Quote {
   id: string;
   display_id?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   currency?: string;
   payment_method?: string;

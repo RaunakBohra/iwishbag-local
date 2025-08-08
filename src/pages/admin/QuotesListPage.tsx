@@ -63,8 +63,8 @@ const QuotesListPage: React.FC = () => {
 
         return {
           ...quote,
-          final_total_usd: quote.total_usd || 0,
-          costprice_total_usd: quote.items?.reduce((sum: number, item: any) => 
+          final_total_origincurrency: quote.total_quote_origincurrency || 0,
+          costprice_total_quote_origincurrency: quote.items?.reduce((sum: number, item: any) => 
             sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
           customer_data: {
             info: {
@@ -94,7 +94,7 @@ const QuotesListPage: React.FC = () => {
     approved: safeQuotes.filter(q => q.status === 'approved').length,
     paid: safeQuotes.filter(q => q.status === 'paid').length,
     completed: safeQuotes.filter(q => q.status === 'completed').length,
-    totalValue: safeQuotes.reduce((sum, q) => sum + (q.final_total_usd || 0), 0),
+    totalValue: safeQuotes.reduce((sum, q) => sum + (q.final_total_origincurrency || 0), 0),
   };
 
   // Count quotes that need batch processing

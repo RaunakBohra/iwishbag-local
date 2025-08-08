@@ -530,7 +530,7 @@ export class ProductCacheService {
 
   private getLocalStorageSize(): number {
     let total = 0;
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key) && key.startsWith('cache_')) {
         total += localStorage[key].length + key.length;
       }

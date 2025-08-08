@@ -59,7 +59,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const exchangeRate = currencyDisplay.exchangeRate;
   
   // Use origin currency system for total cost
-  const totalCost = quote.total_origin_currency || quote.origin_total_amount || quote.final_total_usd || 0;
+  const totalCost = quote.total_origin_currency || quote.origin_total_amount || quote.final_total_origincurrency || 0;
 
   // Check HSN calculation data
   const hsnCalculationData = quote.calculation_data?.hsn_calculation || null;

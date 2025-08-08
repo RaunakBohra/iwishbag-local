@@ -117,7 +117,7 @@ export function useShippingCalculator() {
         origin_country: originCountry,
         destination_country: destinationCountry,
         currency: 'USD',
-        final_total_usd: 0,
+        final_total_origincurrency: 0,
         calculation_data: {
           breakdown: {
             items_total: price,
@@ -166,7 +166,7 @@ export function useShippingCalculator() {
         origin_country: input.originCountry,
         destination_country: input.destinationCountry,
         currency: input.currency || 'USD',
-        final_total_usd: 0,
+        final_total_origincurrency: 0,
         calculation_data: {
           breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 },
         },

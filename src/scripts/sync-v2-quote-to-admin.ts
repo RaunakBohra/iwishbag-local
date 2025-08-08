@@ -28,7 +28,7 @@ async function syncV2QuoteToAdmin(quoteId: string) {
   console.log('  Status:', v2Quote.status);
   console.log('  Customer:', v2Quote.customer_email);
   console.log('  Share Token:', v2Quote.share_token);
-  console.log('  Total USD:', v2Quote.total_usd);
+  console.log('  Total USD:', v2Quote.total_quote_origincurrency);
   
   // Check if already exists in regular quotes table
   const { data: existingQuote, error: checkError } = await supabase
@@ -56,8 +56,8 @@ async function syncV2QuoteToAdmin(quoteId: string) {
       status: v2Quote.status,
       currency: v2Quote.customer_currency || 'USD',
       items: v2Quote.items || [],
-      costprice_total_usd: v2Quote.total_usd || 0,
-      final_total_usd: v2Quote.total_usd || 0,
+      costprice_total_quote_origincurrency: v2Quote.total_quote_origincurrency || 0,
+      final_total_origincurrency: v2Quote.total_quote_origincurrency || 0,
       customer_data: {
         info: {
           email: v2Quote.customer_email,

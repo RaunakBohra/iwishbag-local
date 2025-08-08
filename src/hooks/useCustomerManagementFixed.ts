@@ -111,7 +111,7 @@ export const useCustomerManagementFixed = () => {
         // Get quote statistics for each customer
         const { data: quoteStats } = await supabase
           .from('quotes')
-          .select('user_id, final_total_usd, status')
+          .select('user_id, final_total_origincurrency, status')
           .in(
             'user_id',
             profiles.map((p) => p.id),
@@ -126,7 +126,7 @@ export const useCustomerManagementFixed = () => {
           const quoteCount = customerQuotes.length;
           const totalSpent = customerQuotes
             .filter((q) => ['paid', 'completed'].includes(q.status))
-            .reduce((sum, q) => sum + (q.final_total_usd || 0), 0);
+            .reduce((sum, q) => sum + (q.final_total_origincurrency || 0), 0);
 
           return {
             ...profile,

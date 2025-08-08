@@ -62,7 +62,7 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
   const payment: PaymentInfo = paymentInfo || {
     status: quote.status === 'paid' ? 'completed' : 'pending',
     gateway: 'payu', // Default gateway
-    amount: quote.final_total_usd,
+    amount: quote.final_total_origincurrency,
     currency: quote.currency || 'USD',
   };
 

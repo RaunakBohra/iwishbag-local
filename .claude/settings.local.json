@@ -302,7 +302,8 @@
       "Bash(aws configure:*)",
       "Bash(aws cloudfront:*)",
       "Bash(dig:*)",
-      "Bash(aws dynamodb scan:*)"
+      "Bash(aws dynamodb scan:*)",
+      "WebFetch(domain:www.amazon.com)"
     ],
     "deny": []
   }

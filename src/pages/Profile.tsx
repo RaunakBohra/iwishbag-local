@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { usePhoneCollection } from '@/hooks/usePhoneCollection';
+import { getDestinationCurrency } from '@/utils/originCurrency';
 import { PhoneCollectionModal } from '@/components/auth/PhoneCollectionModal';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { ChangeEmailModal } from '@/components/auth/ChangeEmailModal';
@@ -157,11 +158,11 @@ const Profile = () => {
 
       const [ordersResult, quotesResult] = await Promise.all([
         supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
+          .eq('customer_id', user.id)
           .eq('status', 'completed'),
-        supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('quotes_v2').select('id', { count: 'exact' }).eq('customer_id', user.id),
       ]);
 
       return {
@@ -334,7 +335,7 @@ const Profile = () => {
       email: (user?.email && !user.email.includes('@phone.iwishbag.com')) ? user.email : '',
       phone: phoneForInput,
       country: profile?.country || phoneCountry || 'US',
-      preferred_display_currency: profile?.preferred_display_currency || 'USD',
+      preferred_display_currency: profile?.preferred_display_currency || getDestinationCurrency(profile?.country || phoneCountry || 'US'),
     });
     
     // Mark as loaded to prevent future resets

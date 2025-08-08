@@ -126,7 +126,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         id: quote.id,
         quoteId: quote.id,
         productName: quote.items?.[0]?.name || 'Product',
-        finalTotal: quote.final_total_usd || 0,
+        finalTotal: quote.final_total_origincurrency || quote.total_quote_origincurrency || 0,
         quantity: quote.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
         itemWeight:
           quote.items?.reduce((sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 0) ||
@@ -195,7 +195,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       return;
     }
 
-    if (newStatus === 'paid' && quote.final_total_usd <= 0) {
+    if (newStatus === 'paid' && (quote.final_total_origincurrency || quote.total_quote_origincurrency || 0) <= 0) {
       toast({
         title: 'Cannot Mark as Paid',
         description: 'Quote must have a valid total amount',

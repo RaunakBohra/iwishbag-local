@@ -27,6 +27,7 @@ interface DiscountItem {
 
 interface AdminDiscountControlsProps {
   currencySymbol?: string;
+  currency?: string; // Add explicit currency prop
   onDiscountChange?: (discounts: DiscountItem[]) => void;
   className?: string;
   customerId?: string;
@@ -37,6 +38,7 @@ interface AdminDiscountControlsProps {
 
 export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
   currencySymbol = '$',
+  currency,
   onDiscountChange,
   className,
   customerId,
@@ -100,7 +102,13 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
             quoteId,
             undefined, // orderId
             orderTotal,
-            currencySymbol === '$' ? 'USD' : 'USD' // Default to USD for now
+            currency || (currencySymbol === '$' ? 'USD' : 
+              countryCode ? 
+                (() => {
+                  // Try to infer currency from country code
+                  const { getDestinationCurrency } = require('@/utils/originCurrency');
+                  return getDestinationCurrency(countryCode);
+                })() : 'USD')
           );
           
           console.log('Admin discount tracked successfully');

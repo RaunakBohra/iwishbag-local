@@ -33,7 +33,7 @@ export const StatusDebugger = () => {
   const { data: allQuotes } = useQuery({
     queryKey: ['debug-all-quotes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('quotes').select('status').limit(50);
+      const { data, error } = await supabase.from('quotes_v2').select('status').limit(50);
 
       if (error) {
         console.error('Debug: Error fetching all quotes:', error);

@@ -42,6 +42,8 @@ interface DeliveryOptionsSectionProps {
   phoneError: string;
   onToggleDeliveryInstructions: (show: boolean) => void;
   onPhoneValidation: (phone: string, isValid: boolean, error: string) => void;
+  shouldBeDefault?: boolean;
+  isFirstAddress?: boolean;
 }
 
 export const DeliveryOptionsSection: React.FC<DeliveryOptionsSectionProps> = ({
@@ -52,6 +54,8 @@ export const DeliveryOptionsSection: React.FC<DeliveryOptionsSectionProps> = ({
   phoneError,
   onToggleDeliveryInstructions,
   onPhoneValidation,
+  shouldBeDefault = false,
+  isFirstAddress = false,
 }) => {
   return (
     <>
@@ -131,20 +135,31 @@ export const DeliveryOptionsSection: React.FC<DeliveryOptionsSectionProps> = ({
         name="is_default"
         render={({ field }) => (
           <FormItem>
-            <div className="flex items-center space-x-3 rounded-lg border border-gray-200 p-4 bg-white">
+            <div className={`flex items-center space-x-3 rounded-lg border p-4 ${
+              field.value 
+                ? 'border-green-300 bg-green-50' 
+                : shouldBeDefault 
+                ? 'border-blue-300 bg-blue-50' 
+                : 'border-gray-200 bg-white'
+            }`}>
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                 />
               </FormControl>
               <div className="flex-1">
                 <FormLabel className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Set Default Address
+                  {isFirstAddress ? 'Primary shipping address' : 'Set as primary address'}
                 </FormLabel>
                 <p className="text-xs text-gray-500 mt-1">
-                  This address will be used as your default delivery address
+                  {isFirstAddress 
+                    ? 'This will be your default address for quotes and orders' 
+                    : shouldBeDefault
+                    ? 'You don\'t have a default address yet - this will become your primary address'
+                    : 'This address will be used as your primary shipping address'
+                  }
                 </p>
               </div>
             </div>

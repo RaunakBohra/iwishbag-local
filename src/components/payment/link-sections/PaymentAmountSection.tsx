@@ -18,7 +18,7 @@ interface QuoteData {
   display_id?: string;
   order_display_id?: string;
   product_name?: string;
-  final_total_usd?: number;
+  final_total_origincurrency?: number;
   amount_paid?: number;
   payment_status?: string;
   approved_at?: string;
@@ -60,7 +60,7 @@ export const PaymentAmountSection: React.FC<PaymentAmountSectionProps> = ({
       };
     }
 
-    const totalAmount = quote.final_total_usd || 0;
+    const totalAmount = quote.final_total_origincurrency || 0;
     const paidAmount = quote.amount_paid || 0;
     const dueAmount = totalAmount - paidAmount;
     const isDueAmount = paidAmount > 0 && dueAmount > 0;

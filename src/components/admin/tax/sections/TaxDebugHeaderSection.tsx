@@ -32,7 +32,7 @@ export const TaxDebugHeaderSection: React.FC<TaxDebugHeaderSectionProps> = ({
     : parseFloat(quote.calculation_data?.exchange_rate?.toString() || '1') || 1;
 
   const totalTax = breakdown.customs || 0;
-  const totalAmount = quote.final_total_usd || 0;
+  const totalAmount = quote.final_total_origincurrency || 0;
 
   if (!isExpanded) {
     return (

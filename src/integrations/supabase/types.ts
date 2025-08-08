@@ -2524,7 +2524,7 @@ export type Database = {
           calculation_data: Json | null
           calculation_method_preference: string | null
           consolidation_group_id: string | null
-          costprice_total_usd: number
+          costprice_total_quote_origincurrency: number
           created_at: string
           currency: string
           customer_data: Json | null
@@ -2538,7 +2538,7 @@ export type Database = {
           email_verified: boolean | null
           estimated_delivery_date: string | null
           expires_at: string | null
-          final_total_usd: number
+          final_total_origincurrency: number
           first_viewed_at: string | null
           forwarding_data: Json | null
           forwarding_type: string | null
@@ -2580,7 +2580,7 @@ export type Database = {
           calculation_data?: Json | null
           calculation_method_preference?: string | null
           consolidation_group_id?: string | null
-          costprice_total_usd?: number
+          costprice_total_quote_origincurrency?: number
           created_at?: string
           currency?: string
           customer_data?: Json | null
@@ -2594,7 +2594,7 @@ export type Database = {
           email_verified?: boolean | null
           estimated_delivery_date?: string | null
           expires_at?: string | null
-          final_total_usd?: number
+          final_total_origincurrency?: number
           first_viewed_at?: string | null
           forwarding_data?: Json | null
           forwarding_type?: string | null
@@ -2635,7 +2635,7 @@ export type Database = {
           calculation_data?: Json | null
           calculation_method_preference?: string | null
           consolidation_group_id?: string | null
-          costprice_total_usd?: number
+          costprice_total_quote_origincurrency?: number
           created_at?: string
           currency?: string
           customer_data?: Json | null
@@ -2649,7 +2649,7 @@ export type Database = {
           email_verified?: boolean | null
           estimated_delivery_date?: string | null
           expires_at?: string | null
-          final_total_usd?: number
+          final_total_origincurrency?: number
           first_viewed_at?: string | null
           forwarding_data?: Json | null
           forwarding_type?: string | null
@@ -4679,7 +4679,7 @@ export type Database = {
           calculation_data: Json | null
           calculation_method_preference: string | null
           consolidation_group_id: string | null
-          costprice_total_usd: number
+          costprice_total_quote_origincurrency: number
           created_at: string
           currency: string
           customer_data: Json | null
@@ -4693,7 +4693,7 @@ export type Database = {
           email_verified: boolean | null
           estimated_delivery_date: string | null
           expires_at: string | null
-          final_total_usd: number
+          final_total_origincurrency: number
           first_viewed_at: string | null
           forwarding_data: Json | null
           forwarding_type: string | null

@@ -19,6 +19,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { StateProvinceService } from '@/services/StateProvinceService';
 import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
 import { ipLocationService } from '@/services/IPLocationService';
+import { addressDefaultService } from '@/services/AddressDefaultService';
 import { Loader2 } from 'lucide-react';
 
 // Import our focused components
@@ -76,6 +77,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const [showDeliveryInstructions, setShowDeliveryInstructions] = useState(
     !!(address?.delivery_instructions && address.delivery_instructions.trim())
   );
+  const [shouldBeDefault, setShouldBeDefault] = useState<boolean>(false);
+  const [checkingDefault, setCheckingDefault] = useState<boolean>(false);
 
   // Custom hooks for validation and Nepal address management
   const validation = useAddressValidation({ 
@@ -170,6 +173,30 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           is_default: false,
         },
   });
+
+  // Check if this address should be default (for new addresses only)
+  useEffect(() => {
+    const checkDefaultStatus = async () => {
+      if (!user || address) return; // Skip if editing existing address
+
+      try {
+        setCheckingDefault(true);
+        const shouldDefault = await addressDefaultService.shouldBeDefault(user.id);
+        setShouldBeDefault(shouldDefault);
+        
+        // Auto-set the form value if it should be default
+        if (shouldDefault) {
+          form.setValue('is_default', true);
+        }
+      } catch (error) {
+        console.warn('Failed to check default status:', error);
+      } finally {
+        setCheckingDefault(false);
+      }
+    };
+
+    checkDefaultStatus();
+  }, [user, address, form]);
 
   // Update field labels and states when country changes
   useEffect(() => {
@@ -394,6 +421,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             phoneError={validation.phoneError}
             onToggleDeliveryInstructions={setShowDeliveryInstructions}
             onPhoneValidation={validation.handlePhoneValidation}
+            shouldBeDefault={shouldBeDefault}
+            isFirstAddress={shouldBeDefault && !address}
           />
 
           {/* Submit Button */}

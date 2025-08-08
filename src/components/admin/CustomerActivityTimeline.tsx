@@ -128,7 +128,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       description: `Quote for ${quote.product_name || 'Product'}`,
       date: new Date(quote.created_at),
       status: quote.status,
-      amount: quote.final_total_usd,
+      amount: quote.final_total_origincurrency,
       metadata: {
         quoteId: quote.id,
         productName: quote.product_name,
@@ -146,7 +146,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
       description: `Order for ${order.product_name || 'Product'}`,
       date: new Date(order.updated_at || order.created_at),
       status: order.status,
-      amount: order.final_total_usd,
+      amount: order.final_total_origincurrency,
       metadata: {
         orderId: order.id,
         productName: order.product_name,

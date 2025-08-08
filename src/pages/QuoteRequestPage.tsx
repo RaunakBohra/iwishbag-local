@@ -462,7 +462,7 @@ export default function QuoteRequestPage() {
         admin_notes: data.special_requirements || null,
       };
 
-      let submittedQuotes: string[] = [];
+      const submittedQuotes: string[] = [];
 
       if (data.quote_type === 'single') {
         // Single quote - combine all items
@@ -477,12 +477,23 @@ export default function QuoteRequestPage() {
 
         const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.price_origin), 0);
 
+        // Get customer currency from destination country
+        const customerCurrency = await (async () => {
+          try {
+            const { getDestinationCurrency } = await import('@/utils/originCurrency');
+            return getDestinationCurrency(data.destination_country);
+          } catch (error) {
+            console.warn('Failed to get destination currency, defaulting to USD:', error);
+            return 'USD';
+          }
+        })();
+
         const quoteData = {
           ...baseQuoteData,
           items: mappedItems,
-          total_usd: totalAmount,
-          total_customer_currency: totalAmount,
-          customer_currency: 'USD',
+          total_quote_origincurrency: totalAmount,
+          total_customer_display_currency: totalAmount,
+          customer_currency: customerCurrency,
         };
 
         const { data: createdQuote, error } = await supabase
@@ -514,9 +525,9 @@ export default function QuoteRequestPage() {
             ...baseQuoteData,
             origin_country: item.origin_country, // Use item's origin country for separate quotes
             items: [mappedItem],
-            total_usd: itemTotal,
-            total_customer_currency: itemTotal,
-            customer_currency: 'USD',
+            total_quote_origincurrency: itemTotal,
+            total_customer_display_currency: itemTotal,
+            customer_currency: customerCurrency, // Use the same customerCurrency calculated above
           };
 
           const { data: createdQuote, error } = await supabase

@@ -41,7 +41,7 @@ export const useDeliveryIntegration = () => {
         from: fromAddress,
         to: toAddress,
         weight: totalWeight,
-        value: quote.final_total_usd || 0,
+        value: quote.final_total_origincurrency || 0,
         currency: 'USD',
         service: 'Standard',
         reference: quote.display_id || quote.id,
@@ -55,7 +55,7 @@ export const useDeliveryIntegration = () => {
           })) || []
         },
         cod: requiresCOD ? {
-          amount: quote.final_total_usd || 0,
+          amount: quote.final_total_origincurrency || 0,
           currency: 'USD'
         } : undefined,
         instructions: quote.ncm_delivery_instruction || quote.customer_data?.delivery_instructions
@@ -119,7 +119,7 @@ export const useDeliveryIntegration = () => {
         from: fromAddress,
         to: toAddress,
         weight: totalWeight,
-        value: quote.final_total_usd || 0,
+        value: quote.final_total_origincurrency || 0,
         requiresCOD: quote.payment_method === 'cod'
       });
 
