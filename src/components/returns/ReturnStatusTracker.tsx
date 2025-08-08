@@ -132,7 +132,7 @@ export const ReturnStatusTracker: React.FC<ReturnStatusTrackerProps> = ({
       if (!item.quote || !item.quote.display_id) {
         // Fetch quote data separately
         const { data: quoteData } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('display_id, iwish_tracking_id')
           .eq('id', item.quote_id)
           .single();
@@ -210,7 +210,7 @@ export const ReturnStatusTracker: React.FC<ReturnStatusTrackerProps> = ({
       } else {
         // Search by display_id, tracking_id, or other identifiers
         const { data: quoteIds } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id')
           .or(`display_id.eq.${activeSearch},iwish_tracking_id.eq.${activeSearch}`)
           .eq('user_id', user.id);
@@ -295,7 +295,7 @@ export const ReturnStatusTracker: React.FC<ReturnStatusTrackerProps> = ({
       } else {
         // Search by quote display_id or tracking_id
         const { data: quoteIds } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id')
           .or(`display_id.eq.${activeSearch},iwish_tracking_id.eq.${activeSearch}`)
           .eq('user_id', user.id);

@@ -211,7 +211,7 @@ export async function detectDueAmount(
   // Get current payment status (simplified for backward compatibility)
   // For due amount detection, we need to fetch quote details to get USD amounts
   const { data: quote } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('final_total_origincurrency, currency')
     .eq('id', quoteId)
     .single();

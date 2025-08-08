@@ -141,7 +141,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
       // First try: assume it's a UUID
       if (quoteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         const result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .eq('id', quoteId)
           .eq('user_id', user?.id)
@@ -151,7 +151,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
       } else {
         // Second try: search by display_id or tracking_id
         const result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, display_id, status, final_total_origincurrency, currency, items, created_at, iwish_tracking_id')
           .or(`display_id.eq.${quoteId},iwish_tracking_id.eq.${quoteId}`)
           .eq('user_id', user?.id)
@@ -226,7 +226,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
       // First try: UUID search
       if (searchTerm.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         const result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id')
           .eq('id', searchTerm)
           .eq('user_id', user?.id)
@@ -236,7 +236,7 @@ export const PackageReturnForm: React.FC<PackageReturnFormProps> = ({
       } else {
         // Second try: display_id or tracking_id search
         const result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id')
           .or(`display_id.eq.${searchTerm},iwish_tracking_id.eq.${searchTerm}`)
           .eq('user_id', user?.id)

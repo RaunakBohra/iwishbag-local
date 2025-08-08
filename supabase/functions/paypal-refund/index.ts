@@ -550,7 +550,7 @@ serve(async (req) => {
     // Update the quote's amount_paid to reflect the refund (like PayU does)
     if (transaction.quote_id) {
       const { data: quoteData, error: quoteError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('amount_paid, final_total_usd')
         .eq('id', transaction.quote_id)
         .single();
@@ -565,7 +565,7 @@ serve(async (req) => {
               : 'paid';
 
         const { error: updateQuoteError } = await supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .update({
             amount_paid: newAmountPaid,
             payment_status: newPaymentStatus,
@@ -585,7 +585,7 @@ serve(async (req) => {
     if (transaction.quote_id) {
       try {
         const { data: quote } = await supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .select('email, display_id, product_name')
           .eq('id', transaction.quote_id)
           .single();

@@ -93,7 +93,7 @@ export const useAddressSynchronization = () => {
 
       // Get quotes with addresses
       const { data: quotes, error: quotesError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, shipping_address, destination_country')
         .in('id', quoteIds)
         .eq('user_id', user.id)

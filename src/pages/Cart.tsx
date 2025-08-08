@@ -1,93 +1,47 @@
 /**
- * Cart Page - Full Cart Management Interface
+ * Cart Page - Customer Shopping Cart
  * 
  * Features:
- * - Complete cart management
- * - Real-time updates and sync
- * - Smart filtering and sorting
- * - Bulk operations
- * - Analytics integration
+ * - Simple cart item management
+ * - Real-time cart persistence
+ * - Basic sorting options
  * - Mobile-responsive design
+ * - Clean customer-focused interface
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart, 
-  Package, 
   ArrowLeft, 
-  RotateCcw,
-  Trash2,
-  Filter,
-  SortDesc,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  TrendingUp,
-  RefreshCw
+  Trash2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { SmartCartItem, SmartCartItemSkeleton } from '@/components/cart/SmartCartItem';
 import { CartSummary } from '@/components/cart/CartSummary';
-import { useCart, useCartSync, useCartAnalytics, useCartCurrency } from '@/hooks/useCart';
+import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { logger } from '@/utils/logger';
 
-type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low' | 'status';
-type FilterOption = 'all' | 'approved' | 'pending' | 'paid';
+type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
-// Helper component for currency-aware analytics values - memoized for performance
-const AnalyticsValue: React.FC<{ value: number }> = React.memo(({ value }) => {
-  const { formatAmount } = useCartCurrency();
-  const [formattedValue, setFormattedValue] = useState<string>('...');
-
-  React.useEffect(() => {
-    const updateValue = async () => {
-      try {
-        // Analytics values are in USD, convert to display currency
-        const formatted = await formatAmount(value, 'USD');
-        setFormattedValue(formatted.replace(/\.\d+$/, '')); // Remove decimals for cleaner display
-      } catch (error) {
-        logger.error('Failed to format analytics value', { value, error });
-        setFormattedValue(`$${Math.round(value)}`); // Fallback
-      }
-    };
-
-    updateValue();
-  }, [value, formatAmount]);
-
-  return <>{formattedValue}</>;
-});
-
-AnalyticsValue.displayName = 'AnalyticsValue';
 
 const Cart: React.FC = React.memo(() => {
   const navigate = useNavigate();
-  const { items, clearCart, isLoading } = useCart();
-  const { syncStatus, sync, canUndo, undo } = useCartSync();
-  const analytics = useCartAnalytics();
+  // Use the enhanced original cart system
+  const { items, clearCart, isLoading, syncStatus } = useCart();
 
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [clearingCart, setClearingCart] = useState(false);
 
-  // Sort and filter items
-  const filteredAndSortedItems = useMemo(() => {
-    let filtered = items;
-
-    // Apply filter
-    if (filterBy !== 'all') {
-      filtered = items.filter(item => item.quote.status === filterBy);
-    }
-
-    // Apply sort
-    const sorted = [...filtered].sort((a, b) => {
+  // Sort items (no complex filtering needed for customers)
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
       switch (sortBy) {
         case 'newest':
           return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
@@ -97,26 +51,12 @@ const Cart: React.FC = React.memo(() => {
           return b.quote.final_total_origincurrency - a.quote.final_total_origincurrency;
         case 'price_low':
           return a.quote.final_total_origincurrency - b.quote.final_total_origincurrency;
-        case 'status':
-          return a.quote.status.localeCompare(b.quote.status);
         default:
           return 0;
       }
     });
+  }, [items, sortBy]);
 
-    return sorted;
-  }, [items, sortBy, filterBy]);
-
-  // Status counts for filter badges
-  const statusCounts = useMemo(() => {
-    const counts = { all: items.length, approved: 0, pending: 0, paid: 0 };
-    items.forEach(item => {
-      if (item.quote.status === 'approved') counts.approved++;
-      else if (item.quote.status === 'pending') counts.pending++;
-      else if (item.quote.status === 'paid') counts.paid++;
-    });
-    return counts;
-  }, [items]);
 
   // Handle clear cart
   const handleClearCart = useCallback(async () => {
@@ -141,16 +81,6 @@ const Cart: React.FC = React.memo(() => {
     }
   }, [clearCart, clearingCart, items.length]);
 
-  // Handle sync
-  const handleSync = useCallback(async () => {
-    try {
-      logger.info('Manual cart sync triggered');
-      await sync();
-      logger.info('Cart synced successfully');
-    } catch (error) {
-      logger.error('Failed to sync cart', error);
-    }
-  }, [sync]);
 
   // Handle checkout
   const handleCheckout = useCallback(() => {
@@ -158,13 +88,6 @@ const Cart: React.FC = React.memo(() => {
     navigate('/checkout');
   }, [navigate, items.length]);
 
-  // Handle undo
-  const handleUndo = useCallback(() => {
-    if (canUndo) {
-      logger.info('Undoing last cart action');
-      undo();
-    }
-  }, [canUndo, undo]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,53 +105,22 @@ const Cart: React.FC = React.memo(() => {
                 Back
               </Button>
               
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="w-6 h-6 text-teal-600" />
-                <div>
-                  <h1 className="text-2xl font-bold">Shopping Cart</h1>
-                  <p className="text-sm text-gray-500">
-                    {items.length} {items.length === 1 ? 'item' : 'items'}
-                  </p>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="w-6 h-6 text-teal-600" />
+                  <div>
+                    <h1 className="text-2xl font-bold">Shopping Cart</h1>
+                    <p className="text-sm text-gray-500">
+                      {items.length} {items.length === 1 ? 'item' : 'items'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Sync Status */}
-              <div className="flex items-center gap-2 text-sm">
-                <Badge 
-                  variant={
-                    syncStatus === 'synced' ? 'success' : 
-                    syncStatus === 'syncing' ? 'secondary' : 
-                    syncStatus === 'error' ? 'destructive' : 'outline'
-                  }
-                  className="flex items-center gap-1"
-                >
-                  {syncStatus === 'syncing' && <RefreshCw className="w-3 h-3 animate-spin" />}
-                  {syncStatus === 'synced' && <CheckCircle className="w-3 h-3" />}
-                  {syncStatus === 'error' && <AlertCircle className="w-3 h-3" />}
-                  {syncStatus === 'offline' && <Clock className="w-3 h-3" />}
-                  {syncStatus}
-                </Badge>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleSync}
-                  disabled={syncStatus === 'syncing'}
-                >
-                  <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                {canUndo && (
-                  <Button variant="outline" size="sm" onClick={handleUndo}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Undo
-                  </Button>
-                )}
                 
                 {items.length > 0 && (
                   <Button 
@@ -289,83 +181,38 @@ const Cart: React.FC = React.memo(() => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2">
-              {/* Filters and Sort */}
-              <Card className="mb-6">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Filter className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm font-medium">Filter:</span>
-                      </div>
+              {/* Simple Sort Options */}
+              {items.length > 1 && (
+                <Card className="mb-4">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-gray-600">
+                        {items.length} {items.length === 1 ? 'item' : 'items'} in your cart
+                      </span>
                       
-                      <div className="flex gap-2">
-                        {(['all', 'approved', 'pending', 'paid'] as const).map(status => (
-                          <Button
-                            key={status}
-                            variant={filterBy === status ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setFilterBy(status)}
-                            className="capitalize"
-                          >
-                            {status} {statusCounts[status] > 0 && `(${statusCounts[status]})`}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <SortDesc className="w-4 h-4 text-gray-500" />
-                      <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="newest">Newest first</SelectItem>
-                          <SelectItem value="oldest">Oldest first</SelectItem>
-                          <SelectItem value="price_high">Price: High to low</SelectItem>
-                          <SelectItem value="price_low">Price: Low to high</SelectItem>
-                          <SelectItem value="status">Status</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Analytics Quick View */}
-              {analytics.totalItems > 0 && (
-                <Card className="mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
-                      Quick Insights
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-2xl font-bold text-teal-600">
-                          <AnalyticsValue value={analytics.averageItemValue} />
-                        </p>
-                        <p className="text-xs text-gray-500">Avg. Value</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-blue-600">{analytics.addedToday}</p>
-                        <p className="text-xs text-gray-500">Added Today</p>
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">{analytics.conversionPotential}%</p>
-                        <p className="text-xs text-gray-500">Conversion Potential</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Sort by:</span>
+                        <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                          <SelectTrigger className="w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="newest">Recently added</SelectItem>
+                            <SelectItem value="oldest">Oldest first</SelectItem>
+                            <SelectItem value="price_high">Price: High to low</SelectItem>
+                            <SelectItem value="price_low">Price: Low to high</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
+
               {/* Cart Items */}
               <div className="space-y-4">
-                {filteredAndSortedItems.map(item => (
+                {sortedItems.map(item => (
                   <SmartCartItem
                     key={item.id}
                     item={item}
@@ -375,29 +222,14 @@ const Cart: React.FC = React.memo(() => {
                 ))}
               </div>
 
-              {filteredAndSortedItems.length === 0 && filterBy !== 'all' && (
-                <Alert className="mt-4">
-                  <Package className="h-4 w-4" />
-                  <AlertDescription>
-                    No items found with status "{filterBy}". 
-                    <Button 
-                      variant="link" 
-                      className="h-auto p-0 ml-1"
-                      onClick={() => setFilterBy('all')}
-                    >
-                      Show all items
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
             </div>
 
             {/* Cart Summary Sidebar */}
             <div className="lg:col-span-1">
               <CartSummary
                 onCheckout={handleCheckout}
-                showShippingEstimate={true}
-                showTaxEstimate={true}
+                showShippingEstimate={false}
+                showTaxEstimate={false}
               />
             </div>
           </div>

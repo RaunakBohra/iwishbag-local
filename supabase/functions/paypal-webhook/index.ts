@@ -407,7 +407,7 @@ serve(async (req) => {
             if (quoteIds.length > 0) {
               console.log('Updating quote status for IDs:', quoteIds);
               const { error: quoteError } = await supabaseAdmin
-                .from('quotes')
+                .from('quotes_v2')
                 .update({
                   status: 'paid',
                   payment_status: 'paid',
@@ -481,7 +481,7 @@ serve(async (req) => {
               const quoteIds = customData.quoteIds || [];
               if (quoteIds.length > 0) {
                 await supabaseAdmin
-                  .from('quotes')
+                  .from('quotes_v2')
                   .update({
                     payment_status: 'failed',
                     payment_error: event.summary || 'Payment capture denied',

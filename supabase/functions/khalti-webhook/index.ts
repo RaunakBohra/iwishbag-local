@@ -145,7 +145,7 @@ serve(async (req) => {
 
       // Update all quotes in the payment to paid status
       const { error: updateError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           payment_method: 'khalti',

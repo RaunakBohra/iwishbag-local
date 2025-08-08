@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { StandardLoading } from '@/components/patterns';
 
 // This component handles the redirect from Fonepay
 export default function FonepayCallback() {
@@ -33,12 +34,13 @@ export default function FonepayCallback() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-orange-600 mx-auto mb-4" />
-        <h2 className="text-2xl font-semibold mb-2">Processing Fonepay Payment</h2>
-        <p className="text-gray-600">Please wait while we verify your payment...</p>
-      </div>
-    </div>
+    <StandardLoading 
+      isLoading={true}
+      config={{ fullScreen: true, variant: 'spinner', size: 'lg', color: 'orange' }}
+      loadingText="Processing Fonepay Payment"
+      description="Please wait while we verify your payment..."
+    >
+      <div />
+    </StandardLoading>
   );
 }

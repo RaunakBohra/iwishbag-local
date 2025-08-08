@@ -311,7 +311,7 @@ class MasterServiceOrchestrator {
 
       case 'read':
         const { data, error } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('*')
           .eq('id', context.quote_id)
           .single();

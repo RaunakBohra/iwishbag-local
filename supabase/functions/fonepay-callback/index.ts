@@ -129,7 +129,7 @@ serve(async (req) => {
       console.log('💰 Payment successful, updating quote status');
 
       const { error: updateError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           payment_method: 'fonepay',
@@ -158,7 +158,7 @@ serve(async (req) => {
     let userId: string | null = null;
     if (quoteIds.length > 0) {
       const { data: firstQuote } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('user_id')
         .eq('id', quoteIds[0])
         .single();

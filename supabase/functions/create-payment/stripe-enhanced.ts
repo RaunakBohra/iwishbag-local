@@ -58,7 +58,7 @@ export async function createStripePaymentEnhanced(params: {
   // Fetch full quote details including shipping address
   if (quotes && quotes.length > 0) {
     const { data: fullQuotes } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('email, customer_name, customer_phone, shipping_address')
       .in('id', quoteIds);
 

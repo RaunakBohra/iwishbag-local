@@ -271,11 +271,9 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [mobileBreakdownExpanded, setMobileBreakdownExpanded] = useState(false);
   const [quoteOptions, setQuoteOptions] = useState({
     shipping: 'express',
-    insurance: true,
     discountCode: '',
     adjustedTotal: 0,
     shippingAdjustment: 0,
-    insuranceAdjustment: 0,
     discountAmount: 0
   });
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -490,8 +488,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       ...prev,
       discountCode: couponCode,
       discountAmount,
-      adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) + 
-                    (prev.insuranceAdjustment || 0) - discountAmount
+      adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) - discountAmount
     }));
     setDiscountApplied(true);
     setCouponsModalOpen(false);
@@ -519,20 +516,16 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           // Store selected options in applied_discounts JSONB field
           applied_discounts: {
             shipping: quoteOptions.shipping,
-            insurance: quoteOptions.insurance,
             discountCode: quoteOptions.discountCode,
             finalTotal: finalTotal,
             adjustments: {
               shippingAdjustment: quoteOptions.shippingAdjustment,
-              insuranceAdjustment: quoteOptions.insuranceAdjustment,
               discountAmount: quoteOptions.discountAmount
             }
           },
           // Update discount-related fields
           applied_discount_codes: quoteOptions.discountCode ? [quoteOptions.discountCode] : [],
-          discount_amounts: quoteOptions.discountAmount ? { total: quoteOptions.discountAmount } : {},
-          // Update insurance fields
-          insurance_required: quoteOptions.insurance
+          discount_amounts: quoteOptions.discountAmount ? { total: quoteOptions.discountAmount } : {}
         })
         .eq('id', quote.id);
       
@@ -998,8 +991,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'standard',
                       shippingAdjustment: 0,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
-                                    (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) - (prev.discountAmount || 0)
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1011,8 +1003,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'standard',
                           shippingAdjustment: 0,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
-                                        (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1039,8 +1030,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'express',
                       shippingAdjustment: 25,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 + 
-                                    (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 - (prev.discountAmount || 0)
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1052,8 +1042,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'express',
                           shippingAdjustment: 25,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 + 
-                                        (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1080,8 +1069,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'priority',
                       shippingAdjustment: 45,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 + 
-                                    (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 - (prev.discountAmount || 0)
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1093,8 +1081,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'priority',
                           shippingAdjustment: 45,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 + 
-                                        (prev.insuranceAdjustment || 0) - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 - (prev.discountAmount || 0)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1202,41 +1189,20 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-gray-700">Quick Options</div>
-                      {(quoteOptions.adjustedTotal > 0 || discountApplied || quoteOptions.insurance !== true || quoteOptions.shipping !== 'express') && (
+                      {(quoteOptions.adjustedTotal > 0 || discountApplied || quoteOptions.shipping !== 'express') && (
                         <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                           Modified
                         </div>
                       )}
                     </div>
                     
-                    {/* Insurance Toggle */}
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-blue-600" />
-                        <div>
-                          <span className="text-sm font-medium">Package Protection</span>
-                          <div className="text-xs text-gray-500">+{formatCurrency(15, displayCurrency)} if enabled</div>
-                        </div>
+                    {/* Insurance Note - Moved to cart level */}
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      <div className="text-sm text-blue-700">
+                        <span className="font-medium">Package Protection</span>
+                        <div className="text-xs">Available at checkout with dynamic rates</div>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={quoteOptions.insurance}
-                          onChange={(e) => {
-                            const insuranceEnabled = e.target.checked;
-                            const insuranceCost = insuranceEnabled ? 15 : 0; // $15 insurance cost
-                            setQuoteOptions(prev => ({
-                              ...prev,
-                              insurance: insuranceEnabled,
-                              insuranceAdjustment: insuranceCost,
-                              adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 
-                                            (prev.shippingAdjustment || 0) + insuranceCost - (prev.discountAmount || 0)
-                            }));
-                          }}
-                        />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
                     </div>
 
                     {/* Discount Code Input */}
@@ -1277,8 +1243,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                               setQuoteOptions(prev => ({
                                 ...prev,
                                 discountAmount,
-                                adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) + 
-                                              (prev.insuranceAdjustment || 0) - discountAmount
+                                adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) - discountAmount
                               }));
                               
                               setDiscountApplied(true);

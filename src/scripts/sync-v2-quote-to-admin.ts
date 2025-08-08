@@ -32,7 +32,7 @@ async function syncV2QuoteToAdmin(quoteId: string) {
   
   // Check if already exists in regular quotes table
   const { data: existingQuote, error: checkError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('id')
     .eq('id', quoteId)
     .single();
@@ -48,7 +48,7 @@ async function syncV2QuoteToAdmin(quoteId: string) {
   // Create entry in quotes table for admin access
   // The quotes table stores customer info in customer_data JSONB
   const { data: created, error: createError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .insert({
       id: v2Quote.id,
       destination_country: v2Quote.destination_country,

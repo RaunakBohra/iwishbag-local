@@ -425,7 +425,7 @@ serve(async (req) => {
     // First, verify the quotes exist and check their current status
     console.log(`[${requestId}] 🔍 Verifying quotes exist before update...`);
     const { data: existingQuotes, error: fetchError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('id, status, display_id, final_total_usd, user_id')
       .in('id', quoteIds);
 

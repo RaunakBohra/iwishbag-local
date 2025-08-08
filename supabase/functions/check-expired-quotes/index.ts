@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     // Get quotes that have expired but status is still 'calculated'
     const { data: expiredQuotes, error: fetchError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select(
         `
         id,
@@ -52,7 +52,7 @@ serve(async (req) => {
     }
     // Update expired quotes
     const { error: updateError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         status: 'expired',
       })

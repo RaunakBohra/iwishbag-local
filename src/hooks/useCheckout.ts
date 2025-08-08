@@ -6,7 +6,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/hooks/useCart';
-import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useCurrency } from '@/hooks/unified';
 import { CheckoutService } from '@/services/CheckoutService';
 import { logger } from '@/utils/logger';
 import type { Tables } from '@/integrations/supabase/types';
@@ -44,7 +44,7 @@ export function useCheckout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items, clearCart } = useCart();
-  const { displayCurrency } = useDisplayCurrency();
+  const { displayCurrency } = useCurrency();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +234,7 @@ export function useCheckoutValidation() {
  * Price formatting hook for checkout
  */
 export function useCheckoutPricing() {
-  const { displayCurrency } = useDisplayCurrency();
+  const { displayCurrency } = useCurrency();
 
   const formatPrice = useCallback(async (
     amount: number,
@@ -248,7 +248,7 @@ export function useCheckoutPricing() {
 
       // Use quote context if available for better currency detection
       if (quote) {
-        const { formatAmountWithConversion, getSourceCurrency } = useDisplayCurrency(quote);
+        const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
         const sourceCurrency = fromCurrency || getSourceCurrency(quote);
         return await formatAmountWithConversion(amount, sourceCurrency);
       }

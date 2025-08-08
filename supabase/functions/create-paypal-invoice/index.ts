@@ -68,7 +68,7 @@ serve(async (req) => {
     console.log('User authenticated:', user.id);
     // Fetch quote details with customer information
     const { data: quote, error: quoteError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select(
         `
         *,

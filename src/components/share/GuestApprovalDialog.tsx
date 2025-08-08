@@ -185,7 +185,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
       // Step 2: Update quote with customer details and link to anonymous user
       const { error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           customer_name: guestName,
           user_id: userId,
@@ -247,7 +247,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       };
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update(updateData)
         .eq('id', quoteId)
         .select();

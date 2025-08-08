@@ -128,7 +128,7 @@ const PaypalSuccess: React.FC = () => {
               // Update quotes status
               if (checkoutData.quote_ids) {
                 await supabase
-                  .from('quotes')
+                  .from('quotes_v2')
                   .update({
                     status: 'paid',
                     payment_method: 'paypal',
@@ -321,7 +321,7 @@ const PaypalSuccess: React.FC = () => {
           const quoteIds = gatewayResponse?.quote_ids;
           if (quoteIds) {
             await supabase
-              .from('quotes')
+              .from('quotes_v2')
               .update({
                 status: 'paid',
                 payment_method: 'paypal',

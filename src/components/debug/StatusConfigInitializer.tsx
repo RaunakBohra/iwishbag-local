@@ -364,7 +364,7 @@ export const StatusConfigInitializer: React.FC = () => {
 
       // Get all quotes
       const { data: allQuotes, error: quotesError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, status')
         .eq('user_id', user?.id);
 
@@ -460,7 +460,7 @@ export const StatusConfigInitializer: React.FC = () => {
       ];
 
       const { data: createdQuotes, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .insert(testQuotes)
         .select('id, status, product_name');
 

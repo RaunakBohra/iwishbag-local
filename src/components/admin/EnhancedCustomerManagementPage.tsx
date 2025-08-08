@@ -44,7 +44,7 @@ export const EnhancedCustomerManagementPage = () => {
     queryKey: ['customer-analytics'],
     queryFn: async () => {
       const { data: quotes, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .not('final_total_origincurrency', 'is', null);
 

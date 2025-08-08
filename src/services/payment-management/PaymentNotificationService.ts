@@ -16,6 +16,7 @@
 
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/services/NotificationService';
 
 export interface PaymentNotification {
   id: string;
@@ -809,61 +810,150 @@ export class PaymentNotificationService {
     notification: PaymentNotification,
     content: { title: string; message: string }
   ): Promise<void> {
-    // Mock email sending
-    logger.info('Sending email notification:', { 
-      to: notification.recipient_email,
-      subject: content.title
-    });
-    
-    // TODO: Integrate with actual email service
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      logger.info('Sending email notification:', { 
+        to: notification.recipient_email,
+        subject: content.title
+      });
+      
+      // Integrate with NotificationService for in-app notifications
+      await notificationService.createNotification(
+        notification.recipient_id,
+        notification.type as any, // Type compatibility handled by NotificationService
+        content.message,
+        {
+          title: content.title,
+          action_url: notification.metadata?.quote_id ? `/quotes/${notification.metadata.quote_id}` : undefined,
+          reference_id: notification.id,
+          source: 'payment_system'
+        },
+        {
+          priority: this.mapNotificationPriority(notification.priority),
+          skipDuplicates: true
+        }
+      );
+      
+      // TODO: Integrate with actual email service (SES, SendGrid, etc.)
+      // For now, simulate email sending
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (error) {
+      logger.error('Failed to send email notification:', error);
+      throw error;
+    }
   }
 
   private async sendSMS(
     notification: PaymentNotification,
     content: { title: string; message: string }
   ): Promise<void> {
-    // Mock SMS sending
-    logger.info('Sending SMS notification:', { 
-      to: notification.recipient_phone,
-      message: content.message
-    });
-    
-    // TODO: Integrate with actual SMS service
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      logger.info('Sending SMS notification:', { 
+        to: notification.recipient_phone,
+        message: content.message
+      });
+      
+      // Integrate with NotificationService for tracking
+      await notificationService.createNotification(
+        notification.recipient_id,
+        notification.type as any,
+        `SMS: ${content.message}`,
+        {
+          title: content.title,
+          recipient_phone: notification.recipient_phone,
+          delivery_method: 'sms',
+          reference_id: notification.id,
+          source: 'payment_system'
+        },
+        {
+          priority: this.mapNotificationPriority(notification.priority),
+          skipDuplicates: true
+        }
+      );
+      
+      // TODO: Integrate with actual SMS service (Twilio, MSG91, etc.)
+      // For now, simulate SMS sending
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+    } catch (error) {
+      logger.error('Failed to send SMS notification:', error);
+      throw error;
+    }
   }
 
   private async sendInAppNotification(
     notification: PaymentNotification,
     content: { title: string; message: string }
   ): Promise<void> {
-    // Store in-app notification
-    await supabase
-      .from('in_app_notifications')
-      .insert({
-        user_id: notification.recipient_id,
-        title: content.title,
-        message: content.message,
-        type: notification.type,
-        is_read: false,
-        created_at: new Date().toISOString()
-      });
+    try {
+      // Use NotificationService for consistent in-app notifications
+      const inAppNotification = await notificationService.createNotification(
+        notification.recipient_id,
+        notification.type as any,
+        content.message,
+        {
+          title: content.title,
+          action_url: notification.metadata?.quote_id ? `/quotes/${notification.metadata.quote_id}` : undefined,
+          action_label: notification.metadata?.quote_id ? 'View Quote' : undefined,
+          reference_id: notification.id,
+          source: 'payment_system',
+          payment_type: notification.type
+        },
+        {
+          priority: this.mapNotificationPriority(notification.priority),
+          skipDuplicates: false // Allow multiple payment notifications
+        }
+      );
 
-    logger.info('In-app notification stored:', notification.recipient_id);
+      if (inAppNotification) {
+        logger.info('In-app notification created via NotificationService:', {
+          notificationId: inAppNotification.id,
+          recipientId: notification.recipient_id,
+          type: notification.type
+        });
+      }
+      
+    } catch (error) {
+      logger.error('Failed to send in-app notification:', error);
+      throw error;
+    }
   }
 
   private async sendPushNotification(
     notification: PaymentNotification,
     content: { title: string; message: string }
   ): Promise<void> {
-    // Mock push notification
-    logger.info('Sending push notification:', { 
-      to: notification.recipient_id,
-      title: content.title
-    });
-    
-    // TODO: Integrate with push notification service
-    await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+      logger.info('Sending push notification:', { 
+        to: notification.recipient_id,
+        title: content.title
+      });
+      
+      // Track push notification with NotificationService
+      await notificationService.createNotification(
+        notification.recipient_id,
+        notification.type as any,
+        `Push: ${content.message}`,
+        {
+          title: content.title,
+          delivery_method: 'push',
+          reference_id: notification.id,
+          source: 'payment_system'
+        },
+        {
+          priority: this.mapNotificationPriority(notification.priority),
+          skipDuplicates: true
+        }
+      );
+      
+      // TODO: Integrate with push notification service (FCM, APNS, etc.)
+      // For now, simulate push sending
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+    } catch (error) {
+      logger.error('Failed to send push notification:', error);
+      throw error;
+    }
   }
 
   private async sendWebhookNotification(
@@ -970,6 +1060,27 @@ export class PaymentNotificationService {
       type_breakdown: typeBreakdown,
       failure_reasons: failureReasons
     };
+  }
+
+  /**
+   * Helper to map PaymentNotificationService priority to NotificationService priority
+   */
+  private mapNotificationPriority(priority: NotificationPriority): any {
+    // Import NotificationPriority from NotificationService
+    const { NOTIFICATION_PRIORITY } = require('@/types/NotificationTypes');
+    
+    switch (priority) {
+      case NotificationPriority.URGENT:
+        return NOTIFICATION_PRIORITY.URGENT;
+      case NotificationPriority.HIGH:
+        return NOTIFICATION_PRIORITY.HIGH;
+      case NotificationPriority.MEDIUM:
+        return NOTIFICATION_PRIORITY.MEDIUM;
+      case NotificationPriority.LOW:
+        return NOTIFICATION_PRIORITY.LOW;
+      default:
+        return NOTIFICATION_PRIORITY.MEDIUM;
+    }
   }
 
   /**

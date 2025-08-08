@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StandardLoading } from '@/components/patterns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -492,39 +493,21 @@ export const AdminMessageCenterComplete = () => {
 
   if (isLoading || isLoadingUsers) {
     return (
-      <div className="h-[calc(100vh-120px)] max-w-7xl mx-auto p-6">
-        <div className="flex h-full gap-6">
-          {/* Left Panel Skeleton */}
-          <div className="w-80 flex-shrink-0">
-            <Card className="h-full">
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+      <StandardLoading 
+        isLoading={true}
+        config={{ variant: 'skeleton', fullScreen: true }}
+        loadingText="Loading messages..."
+      >
+        <div className="h-[calc(100vh-120px)] max-w-7xl mx-auto p-6">
+          <div className="flex h-full gap-6">
+            {/* Placeholder content */}
+            <div className="w-80 flex-shrink-0">
+              <Card className="h-full" />
+            </div>
+            <Card className="flex-1" />
           </div>
-
-          {/* Right Panel Skeleton */}
-          <Card className="flex-1">
-            <CardContent className="p-8 text-center">
-              <Skeleton className="h-12 w-12 rounded-full mx-auto mb-4" />
-              <Skeleton className="h-6 w-48 mx-auto mb-2" />
-              <Skeleton className="h-4 w-32 mx-auto" />
-            </CardContent>
-          </Card>
         </div>
-      </div>
+      </StandardLoading>
     );
   }
 

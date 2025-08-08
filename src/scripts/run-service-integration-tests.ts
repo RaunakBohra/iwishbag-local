@@ -139,7 +139,7 @@ const runServiceIntegrationTests = async () => {
     
     // Test basic database connectivity
     const { data, error } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('count')
       .limit(1);
     

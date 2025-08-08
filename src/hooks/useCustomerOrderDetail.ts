@@ -18,7 +18,7 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
       }
 
       const { data: quoteData, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', orderId)
         .maybeSingle();

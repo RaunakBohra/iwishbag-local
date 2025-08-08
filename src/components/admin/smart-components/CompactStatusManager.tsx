@@ -147,7 +147,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       // Update quote's in_cart flag in database using direct Supabase call
       // This is more reliable than going through UnifiedDataEngine for this simple update
       const { error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           in_cart: true,
           updated_at: new Date().toISOString(),

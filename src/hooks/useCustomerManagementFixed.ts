@@ -110,7 +110,7 @@ export const useCustomerManagementFixed = () => {
 
         // Get quote statistics for each customer
         const { data: quoteStats } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('user_id, final_total_origincurrency, status')
           .in(
             'user_id',

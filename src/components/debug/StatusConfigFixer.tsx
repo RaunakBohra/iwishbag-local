@@ -17,7 +17,7 @@ export const StatusConfigFixer: React.FC = () => {
     queryKey: ['payment-pending-debug'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, display_id, status, product_name')
         .eq('status', 'payment_pending');
 

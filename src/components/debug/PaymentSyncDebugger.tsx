@@ -25,7 +25,7 @@ export const PaymentSyncDebugger = () => {
     queryKey: ['debug-quote-payments'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, display_id, status, payment_status, amount_paid, final_total_origincurrency, currency');
 
       if (error) {

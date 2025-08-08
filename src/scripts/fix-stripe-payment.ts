@@ -68,7 +68,7 @@ async function fixStripePayment() {
   // Update quote status
   console.log('\n📝 Updating quote status...');
   const { error: quoteError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .update({
       status: 'paid',
       payment_status: 'paid',

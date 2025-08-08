@@ -76,7 +76,7 @@ export const useBatchProcessing = (): UseBatchProcessingResult => {
           if (progressData.processedQuotes > 0 && progressData.processedQuotes % 25 === 0) {
             toast({
               title: "Processing Update",
-              description: `Processed ${progressData.processedQuotes}/${progressData.totalQuotes} quotes (${progressData.successfulQuotes} successful)`,
+              description: `Processed ${progressData.processedQuotes}/${progressData.totalQuotes} quotes_v2 (${progressData.successfulQuotes} successful)`,
             });
           }
         },

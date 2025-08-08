@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { R2StorageServiceSimple } from '../services/R2StorageServiceSimple';
+import { getStorageService } from '../services/unified/StorageService';
 import { toast } from 'sonner';
 
 interface UploadProgress {
@@ -22,7 +22,7 @@ export function useR2Storage(): UseR2StorageReturn {
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const r2Service = R2StorageServiceSimple.getInstance();
+  const r2Service = getStorageService();
 
   const uploadFile = useCallback(async (file: File, folder?: string) => {
     setUploading(true);

@@ -815,7 +815,7 @@ serve(async (req) => {
     if (notifyCustomer && quoteId) {
       try {
         const { data: quote } = await supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .select('email, display_id, product_name')
           .eq('id', quoteId)
           .single();

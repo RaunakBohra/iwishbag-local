@@ -239,7 +239,7 @@ serve(async (req) => {
       console.log('Updating quote status for IDs:', quoteIds);
       if (quoteIds.length > 0) {
         const { error: quoteError } = await supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .update({
             status: 'paid',
             payment_status: 'paid',

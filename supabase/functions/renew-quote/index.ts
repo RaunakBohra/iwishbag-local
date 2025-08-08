@@ -43,7 +43,7 @@ serve(async (req) => {
 
     // First, check if the quote exists and can be renewed
     const { data: quote, error: fetchError } = await client
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', quoteId)
       .single();
@@ -78,7 +78,7 @@ serve(async (req) => {
     const expiresAt = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000); // 5 days from now
 
     const { error: updateError } = await client
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         status: 'pending',
         sent_at: now.toISOString(),

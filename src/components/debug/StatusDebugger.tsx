@@ -17,7 +17,7 @@ export const StatusDebugger = () => {
     queryKey: ['debug-payment-pending-quotes'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, display_id, status')
         .eq('status', 'payment_pending');
 

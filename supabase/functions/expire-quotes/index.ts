@@ -89,7 +89,7 @@ serve(async (req) => {
 
       // Find and expire quotes for this status
       const { data: quotesToExpire, error: expireError } = await client
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, display_id, email, final_total_usd, sent_at, expires_at')
         .eq('status', statusName)
         .lt('expires_at', expirationThreshold.toISOString());
@@ -102,7 +102,7 @@ serve(async (req) => {
       if (quotesToExpire && quotesToExpire.length > 0) {
         // Update these quotes to expired status
         const { error: updateError } = await client
-          .from('quotes')
+          .from('quotes_v2')
           .update({ status: 'expired' })
           .in(
             'id',

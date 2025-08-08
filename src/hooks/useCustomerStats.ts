@@ -18,7 +18,7 @@ export const useCustomerStats = (customerIds: string[]) => {
     queryKey: ['customer-stats', customerIds],
     queryFn: async () => {
       const { data: orders, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           `
           id,

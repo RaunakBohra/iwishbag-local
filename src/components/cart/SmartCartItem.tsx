@@ -23,13 +23,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useCartItem } from '@/hooks/useCart';
-import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
 import type { CartItem } from '@/types/cart';
 
 // Helper component for "Price when added" display with currency conversion
 const PriceAtAddDisplay: React.FC<{ amount: number; quote: any }> = ({ amount, quote }) => {
-  const { formatAmountWithConversion, getSourceCurrency } = useDisplayCurrency(quote);
+  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
   const [formattedAmount, setFormattedAmount] = useState<string>('...');
 
   React.useEffect(() => {
@@ -72,7 +72,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
   onError
 }) => {
   const { remove, isLoading } = useCartItem(item.quote);
-  const { formatAmountWithConversion, getSourceCurrency } = useDisplayCurrency(item.quote);
+  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote: item.quote });
   
   const [removeLoading, setRemoveLoading] = useState(false);
   const [displayPrice, setDisplayPrice] = useState<string>('...');

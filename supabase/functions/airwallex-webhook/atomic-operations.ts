@@ -102,7 +102,7 @@ export async function processPaymentIntentSucceeded(
     if (quoteIds.length > 0) {
       // First check current quote statuses
       const { data: quotes, error: quotesError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, status, user_id')
         .in('id', quoteIds);
 
@@ -117,7 +117,7 @@ export async function processPaymentIntentSucceeded(
 
       if (quotesToUpdate.length > 0) {
         const quoteUpdate = supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .update({
             status: 'paid',
             payment_transaction_id: transactionId,
@@ -202,7 +202,7 @@ export async function processPaymentIntentFailed(
     // 2. Update quote statuses back to 'approved' (allowing retry)
     if (quoteIds.length > 0) {
       const quoteUpdate = supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'approved', // Reset to approved so customer can retry
           payment_transaction_id: null, // Clear failed transaction reference
@@ -319,7 +319,7 @@ export async function processRefundSucceeded(
 
         if (txnData?.quote_ids?.length > 0) {
           const quoteUpdate = supabaseAdmin
-            .from('quotes')
+            .from('quotes_v2')
             .update({
               status: 'refunded',
               updated_at: new Date().toISOString(),

@@ -25,7 +25,7 @@ export async function updateQuoteAddress(
   try {
     // Get current quote data
     const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('shipping_address, address_locked, user_id, destination_country')
       .eq('id', quoteId)
       .single();
@@ -81,7 +81,7 @@ export async function updateQuoteAddress(
 
     // Update the quote with new address
     const { error: updateError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         shipping_address: normalizedAddress,
         address_updated_at: new Date().toISOString(),
@@ -111,7 +111,7 @@ export async function lockAddressAfterPayment(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         address_locked: true,
         address_updated_at: new Date().toISOString(),
@@ -157,7 +157,7 @@ export async function unlockAddress(
     }
 
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         address_locked: false,
         address_updated_at: new Date().toISOString(),
@@ -228,7 +228,7 @@ export async function checkAddressPermissions(
   try {
     // Get quote data
     const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('address_locked, user_id, status')
       .eq('id', quoteId)
       .single();
@@ -312,7 +312,7 @@ export async function createInitialAddress(
 
     // Update quote with initial address
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         shipping_address: normalizedAddress,
         address_updated_at: new Date().toISOString(),
@@ -335,7 +335,7 @@ export async function createInitialAddress(
 }
 
 /**
- * Bulk update addresses for multiple quotes (admin only)
+ * Bulk update addresses for multiple quotes_v2 (admin only)
  */
 export async function bulkUpdateAddresses(
   quoteIds: string[],
@@ -378,7 +378,7 @@ export async function bulkUpdateAddresses(
     for (const quoteId of quoteIds) {
       try {
         const { error } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .update({
             shipping_address: normalizedAddress,
             address_updated_at: new Date().toISOString(),

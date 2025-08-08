@@ -79,7 +79,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
     queryKey: ['customer-quotes', customerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', customerId)
         .order('created_at', { ascending: false });
@@ -93,7 +93,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
     queryKey: ['customer-orders', customerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', customerId)
         .in('status', ['paid', 'ordered', 'shipped', 'completed'])

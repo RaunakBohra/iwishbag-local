@@ -90,30 +90,38 @@ export const PatternExamples = {
       ],
     },
   },
+};
+
+// Form examples function to avoid circular imports
+export const getFormExamples = () => {
+  const { commonValidations } = require('./StandardForm');
   
-  // Form examples
-  loginForm: {
-    component: 'StandardForm',
-    fields: [
-      { 
-        name: 'email', 
-        label: 'Email', 
-        type: 'email', 
-        required: true,
-        validation: commonValidations.email,
-      },
-      { 
-        name: 'password', 
-        label: 'Password', 
-        type: 'password', 
-        required: true,
-        showPasswordToggle: true,
-        validation: commonValidations.password,
-      },
-    ],
-  },
-  
-  // Loading examples
+  return {
+    loginForm: {
+      component: 'StandardForm',
+      fields: [
+        { 
+          name: 'email', 
+          label: 'Email', 
+          type: 'email', 
+          required: true,
+          validation: commonValidations.email,
+        },
+        { 
+          name: 'password', 
+          label: 'Password', 
+          type: 'password', 
+          required: true,
+          showPasswordToggle: true,
+          validation: commonValidations.password,
+        },
+      ],
+    },
+  };
+};
+
+// Loading examples 
+export const getLoadingExamples = () => ({
   pageLoad: {
     component: 'PageLoading',
     props: {
@@ -129,7 +137,7 @@ export const PatternExamples = {
       config: { variant: 'skeleton', overlay: true },
     },
   },
-};
+});
 
 // Pattern best practices
 export const PatternBestPractices = {

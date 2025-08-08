@@ -291,7 +291,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
 
       // Update the quote in the database
       const { error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({ enabled_delivery_options: newEnabledOptions })
         .eq('id', quote.id);
 
@@ -321,7 +321,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
     setEnabledOptions([]);
     // Update the quote in the database
     const { error: updateError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({ enabled_delivery_options: [] })
       .eq('id', quote.id);
 

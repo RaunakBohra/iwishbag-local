@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MembershipService } from '@/services/MembershipService';
-import { DiscountService } from '@/services/DiscountService';
+import { getDiscountService } from '@/services/unified/DiscountService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -51,7 +51,7 @@ export default function TestMembershipDiscount() {
       console.log('Testing discount calculations...');
       
       // Scenario A: Small order with bank transfer
-      const discountA = await DiscountService.getInstance().calculateDiscounts(
+      const discountA = await getDiscountService().calculateDiscounts(
         user.id,
         50, // $50 order
         5,  // $5 handling fee
@@ -65,7 +65,7 @@ export default function TestMembershipDiscount() {
       };
 
       // Scenario B: Large order with credit card
-      const discountB = await DiscountService.getInstance().calculateDiscounts(
+      const discountB = await getDiscountService().calculateDiscounts(
         user.id,
         500, // $500 order
         50,  // $50 handling fee
@@ -80,7 +80,7 @@ export default function TestMembershipDiscount() {
 
       // Test 4: Validate discount code
       console.log('Testing discount code validation...');
-      const codeValidation = await DiscountService.getInstance().validateDiscountCode('WELCOME2025', user.id);
+      const codeValidation = await getDiscountService().validateDiscountCode('WELCOME2025', user.id);
       results.discountCodeValidation = {
         success: codeValidation.valid,
         data: codeValidation

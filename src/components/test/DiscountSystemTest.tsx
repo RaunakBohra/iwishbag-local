@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { SmartSavingsWidget } from '@/components/quotes-v2/SmartSavingsWidget';
 import { AdminDiscountControls } from '@/components/quotes-v2/AdminDiscountControls';
-import { DiscountService } from '@/services/DiscountService';
+import { getDiscountService } from '@/services/unified/DiscountService';
 
 /**
  * Test component to validate discount system functionality
@@ -37,7 +37,7 @@ export const DiscountSystemTest: React.FC = () => {
       addResult('Starting discount system tests...');
       
       // Test 1: DiscountService getInstance
-      const discountService = DiscountService.getInstance();
+      const discountService = getDiscountService();
       addResult('✓ DiscountService singleton instance created');
       
       // Test 2: Validate a non-existent discount code

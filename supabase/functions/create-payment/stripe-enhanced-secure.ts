@@ -334,7 +334,7 @@ async function extractCustomerDetails(
     // Fetch additional quote details if needed
     if (quotes && quotes.length > 0) {
       const { data: fullQuotes, error } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('email, customer_name, customer_phone, shipping_address')
         .in('id', quoteIds);
 

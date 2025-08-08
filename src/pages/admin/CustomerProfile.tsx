@@ -172,7 +172,7 @@ export const CustomerProfile: React.FC = () => {
       if (!customerId) return [];
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', customerId)
         .order('created_at', { ascending: false });

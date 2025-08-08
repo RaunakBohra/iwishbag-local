@@ -43,7 +43,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
     queryKey: ['order-destination', orderId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('destination_country, payment_status')
         .eq('id', orderId)
         .single();

@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     // Validate that this is a shared quote that can be updated
     const { data: quote, error: fetchError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('id, status, is_anonymous, share_token')
       .eq('id', quoteId)
       .single();
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     };
 
     const { data, error } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .update(updateData)
       .eq('id', quoteId)
       .select();

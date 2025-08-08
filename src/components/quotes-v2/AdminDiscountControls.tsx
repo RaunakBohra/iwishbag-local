@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { DiscountService, type ApplicableDiscount } from '@/services/DiscountService';
+import { getDiscountService, type ApplicableDiscount } from '@/services/unified/DiscountService';
 import { 
   Settings,
   Percent,
@@ -55,7 +55,7 @@ export const AdminDiscountControls: React.FC<AdminDiscountControlsProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   
-  const discountService = DiscountService.getInstance();
+  const discountService = getDiscountService();
 
   const discountTypeOptions = [
     { value: 'order', label: 'Order Total', icon: Package },

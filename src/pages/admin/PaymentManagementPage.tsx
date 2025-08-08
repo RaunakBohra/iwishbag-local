@@ -162,7 +162,7 @@ const PaymentManagementPage = () => {
           let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
-              .from('quotes')
+              .from('quotes_v2')
               .select(
                 'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
@@ -264,7 +264,7 @@ const PaymentManagementPage = () => {
           let quotesData: Tables<'quotes'>[] = [];
           if (quoteIds.length > 0) {
             const { data } = await supabase
-              .from('quotes')
+              .from('quotes_v2')
               .select(
                 'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id',
               )
@@ -477,7 +477,7 @@ const PaymentManagementPage = () => {
       let quotes: Tables<'quotes'>[] = [];
       if (quoteIds.length > 0) {
         const { data: quotesData, error: quotesError } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('*')
           .in('id', quoteIds);
 

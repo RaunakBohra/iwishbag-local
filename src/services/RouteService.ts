@@ -120,7 +120,7 @@ export class RouteService {
       updateData.shipping_route_id = routeId;
     }
 
-    const { error } = await supabase.from('quotes').update(updateData).eq('id', quoteId);
+    const { error } = await supabase.from('quotes_v2').update(updateData).eq('id', quoteId);
 
     if (error) {
       console.error('Error updating quote route:', error);

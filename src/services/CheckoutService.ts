@@ -115,6 +115,7 @@ export class CheckoutService {
    */
   async calculateOrderSummary(items: CartItem[], destinationCountry: string): Promise<OrderSummary> {
     try {
+      console.log(`[CHECKOUT SERVICE] Calculating order summary for ${items.length} items, destination: ${destinationCountry}`);
       logger.info(`Calculating order summary for ${items.length} items, destination: ${destinationCountry}`);
 
       let itemsTotal = 0;
@@ -124,32 +125,55 @@ export class CheckoutService {
       let savings = 0;
 
       // Get user's preferred currency
-      const userCurrency = await currencyService.getCurrency(destinationCountry);
+      console.log(`[CHECKOUT SERVICE] Getting currency for destination: ${destinationCountry}`);
+      const userCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+      console.log(`[CHECKOUT SERVICE] User currency: ${userCurrency}`);
 
       // Process each cart item
-      for (const item of items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
         const quote = item.quote;
         const quoteCalculation = quote.calculation_data?.calculation_steps || {};
+
+        console.log(`[CHECKOUT SERVICE] Processing item ${i + 1}:`, {
+          quoteId: quote.id,
+          display_id: quote.display_id,
+          customer_currency: quote.customer_currency,
+          origin_country: quote.origin_country,
+          destination_country: quote.destination_country,
+          total_quote_origincurrency: quote.total_quote_origincurrency,
+          final_total_origin: quote.final_total_origin,
+          calculation_data: !!quote.calculation_data
+        });
 
         // Convert amounts to user currency if needed
         const originCurrency = quote.customer_currency || 
           (quote.origin_country ? getOriginCurrency(quote.origin_country) : null) ||
           (quote.destination_country ? getDestinationCurrency(quote.destination_country) : 'USD');
+        
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Origin currency: ${originCurrency}, User currency: ${userCurrency}`);
+        
         let conversionRate = 1;
         
         // Only convert if we have valid currencies and they're different
         if (originCurrency && userCurrency && originCurrency !== userCurrency) {
           try {
+            console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Getting exchange rate: ${originCurrency} -> ${userCurrency}`);
             // Use currency-based conversion method for better compatibility
             conversionRate = await currencyService.getExchangeRateByCurrency(originCurrency, userCurrency);
+            console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Exchange rate: ${conversionRate}`);
           } catch (error) {
+            console.warn(`[CHECKOUT SERVICE] Item ${i + 1} - Failed to get exchange rate, using 1:1`, { originCurrency, userCurrency, error });
             logger.warn('Failed to get exchange rate, using 1:1', { originCurrency, userCurrency, error });
             conversionRate = 1;
           }
+        } else {
+          console.log(`[CHECKOUT SERVICE] Item ${i + 1} - No conversion needed (same currency or missing currency info)`);
         }
 
         // Items subtotal
         const itemSubtotal = (quoteCalculation.discounted_items_subtotal || quoteCalculation.items_subtotal || 0) * conversionRate;
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Item subtotal: ${itemSubtotal} ${userCurrency}`);
         itemsTotal += itemSubtotal;
 
         // Shipping costs
@@ -158,6 +182,7 @@ export class CheckoutService {
           (quoteCalculation.insurance_amount || 0) +
           (quoteCalculation.discounted_delivery || quoteCalculation.domestic_delivery || 0)
         ) * conversionRate;
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Shipping cost: ${shippingCost} ${userCurrency}`);
         shippingTotal += shippingCost;
 
         // Taxes and duties
@@ -165,6 +190,7 @@ export class CheckoutService {
           (quoteCalculation.discounted_customs_duty || quoteCalculation.customs_duty || 0) +
           (quoteCalculation.discounted_tax_amount || quoteCalculation.local_tax_amount || 0)
         ) * conversionRate;
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Taxes cost: ${taxesCost} ${userCurrency}`);
         taxesTotal += taxesCost;
 
         // Service fees
@@ -172,14 +198,26 @@ export class CheckoutService {
           (quoteCalculation.discounted_handling_fee || quoteCalculation.handling_fee || 0) +
           (quoteCalculation.payment_gateway_fee || 0)
         ) * conversionRate;
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Service fees: ${serviceFeeCost} ${userCurrency}`);
         serviceFeesTotal += serviceFeeCost;
 
         // Total savings
         const quoteSavings = (quoteCalculation.total_savings || 0) * conversionRate;
+        console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Savings: ${quoteSavings} ${userCurrency}`);
         savings += quoteSavings;
       }
 
       const finalTotal = itemsTotal + shippingTotal + taxesTotal + serviceFeesTotal;
+
+      console.log(`[CHECKOUT SERVICE] Order summary totals:`, {
+        itemsTotal,
+        shippingTotal,
+        taxesTotal,
+        serviceFeesTotal,
+        finalTotal,
+        currency: userCurrency,
+        savings
+      });
 
       const summary: OrderSummary = {
         itemsTotal,
@@ -204,6 +242,7 @@ export class CheckoutService {
       return summary;
 
     } catch (error) {
+      console.error(`[CHECKOUT SERVICE] Failed to calculate order summary:`, error);
       logger.error('Failed to calculate order summary:', error);
       throw new Error('Unable to calculate order total. Please try again.');
     }

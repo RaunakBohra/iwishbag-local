@@ -391,7 +391,7 @@ class TicketService {
           if (record.quote_id) {
             try {
               const { data: quote } = await supabase
-                .from('quotes')
+                .from('quotes_v2')
                 .select(`
                   id,
                   display_id,

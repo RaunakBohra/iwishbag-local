@@ -330,7 +330,7 @@ class EnhancedSupportService {
 
   private async getQuoteContext(quoteId: string): Promise<any> {
     const { data } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', quoteId)
       .single();
@@ -348,7 +348,7 @@ class EnhancedSupportService {
 
   private async getOrderContext(orderId: string): Promise<any> {
     const { data } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', orderId)
       .single();

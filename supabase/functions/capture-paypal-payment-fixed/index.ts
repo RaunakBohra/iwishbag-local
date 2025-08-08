@@ -200,7 +200,7 @@ serve(async (req) => {
     if (quoteIds.length > 0) {
       console.log('📝 Updating quote status for IDs:', quoteIds);
       const { data: updatedQuotes, error: quoteError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           payment_status: 'paid',

@@ -775,4 +775,7 @@ export class RefundProcessingService {
   }
 }
 
+// Create and export a singleton instance
+export const refundProcessingService = new RefundProcessingService();
+
 export default RefundProcessingService;

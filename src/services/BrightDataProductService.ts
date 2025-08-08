@@ -2161,37 +2161,7 @@ class BrightDataProductService {
     }
   }
 
-  private normalizeEtsyData(rawData: any): ProductData {
-    return {
-      title: rawData.title,
-      price: this.parsePrice(rawData.price),
-      currency: rawData.currency || 'USD',
-      images: rawData.images || [],
-      brand: rawData.shop_name,
-      category: rawData.category || 'handmade',
-      availability: 'in-stock',
-      variants: rawData.variations?.map((v: any) => ({
-        name: v.name,
-        options: v.options
-      })) || []
-    };
-  }
 
-  private normalizeZaraData(rawData: any): ProductData {
-    return {
-      title: rawData.title || rawData.name,
-      price: this.parsePrice(rawData.price),
-      currency: rawData.currency || 'USD',
-      images: rawData.images || [],
-      brand: 'Zara',
-      category: 'fashion',
-      availability: rawData.available ? 'in-stock' : 'out-of-stock',
-      variants: [
-        ...(rawData.sizes ? [{ name: 'Size', options: rawData.sizes }] : []),
-        ...(rawData.colors ? [{ name: 'Color', options: rawData.colors }] : [])
-      ]
-    };
-  }
 
   /**
    * Normalize American Eagle product data to our standard format
@@ -4865,54 +4835,6 @@ class BrightDataProductService {
     return 'luxury-beauty';
   }
 
-  /**
-   * Estimate weight for luxury goods
-   */
-  private estimateLuxuryWeight(title: string, category: string): number {
-    const titleLower = title.toLowerCase();
-    
-    // Luxury bags vary significantly
-    if (category.includes('bags')) {
-      if (titleLower.includes('tote') || titleLower.includes('large')) return 1.2;
-      if (titleLower.includes('clutch') || titleLower.includes('small')) return 0.4;
-      return 0.8;
-    }
-    
-    // Footwear
-    if (category.includes('footwear') || category.includes('sneakers')) {
-      if (titleLower.includes('sneaker')) return 0.7;
-      if (titleLower.includes('heel') || titleLower.includes('pump')) return 0.6;
-      return 0.8;
-    }
-    
-    // Fashion items
-    if (category.includes('fashion')) {
-      if (titleLower.includes('jacket') || titleLower.includes('coat')) return 1.0;
-      if (titleLower.includes('shirt') || titleLower.includes('top')) return 0.3;
-      if (titleLower.includes('pants') || titleLower.includes('trouser')) return 0.5;
-      return 0.4;
-    }
-    
-    // Beauty and cosmetics
-    if (category.includes('beauty')) return 0.2;
-    
-    // Fragrance
-    if (category.includes('fragrance')) return 0.3;
-    
-    // Eyewear
-    if (category.includes('eyewear')) return 0.2;
-    
-    // Jewelry
-    if (category.includes('jewelry')) return 0.1;
-    
-    // Watches
-    if (category.includes('watches')) return 0.3;
-    
-    // Accessories
-    if (category.includes('accessories')) return 0.3;
-    
-    return 0.5; // Default luxury item weight
-  }
 
   /**
    * Estimate toy weight based on category and title

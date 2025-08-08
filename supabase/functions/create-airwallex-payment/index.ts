@@ -40,7 +40,7 @@ serve(async (req) => {
     });
     // Validate quotes and calculate total
     const { data: quotes, error: quotesError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .in('id', quoteIds);
     if (quotesError || !quotes || quotes.length === 0) {

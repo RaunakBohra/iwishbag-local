@@ -73,7 +73,7 @@ export class IntegratedPaymentService {
     try {
       // Get quote data with forwarding information
       const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', quoteId)
         .single();
@@ -154,7 +154,7 @@ export class IntegratedPaymentService {
 
       // Update quote status to paid (this will trigger the database trigger)
       const { error: quoteUpdateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           // Add payment information to operational data
@@ -256,7 +256,7 @@ export class IntegratedPaymentService {
 
       // Create a storage fees only quote
       const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .insert({
           user_id: userId,
           status: 'pending',
@@ -321,7 +321,7 @@ export class IntegratedPaymentService {
     try {
       // Get quote information to determine what to update
       const { data: quote } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('forwarding_type, package_ids, consolidation_group_id')
         .eq('id', quoteId)
         .single();
@@ -381,7 +381,7 @@ export class IntegratedPaymentService {
     try {
       // Get all package forwarding quotes
       const { data: quotes, error: quotesError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', userId)
         .not('forwarding_type', 'is', null)

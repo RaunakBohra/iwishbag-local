@@ -80,7 +80,7 @@ export class QuoteDataService {
       if (isUpdate) {
         // Update existing quote
         result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .update(quoteData)
           .eq('id', formData.quoteId)
           .select()
@@ -88,7 +88,7 @@ export class QuoteDataService {
       } else {
         // Create new quote
         result = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .insert([quoteData])
           .select()
           .single();
@@ -140,7 +140,7 @@ export class QuoteDataService {
 
       // Load main quote data
       const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', quoteId)
         .single();
@@ -393,7 +393,7 @@ export class QuoteDataService {
   } = {}): Promise<{ success: boolean; quotes?: any[]; error?: string }> {
     try {
       let queryBuilder = supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, customer_name, customer_email, status, final_total_origin, total_origin_currency, created_at, updated_at')
         .order('updated_at', { ascending: false });
 

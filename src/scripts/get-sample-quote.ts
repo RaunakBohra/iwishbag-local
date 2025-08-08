@@ -13,7 +13,7 @@ async function getSampleQuote() {
 
   // Get an approved quote that hasn't been paid yet
   const { data: quote, error } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select(
       'id, display_id, status, final_total_origincurrency, destination_currency, user_id, email, customer_name',
     )
@@ -29,7 +29,7 @@ async function getSampleQuote() {
     console.log('No approved unpaid quotes found. Getting any recent quote...');
 
     const { data: anyQuote, error: anyError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select(
         'id, display_id, status, final_total_origincurrency, destination_currency, user_id, email, customer_name',
       )

@@ -811,4 +811,10 @@ export class AutoAssignmentService {
   }
 }
 
+// Export type alias for better API
+export type AutoAssignmentRule = AssignmentData;
+
+// Create and export a singleton instance
+export const autoAssignmentService = new AutoAssignmentService();
+
 export default AutoAssignmentService;

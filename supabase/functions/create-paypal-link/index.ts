@@ -80,7 +80,7 @@ serve(async (req) => {
     // Validate quote_id if provided
     if (quote_id && quote_id.trim() !== '') {
       const { data: quote, error: quoteError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, status')
         .eq('id', quote_id)
         .single();

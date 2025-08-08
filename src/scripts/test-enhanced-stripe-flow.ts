@@ -91,7 +91,7 @@ async function testEnhancedStripeFlow() {
   // 2. Check if quotes are being updated with customer info
   console.log('\n\n📋 2. Checking if Quotes Receive Customer Info from Stripe:');
   const { data: paidQuotes } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('id, customer_name, email, payment_method, paid_at')
     .eq('payment_method', 'stripe')
     .eq('payment_status', 'paid')

@@ -61,7 +61,7 @@ export default function OrderDetail() {
     queryFn: async () => {
       if (!id || !user) return null;
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           `
           *,
@@ -125,7 +125,7 @@ export default function OrderDetail() {
     setIsUpdatingStatus(true);
     try {
       const { error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({ status: 'completed' })
         .eq('id', order.id);
 

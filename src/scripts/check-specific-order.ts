@@ -13,7 +13,7 @@ async function checkOrder(displayId: string) {
 
   // Get the quote details
   const { data: quote, error: quoteError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('*')
     .eq('display_id', displayId)
     .single();

@@ -22,7 +22,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     // Get the expired quote with unified structure
     const { data: expiredQuote, error: fetchError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select(
         `
         *,
@@ -78,7 +78,7 @@ serve(async (req) => {
     };
     // Insert new quote
     const { data: newQuote, error: insertError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .insert(newQuoteData)
       .select()
       .single();

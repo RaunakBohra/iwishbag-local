@@ -131,7 +131,7 @@ export class QuoteV2MigrationService {
     try {
       // Fetch the original quote
       const { data: originalQuote, error: fetchError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', quoteId)
         .single();
@@ -165,7 +165,7 @@ export class QuoteV2MigrationService {
 
       // Update the original quote with reference to V2
       await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({ 
           external_reference: v2Quote.id,
           updated_at: new Date().toISOString()

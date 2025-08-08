@@ -111,7 +111,7 @@ export function useDueAmountManager({
       if (!quote) {
         // Fetch quote if not provided
         const { data: fetchedQuote } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('*')
           .eq('id', quoteId)
           .single();
@@ -214,7 +214,7 @@ export function useDueAmountManager({
 
       try {
         const { data: quote } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('final_total_origincurrency')
           .eq('id', quoteId)
           .single();

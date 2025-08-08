@@ -73,7 +73,7 @@ serve(async (req) => {
       .select(
         `
         *,
-        quotes (
+        quotes_v2 (
           display_id,
           product_name,
           email,

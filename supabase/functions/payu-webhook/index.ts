@@ -196,7 +196,7 @@ serve(async (req) => {
     let userId = null;
     if (quoteId) {
       const { data: quote } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('user_id')
         .eq('id', quoteId)
         .single();
@@ -336,7 +336,7 @@ serve(async (req) => {
       if (quoteIds.length > 0) {
         // First check if quotes are already paid to prevent duplicate updates
         const { data: existingQuotes } = await supabaseAdmin
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, status, payment_status')
           .in('id', quoteIds);
 
@@ -350,7 +350,7 @@ serve(async (req) => {
           console.log('Updating unpaid quotes:', unpaidQuoteIds);
 
           const { error: quoteError } = await supabaseAdmin
-            .from('quotes')
+            .from('quotes_v2')
             .update({
               status: 'paid',
               payment_status: 'paid',

@@ -248,7 +248,7 @@ serve(async (req) => {
 
     // Get quote details for order description
     const { data: quotes, error: quotesError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('product_name, display_id')
       .in('id', paymentRequest.quoteIds);
 

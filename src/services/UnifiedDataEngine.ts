@@ -325,7 +325,7 @@ class UnifiedDataEngine {
 
     try {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', quoteId)
         .single();
@@ -374,7 +374,7 @@ class UnifiedDataEngine {
       dbUpdates.updated_at = new Date().toISOString();
 
       const { error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update(dbUpdates)
         .eq('id', quoteId);
 

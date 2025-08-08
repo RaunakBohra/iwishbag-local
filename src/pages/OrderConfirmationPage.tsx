@@ -79,7 +79,7 @@ const OrderConfirmationPage: React.FC = () => {
     const fetchOrderDetails = async () => {
       try {
         const { data, error } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select(
             `
             id,
@@ -182,7 +182,7 @@ const OrderConfirmationPage: React.FC = () => {
       if (authData.user) {
         // Update the quote to link it to the new user
         const { error: updateError } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .update({
             user_id: authData.user.id,
             is_anonymous: false,

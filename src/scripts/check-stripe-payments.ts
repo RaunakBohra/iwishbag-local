@@ -71,7 +71,7 @@ async function checkStripePayments() {
   // Check quotes that might be missing payment records
   console.log('\n\n🔍 Checking quotes with payment_completed_at but no transaction:');
   const { data: quotes, error: quoteError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('*')
     .eq('payment_method', 'stripe')
     .not('payment_completed_at', 'is', null)

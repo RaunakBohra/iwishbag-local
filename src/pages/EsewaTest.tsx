@@ -75,7 +75,7 @@ const EsewaTest = () => {
 
       // Create a test quote for eSewa payment
       const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .insert({
           user_id: user.id,
           product_name: 'eSewa Test Product',

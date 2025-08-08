@@ -12,7 +12,7 @@ import {
   Info,
   Zap
 } from 'lucide-react';
-import { DiscountService, type ApplicableDiscount } from '@/services/DiscountService';
+import { getDiscountService, type ApplicableDiscount } from '@/services/unified/DiscountService';
 import { currencyService } from '@/services/CurrencyService';
 
 interface SmartSavingsWidgetProps {
@@ -42,7 +42,7 @@ export const SmartSavingsWidget: React.FC<SmartSavingsWidgetProps> = ({
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null);
   
-  const discountService = DiscountService.getInstance();
+  const discountService = getDiscountService();
 
   // Format currency based on origin currency
   const formatAmount = (amount: number, currency?: string) => {

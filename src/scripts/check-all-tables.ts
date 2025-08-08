@@ -53,7 +53,7 @@ async function checkAllTables() {
   // Check quotes with recent updates
   console.log('\n📝 Recent quote updates (last 10 min):');
   const { data: quotes } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('id, status, payment_status, payment_method, updated_at')
     .gte('updated_at', since)
     .order('updated_at', { ascending: false })

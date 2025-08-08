@@ -401,7 +401,7 @@ serve(async (req) => {
 
           // Fetch quotes and verify ownership
           const { data: quotes, error: quotesError } = await supabaseAdmin
-            .from('quotes')
+            .from('quotes_v2')
             .select(
               'id, user_id, product_name, final_total_usd, quantity, destination_currency, origin_country, destination_country',
             )
@@ -728,7 +728,7 @@ serve(async (req) => {
                 ) {
                   // Fetch full quote details including shipping address
                   const { data: fullQuotes } = await supabaseAdmin
-                    .from('quotes')
+                    .from('quotes_v2')
                     .select('email, customer_name, shipping_address')
                     .in('id', quoteIds)
                     .limit(1);
@@ -1050,7 +1050,7 @@ serve(async (req) => {
                   !quoteIds.some((id) => id.startsWith('test-'))
                 ) {
                   const { data: fullQuotes } = await supabaseAdmin
-                    .from('quotes')
+                    .from('quotes_v2')
                     .select('email, customer_name, shipping_address')
                     .in('id', quoteIds)
                     .limit(1);
@@ -1709,7 +1709,7 @@ serve(async (req) => {
                 // If we have quote IDs, try to get customer info from quotes
                 if (quoteIds && quoteIds.length > 0) {
                   const { data: fullQuotes } = await supabaseAdmin
-                    .from('quotes')
+                    .from('quotes_v2')
                     .select('email, customer_name, shipping_address')
                     .in('id', quoteIds)
                     .limit(1);
@@ -2061,7 +2061,7 @@ serve(async (req) => {
 
                 if (quoteIds && quoteIds.length > 0) {
                   const { data: fullQuotes } = await supabaseAdmin
-                    .from('quotes')
+                    .from('quotes_v2')
                     .select('email, customer_name, shipping_address')
                     .in('id', quoteIds)
                     .limit(1);

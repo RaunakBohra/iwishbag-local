@@ -1559,7 +1559,7 @@ const QuoteCalculatorV2: React.FC = () => {
     }
 
     // For new quotes, require calculation before saving
-    // For existing quotes (edit mode), allow field updates without recalculation
+    // For existing quotes_v2 (edit mode), allow field updates without recalculation
     const needsCalculation = !isEditMode && (!calculationResult || !calculationResult.calculation_steps);
     logger.debug({
       isEditMode,

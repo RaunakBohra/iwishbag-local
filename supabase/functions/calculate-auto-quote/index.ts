@@ -447,7 +447,7 @@ async function createAutoQuote(quoteCalculation, userId, purchaseCountry, supaba
     // Save the full breakdown as JSON
     breakdown: quoteCalculation.breakdown,
   };
-  const { data: quote, error } = await supabase.from('quotes').insert(quoteData).select().single();
+  const { data: quote, error } = await supabase.from('quotes_v2').insert(quoteData).select().single();
   if (error) {
     throw new Error(`Failed to create quote: ${error.message}`);
   }

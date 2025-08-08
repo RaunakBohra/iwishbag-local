@@ -85,7 +85,7 @@ const Header = () => {
     queryFn: async () => {
       if (!user) return 0;
       const { count, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('status', 'approved');

@@ -24,8 +24,8 @@ const Quote = React.lazy(() => import('@/pages/Quote'));
 const Auth = React.lazy(() => import('@/pages/Auth'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Cart = React.lazy(() => import('@/pages/Cart'));
-const CheckoutShopify = React.lazy(() => import('@/pages/CheckoutShopify'));
-const CartTest = React.lazy(() => import('@/components/cart/CartTestComponent').then((m) => ({ default: () => <m.CartTestComponent /> })));
+const Checkout = React.lazy(() => import('@/pages/CheckoutShopify'));
+const CartTest = React.lazy(() => import('@/pages/CartTest'));
 // const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes')); // REMOVED: V1 customer quotes page
 const Orders = React.lazy(() => import('@/pages/dashboard/Orders'));
 const OrderDetail = React.lazy(() => import('@/pages/dashboard/OrderDetail'));
@@ -514,7 +514,7 @@ const router = createBrowserRouter([
             path: 'checkout',
             element: (
               <ErrorBoundary fallback={PaymentErrorFallback}>
-                <CheckoutShopify />
+                <Checkout />
               </ErrorBoundary>
             ),
           },

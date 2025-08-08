@@ -72,7 +72,7 @@ export const useDeliveryIntegration = () => {
 
       // Update quote with delivery info
       const { error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           delivery_provider: provider,
           delivery_tracking_number: order.trackingNumber,

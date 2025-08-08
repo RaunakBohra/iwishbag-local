@@ -363,7 +363,7 @@ export class PaymentActionsService {
     }
 
     const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('*')
       .eq('id', message.quote_id)
       .single();
@@ -397,7 +397,7 @@ export class PaymentActionsService {
     const newPaymentStatus = newAmountPaid >= orderTotal ? 'paid' : 'partial';
 
     const { error: quoteUpdateError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .update({
         payment_status: newPaymentStatus,
         amount_paid: newAmountPaid,

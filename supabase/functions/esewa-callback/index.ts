@@ -124,7 +124,7 @@ serve(async (req) => {
     // Find quotes by searching for the transaction UUID in payment_details
     // (We'll store the transaction UUID when creating the payment)
     const { data: quotes, error: quotesError } = await supabaseAdmin
-      .from('quotes')
+      .from('quotes_v2')
       .select('id, status, final_total_usd, user_id')
       .or(
         `payment_details->transaction_uuid.eq.${transactionUuid},payment_details->>transaction_uuid.eq.${transactionUuid}`,
@@ -161,7 +161,7 @@ serve(async (req) => {
       console.log('💰 Payment successful, updating quote status');
 
       const { error: updateError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           payment_method: 'esewa',

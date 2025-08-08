@@ -668,7 +668,7 @@ describe('create-payment Stripe Integration', () => {
 
       const validateQuoteOwnership = async (quoteIds: string[], userId: string) => {
         const { data: quotes, error } = await mockSupabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, user_id')
           .in('id', quoteIds);
 
@@ -710,7 +710,7 @@ describe('create-payment Stripe Integration', () => {
 
       const validateQuoteOwnership = async (quoteIds: string[], userId: string) => {
         const { data: quotes, error } = await mockSupabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, user_id')
           .in('id', quoteIds);
 

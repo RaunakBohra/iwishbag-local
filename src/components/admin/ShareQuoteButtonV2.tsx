@@ -123,7 +123,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
         updateData.is_anonymous = true;
       }
 
-      const { error } = await supabase.from('quotes').update(updateData).eq('id', quote.id);
+      const { error } = await supabase.from('quotes_v2').update(updateData).eq('id', quote.id);
 
       if (error) throw error;
 
@@ -185,7 +185,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
       expiresAt.setDate(expiresAt.getDate() + parseFloat(expiresInDays));
 
       const { error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({ expires_at: expiresAt.toISOString() })
         .eq('id', quote.id);
 

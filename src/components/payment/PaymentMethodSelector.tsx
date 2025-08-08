@@ -22,10 +22,11 @@ import { PaymentConfigurationPrompt } from './PaymentConfigurationPrompt';
 import { cn } from '@/lib/utils';
 
 interface PaymentMethodSelectorProps {
-  selectedMethod: PaymentGateway;
+  selectedMethod: PaymentGateway | null;
   onMethodChange: (method: PaymentGateway) => void;
   amount: number;
   currency: string;
+  country?: string;
   showRecommended?: boolean;
   disabled?: boolean;
   // Accept payment methods from parent to avoid duplicate hook calls
@@ -55,6 +56,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   onMethodChange,
   amount,
   currency,
+  country,
   showRecommended = true,
   disabled = false,
   availableMethods: propAvailableMethods,
@@ -67,7 +69,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     getRecommendedPaymentMethod,
     getPaymentMethodDisplay,
     _PAYMENT_METHOD_DISPLAYS,
-  } = usePaymentGateways();
+  } = usePaymentGateways(currency, country);
 
   // Prefer props over hook data (for guest checkout)
   const availableMethods =
@@ -75,7 +77,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const isLoading = propMethodsLoading !== undefined ? propMethodsLoading : hookIsLoading;
 
   // Ensure selectedMethod is always a valid available method
-  const validSelectedMethod = availableMethods?.includes(selectedMethod)
+  const validSelectedMethod = (selectedMethod && availableMethods?.includes(selectedMethod))
     ? selectedMethod
     : availableMethods?.[0] || 'bank_transfer';
 
@@ -109,6 +111,18 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Error state when no payment methods are available
+  if (!availableMethods || availableMethods.length === 0) {
+    return (
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          No payment methods are available for your location. Please contact support for assistance.
+        </AlertDescription>
+      </Alert>
     );
   }
 

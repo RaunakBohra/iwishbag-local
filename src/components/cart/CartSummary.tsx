@@ -10,7 +10,7 @@
  */
 
 import React, { memo, useMemo, useState, useEffect } from 'react';
-import { ShoppingCart, Package, Truck, Calculator, Percent, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Package, Percent, AlertCircle, Shield } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -18,15 +18,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { SimpleCartSyncIndicator } from '@/components/cart/SimpleCartSyncIndicator';
+import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface CartSummaryProps {
   onCheckout?: () => void;
   showShippingEstimate?: boolean;
   showTaxEstimate?: boolean;
+  showInsuranceOption?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -38,6 +46,9 @@ interface SummaryCalculations {
   estimatedShippingFormatted: string;
   estimatedTax: number;
   estimatedTaxFormatted: string;
+  insurance: number;
+  insuranceFormatted: string;
+  insuranceRate: number;
   discount: number;
   discountFormatted: string;
   total: number;
@@ -47,75 +58,240 @@ interface SummaryCalculations {
 
 export const CartSummary = memo<CartSummaryProps>(({
   onCheckout,
-  showShippingEstimate = true,
-  showTaxEstimate = true,
+  showShippingEstimate = false,
+  showTaxEstimate = false,
+  showInsuranceOption = true,
   compact = false,
   className = ''
 }) => {
   const { items, getTotalValue, isLoading } = useCart();
   const { displayCurrency } = useCartCurrency();
+  const { user } = useAuth();
+  
+  // Get sync status from original cart
+  const { syncStatus } = useCart();
   
   const [calculations, setCalculations] = useState<SummaryCalculations | null>(null);
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeInsurance, setIncludeInsurance] = useState(false);
+  const [insuranceLoading, setInsuranceLoading] = useState(false);
+  
+  // Coupon state management
+  const [appliedCoupons, setAppliedCoupons] = useState<Array<{
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    discountAmount: number;
+    appliesTo: 'total' | 'shipping' | 'handling';
+    discountCodeId?: string;
+  }>>([]);
+  const [totalDiscount, setTotalDiscount] = useState(0);
+
+  // Handle insurance toggle with database persistence
+  const handleInsuranceToggle = async (enabled: boolean) => {
+    if (!user?.id || items.length === 0) {
+      setIncludeInsurance(enabled);
+      return;
+    }
+
+    setInsuranceLoading(true);
+    try {
+      console.log(`[CART SUMMARY] Updating insurance for ${items.length} quotes:`, enabled);
+
+      // Update insurance for all cart items
+      const promises = items.map(async (item) => {
+        const { data, error } = await supabase.rpc('update_quote_insurance', {
+          p_quote_id: item.quote.id,
+          p_insurance_enabled: enabled,
+          p_customer_id: user.id
+        });
+
+        if (error) {
+          console.error(`Failed to update insurance for quote ${item.quote.id}:`, error);
+          throw error;
+        }
+
+        console.log(`[CART SUMMARY] Insurance updated for quote ${item.quote.id}:`, data);
+        return data;
+      });
+
+      await Promise.all(promises);
+      
+      setIncludeInsurance(enabled);
+      
+      toast({
+        title: enabled ? "Insurance Added" : "Insurance Removed",
+        description: enabled 
+          ? "Package protection has been added to all items in your cart"
+          : "Package protection has been removed from your cart",
+      });
+
+    } catch (error) {
+      console.error('[CART SUMMARY] Failed to update insurance:', error);
+      logger.error('Failed to update cart insurance:', error);
+      
+      toast({
+        title: "Update Failed",
+        description: "Failed to update insurance. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setInsuranceLoading(false);
+    }
+  };
+
+  // Handle coupon application
+  const handleDiscountApplied = useCallback((discount: {
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    discountAmount: number;
+    appliesTo: 'total' | 'shipping' | 'handling';
+    discountCodeId?: string;
+  }) => {
+    console.log('[CART SUMMARY] Coupon applied:', discount);
+    
+    // Check if coupon already applied
+    const existingCoupon = appliedCoupons.find(c => c.code === discount.code);
+    if (existingCoupon) {
+      toast({
+        title: "Coupon Already Applied",
+        description: `${discount.code} is already applied to your cart.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Add to applied coupons
+    const newAppliedCoupons = [...appliedCoupons, discount];
+    setAppliedCoupons(newAppliedCoupons);
+    
+    // Calculate total discount from all coupons
+    const newTotalDiscount = newAppliedCoupons.reduce((sum, coupon) => sum + coupon.discountAmount, 0);
+    setTotalDiscount(newTotalDiscount);
+    
+    console.log('[CART SUMMARY] Updated coupons:', { 
+      coupons: newAppliedCoupons.map(c => ({ code: c.code, amount: c.discountAmount })),
+      totalDiscount: newTotalDiscount
+    });
+  }, [appliedCoupons]);
+
+  // Handle coupon removal
+  const handleDiscountRemoved = useCallback((codeToRemove?: string) => {
+    if (!codeToRemove && appliedCoupons.length > 0) {
+      // Remove the last applied coupon if no specific code provided
+      codeToRemove = appliedCoupons[appliedCoupons.length - 1].code;
+    }
+    
+    if (!codeToRemove) return;
+    
+    console.log('[CART SUMMARY] Removing coupon:', codeToRemove);
+    
+    const newAppliedCoupons = appliedCoupons.filter(c => c.code !== codeToRemove);
+    setAppliedCoupons(newAppliedCoupons);
+    
+    // Recalculate total discount
+    const newTotalDiscount = newAppliedCoupons.reduce((sum, coupon) => sum + coupon.discountAmount, 0);
+    setTotalDiscount(newTotalDiscount);
+    
+    console.log('[CART SUMMARY] Updated coupons after removal:', { 
+      coupons: newAppliedCoupons.map(c => ({ code: c.code, amount: c.discountAmount })),
+      totalDiscount: newTotalDiscount
+    });
+  }, [appliedCoupons]);
 
   // Calculate summary totals
   const calculateSummary = useMemo(() => async (): Promise<SummaryCalculations> => {
+    console.log('[CART SUMMARY] Starting calculation...', {
+      itemsCount: items.length,
+      displayCurrency,
+      items: items.map(item => ({
+        id: item.quote.id,
+        display_id: item.quote.display_id,
+        total_quote_origincurrency: item.quote.total_quote_origincurrency,
+        final_total_origin: item.quote.final_total_origin,
+        customer_currency: item.quote.customer_currency
+      }))
+    });
     
     // Base subtotal in display currency
+    console.log('[CART SUMMARY] Getting total value...');
     const subtotal = await getTotalValue(displayCurrency);
-    const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
-
-    // Estimate shipping (simplified logic - would use ShippingService in real implementation)
-    const averageShippingPerKg = displayCurrency === 'USD' ? 8 : 
-      displayCurrency === 'INR' ? 600 : 
-      displayCurrency === 'NPR' ? 1000 : 8;
-
-    const totalWeight = items.reduce((sum, item) => {
-      try {
-        const items = Array.isArray(item.quote.items) ? 
-          item.quote.items : JSON.parse(item.quote.items as string);
-        return sum + items.reduce((itemSum: number, quoteItem: any) => 
-          itemSum + (quoteItem.weight || 0.5), 0);
-      } catch {
-        return sum + 0.5; // Default weight if parsing fails
-      }
-    }, 0);
-
-    const estimatedShipping = Math.max(totalWeight * averageShippingPerKg, 
-      displayCurrency === 'USD' ? 15 : 
-      displayCurrency === 'INR' ? 1200 : 
-      displayCurrency === 'NPR' ? 1800 : 15);
+    console.log(`[CART SUMMARY] Subtotal: ${subtotal} ${displayCurrency}`);
     
-    const estimatedShippingFormatted = currencyService.formatAmount(estimatedShipping, displayCurrency);
+    const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
+    console.log(`[CART SUMMARY] Subtotal formatted: ${subtotalFormatted}`);
 
-    // Estimate tax (simplified - would use TaxCalculationService in real implementation)
-    const estimatedTaxRate = 0.1; // 10% average
-    const estimatedTax = subtotal * estimatedTaxRate;
-    const estimatedTaxFormatted = currencyService.formatAmount(estimatedTax, displayCurrency);
+    // No shipping or tax calculations needed
+    const estimatedShipping = 0;
+    const estimatedShippingFormatted = currencyService.formatAmount(0, displayCurrency);
+    
+    const estimatedTax = 0;
+    const estimatedTaxFormatted = currencyService.formatAmount(0, displayCurrency);
 
-    // Discount (would integrate with discount system)
-    const discount = 0; // Placeholder
+    // Calculate insurance from quote data or use default rate
+    const insuranceRate = items.length > 0 ? getInsuranceRateFromQuotes() : 0.015; // Default 1.5%
+    const insurance = includeInsurance ? subtotal * insuranceRate : 0;
+    console.log(`[CART SUMMARY] Insurance (${insuranceRate * 100}%): ${insurance} ${displayCurrency} (included: ${includeInsurance})`);
+    
+    const insuranceFormatted = currencyService.formatAmount(insurance, displayCurrency);
+
+    // Helper function to get insurance rate from quote calculation data
+    function getInsuranceRateFromQuotes(): number {
+      try {
+        // Get insurance rate from the first quote's calculation data
+        const firstQuote = items[0]?.quote;
+        if (firstQuote?.calculation_data) {
+          const calcData = typeof firstQuote.calculation_data === 'string' 
+            ? JSON.parse(firstQuote.calculation_data)
+            : firstQuote.calculation_data;
+          
+          const insurancePercentage = calcData?.applied_rates?.insurance_percentage;
+          if (insurancePercentage && insurancePercentage > 0) {
+            console.log(`[CART SUMMARY] Using insurance rate from quote: ${insurancePercentage}%`);
+            return insurancePercentage / 100; // Convert percentage to decimal
+          }
+        }
+        
+        console.log('[CART SUMMARY] Using default insurance rate: 1.5%');
+        return 0.015; // Default 1.5%
+      } catch (error) {
+        console.log('[CART SUMMARY] Failed to parse insurance rate, using default:', error);
+        return 0.015; // Fallback
+      }
+    }
+
+    // Use actual discount from applied coupons
+    const discount = totalDiscount;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    // Total
-    const total = subtotal + estimatedShipping + estimatedTax - discount;
+    // Total including insurance and discount
+    const total = subtotal + insurance - discount;
+    console.log(`[CART SUMMARY] Final total: ${subtotal} + ${insurance} - ${discount} = ${total} ${displayCurrency}`);
+    
     const totalFormatted = currencyService.formatAmount(total, displayCurrency);
 
-    return {
+    const result = {
       subtotal,
       subtotalFormatted,
       estimatedShipping,
       estimatedShippingFormatted,
       estimatedTax,
       estimatedTaxFormatted,
+      insurance,
+      insuranceFormatted,
+      insuranceRate,
       discount,
       discountFormatted,
       total,
       totalFormatted,
       currency: displayCurrency
     };
-  }, [items, displayCurrency, getTotalValue]);
+
+    console.log('[CART SUMMARY] Calculation complete:', result);
+    return result;
+  }, [items, displayCurrency, getTotalValue, includeInsurance, totalDiscount]);
 
   // Recalculate when items or currency changes
   useEffect(() => {
@@ -154,6 +330,48 @@ export const CartSummary = memo<CartSummaryProps>(({
       isMounted = false;
     };
   }, [calculateSummary, items.length]);
+
+  // Load initial insurance state from database when cart items change
+  useEffect(() => {
+    const loadInsuranceState = async () => {
+      if (!user?.id || items.length === 0) {
+        setIncludeInsurance(false);
+        return;
+      }
+
+      try {
+        // Check if any cart items have insurance enabled
+        const promises = items.map(async (item) => {
+          const { data, error } = await supabase
+            .from('quotes_v2')
+            .select('insurance_required')
+            .eq('id', item.quote.id)
+            .single();
+
+          if (error) {
+            console.warn(`Failed to check insurance for quote ${item.quote.id}:`, error);
+            return false;
+          }
+
+          return data?.insurance_required || false;
+        });
+
+        const insuranceStates = await Promise.all(promises);
+        
+        // Set insurance to true if any item has it enabled
+        const anyInsuranceEnabled = insuranceStates.some(Boolean);
+        setIncludeInsurance(anyInsuranceEnabled);
+
+        console.log(`[CART SUMMARY] Initial insurance state loaded: ${anyInsuranceEnabled} (from ${insuranceStates.length} quotes)`);
+
+      } catch (error) {
+        console.error('[CART SUMMARY] Failed to load insurance state:', error);
+        logger.error('Failed to load cart insurance state:', error);
+      }
+    };
+
+    loadInsuranceState();
+  }, [items, user?.id]);
 
   // Loading state
   if (isLoading || calculationLoading) {
@@ -219,8 +437,7 @@ export const CartSummary = memo<CartSummaryProps>(({
 
   const { 
     subtotalFormatted, 
-    estimatedShippingFormatted, 
-    estimatedTaxFormatted,
+    insuranceFormatted,
     discountFormatted,
     totalFormatted,
     discount
@@ -234,10 +451,35 @@ export const CartSummary = memo<CartSummaryProps>(({
             <ShoppingCart className="w-5 h-5" />
             Cart Summary
           </span>
-          <Badge variant="secondary" className="text-xs">
-            {items.length} {items.length === 1 ? 'item' : 'items'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <SimpleCartSyncIndicator 
+              syncStatus={syncStatus} 
+              showLabel={false} 
+            />
+            <Badge variant="secondary" className="text-xs">
+              {items.length} {items.length === 1 ? 'item' : 'items'}
+            </Badge>
+          </div>
         </CardTitle>
+        
+        {/* Cart status info for non-compact view */}
+        {!compact && (
+          <div className="text-xs text-gray-500 mt-1 space-y-1">
+            {!user && (
+              <div>Sign in to sync cart across devices</div>
+            )}
+            {syncStatus !== 'synced' && syncStatus !== 'offline' && (
+              <div className="text-orange-600">
+                Cart is {syncStatus}
+              </div>
+            )}
+            <SimpleCartSyncIndicator 
+              syncStatus={syncStatus} 
+              showLabel={false} 
+              className="inline-flex"
+            />
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -247,29 +489,42 @@ export const CartSummary = memo<CartSummaryProps>(({
           <span className="font-medium">{subtotalFormatted}</span>
         </div>
 
-        {/* Shipping Estimate */}
-        {showShippingEstimate && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Truck className="w-3 h-3" />
-              Estimated Shipping
-            </span>
-            <span className="font-medium text-orange-600">
-              {estimatedShippingFormatted}
-            </span>
-          </div>
-        )}
 
-        {/* Tax Estimate */}
-        {showTaxEstimate && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Calculator className="w-3 h-3" />
-              Estimated Tax
-            </span>
-            <span className="font-medium text-blue-600">
-              {estimatedTaxFormatted}
-            </span>
+        {/* Insurance Option */}
+        {showInsuranceOption && calculations && (
+          <div className="space-y-2">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="include-insurance"
+                checked={includeInsurance}
+                onCheckedChange={(checked) => handleInsuranceToggle(checked === true)}
+                disabled={insuranceLoading}
+                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label 
+                htmlFor="include-insurance"
+                className="text-sm text-gray-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Shield className="w-3 h-3" />
+                Package Insurance ({(calculations.insuranceRate * 100).toFixed(1)}%)
+              </Label>
+            </div>
+            
+            {includeInsurance && (
+              <div className="flex justify-between items-center ml-6">
+                <span className="text-sm text-gray-500">Insurance Coverage</span>
+                <span className="font-medium text-blue-600">
+                  {calculations.insuranceFormatted}
+                </span>
+              </div>
+            )}
+
+            {insuranceLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-500 ml-6">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                Updating insurance coverage...
+              </div>
+            )}
           </div>
         )}
 
@@ -297,9 +552,9 @@ export const CartSummary = memo<CartSummaryProps>(({
         </div>
 
         {/* Disclaimers for compact view */}
-        {compact && (showShippingEstimate || showTaxEstimate) && (
+        {compact && (showShippingEstimate || showTaxEstimate || showInsuranceOption) && (
           <p className="text-xs text-gray-500 mt-2">
-            * Shipping and tax are estimates
+            * Shipping, tax, and insurance are estimates
           </p>
         )}
 
@@ -320,12 +575,18 @@ export const CartSummary = memo<CartSummaryProps>(({
           <div className="pt-3 border-t space-y-2">
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <AlertCircle className="w-3 h-3" />
-              <span>Shipping and tax calculated at checkout</span>
+              <span>Shipping, tax, and insurance calculated at checkout</span>
             </div>
             
             {showShippingEstimate && (
               <div className="text-xs text-gray-500">
                 Shipping rates vary by destination and weight
+              </div>
+            )}
+            
+            {showInsuranceOption && (
+              <div className="text-xs text-gray-500">
+                Insurance covers loss, theft, and damage during transit
               </div>
             )}
           </div>

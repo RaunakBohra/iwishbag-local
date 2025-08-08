@@ -9,7 +9,7 @@
  * import { QUERY_COLUMNS } from '@/lib/queryColumns';
  *
  * const { data } = await supabase
- *   .from('quotes')
+ *   .from('quotes_v2')
  *   .select(QUERY_COLUMNS.QUOTE_LIST);
  * ```
  */
@@ -156,7 +156,7 @@ export const COMMON_QUERIES = {
   adminQuotesWithProfiles: QUERY_COLUMNS.ADMIN_QUOTES.trim(),
 
   /**
-   * User dashboard quotes (no joins needed)
+   * User dashboard quotes_v2 (no joins needed)
    */
   userDashboardQuotes: QUERY_COLUMNS.USER_QUOTES.trim(),
 

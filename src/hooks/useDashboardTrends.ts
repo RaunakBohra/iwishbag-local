@@ -28,7 +28,7 @@ export const useDashboardTrends = () => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -49,7 +49,7 @@ export const useDashboardTrends = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('user_id', user.id)
         .lt('created_at', thirtyDaysAgo.toISOString())

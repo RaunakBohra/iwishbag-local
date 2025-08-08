@@ -37,7 +37,7 @@ async function checkSchemas() {
 
   // Get a sample from quotes
   const { data: sampleQuote, error: quoteError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('*')
     .limit(1)
     .single();

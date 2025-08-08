@@ -3,47 +3,41 @@
  * 
  * Features:
  * - Single page layout with left/right split
- * - Left: Contact, Address, Payment sections
+ * - Left: Address, Payment sections
  * - Right: Order summary with cart items
  * - Real-time validation and totals
  * - Mobile responsive design
  * - Integration with existing payment system
+ * - Uses our new standardized patterns
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { 
   ArrowLeft,
   AlertCircle,
   Loader2,
-  Edit2,
   Package,
   Truck,
-  Shield,
-  User,
-  Mail,
-  Phone,
-  MapPin,
   CreditCard,
   Lock,
-  ChevronRight
+  ShoppingBag,
+  MapPin,
+  User,
+  Shield,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-import { useCart } from '@/hooks/useCart';
-import { useDisplayCurrency } from '@/hooks/useDisplayCurrency';
+// Import new unified patterns
+import { StandardLoading } from '@/components/patterns';
+
+import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
 import { CheckoutService } from '@/services/CheckoutService';
@@ -52,10 +46,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
-import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
-import { ShippingAddressSection } from '@/components/checkout/ShippingAddressSection';
-import { AddressForm } from '@/components/profile/AddressForm';
+import { CheckoutAddressDisplay } from '@/components/checkout/CheckoutAddressDisplay';
 import { Tables } from '@/integrations/supabase/types';
+import { PaymentGateway } from '@/types/payment';
 
 interface OrderSummary {
   itemsTotal: number;
@@ -67,64 +60,17 @@ interface OrderSummary {
   savings?: number;
 }
 
-interface ContactInfo {
-  email: string;
-  subscribe: boolean;
-}
 
-// Helper component for currency-aware formatting - memoized for performance
-const CheckoutPrice: React.FC<{ amount: number; fromCurrency?: string; quote?: any }> = React.memo(({ 
-  amount, 
-  fromCurrency, 
-  quote 
-}) => {
-  const { formatAmountWithConversion, getSourceCurrency, displayCurrency } = useDisplayCurrency(quote);
-  const [formattedAmount, setFormattedAmount] = useState<string>('...');
-
-  React.useEffect(() => {
-    const updatePrice = async () => {
-      try {
-        let sourceCurrency = fromCurrency;
-        
-        // Better currency fallback logic
-        if (!sourceCurrency && quote) {
-          sourceCurrency = getSourceCurrency(quote);
-        }
-        if (!sourceCurrency || sourceCurrency === 'undefined' || sourceCurrency === 'null') {
-          sourceCurrency = displayCurrency;
-        }
-
-        // Handle zero or invalid amounts
-        if (!amount || isNaN(amount) || amount < 0) {
-          setFormattedAmount(currencyService.formatAmount(0, sourceCurrency));
-          return;
-        }
-
-        const formatted = await formatAmountWithConversion(amount, sourceCurrency);
-        setFormattedAmount(formatted);
-      } catch (error) {
-        logger.error('Failed to format checkout price', { amount, fromCurrency, error });
-        // Better fallback currency handling
-        const safeCurrency = fromCurrency && fromCurrency !== 'undefined' && fromCurrency !== 'null' 
-          ? fromCurrency 
-          : displayCurrency;
-        setFormattedAmount(currencyService.formatAmount(amount || 0, safeCurrency));
-      }
-    };
-
-    updatePrice();
-  }, [amount, fromCurrency, quote, formatAmountWithConversion, getSourceCurrency, displayCurrency]);
-
-  return <>{formattedAmount}</>;
-});
-
-CheckoutPrice.displayName = 'CheckoutPrice';
+// Helper function for simple currency formatting - matches CartSummary approach
+const formatCheckoutAmount = (amount: number, currency: string): string => {
+  return currencyService.formatAmount(amount || 0, currency);
+};
 
 const CheckoutShopify: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items, clearCart } = useCart();
-  const { displayCurrency } = useDisplayCurrency();
+  const { displayCurrency } = useCartCurrency();
   
   // State management
   const [loading, setLoading] = useState(false);
@@ -133,37 +79,41 @@ const CheckoutShopify: React.FC = React.memo(() => {
   const [processingOrder, setProcessingOrder] = useState(false);
   
   // Form data
-  const [contactInfo, setContactInfo] = useState<ContactInfo>({
-    email: user?.email || '',
-    subscribe: false
-  });
-  
   const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | null>(null);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentGateway | null>(null);
   const [orderNotes, setOrderNotes] = useState('');
   
   // Services
   const checkoutService = useMemo(() => CheckoutService.getInstance(), []);
 
   // Fetch user addresses
-  const { data: addresses = [], isLoading: addressesLoading } = useQuery({
-    queryKey: ['delivery_addresses', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from('delivery_addresses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false });
+  const [addresses, setAddresses] = useState<Tables<'delivery_addresses'>[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
 
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!user,
-  });
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!user) return;
+      
+      setAddressesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('delivery_addresses')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        if (error) throw new Error(error.message);
+        setAddresses(data || []);
+      } catch (error) {
+        logger.error('Failed to fetch addresses:', error);
+      } finally {
+        setAddressesLoading(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [user]);
 
   // Calculate order summary
   useEffect(() => {
@@ -209,22 +159,12 @@ const CheckoutShopify: React.FC = React.memo(() => {
   }, [items.length, loading, navigate]);
 
   // Form validation
-  const isContactValid = contactInfo.email.length > 0 && contactInfo.email.includes('@');
   const isAddressValid = selectedAddress !== null;
   const isPaymentValid = selectedPaymentMethod !== null;
-  const canPlaceOrder = isContactValid && isAddressValid && isPaymentValid && orderSummary && !processingOrder;
-
-  // Handle form updates
-  const updateContactInfo = useCallback((field: keyof ContactInfo, value: any) => {
-    setContactInfo(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const canPlaceOrder = isAddressValid && isPaymentValid && orderSummary && !processingOrder;
 
   const handleAddressSelect = useCallback((address: Tables<'delivery_addresses'>) => {
     setSelectedAddress(address);
-  }, []);
-
-  const handleAddNewAddress = useCallback(() => {
-    setShowAddressForm(true);
   }, []);
 
   // Auto-select default address
@@ -266,322 +206,273 @@ const CheckoutShopify: React.FC = React.memo(() => {
     }
   }, [canPlaceOrder, checkoutService, items, selectedAddress, selectedPaymentMethod, orderSummary, user, clearCart, navigate]);
 
+  // Show loading state while initializing
+  if (loading && items.length === 0) {
+    return (
+      <StandardLoading
+        isLoading={true}
+        config={{ fullScreen: true, variant: 'spinner', size: 'lg' }}
+        loadingText="Loading checkout..."
+      >
+        <div />
+      </StandardLoading>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/cart')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Cart
-          </Button>
-          <h1 className="font-semibold">Checkout</h1>
-          <div className="w-16" /> {/* Spacer */}
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen">
-          {/* Left Column - Checkout Form */}
-          <div className="bg-white p-6 md:p-8 lg:p-12">
-              {/* Desktop Header */}
-              <div className="hidden md:block mb-8">
-                <Button variant="ghost" className="mb-4 p-0" onClick={() => navigate('/cart')}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Return to cart
-                </Button>
-                <h1 className="text-2xl font-bold">Checkout</h1>
-              </div>
-
-              {error && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-8">
-                {/* Contact Information */}
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/cart')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Cart
+              </Button>
+              
+              <div className="flex items-center gap-3">
+                <ShoppingBag className="w-6 h-6 text-teal-600" />
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Mail className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-lg font-semibold">Contact information</h2>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="email">Email address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={contactInfo.email}
-                        onChange={(e) => updateContactInfo('email', e.target.value)}
-                        placeholder="Enter your email"
-                        className="mt-1"
-                        required
-                      />
-                      {user && contactInfo.email === user.email && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Using your account email. You can change this if needed.
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="subscribe"
-                        checked={contactInfo.subscribe}
-                        onCheckedChange={(checked) => updateContactInfo('subscribe', checked)}
-                      />
-                      <Label htmlFor="subscribe" className="text-sm text-gray-600">
-                        Email me with news and offers
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Shipping Address */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Truck className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-lg font-semibold">Shipping address</h2>
-                  </div>
-                  
-                  <ShippingAddressSection
-                    selectedAddress={selectedAddress}
-                    addresses={addresses}
-                    onAddressChange={handleAddressSelect}
-                    onAddNewAddress={handleAddNewAddress}
-                    loading={addressesLoading}
-                  />
-                  
-                  {!selectedAddress && !addressesLoading && (
-                    <Alert className="mt-4">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Please select a shipping address to continue.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Payment Method */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <CreditCard className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-lg font-semibold">Payment</h2>
-                  </div>
-                  
-                  <PaymentMethodSelector
-                    selectedMethod={selectedPaymentMethod as any}
-                    onMethodChange={(method) => setSelectedPaymentMethod(method as string)}
-                    amount={orderSummary?.finalTotal || 0}
-                    currency={displayCurrency}
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Order Notes */}
-                <div>
-                  <Label htmlFor="orderNotes">Order notes (optional)</Label>
-                  <Textarea
-                    id="orderNotes"
-                    value={orderNotes}
-                    onChange={(e) => setOrderNotes(e.target.value)}
-                    placeholder="Special instructions for your order"
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Place Order Button */}
-                <div className="pt-4 pb-8">
-                  <Button
-                    onClick={handlePlaceOrder}
-                    disabled={!canPlaceOrder}
-                    className="w-full py-3 text-lg"
-                    size="lg"
-                  >
-                    {processingOrder ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processing order...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        Place order • {orderSummary ? (
-                          <CheckoutPrice 
-                            amount={orderSummary.finalTotal}
-                            fromCurrency={orderSummary.currency}
-                          />
-                        ) : '...'}
-                      </>
-                    )}
-                  </Button>
+                  <h1 className="text-2xl font-bold">Checkout</h1>
+                  <p className="text-sm text-gray-500">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* Security Badge */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Lock className="w-4 h-4" />
+              <span>Secure Checkout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Shopify-style Layout: Left form, Right summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Side: Checkout Form */}
+          <div className="space-y-6">
+            {/* Delivery Address */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  Delivery Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CheckoutAddressDisplay
+                  selectedAddress={selectedAddress}
+                  onAddressChange={handleAddressSelect}
+                  isLoading={addressesLoading}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Payment Method */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PaymentMethodSelector
+                  selectedMethod={selectedPaymentMethod}
+                  onMethodChange={setSelectedPaymentMethod}
+                  amount={orderSummary?.finalTotal || 0}
+                  currency={displayCurrency}
+                  country={selectedAddress?.destination_country || user?.profile?.country || 'US'}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Order Notes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Order Notes (Optional)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="Add any special instructions for your order..."
+                  rows={3}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Place Order Button - Mobile */}
+            <div className="sticky bottom-4 bg-white p-4 border rounded-lg shadow-lg lg:hidden">
+              <Button
+                onClick={handlePlaceOrder}
+                disabled={!canPlaceOrder}
+                className="w-full h-12 text-lg font-medium"
+              >
+                {processingOrder ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing Order...
+                  </>
+                ) : (
+                  <>Place Order</>
+                )}
+              </Button>
+            </div>
           </div>
 
-          {/* Right Column - Order Summary */}
-          <div className="bg-gray-50 p-6 md:p-8 lg:p-12 border-l">
-            <div className="sticky top-8">
-              <h2 className="text-lg font-semibold mb-6">Order summary</h2>
-              
-              {/* Cart Items */}
-              <div className="space-y-4 mb-6">
+          {/* Right Side: Order Summary */}
+          <div className="space-y-6">
+            <div className="lg:sticky lg:top-4">
+              {/* Cart Items Preview */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5" />
+                    Order Items ({items.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 max-h-60 overflow-y-auto">
                   {items.map((item) => (
-                    <div key={item.id} className="flex gap-4 p-4 bg-white rounded-lg border">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Package className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">
-                          Quote #{item.quote.display_id || item.quote.id.slice(0, 8)}
-                        </h4>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {item.quote.items?.length || 0} items • {item.quote.origin_country} → {item.quote.destination_country}
-                        </p>
-                        <Badge variant={item.quote.status === 'approved' ? 'default' : 'secondary'} className="mt-2">
-                          {item.quote.status}
-                        </Badge>
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border">
+                          <Package className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">Quote #{item.quote.display_id || item.quote.id.slice(0, 8)}</h4>
+                          <p className="text-xs text-gray-600">
+                            {item.quote.items?.length || 0} items • {item.quote.origin_country} → {item.quote.destination_country}
+                          </p>
+                          <Badge size="sm" variant={item.quote.status === 'approved' ? 'default' : 'secondary'}>
+                            {item.quote.status}
+                          </Badge>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">
-                          <CheckoutPrice 
-                            amount={item.quote.final_total_origincurrency || 0}
-                            quote={item.quote}
-                          />
+                        <p className="font-semibold text-sm">
+                          {formatCheckoutAmount(item.quote.final_total_origincurrency || 0, displayCurrency)}
                         </p>
                       </div>
                     </div>
                   ))}
-                </div>
-
-              <Separator className="my-6" />
-
-              {/* Shipping Address Preview */}
-              {selectedAddress && (
-                <div className="mb-6">
-                  <h3 className="font-medium text-sm mb-3">Shipping to:</h3>
-                  <div className="bg-white rounded-lg border p-3 text-sm">
-                    <div className="font-medium text-gray-900 mb-1">
-                      {selectedAddress.recipient_name}
-                    </div>
-                    <div className="text-gray-600 space-y-0.5">
-                      <p>{selectedAddress.address_line1}</p>
-                      {selectedAddress.address_line2 && <p>{selectedAddress.address_line2}</p>}
-                      <p>
-                        {selectedAddress.city}, {selectedAddress.state_province_region} {selectedAddress.postal_code}
-                      </p>
-                      <p>{selectedAddress.destination_country}</p>
-                      {selectedAddress.phone && (
-                        <p className="text-gray-500 flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {selectedAddress.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+                </CardContent>
+              </Card>
 
               {/* Order Summary */}
-              {loading ? (
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                </div>
-              ) : orderSummary ? (
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal • {items.length} {items.length === 1 ? 'item' : 'items'}</span>
-                    <span>
-                      <CheckoutPrice 
-                        amount={orderSummary.itemsTotal}
-                        fromCurrency={orderSummary.currency}
-                      />
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping</span>
-                    <span>
-                      <CheckoutPrice 
-                        amount={orderSummary.shippingTotal}
-                        fromCurrency={orderSummary.currency}
-                      />
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Taxes & duties</span>
-                    <span>
-                      <CheckoutPrice 
-                        amount={orderSummary.taxesTotal}
-                        fromCurrency={orderSummary.currency}
-                      />
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Service fees</span>
-                    <span>
-                      <CheckoutPrice 
-                        amount={orderSummary.serviceFeesTotal}
-                        fromCurrency={orderSummary.currency}
-                      />
-                    </span>
-                  </div>
-                  
-                  {orderSummary.savings && orderSummary.savings > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Savings</span>
-                      <span>
-                        -<CheckoutPrice 
-                          amount={orderSummary.savings}
-                          fromCurrency={orderSummary.currency}
-                        />
-                      </span>
-                    </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StandardLoading
+                    isLoading={loading}
+                    config={{ variant: 'skeleton' }}
+                  >
+                    {orderSummary ? (
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span>Items ({items.length})</span>
+                          <span>
+                            {formatCheckoutAmount(orderSummary.itemsTotal, displayCurrency)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-1">
+                            <Truck className="w-3 h-3" />
+                            Shipping
+                          </span>
+                          <span>
+                            {formatCheckoutAmount(orderSummary.shippingTotal, displayCurrency)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Taxes & Duties</span>
+                          <span>
+                            {formatCheckoutAmount(orderSummary.taxesTotal, displayCurrency)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-1">
+                            <Shield className="w-3 h-3" />
+                            Service Fees
+                          </span>
+                          <span>
+                            {formatCheckoutAmount(orderSummary.serviceFeesTotal, displayCurrency)}
+                          </span>
+                        </div>
+                        
+                        {orderSummary.savings && orderSummary.savings > 0 && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span>Savings</span>
+                            <span>
+                              -{formatCheckoutAmount(orderSummary.savings, displayCurrency)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <Separator />
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span>Total</span>
+                          <span>
+                            {formatCheckoutAmount(orderSummary.finalTotal, displayCurrency)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">Calculating totals...</p>
+                    )}
+                  </StandardLoading>
+                </CardContent>
+              </Card>
+
+              {/* Place Order Button - Desktop */}
+              <div className="hidden lg:block mt-6">
+                <Button
+                  onClick={handlePlaceOrder}
+                  disabled={!canPlaceOrder}
+                  className="w-full h-12 text-lg font-medium"
+                >
+                  {processingOrder ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Processing Order...
+                    </>
+                  ) : (
+                    <>Place Order</>
                   )}
-                  
-                  <Separator />
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span>Total</span>
-                    <span>
-                      <CheckoutPrice 
-                        amount={orderSummary.finalTotal}
-                        fromCurrency={orderSummary.currency}
-                      />
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Calculating totals...</p>
-              )}
+                </Button>
+                
+                {!isAddressValid && (
+                  <p className="text-sm text-red-600 mt-2">Please select a delivery address</p>
+                )}
+                {!isPaymentValid && (
+                  <p className="text-sm text-red-600 mt-2">Please select a payment method</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <Dialog open={showAddressForm} onOpenChange={setShowAddressForm}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add New Address</DialogTitle>
-          </DialogHeader>
-          <AddressForm onSuccess={(newAddress) => {
-            setShowAddressForm(false);
-            if (newAddress) {
-              handleAddressSelect(newAddress);
-            }
-          }} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 });

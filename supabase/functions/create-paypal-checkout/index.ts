@@ -227,7 +227,7 @@ serve(async (req) => {
     if (!quoteIds.some((id) => id.startsWith('test-'))) {
       console.log('🔍 Fetching quote details for:', quoteIds);
       const { data: quotes, error: quotesError } = await supabaseAdmin
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, product_name, email, customer_name, shipping_address, final_total_usd')
         .in('id', quoteIds);
 

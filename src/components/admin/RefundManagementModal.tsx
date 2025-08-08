@@ -485,7 +485,7 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
 
       // Update quote's amount_paid
       const { error: quoteUpdateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           amount_paid: quote.amount_paid - amount,
           payment_status:

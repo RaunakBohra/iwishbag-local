@@ -39,7 +39,7 @@ export const useStatusTransitions = () => {
 
       // Update the quote status
       const { error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: toStatus,
           updated_at: new Date().toISOString(),
@@ -190,7 +190,7 @@ export const useStatusTransitions = () => {
 
       // Get quote details for notification
       const { data: quote } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('display_id, final_total_origincurrency, customer_data, items')
         .eq('id', event.quoteId)
         .single();

@@ -340,13 +340,13 @@ class UnifiedUserContextService {
     try {
       // Get quote statistics
       const { data: quoteStats } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('status, total_amount_usd, created_at')
         .eq('customer_id', userId);
 
       // Get order statistics
       const { data: orderStats } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('status, total_amount_usd, created_at')
         .eq('customer_id', userId)
         .in('status', ['paid', 'ordered', 'shipped', 'completed']);

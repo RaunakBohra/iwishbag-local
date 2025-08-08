@@ -290,7 +290,7 @@ export class PaymentDataService {
     let quotesData: Tables<'quotes'>[] = [];
     if (quoteIds.length > 0) {
       const { data } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
         )
@@ -391,7 +391,7 @@ export class PaymentDataService {
     let quotesData: Tables<'quotes'>[] = [];
     if (quoteIds.length > 0) {
       const { data } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           'id, order_display_id, final_total_origincurrency, destination_currency, payment_method, payment_status, email, amount_paid, user_id'
         )
@@ -545,7 +545,7 @@ export class PaymentDataService {
     try {
       // Get amounts from quotes that have payments
       let query = supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('final_total_origincurrency, amount_paid')
         .gt('amount_paid', 0);
 
@@ -591,7 +591,7 @@ export class PaymentDataService {
         const quoteIds = bankTransfers.map(bt => bt.quote_id).filter(Boolean);
         if (quoteIds.length > 0) {
           const { data: quotes } = await supabase
-            .from('quotes')
+            .from('quotes_v2')
             .select('payment_method, amount_paid')
             .in('id', quoteIds);
 
@@ -661,7 +661,7 @@ export class PaymentDataService {
     // Get related quote and profile data
     const [{ data: quote }, { data: profile }] = await Promise.all([
       supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', message.quote_id)
         .single(),
@@ -712,7 +712,7 @@ export class PaymentDataService {
     // Get related quote and profile data
     const [{ data: quote }, { data: profile }] = await Promise.all([
       supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('*')
         .eq('id', transaction.quote_id)
         .single(),

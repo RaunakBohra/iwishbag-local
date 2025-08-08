@@ -19,7 +19,7 @@ export const SimpleShareStats: React.FC = () => {
       try {
         // Simple count query
         const { data, error } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .select('id, status, share_token')
           .not('share_token', 'is', null);
 

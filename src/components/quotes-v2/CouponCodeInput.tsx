@@ -12,7 +12,7 @@ import {
   DollarSign,
   AlertCircle
 } from 'lucide-react';
-import { DiscountService } from '@/services/DiscountService';
+import { getDiscountService } from '@/services/unified/DiscountService';
 import { toast } from '@/hooks/use-toast';
 
 interface CouponCodeInputProps {
@@ -75,7 +75,7 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
     setError(null);
 
     try {
-      const validation = await DiscountService.getInstance().validateDiscountCode(
+      const validation = await getDiscountService().validateDiscountCode(
         code.trim(), 
         customerId, 
         countryCode, 

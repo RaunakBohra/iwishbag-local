@@ -392,7 +392,7 @@ const PaymentSuccess: React.FC = () => {
 
       // First, verify the quotes exist and check their current status
       const { data: existingQuotes, error: fetchError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id, status, display_id, final_total_origincurrency')
         .in('id', quoteIds);
 
@@ -417,7 +417,7 @@ const PaymentSuccess: React.FC = () => {
 
       // Update quotes to paid status - let trigger calculate payment_status and amount_paid
       const { data: updatedQuotes, error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           status: 'paid',
           // payment_status: 'paid',  // Let trigger calculate this

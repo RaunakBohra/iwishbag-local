@@ -93,7 +93,7 @@ export function PurchaseItemDialog({
 
       // Get current quote data
       const { data: quote, error: fetchError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('operational_data')
         .eq('id', quoteId)
         .single();
@@ -135,7 +135,7 @@ export function PurchaseItemDialog({
 
       // Update the quote with new operational data
       const { error: updateError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .update({
           operational_data: {
             ...operationalData,

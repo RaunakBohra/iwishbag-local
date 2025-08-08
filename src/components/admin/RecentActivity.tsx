@@ -15,7 +15,7 @@ export const RecentActivity = () => {
     queryKey: ['recent-activity'],
     queryFn: async () => {
       const { data: recentQuotes, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           `
           id,

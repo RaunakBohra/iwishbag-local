@@ -57,7 +57,7 @@ class TrackingService {
       // Update quote with new tracking ID (only if quoteId provided)
       if (quoteId) {
         const { error: updateError } = await supabase
-          .from('quotes')
+          .from('quotes_v2')
           .update({ iwish_tracking_id: trackingId })
           .eq('id', quoteId);
 
@@ -100,7 +100,7 @@ class TrackingService {
         updateData.estimated_delivery_date = update.estimated_delivery_date;
       }
 
-      const { error } = await supabase.from('quotes').update(updateData).eq('id', quoteId);
+      const { error } = await supabase.from('quotes_v2').update(updateData).eq('id', quoteId);
 
       if (error) {
         logger.error('❌ Error updating tracking status:', error);
@@ -121,7 +121,7 @@ class TrackingService {
   async getBasicTrackingInfo(quoteId: string): Promise<BasicTrackingInfo | null> {
     try {
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           'iwish_tracking_id, tracking_status, shipping_carrier, tracking_number, estimated_delivery_date, display_id',
         )
@@ -148,7 +148,7 @@ class TrackingService {
       logger.debug('🔍 Looking up tracking info for:', iwishTrackingId);
 
       const { data, error } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(
           'iwish_tracking_id, tracking_status, shipping_carrier, tracking_number, estimated_delivery_date, display_id',
         )
@@ -217,7 +217,7 @@ class TrackingService {
 
       // First get the quote ID from tracking ID
       const { data: trackingData, error: trackingError } = await supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select('id')
         .eq('iwish_tracking_id', iwishTrackingId)
         .single();

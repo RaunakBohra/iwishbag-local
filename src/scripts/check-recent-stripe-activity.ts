@@ -88,7 +88,7 @@ async function checkRecentStripeActivity() {
   // Check recent quote updates
   console.log('\n\n📝 Recent Quote Updates:');
   const { data: quotes, error: quoteError } = await supabase
-    .from('quotes')
+    .from('quotes_v2')
     .select('id, display_id, status, payment_status, payment_method, updated_at')
     .gte('updated_at', since)
     .order('updated_at', { ascending: false })

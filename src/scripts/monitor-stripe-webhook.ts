@@ -52,7 +52,7 @@ async function monitorWebhook() {
 
     // Check for updated quotes
     const { data: updatedQuotes, error: quoteError } = await supabase
-      .from('quotes')
+      .from('quotes_v2')
       .select('id, status, payment_status, payment_method')
       .eq('payment_method', 'stripe')
       .gt('updated_at', lastCheckTime.toISOString())
