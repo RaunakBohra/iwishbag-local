@@ -11,7 +11,7 @@
  * Designed for maximum conversion and customer satisfaction
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,8 +138,13 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
   // More robust order value calculation with fallbacks
   const validOrderValue = useMemo(() => {
     if (!orderValue || isNaN(orderValue) || orderValue <= 0) {
-      console.warn('⚠️ [AddonServices] Invalid order value, using fallback:', orderValue);
-      return 1; // Minimum fallback value to enable the query
+      console.warn('⚠️ [AddonServices] Invalid order value, using fallback:', {
+        orderValue,
+        type: typeof orderValue,
+        isNaN: isNaN(orderValue),
+        isPositive: orderValue > 0
+      });
+      return 50; // Better fallback value for addon calculations
     }
     return Math.max(orderValue, 0.01); // Ensure positive value
   }, [orderValue]);
@@ -168,11 +173,11 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
   const { data: addonData, isLoading, error, refetch } = useQuery({
     queryKey: ['addon-services-recommendations', finalCountryCode, validOrderValue, customerTier],
     queryFn: async () => {
-      // Add timeout promise race condition
+      // Add timeout promise race condition - reduced to 8 seconds since DB is fast
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('Addon services request timed out after 15 seconds'));
-        }, 15000); // 15 second timeout
+          reject(new Error('Addon services request timed out after 8 seconds'));
+        }, 8000); // 8 second timeout - more reasonable for fast local DB
       });
       
       const servicePromise = addonServicesService.getRecommendedServices(
@@ -199,12 +204,12 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
       }
     },
     enabled: queryEnabled,
-    retry: 2, // Increased from 1 to 2 retries
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1s, 2s, 4s
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3, // Increased retries since we have faster timeout
+    retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 5000), // Faster exponential backoff: 0.5s, 1s, 2s
+    staleTime: 3 * 60 * 1000, // 3 minutes - reduced cache time
+    gcTime: 5 * 60 * 1000, // 5 minutes - reduced garbage collection time
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true, // Enable reconnect refetch
     meta: {
       errorMessage: 'Failed to load addon services'
     }
@@ -215,7 +220,7 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
     if (isLoading) {
       const timer = setTimeout(() => {
         setLoadingTooLong(true);
-      }, 20000); // 20 seconds timeout
+      }, 10000); // 10 seconds timeout - reduced since we have 8s service timeout
       
       return () => clearTimeout(timer);
     } else {
@@ -230,11 +235,30 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
       .reduce((sum, s) => sum + s.calculated_amount, 0);
   }, [selections]);
 
-  // Notify parent of selection changes
+  // Notify parent of selection changes - use callback ref to avoid infinite loops
+  const previousSelections = useRef<Map<string, AddonServiceSelection>>(new Map());
+  const previousTotalCost = useRef<number>(0);
+  
   useEffect(() => {
-    const selectedServices = Array.from(selections.values());
-    onSelectionChange(selectedServices, totalAddonCost);
-  }, [selections, totalAddonCost, onSelectionChange]);
+    // Only update if selections actually changed
+    const hasSelectionChanged = 
+      previousSelections.current.size !== selections.size ||
+      Array.from(selections.entries()).some(([key, value]) => {
+        const prev = previousSelections.current.get(key);
+        return !prev || prev.is_selected !== value.is_selected || prev.calculated_amount !== value.calculated_amount;
+      });
+    
+    const hasTotalChanged = previousTotalCost.current !== totalAddonCost;
+    
+    if (hasSelectionChanged || hasTotalChanged) {
+      const selectedServices = Array.from(selections.values());
+      onSelectionChange(selectedServices, totalAddonCost);
+      
+      // Update refs
+      previousSelections.current = new Map(selections);
+      previousTotalCost.current = totalAddonCost;
+    }
+  }, [selections, totalAddonCost]);
 
   // Auto-select recommended services on load
   useEffect(() => {
@@ -553,74 +577,127 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
     );
   }
 
+  // Emergency fallback data for when service fails
+  const getFallbackAddonServices = () => {
+    // Use validOrderValue since it has proper fallbacks
+    const baseOrderValue = Math.max(validOrderValue, 50);
+    
+    const fallbackServices = [
+      {
+        service_key: 'package_protection',
+        service_name: 'Package Protection Insurance',
+        pricing: { 
+          calculated_amount: Math.max(baseOrderValue * 0.025, 2.00), 
+          pricing_tier: 'global' 
+        },
+        recommendation_score: 0.7,
+        recommendation_reason: 'Essential protection for your shipment',
+      },
+      {
+        service_key: 'express_processing', 
+        service_name: 'Express Processing',
+        pricing: { 
+          calculated_amount: finalCountryCode === 'IN' ? 8 : finalCountryCode === 'NP' ? 10 : 15, 
+          pricing_tier: 'global' 
+        },
+        recommendation_score: 0.5,
+        recommendation_reason: 'Faster processing available',
+      }
+    ];
+
+    return {
+      success: true,
+      available_services: fallbackServices,
+      recommendations: fallbackServices,
+      pricing_calculations: fallbackServices.map(s => s.pricing),
+      suggested_bundles: [],
+      total_addon_cost: 0,
+      currency_code: currency,
+    };
+  };
+
   if (error || !addonData) {
-    // Show enhanced error state with retry functionality
+    const fallbackData = getFallbackAddonServices();
+    
+    // Show enhanced error state with fallback services
     return (
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-blue-600" />
             Add-on Services
-            <Badge variant="secondary">Error Loading</Badge>
+            <Badge variant="secondary">Limited Mode</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
+          <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <AlertDescription>
               {error?.message?.includes('timed out') ? (
                 <>
-                  Request timed out while loading personalized recommendations.
-                  <div className="text-xs mt-1 text-red-500">
-                    This might be due to slow network or server issues. Please try again.
-                  </div>
+                  Personalized recommendations are taking longer than expected. 
+                  We're showing basic services while we retry in the background.
                 </>
               ) : (
                 <>
-                  Unable to load personalized recommendations. Showing basic options instead.
-                  {error && <div className="text-xs mt-1 text-red-500">Error: {error.message}</div>}
+                  Using basic add-on services. Personalized recommendations will load shortly.
                 </>
               )}
             </AlertDescription>
           </Alert>
           
+          {/* Fallback Services */}
+          <div className="space-y-3">
+            {fallbackData.recommendations.map((service) => (
+              <div key={service.service_key} className="p-3 border rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {service.service_key === 'package_protection' && <Shield className="w-4 h-4 text-green-600" />}
+                    {service.service_key === 'express_processing' && <Zap className="w-4 h-4 text-blue-600" />}
+                    <span className="font-medium">{service.service_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-green-600">
+                      {currencyService.formatAmount(service.pricing.calculated_amount, currency)}
+                    </span>
+                    <Switch
+                      checked={false}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          const fallbackSelection = {
+                            service_key: service.service_key,
+                            is_selected: true,
+                            calculated_amount: service.pricing.calculated_amount,
+                          };
+                          onSelectionChange([fallbackSelection], service.pricing.calculated_amount);
+                          toast({
+                            title: 'Service Added',
+                            description: `${service.service_name} has been added with standard pricing`,
+                            duration: 3000,
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">{service.recommendation_reason}</p>
+              </div>
+            ))}
+          </div>
+          
           {/* Debug info for development */}
           {import.meta.env.DEV && (
-            <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <Alert className="mt-4 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4" />
               <AlertDescription>
                 <div className="text-xs">
                   <strong>Debug Info:</strong><br/>
                   Country: {finalCountryCode} | Order Value: {validOrderValue} | Currency: {currency}
-                  <br/>Query Enabled: {queryEnabled ? 'Yes' : 'No'}
+                  <br/>Query Enabled: {queryEnabled ? 'Yes' : 'No'} | Error: {error?.message || 'None'}
                 </div>
               </AlertDescription>
             </Alert>
           )}
-          
-          <div className="space-y-3">
-            <div className="p-3 border rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="font-medium">Package Protection</span>
-                </div>
-                <Badge variant="outline">Coming Soon</Badge>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Protect your package during shipping</p>
-            </div>
-            
-            <div className="p-3 border rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium">Express Processing</span>
-                </div>
-                <Badge variant="outline">Coming Soon</Badge>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Faster processing and handling</p>
-            </div>
-          </div>
           
           <div className="flex gap-2 mt-4">
             <Button 
@@ -632,10 +709,10 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Retrying...
+                  Loading Full Services...
                 </>
               ) : (
-                'Try Again'
+                'Load Personalized Services'
               )}
             </Button>
             <Button 

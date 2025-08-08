@@ -951,9 +951,10 @@ class CurrencyService {
             .not('exchange_rate', 'is', null)
             .single();
 
-          console.log(`[CurrencyService] Shipping route query result:`, { data: shippingRoute, error: routeError });
-
-          if (!routeError && shippingRoute?.exchange_rate) {
+          // Skip shipping_routes query if it's causing 406 errors
+          if (routeError?.code === '406' || routeError?.message?.includes('Not Acceptable')) {
+            console.log(`[CurrencyService] ⚠️ Shipping routes table not accessible (406), skipping to fallback`);
+          } else if (!routeError && shippingRoute?.exchange_rate) {
             console.log(
               `[CurrencyService] ✅ Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
             );

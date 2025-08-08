@@ -85,8 +85,14 @@ class AddonServicesServiceClass {
     try {
       logger.debug(`[AddonServices] Getting recommendations for ${eligibility.country_code}, order value: ${eligibility.order_value}`);
 
-      // 1. Get all available services
-      const availableServices = await regionalPricingService.getAvailableServices();
+      // 1. Get all available services with timeout
+      const availableServicesPromise = regionalPricingService.getAvailableServices();
+      const availableServices = await Promise.race([
+        availableServicesPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout getting available services')), 3000)
+        )
+      ]);
       
       // 2. Filter services applicable to this order type
       const applicableServices = availableServices.filter(service => 
@@ -94,14 +100,21 @@ class AddonServicesServiceClass {
         service.is_active
       );
 
-      // 3. Get pricing for all applicable services
-      const pricingResult = await regionalPricingService.calculatePricing({
+      // 3. Get pricing for all applicable services with timeout
+      const pricingPromise = regionalPricingService.calculatePricing({
         service_keys: applicableServices.map(s => s.service_key),
         country_code: eligibility.country_code,
         order_value: eligibility.order_value,
         currency_code,
         use_cache: true
       });
+      
+      const pricingResult = await Promise.race([
+        pricingPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout calculating pricing')), 5000)
+        )
+      ]);
 
       if (!pricingResult.success) {
         throw new Error(pricingResult.error || 'Pricing calculation failed');

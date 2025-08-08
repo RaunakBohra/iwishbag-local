@@ -843,6 +843,29 @@ class RegionalPricingServiceClass {
   }
 
   /**
+   * Check if a country is supported for regional pricing
+   */
+  async isCountrySupported(country_code: string): Promise<boolean> {
+    if (!country_code || country_code.length !== 2) {
+      return false;
+    }
+
+    try {
+      // Check if country exists in our settings
+      const { data: countryData } = await supabase
+        .from('country_settings')
+        .select('code')
+        .eq('code', country_code.toUpperCase())
+        .single();
+
+      return !!countryData;
+    } catch (error) {
+      logger.debug(`Country ${country_code} not found in country_settings`);
+      return false;
+    }
+  }
+
+  /**
    * Clear all caches
    */
   clearCache(): void {

@@ -283,7 +283,22 @@ const CheckoutShopify: React.FC = React.memo(() => {
                   </div>
                 }>
                   <EnhancedAddonServicesSelector
-                    orderValue={items.reduce((total, item) => total + (item.quote.final_total_origincurrency || 0), 0)}
+                    orderValue={(() => {
+                      const calculatedValue = items.reduce((total, item) => {
+                        const itemValue = item.quote?.final_total_origincurrency || item.quote?.total_quote_origincurrency || 0;
+                        return total + itemValue;
+                      }, 0);
+                      console.debug('🧮 [Checkout] Order value calculation:', {
+                        itemsCount: items.length,
+                        calculatedValue,
+                        items: items.map(item => ({
+                          id: item.quote?.id,
+                          final_total: item.quote?.final_total_origincurrency,
+                          total_quote: item.quote?.total_quote_origincurrency,
+                        }))
+                      });
+                      return calculatedValue;
+                    })()}
                     currency={displayCurrency}
                     customerCountry={selectedAddress?.destination_country || user?.profile?.country}
                     customerTier="regular"
