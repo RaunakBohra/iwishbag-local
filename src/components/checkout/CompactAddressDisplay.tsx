@@ -1,17 +1,16 @@
 /**
- * CompactAddressDisplay - Single-line address display for checkout
+ * CompactAddressDisplay - Multiline address display for checkout
  * 
  * Features:
- * - Amazon/Shopify-style single-line format
- * - "Name - Address, City, Country [Change]" pattern
+ * - Amazon/Shopify-style multiline format (no truncation)
+ * - Clear hierarchy: Name, Street, City/State/Zip, Country
  * - Modal-based address selection
- * - Space-efficient design
+ * - Space-efficient but complete address visibility
  */
 
 import React, { useState } from 'react';
-import { MapPin, Edit2, Check } from 'lucide-react';
+import { MapPin, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AddressChangeModal } from '@/components/checkout/AddressChangeModal';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -54,66 +53,67 @@ export function CompactAddressDisplay({
     );
   }
 
-  // Format address as single line: "Name - Address, City, Country"
-  const formatCompactAddress = (address: Tables<'delivery_addresses'>) => {
-    const parts = [
-      address.recipient_name,
-      '-',
+  // Format address as multiline for clear readability
+  const formatMultilineAddress = (address: Tables<'delivery_addresses'>) => {
+    // Street address line (combine address_line1 and address_line2)
+    const streetAddress = [
       address.address_line1,
-      address.address_line2 && `, ${address.address_line2}`,
-      `, ${address.city}`,
-      `, ${address.state_province_region || ''}`,
-      ` ${address.postal_code || ''}`,
-      `, ${address.destination_country}`
-    ].filter(Boolean);
+      address.address_line2
+    ].filter(Boolean).join(', ');
     
-    return parts.join('').replace(/,\s*,/g, ','); // Clean up double commas
+    // City, state, postal code line
+    const cityStateZip = [
+      address.city,
+      address.state_province_region,
+      address.postal_code
+    ].filter(Boolean).join(', ');
+    
+    return {
+      name: address.recipient_name,
+      street: streetAddress,
+      cityStateZip,
+      country: address.destination_country,
+      phone: address.phone
+    };
   };
 
+  const addressLines = formatMultilineAddress(selectedAddress);
+
   return (
-    <div className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+    <div className={`p-4 rounded-lg border transition-all ${
       selectedAddress.is_default 
         ? 'border-green-300 bg-green-50' 
         : 'border-gray-200 bg-gray-50'
     }`}>
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          selectedAddress.is_default 
-            ? 'bg-green-100' 
-            : 'bg-blue-100'
-        }`}>
-          <Check className={`w-4 h-4 ${
-            selectedAddress.is_default 
-              ? 'text-green-600' 
-              : 'text-blue-600'
-          }`} />
-        </div>
+      {/* Name and Edit Button Row */}
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-semibold text-gray-900">
+          {addressLines.name}
+        </h4>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate">
-              {formatCompactAddress(selectedAddress)}
-            </span>
-          </div>
-          
-          {selectedAddress.phone && (
-            <p className="text-xs text-gray-500">
-              Phone: {selectedAddress.phone}
-            </p>
-          )}
-        </div>
+        {/* Change Button - Pencil Icon Only */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="px-2 py-1 h-auto"
+          onClick={() => setIsChangeModalOpen(true)}
+          title="Change address"
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </Button>
       </div>
 
-      {/* Change Button - Pencil Icon Only */}
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="flex-shrink-0 ml-2 px-2 py-2 h-auto"
-        onClick={() => setIsChangeModalOpen(true)}
-        title="Change address"
-      >
-        <Edit2 className="w-4 h-4" />
-      </Button>
+      {/* Address Lines */}
+      <div className="text-sm text-gray-700 space-y-1">
+        <p>{addressLines.street}</p>
+        <p>{addressLines.cityStateZip}</p>
+        <p className="font-medium">{addressLines.country}</p>
+        {addressLines.phone && (
+          <p className="text-xs text-gray-500 mt-2">
+            Phone: {addressLines.phone}
+          </p>
+        )}
+      </div>
 
       {/* Address Change Modal */}
       <AddressChangeModal

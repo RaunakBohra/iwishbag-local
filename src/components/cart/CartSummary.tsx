@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cartDesignTokens } from '@/styles/cart-design-system';
+import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -539,7 +539,7 @@ export const CartSummary = memo<CartSummaryProps>(({
           <div className="pt-6">
             <Button 
               onClick={onCheckout}
-              className={`w-full ${cartDesignTokens.components.button.primary} ${cartDesignTokens.animations.transition.all} h-12 text-base`}
+              className={`w-full ${cartDesignTokens.components.button.primary} ${animations.transition.all} h-12 text-base`}
               size="lg"
             >
               <Package className="w-5 h-5 mr-2" />

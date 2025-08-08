@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cartDesignTokens } from '@/styles/cart-design-system';
+import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 
 import { useCartItem } from '@/hooks/useCart';
 import { useCurrency } from '@/hooks/unified';
@@ -239,7 +239,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
 
   // Full view for cart page
   return (
-    <Card className={`${cartDesignTokens.components.card.interactive} ${cartDesignTokens.animations.transition.all} ${className}`}>
+    <Card className={`${cartDesignTokens.components.card.interactive} ${animations.transition.all} ${className}`}>
       <CardContent className={cartDesignTokens.spacing.component.comfortable}>
         <div className={cartDesignTokens.layout.flex.itemRow}>
           {/* Product Image */}
@@ -268,7 +268,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                       href={itemDetails.productUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`${cartDesignTokens.colors.interactive.primary} ${cartDesignTokens.layout.flex.itemRow} ${cartDesignTokens.animations.transition.colors}`}
+                      className={`${cartDesignTokens.colors.interactive.primary} ${cartDesignTokens.layout.flex.itemRow} ${animations.transition.colors}`}
                     >
                       {itemDetails.displayName}
                       <ExternalLink className="w-4 h-4" />
