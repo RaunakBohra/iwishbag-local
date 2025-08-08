@@ -120,13 +120,16 @@ export const WeightPolicySection: React.FC<WeightPolicySectionProps> = ({
               </p>
             </div>
             <Button 
-              variant="ghost" 
+              variant={hasReadPolicy ? "ghost" : "default"}
               size="sm"
               onClick={handleReadPolicy}
-              className="text-amber-700 hover:bg-amber-100"
+              className={hasReadPolicy ? 
+                "text-amber-700 hover:bg-amber-100" : 
+                "bg-amber-600 hover:bg-amber-700 text-white animate-pulse"
+              }
             >
               <Eye className="w-4 h-4 mr-1" />
-              {hasReadPolicy ? 'Review' : 'Read Policy'}
+              {hasReadPolicy ? 'Review Policy' : 'Read Policy First'}
             </Button>
           </div>
         </CardHeader>
@@ -237,22 +240,27 @@ export const WeightPolicySection: React.FC<WeightPolicySectionProps> = ({
                 id="weight-policy-acceptance"
                 checked={isAccepted}
                 onCheckedChange={(checked) => onPolicyAccepted(checked as boolean)}
+                disabled={!hasReadPolicy}
                 className="mt-1"
               />
               <div className="flex-1">
                 <label 
                   htmlFor="weight-policy-acceptance"
-                  className="text-sm font-medium text-gray-900 cursor-pointer"
+                  className={`text-sm font-medium cursor-pointer ${
+                    hasReadPolicy ? 'text-gray-900' : 'text-gray-500'
+                  }`}
                 >
                   I understand and accept the Weight & Pricing Policy
                 </label>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className={`text-xs mt-1 ${
+                  hasReadPolicy ? 'text-gray-600' : 'text-gray-400'
+                }`}>
                   By checking this box, you acknowledge that actual weights may differ from estimates 
                   and agree to pay any additional shipping/customs costs that may arise.
                 </p>
                 {!hasReadPolicy && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Please read the complete policy above before accepting.
+                  <p className="text-xs text-red-600 mt-1 font-medium">
+                    👆 Please click "Read Policy" above to enable acceptance checkbox.
                   </p>
                 )}
               </div>

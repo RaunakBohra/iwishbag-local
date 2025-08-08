@@ -34,7 +34,7 @@ import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { cartDesignTokens } from '@/styles/cart-design-system';
+import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 
 // Import existing components we'll integrate
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
@@ -558,7 +558,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
               <Button 
                 onClick={onPlaceOrder}
                 disabled={!canPlaceOrder || isProcessingOrder}
-                className={`w-full ${cartDesignTokens.components.button.primary} ${cartDesignTokens.animations.transition.all} h-12 text-base`}
+                className={`w-full ${cartDesignTokens.components.button.primary} ${animations.transition.all} h-12 text-base`}
                 size="lg"
               >
                 {isProcessingOrder ? (

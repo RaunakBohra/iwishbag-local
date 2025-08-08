@@ -28,7 +28,8 @@ import {
   Tag,
   Zap,
   X,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
@@ -1327,9 +1328,19 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         className="w-full h-12 text-base font-medium"
                         onClick={handleApprove}
                         disabled={!weightPolicyAccepted}
+                        variant={weightPolicyAccepted ? "default" : "secondary"}
                       >
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        {weightPolicyAccepted ? 'Approve Quote' : 'Accept Policy First'}
+                        {weightPolicyAccepted ? (
+                          <>
+                            <CheckCircle className="w-5 h-5 mr-2" />
+                            Approve Quote
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="w-5 h-5 mr-2" />
+                            Accept Weight Policy First
+                          </>
+                        )}
                       </Button>
                     )}
 
