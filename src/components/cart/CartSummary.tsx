@@ -444,93 +444,62 @@ export const CartSummary = memo<CartSummaryProps>(({
   } = calculations;
 
   return (
-    <Card className={`${className} sticky top-4`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            Cart Summary
+    <Card className={`${className} sticky top-4 shadow-sm border-gray-100`}>
+      <CardHeader className="pb-4 px-4 sm:px-6">
+        <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">
+          Order Summary
+          <span className="text-sm font-normal text-gray-500 ml-2">
+            ({items.length} {items.length === 1 ? 'item' : 'items'})
           </span>
-          <div className="flex items-center gap-2">
-            <SimpleCartSyncIndicator 
-              syncStatus={syncStatus} 
-              showLabel={false} 
-            />
-            <Badge variant="secondary" className="text-xs">
-              {items.length} {items.length === 1 ? 'item' : 'items'}
-            </Badge>
-          </div>
         </CardTitle>
-        
-        {/* Cart status info for non-compact view */}
-        {!compact && (
-          <div className="text-xs text-gray-500 mt-1 space-y-1">
-            {!user && (
-              <div>Sign in to sync cart across devices</div>
-            )}
-            {syncStatus !== 'synced' && syncStatus !== 'offline' && (
-              <div className="text-orange-600">
-                Cart is {syncStatus}
-              </div>
-            )}
-            <SimpleCartSyncIndicator 
-              syncStatus={syncStatus} 
-              showLabel={false} 
-              className="inline-flex"
-            />
-          </div>
-        )}
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4 px-4 sm:px-6 pb-6">
         {/* Subtotal */}
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Subtotal</span>
-          <span className="font-medium">{subtotalFormatted}</span>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-gray-700">Subtotal</span>
+          <span className="font-medium text-gray-900">{subtotalFormatted}</span>
         </div>
 
-
-        {/* Insurance Option */}
+        {/* Insurance Option - Simplified */}
         {showInsuranceOption && calculations && (
-          <div className="space-y-2">
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="include-insurance"
-                checked={includeInsurance}
-                onCheckedChange={(checked) => handleInsuranceToggle(checked === true)}
-                disabled={insuranceLoading}
-                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-              />
-              <Label 
-                htmlFor="include-insurance"
-                className="text-sm text-gray-700 flex items-center gap-1 cursor-pointer"
-              >
-                <Shield className="w-3 h-3" />
-                Package Insurance ({(calculations.insuranceRate * 100).toFixed(1)}%)
-              </Label>
-            </div>
-            
-            {includeInsurance && (
-              <div className="flex justify-between items-center ml-6">
-                <span className="text-sm text-gray-500">Insurance Coverage</span>
-                <span className="font-medium text-blue-600">
+          <div className="py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="include-insurance"
+                  checked={includeInsurance}
+                  onCheckedChange={(checked) => handleInsuranceToggle(checked === true)}
+                  disabled={insuranceLoading}
+                  className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                />
+                <Label 
+                  htmlFor="include-insurance"
+                  className="text-sm text-gray-700 cursor-pointer flex items-center gap-2"
+                >
+                  <Shield className="w-4 h-4 text-gray-600" />
+                  Package Protection
+                </Label>
+              </div>
+              {includeInsurance && (
+                <span className="font-medium text-gray-900">
                   {calculations.insuranceFormatted}
                 </span>
-              </div>
-            )}
-
+              )}
+            </div>
+            
             {insuranceLoading && (
-              <div className="flex items-center gap-2 text-xs text-gray-500 ml-6">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                Updating insurance coverage...
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-2 ml-10">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
+                Updating...
               </div>
             )}
           </div>
         )}
 
-        {/* Coupon Input */}
+        {/* Coupon Input - Clean Design */}
         {calculations && (
-          <div className="space-y-2">
+          <div className="py-2 border-t border-gray-100">
             <CouponCodeInput
               customerId={user?.id}
               quoteTotal={calculations.subtotal + calculations.insurance}
@@ -538,24 +507,24 @@ export const CartSummary = memo<CartSummaryProps>(({
               countryCode={items.length > 0 ? items[0].quote.destination_country : undefined}
               componentBreakdown={{
                 shipping_cost: calculations.estimatedShipping,
-                handling_fee: 0, // No handling fee in cart
+                handling_fee: 0,
                 insurance_amount: calculations.insurance,
               }}
               onDiscountApplied={handleDiscountApplied}
               onDiscountRemoved={handleDiscountRemoved}
               appliedCodes={appliedCoupons.map(c => c.code)}
               disabled={calculationLoading || isLoading}
-              hideQuoteTotal={false}
+              hideQuoteTotal={true}
             />
           </div>
         )}
 
         {/* Discount */}
         {discount > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Percent className="w-3 h-3" />
-              Discount
+          <div className="flex justify-between items-center py-2">
+            <span className="text-gray-700 flex items-center gap-2">
+              <Percent className="w-4 h-4 text-green-600" />
+              Discount Applied
             </span>
             <span className="font-medium text-green-600">
               -{discountFormatted}
@@ -563,54 +532,36 @@ export const CartSummary = memo<CartSummaryProps>(({
           </div>
         )}
 
-        <Separator />
-
-        {/* Total */}
-        <div className="flex justify-between items-center">
-          <span className="text-base font-semibold">Total</span>
-          <span className="text-xl font-bold text-green-600">
-            {totalFormatted}
-          </span>
+        {/* Total Section - Enhanced & Responsive */}
+        <div className="border-t border-gray-200 pt-4 mt-6">
+          <div className="flex justify-between items-center">
+            <span className="text-lg sm:text-xl font-semibold text-gray-900">Total</span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-900">
+              {totalFormatted}
+            </span>
+          </div>
         </div>
 
-        {/* Disclaimers for compact view */}
-        {compact && (showShippingEstimate || showTaxEstimate || showInsuranceOption) && (
-          <p className="text-xs text-gray-500 mt-2">
-            * Shipping, tax, and insurance are estimates
-          </p>
-        )}
-
-        {/* Checkout Button */}
+        {/* Checkout Button - Enhanced & Responsive */}
         {onCheckout && (
-          <Button 
-            onClick={onCheckout}
-            className="w-full mt-4"
-            size={compact ? 'sm' : 'default'}
-          >
-            <Package className="w-4 h-4 mr-2" />
-            Proceed to Checkout
-          </Button>
+          <div className="pt-6">
+            <Button 
+              onClick={onCheckout}
+              className="w-full h-12 sm:h-14 text-base sm:text-lg font-medium bg-green-600 hover:bg-green-700 text-white transition-colors duration-200 shadow-sm hover:shadow-md"
+              size="lg"
+            >
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              Proceed to Checkout
+            </Button>
+          </div>
         )}
 
-        {/* Additional Info for non-compact view */}
-        {!compact && (
-          <div className="pt-3 border-t space-y-2">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <AlertCircle className="w-3 h-3" />
-              <span>Shipping, tax, and insurance calculated at checkout</span>
-            </div>
-            
-            {showShippingEstimate && (
-              <div className="text-xs text-gray-500">
-                Shipping rates vary by destination and weight
-              </div>
-            )}
-            
-            {showInsuranceOption && (
-              <div className="text-xs text-gray-500">
-                Insurance covers loss, theft, and damage during transit
-              </div>
-            )}
+        {/* Minimal Additional Info */}
+        {!compact && !onCheckout && (
+          <div className="pt-3 text-center">
+            <p className="text-xs text-gray-500">
+              Final shipping and taxes calculated at checkout
+            </p>
           </div>
         )}
       </CardContent>

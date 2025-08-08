@@ -305,7 +305,8 @@
       "Bash(aws dynamodb scan:*)",
       "WebFetch(domain:www.amazon.com)",
       "Bash(./replace_quotes_table.sh:*)",
-      "WebFetch(domain:shopify.dev)"
+      "WebFetch(domain:shopify.dev)",
+      "WebFetch(domain:www.shopify.com)"
     ],
     "deny": []
   }
