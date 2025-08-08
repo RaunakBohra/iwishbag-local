@@ -17,7 +17,6 @@ import {
   ArrowLeft,
   AlertCircle,
   Loader2,
-  Package,
   CreditCard,
   Lock,
   ShoppingBag,
@@ -27,7 +26,6 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -42,8 +40,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
-import { CheckoutAddressDisplay } from '@/components/checkout/CheckoutAddressDisplay';
-import { CartSummary } from '@/components/cart/CartSummary';
+import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
+import { CompactOrderItems } from '@/components/checkout/CompactOrderItems';
+import { ProfessionalOrderSummary } from '@/components/checkout/ProfessionalOrderSummary';
 import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
 
@@ -213,7 +212,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CheckoutAddressDisplay
+                <CompactAddressDisplay
                   selectedAddress={selectedAddress}
                   onAddressChange={handleAddressSelect}
                   isLoading={addressesLoading}
@@ -280,46 +279,16 @@ const CheckoutShopify: React.FC = React.memo(() => {
           {/* Right Side: Order Summary */}
           <div className="space-y-6">
             <div className="lg:sticky lg:top-4">
-              {/* Cart Items Preview */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    Order Items ({items.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 max-h-60 overflow-y-auto">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-sm">Quote #{item.quote.display_id || item.quote.id.slice(0, 8)}</h4>
-                          <p className="text-xs text-gray-600">
-                            {item.quote.items?.length || 0} items • {item.quote.origin_country} → {item.quote.destination_country}
-                          </p>
-                          <Badge size="sm" variant={item.quote.status === 'approved' ? 'default' : 'secondary'}>
-                            {item.quote.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">
-                          ${(item.quote.final_total_origincurrency || 0).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              {/* Compact Order Items */}
+              <div className="mb-6">
+                <CompactOrderItems
+                  items={items}
+                  showDetails={false}
+                />
+              </div>
 
-              {/* Order Summary - Reuse CartSummary component */}
-              <CartSummary
-                onCheckout={() => {}} // No checkout button needed in checkout page
-                showShippingEstimate={false}
-                showTaxEstimate={false}
+              {/* Professional Order Summary */}
+              <ProfessionalOrderSummary
                 showInsuranceOption={true}
                 compact={false}
                 className="order-summary"

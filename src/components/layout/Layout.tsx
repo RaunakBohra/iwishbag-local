@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Header from '@/components/layout/Header';
+import { SimpleHeader } from '@/components/layout/SimpleHeader';
 import Footer from '@/components/layout/Footer';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { CommandPalette } from '@/components/shared/CommandPalette';
@@ -14,7 +14,7 @@ const Layout = () => {
   return (
     <SidebarProvider>
       <div className="flex flex-col min-h-screen w-full bg-white">
-        <Header />
+        <SimpleHeader />
         <main className="flex-grow bg-white">
           <Outlet />
         </main>

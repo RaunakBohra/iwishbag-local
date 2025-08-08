@@ -306,7 +306,8 @@
       "WebFetch(domain:www.amazon.com)",
       "Bash(./replace_quotes_table.sh:*)",
       "WebFetch(domain:shopify.dev)",
-      "WebFetch(domain:www.shopify.com)"
+      "WebFetch(domain:www.shopify.com)",
+      "WebFetch(domain:www.amazon.com)"
     ],
     "deny": []
   }
