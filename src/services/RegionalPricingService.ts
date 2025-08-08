@@ -289,14 +289,14 @@ class RegionalPricingServiceClass {
         normalizedCountry = 'US';
       }
 
-      logger.debug(`[RegionalPricing] Calculating pricing for ${request.service_keys?.length || 0} services, country: ${normalizedCountry}`);
-
       const calculations: PricingCalculation[] = [];
       const currency = request.currency_code || 'USD';
       const serviceKeys = request.service_keys || [];
 
+      logger.debug(`[RegionalPricing] Calculating pricing for ${serviceKeys.length} services, country: ${normalizedCountry}`);
+
       // Process each service
-      for (const service_key of request.service_keys) {
+      for (const service_key of serviceKeys) {
         totalQueries++;
         const calculation = await this.calculateServicePricing(
           service_key,

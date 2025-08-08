@@ -569,6 +569,19 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
             </div>
           )}
 
+          {/* Addon Services Display */}
+          {totalAddonCost > 0 && (
+            <div className={cartDesignTokens.layout.flex.spaceBetween}>
+              <span className={`${cartDesignTokens.typography.body.medium} ${cartDesignTokens.layout.flex.itemRow}`}>
+                <Package className="w-4 h-4 text-blue-600" />
+                Add-on Services ({selectedAddonServices.filter(s => s.is_selected).length})
+              </span>
+              <span className={cartDesignTokens.typography.price.secondary}>
+                {calculations?.addonsFormatted}
+              </span>
+            </div>
+          )}
+
           {/* Discount Display */}
           {discount > 0 && (
             <div className={cartDesignTokens.layout.flex.spaceBetween}>
