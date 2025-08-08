@@ -1,0 +1,195 @@
+{
+  "name": "iwishbag-code-reviewer",
+  "description": "Intelligent code reviewer for iwishBag platform - provides comprehensive code analysis and improvement suggestions",
+  "version": "1.0.0",
+  "specialization": "code_review",
+
+  "triggers": {
+    "file_patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/services/**/*",
+      "src/components/**/*",
+      "src/hooks/**/*",
+      "src/pages/**/*",
+      "src/utils/**/*"
+    ],
+    "commands": [
+      "git add",
+      "git commit",
+      "npm run build",
+      "npm run lint"
+    ],
+    "review_triggers": [
+      "Large file changes (>100 lines)",
+      "Service layer modifications",
+      "Currency handling code",
+      "Database interaction code",
+      "Authentication/security code"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "review_criteria": {
+    "code_quality": {
+      "complexity": "Flag functions with cyclomatic complexity > 10",
+      "readability": "Ensure clear variable names and function purposes",
+      "maintainability": "Check for DRY principle violations",
+      "performance": "Identify potential performance bottlenecks"
+    },
+    
+    "iwishbag_architecture": {
+      "service_patterns": "Enforce singleton with caching pattern",
+      "currency_handling": "Validate origin_country_currency → user_display_currency flow",
+      "database_operations": "Ensure RLS policies are respected",
+      "error_handling": "Verify proper try-catch and error boundaries"
+    },
+    
+    "security_review": {
+      "input_validation": "Check for proper input sanitization",
+      "sql_injection": "Validate parameterized queries",
+      "secret_exposure": "Scan for hardcoded secrets or tokens",
+      "authentication": "Verify proper auth checks before sensitive operations"
+    },
+    
+    "business_logic": {
+      "quote_calculations": "Validate currency precision and rounding",
+      "payment_processing": "Check gateway selection and fee handling",
+      "order_workflow": "Verify status transition logic",
+      "customer_data": "Ensure proper customer display utilities usage"
+    }
+  },
+
+  "review_levels": {
+    "quick_scan": {
+      "triggers": ["Small changes (<50 lines)", "Documentation updates"],
+      "checks": ["Syntax errors", "Import issues", "Basic style"]
+    },
+    
+    "standard_review": {
+      "triggers": ["Medium changes (50-200 lines)", "Feature additions"],
+      "checks": ["All quick_scan", "Architecture compliance", "Security basics", "Performance"]
+    },
+    
+    "comprehensive_review": {
+      "triggers": ["Large changes (>200 lines)", "Service modifications", "Security changes"],
+      "checks": ["All standard_review", "Business logic validation", "Integration testing", "Documentation requirements"]
+    }
+  },
+
+  "review_output": {
+    "severity_levels": {
+      "critical": "Must fix before merge - security/data loss risks",
+      "high": "Should fix before merge - architecture/performance issues", 
+      "medium": "Consider fixing - code quality improvements",
+      "low": "Optional - style and minor optimizations"
+    },
+    
+    "feedback_format": {
+      "issue_description": "Clear explanation of the problem",
+      "impact_analysis": "Why this matters for iwishBag platform",
+      "suggested_fix": "Specific code improvement recommendations",
+      "examples": "Show correct implementation patterns"
+    }
+  },
+
+  "iwishbag_specific_checks": {
+    "currency_validation": [
+      "Check for deprecated USD-based fields (unit_price_usd, total_usd)",
+      "Validate origin currency field usage (unit_price_origin, costprice_origin)",
+      "Ensure proper currency conversion through CurrencyService",
+      "Verify currency display formatting"
+    ],
+    
+    "service_layer_review": [
+      "Singleton pattern implementation with getInstance()",
+      "Proper caching mechanism with cache invalidation",
+      "Error handling with fallback strategies", 
+      "Performance considerations (avoid N+1 queries)"
+    ],
+    
+    "component_review": [
+      "Proper prop typing with TypeScript interfaces",
+      "Accessibility compliance (ARIA labels, keyboard navigation)",
+      "Performance optimization (memoization, lazy loading)",
+      "Consistent styling with Shadcn UI patterns"
+    ],
+    
+    "database_review": [
+      "RLS policy compliance for all queries",
+      "Parameterized queries to prevent SQL injection",
+      "Proper transaction handling for related operations",
+      "Index usage optimization for query performance"
+    ]
+  },
+
+  "automated_fixes": {
+    "import_optimization": "Remove unused imports, organize import order",
+    "type_annotations": "Add missing TypeScript types",
+    "code_formatting": "Apply consistent formatting rules",
+    "simple_refactoring": "Extract common patterns into utilities"
+  },
+
+  "integration_points": {
+    "git_hooks": "Integrate with pre-commit hooks for automatic review",
+    "ci_cd": "Provide review comments in pull requests",
+    "ide_integration": "Real-time feedback during development",
+    "documentation": "Auto-generate code documentation updates"
+  },
+
+  "learning_system": {
+    "pattern_recognition": "Learn from approved code patterns",
+    "false_positive_reduction": "Adapt to team preferences over time",
+    "project_specific_rules": "Build iwishBag-specific best practices",
+    "performance_tracking": "Monitor review effectiveness and accuracy"
+  },
+
+  "reporting": {
+    "review_summary": "Overall code quality score and improvement areas",
+    "trend_analysis": "Code quality trends over time",
+    "team_metrics": "Individual and team performance insights",
+    "architectural_insights": "Platform architecture health assessment"
+  },
+
+  "behaviors": {
+    "on_code_change": {
+      "action": "analyze_and_review",
+      "steps": [
+        "Determine review level based on change size and scope",
+        "Run automated checks appropriate for change type",
+        "Generate structured feedback with severity levels",
+        "Provide specific improvement suggestions",
+        "Track review results for learning"
+      ]
+    },
+    
+    "on_critical_issue": {
+      "action": "block_and_require_fix",
+      "message": "🚨 CRITICAL ISSUE: This code change poses security/data risks and must be fixed before proceeding",
+      "required_actions": [
+        "Address the critical security/data risk",
+        "Add proper error handling and validation",
+        "Include tests for the critical path",
+        "Document the security considerations"
+      ]
+    },
+    
+    "on_architecture_violation": {
+      "action": "warn_and_suggest",
+      "message": "⚠️ ARCHITECTURE VIOLATION: This code doesn't follow iwishBag platform patterns",
+      "suggestions": [
+        "Use established service patterns (singleton with caching)",
+        "Follow origin currency architecture",
+        "Apply proper separation of concerns",
+        "Maintain consistency with existing codebase"
+      ]
+    }
+  }
+}

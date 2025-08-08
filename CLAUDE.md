@@ -141,12 +141,14 @@ This ensures:
 ### Currency System
 **Central service**: `CurrencyService.ts` (5-min cache)
 - Source: `country_settings` table
-- All storage in USD, display in user currency
+- All storage in origin country currency, display in user currency
+- Architecture: Origin country currency (base) → User display currency
 - Key functions: `getCurrency()`, `formatAmount()`, `isValidPaymentAmount()`
 
 ### Quote Calculator
 **Engine**: `QuoteCalculatorService.ts` (15-min cache)
-- USD base → currency conversion for display
+- Origin country currency base → currency conversion for display
+- Example: Items from India stored in INR, displayed in NPR for Nepal customers
 - Customs calculation: max 50%, handles basis points/percentages
 - Admin: dual currency, Customer: single currency
 
@@ -220,10 +222,12 @@ npm run lint             # ESLint validation
 - ❌ Mix currencies in calculations
 - ❌ Create custom customer display logic
 - ❌ Use `npm run db:reset`
+- ❌ Use deprecated USD-based fields (`unit_price_usd`, `total_usd`, `costprice_total_usd`)
 
 ### ALWAYS:
 - ✅ Use core services for all operations
-- ✅ Store in USD but quotes have origin country currency as well, display in user currency
+- ✅ Store in origin country currency, display in user currency
+- ✅ Use origin currency fields: `unit_price_origin`, `costprice_origin`, `total_quote_origincurrency`
 - ✅ Validate status transitions
 - ✅ Check RLS policies for data access
 - ✅ Test both admin and customer views
@@ -234,7 +238,7 @@ npm run lint             # ESLint validation
 - **RLS**: User isolation with admin override
 - **JSONB**: Flexible data in `calculation_data`, `customer_data`
 - **Caching**: 5-15 minute durations for performance
-- **Storage**: USD base currency for all amounts
+- **Storage**: Origin country currency for all amounts (INR for India, USD for US, NPR for Nepal)
 
 ## Performance Features
 - **Multi-layer caching**: Currency (5min), calculations (15min), React Query
@@ -251,6 +255,7 @@ npm run lint             # ESLint validation
 
 ## Architecture Patterns
 - **Services**: Singleton with caching
-- **Data Flow**: Database (USD) → Service → Formatter → UI (User Currency)
+- **Data Flow**: Database (Origin Currency) → Service → Formatter → UI (User Currency)
+- **Currency Flow**: Origin Country Currency → Exchange Rate Conversion → User Display Currency
 - **State**: Zustand (client) + React Query (server) + localStorage
 - **Auth**: Supabase → RLS → Roles → Components

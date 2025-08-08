@@ -9,6 +9,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
+import { getOriginCurrency } from '@/utils/originCurrency';
 import type {
   CartItem,
   CartSyncStatus,
@@ -49,7 +50,15 @@ const isOnline = (): boolean => {
   return navigator.onLine;
 };
 
-// Enhanced store state
+// Cart history snapshot for undo/redo
+interface CartSnapshot {
+  items: CartItem[];
+  timestamp: Date;
+  operation: string;
+  operationData?: any;
+}
+
+// Enhanced store state with undo/redo
 interface SimpleCartStore {
   // State
   items: CartItem[];
@@ -60,6 +69,12 @@ interface SimpleCartStore {
   session: CartSession | null;
   isOnline: boolean;
   recoveredFromSession: boolean;
+  
+  // Undo/Redo state
+  history: CartSnapshot[];
+  historyIndex: number;
+  maxHistorySize: number;
+  lastOperation: string | null;
   
   // Actions
   initialize: () => Promise<void>;
@@ -78,6 +93,21 @@ interface SimpleCartStore {
   getItem: (quoteId: string) => CartItem | undefined;
   getTotalCount: () => number;
   getTotalValue: () => number;
+  
+  // Undo/Redo actions
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  
+  // History management
+  saveSnapshot: (operation: string, operationData?: any) => void;
+  clearHistory: () => void;
+  getHistoryInfo: () => { canUndo: boolean; canRedo: boolean; lastOperation: string | null };
+  
+  // Debug utilities
+  debugCartState: () => void;
+  forceSync: () => Promise<void>;
   // PHASE 2: New currency-aware method
   getTotalValueWithCurrency: () => {
     totalsByCurrency: Record<string, number>;
@@ -101,6 +131,12 @@ export const useCartStore = create<SimpleCartStore>()(
     session: null,
     isOnline: isOnline(),
     recoveredFromSession: false,
+    
+    // Undo/Redo initial state
+    history: [],
+    historyIndex: -1,
+    maxHistorySize: 20,
+    lastOperation: null,
 
     // Create cart session
     createSession: () => {
@@ -178,21 +214,18 @@ export const useCartStore = create<SimpleCartStore>()(
           session = get().createSession();
         }
 
-        // Validate and restore items with currency fixes
-        const validatedItems = await Promise.all(items.map(async (item) => {
-          const { detectQuoteCurrency } = await import('@/utils/quoteCurrency');
-          const currencyValidation = detectQuoteCurrency(item.quote);
-          
+        // Restore items with origin currency (simplified)
+        const validatedItems = items.map((item) => {
           return {
             ...item,
             quote: {
-              ...item.quote,
-              customer_currency: currencyValidation.detectedCurrency
+              ...item.quote
+              // No currency modification needed - use origin currency from DB
             },
             addedAt: new Date(item.addedAt),
             lastUpdated: new Date(item.lastUpdated)
           };
-        }));
+        });
 
         set(prev => ({ 
           ...prev, 
@@ -274,24 +307,23 @@ export const useCartStore = create<SimpleCartStore>()(
           currentUserId: user?.id || null 
         }));
 
-        // 3. Try to restore from localStorage first
-        const restored = await get().restoreFromLocalStorage();
-        
-        if (restored) {
-          console.log('[CART STORE] Successfully recovered cart from localStorage');
-          set(prev => ({ 
-            ...prev, 
-            syncStatus: navigator.onLine ? (user ? 'synced' : 'guest') : 'offline'
-          }));
-        } else if (user && navigator.onLine) {
-          // 4. Load from database if online and authenticated
-          console.log('[CART STORE] Loading cart from database...');
+        // 3. Always sync with server if user is authenticated and online
+        if (user && navigator.onLine) {
+          console.log('[CART STORE] Loading cart from database (ignoring localStorage to ensure fresh state)...');
           await get().syncWithServer();
         } else {
-          console.log('[CART STORE] Starting with empty cart');
+          // 4. Try to restore from localStorage only if user is offline/guest
+          const restored = await get().restoreFromLocalStorage();
+          
+          if (restored) {
+            console.log('[CART STORE] Successfully recovered cart from localStorage (offline mode)');
+          } else {
+            console.log('[CART STORE] Starting with empty cart');
+          }
+          
           set(prev => ({ 
             ...prev, 
-            syncStatus: user ? (navigator.onLine ? 'synced' : 'offline') : 'guest' 
+            syncStatus: user ? 'offline' : 'guest'
           }));
         }
 
@@ -332,6 +364,215 @@ export const useCartStore = create<SimpleCartStore>()(
           syncStatus: 'error'
         }));
       }
+    },
+
+    // Save snapshot for undo/redo
+    saveSnapshot: (operation: string, operationData?: any) => {
+      const state = get();
+      console.log(`[CART STORE] Saving snapshot for operation: ${operation}`);
+      
+      const snapshot: CartSnapshot = {
+        items: JSON.parse(JSON.stringify(state.items)), // Deep copy
+        timestamp: new Date(),
+        operation,
+        operationData
+      };
+      
+      set(prev => {
+        // Remove any redo history if we're not at the end
+        const newHistory = prev.historyIndex === prev.history.length - 1 
+          ? [...prev.history]
+          : prev.history.slice(0, prev.historyIndex + 1);
+        
+        // Add new snapshot
+        newHistory.push(snapshot);
+        
+        // Limit history size
+        if (newHistory.length > prev.maxHistorySize) {
+          newHistory.shift();
+        }
+        
+        return {
+          ...prev,
+          history: newHistory,
+          historyIndex: newHistory.length - 1,
+          lastOperation: operation
+        };
+      });
+    },
+
+    // Undo/Redo utilities
+    canUndo: () => {
+      const state = get();
+      return state.historyIndex > 0;
+    },
+
+    canRedo: () => {
+      const state = get();
+      return state.historyIndex < state.history.length - 1;
+    },
+
+    // Undo operation
+    undo: async () => {
+      const state = get();
+      console.log('[CART STORE] Undo operation triggered');
+      
+      if (!state.canUndo()) {
+        console.log('[CART STORE] Cannot undo - no history available');
+        return;
+      }
+
+      try {
+        const previousSnapshot = state.history[state.historyIndex - 1];
+        console.log(`[CART STORE] Undoing to snapshot: ${previousSnapshot.operation}`);
+        
+        // Update state to previous snapshot
+        set(prev => ({
+          ...prev,
+          items: JSON.parse(JSON.stringify(previousSnapshot.items)), // Deep copy
+          historyIndex: prev.historyIndex - 1,
+          lastOperation: `undo_${previousSnapshot.operation}`
+        }));
+
+        // Sync database state to match the undo
+        const itemIds = previousSnapshot.items.map(item => item.id);
+        const currentItemIds = state.items.map(item => item.id);
+        
+        // Items that were removed by undo (need to set in_cart = false)
+        const removedItems = currentItemIds.filter(id => !itemIds.includes(id));
+        
+        // Items that were added by undo (need to set in_cart = true)
+        const addedItems = itemIds.filter(id => !currentItemIds.includes(id));
+
+        if (removedItems.length > 0) {
+          const { error: removeError } = await supabase
+            .from('quotes_v2')
+            .update({ in_cart: false })
+            .in('id', removedItems);
+            
+          if (removeError) {
+            console.error('[CART STORE] Failed to sync removed items during undo:', removeError);
+          }
+        }
+
+        if (addedItems.length > 0) {
+          const { error: addError } = await supabase
+            .from('quotes_v2')
+            .update({ in_cart: true })
+            .in('id', addedItems);
+            
+          if (addError) {
+            console.error('[CART STORE] Failed to sync added items during undo:', addError);
+          }
+        }
+
+        console.log('[CART STORE] Undo completed successfully');
+        logger.info('Cart undo operation completed', {
+          previousOperation: previousSnapshot.operation,
+          itemsRemoved: removedItems.length,
+          itemsAdded: addedItems.length
+        });
+        
+        // Auto-save to localStorage
+        get().saveToLocalStorage();
+        
+      } catch (error) {
+        console.error('[CART STORE] Undo operation failed:', error);
+        logger.error('Cart undo operation failed', error);
+        throw error;
+      }
+    },
+
+    // Redo operation
+    redo: async () => {
+      const state = get();
+      console.log('[CART STORE] Redo operation triggered');
+      
+      if (!state.canRedo()) {
+        console.log('[CART STORE] Cannot redo - no future history available');
+        return;
+      }
+
+      try {
+        const nextSnapshot = state.history[state.historyIndex + 1];
+        console.log(`[CART STORE] Redoing to snapshot: ${nextSnapshot.operation}`);
+        
+        // Update state to next snapshot
+        set(prev => ({
+          ...prev,
+          items: JSON.parse(JSON.stringify(nextSnapshot.items)), // Deep copy
+          historyIndex: prev.historyIndex + 1,
+          lastOperation: `redo_${nextSnapshot.operation}`
+        }));
+
+        // Sync database state to match the redo
+        const itemIds = nextSnapshot.items.map(item => item.id);
+        const currentItemIds = state.items.map(item => item.id);
+        
+        // Items that were removed by redo (need to set in_cart = false)
+        const removedItems = currentItemIds.filter(id => !itemIds.includes(id));
+        
+        // Items that were added by redo (need to set in_cart = true)
+        const addedItems = itemIds.filter(id => !currentItemIds.includes(id));
+
+        if (removedItems.length > 0) {
+          const { error: removeError } = await supabase
+            .from('quotes_v2')
+            .update({ in_cart: false })
+            .in('id', removedItems);
+            
+          if (removeError) {
+            console.error('[CART STORE] Failed to sync removed items during redo:', removeError);
+          }
+        }
+
+        if (addedItems.length > 0) {
+          const { error: addError } = await supabase
+            .from('quotes_v2')
+            .update({ in_cart: true })
+            .in('id', addedItems);
+            
+          if (addError) {
+            console.error('[CART STORE] Failed to sync added items during redo:', addError);
+          }
+        }
+
+        console.log('[CART STORE] Redo completed successfully');
+        logger.info('Cart redo operation completed', {
+          nextOperation: nextSnapshot.operation,
+          itemsRemoved: removedItems.length,
+          itemsAdded: addedItems.length
+        });
+        
+        // Auto-save to localStorage
+        get().saveToLocalStorage();
+        
+      } catch (error) {
+        console.error('[CART STORE] Redo operation failed:', error);
+        logger.error('Cart redo operation failed', error);
+        throw error;
+      }
+    },
+
+    // Clear history
+    clearHistory: () => {
+      console.log('[CART STORE] Clearing undo/redo history');
+      set(prev => ({
+        ...prev,
+        history: [],
+        historyIndex: -1,
+        lastOperation: null
+      }));
+    },
+
+    // Get history info
+    getHistoryInfo: () => {
+      const state = get();
+      return {
+        canUndo: state.canUndo(),
+        canRedo: state.canRedo(),
+        lastOperation: state.lastOperation
+      };
     },
 
     // Add item with localStorage auto-save
@@ -385,77 +626,34 @@ export const useCartStore = create<SimpleCartStore>()(
           });
         }
 
-        // PHASE 2 FIX: Smart currency detection and validation (enhanced)
-        console.log('[CART STORE] Validating quote currency...');
-        const { detectQuoteCurrency, shouldBlockQuoteFromCart, logCurrencyDetection } = 
-          await import('@/utils/quoteCurrency');
-        
-        // Log currency detection for debugging
-        logCurrencyDetection(quote, 'ADD_TO_CART');
-        
-        // Double-check blocking conditions (redundant but ensures safety)
-        const blockCheck = shouldBlockQuoteFromCart(quote);
-        if (blockCheck.blocked) {
-          console.error('[CART STORE] Quote blocked from cart:', blockCheck.reason);
-          throw new Error(`Cannot add to cart: ${blockCheck.reason}`);
-        }
-
-        // Get the correct currency for this quote
-        const currencyValidation = detectQuoteCurrency(quote);
-        const safeCurrency = currencyValidation.detectedCurrency;
-        
-        console.log('[CART STORE] Currency validation result:', {
-          originalCurrency: quote.customer_currency,
-          detectedCurrency: safeCurrency,
-          isValid: currencyValidation.isValid,
-          confidence: currencyValidation.confidence,
-          issues: currencyValidation.issues
-        });
-
-        // Enhanced currency validation logging
-        if (!currencyValidation.isValid) {
-          logger.warn('Adding quote with currency issues to cart', {
-            quoteId: quote.id,
-            issues: currencyValidation.issues,
-            originalCurrency: quote.customer_currency,
-            correctedCurrency: safeCurrency,
-            preValidationWarnings: preValidation.issues
-          });
-        }
-
-        console.log('[CART STORE] Adding item to cart with validated currency...', {
+        // SIMPLIFIED: Basic validation only  
+        console.log('[CART STORE] Adding item to cart with origin currency...', {
           total_quote_origincurrency: quote.total_quote_origincurrency,
-          final_total_origin: quote.final_total_origin,
-          originalCurrency: quote.customer_currency,
-          validatedCurrency: safeCurrency
+          final_total_origincurrency: quote.final_total_origincurrency,
+          origin_country: quote.origin_country
         });
 
-        // Create cart item with corrected currency information
+        // Create cart item with origin currency only (simplified)
+        const originCurrency = getOriginCurrency(quote.origin_country);
         const newItem: CartItem = {
           id: quote.id,
           quote: {
-            ...quote,
-            // Use the validated/corrected currency
-            customer_currency: safeCurrency
+            ...quote
+            // No currency modification needed - use origin currency
           },
           addedAt: new Date(),
           lastUpdated: new Date(),
           metadata: {
             addedFrom: 'user',
-            priceAtAdd: quote.total_quote_origincurrency || quote.final_total_origin,
-            currencyAtAdd: safeCurrency,
-            originalCurrencyFromDB: quote.customer_currency, // Track original for debugging
-            currencyValidation: {
-              isValid: currencyValidation.isValid,
-              confidence: currencyValidation.confidence,
-              issues: currencyValidation.issues
-            }
+            priceAtAdd: quote.total_quote_origincurrency || quote.final_total_origincurrency,
+            currencyAtAdd: originCurrency, // Store origin currency
+            originCountry: quote.origin_country
           }
         };
 
-        console.log('[CART STORE] Created new item with corrected currency:', {
+        console.log('[CART STORE] Created new item with origin currency:', {
           metadata: newItem.metadata,
-          quoteCurrency: newItem.quote.customer_currency
+          originCurrency
         });
 
         set(prev => ({
@@ -464,6 +662,9 @@ export const useCartStore = create<SimpleCartStore>()(
         }));
 
         console.log(`[CART STORE] Optimistic update completed, cart now has ${get().items.length} items`);
+        
+        // Save snapshot for undo/redo BEFORE database operation
+        get().saveSnapshot('add_item', { quote: { id: quote.id, display_id: quote.display_id || 'N/A' } });
         
         // Auto-save to localStorage
         get().saveToLocalStorage();
@@ -477,20 +678,28 @@ export const useCartStore = create<SimpleCartStore>()(
 
         if (error) {
           console.error('[CART STORE] Database update failed, reverting optimistic update:', error);
-          // Revert optimistic update
-          set(prev => ({
-            ...prev,
-            items: prev.items.filter(item => item.id !== quote.id)
-          }));
-          throw error;
+          // Revert optimistic update AND remove from history
+          set(prev => {
+            const revertedItems = prev.items.filter(item => item.id !== quote.id);
+            // Remove the snapshot we just added since operation failed
+            const revertedHistory = prev.history.slice(0, -1);
+            return {
+              ...prev,
+              items: revertedItems,
+              history: revertedHistory,
+              historyIndex: revertedHistory.length - 1
+            };
+          });
+          
+          logger.error('Failed to add item to cart - database error', { quoteId: quote.id, error });
+          throw new Error(`Failed to add item to cart: ${error.message}`);
         }
 
         console.log('[CART STORE] Item added successfully to database');
-        logger.info('Item added to cart with currency validation', { 
+        logger.info('Item added to cart with origin currency', { 
           quoteId: quote.id,
-          originalCurrency: quote.customer_currency,
-          validatedCurrency: safeCurrency,
-          currencyIssues: currencyValidation.issues
+          originCurrency,
+          priceAtAdd: newItem.metadata.priceAtAdd
         });
 
       } catch (error) {
@@ -500,75 +709,146 @@ export const useCartStore = create<SimpleCartStore>()(
       }
     },
 
-    // Remove item
+    // Remove item with enhanced error handling
     removeItem: async (quoteId: string) => {
       const state = get();
-      if (!state.currentUserId) return;
+      console.log('[CART STORE] removeItem called:', { quoteId, hasUser: !!state.currentUserId });
+      
+      if (!state.currentUserId) {
+        logger.warn('Cannot remove item - user not authenticated', { quoteId });
+        throw new Error('User not authenticated');
+      }
 
       const originalItems = state.items;
       const item = originalItems.find(item => item.id === quoteId);
-      if (!item) return;
+      
+      if (!item) {
+        console.log('[CART STORE] Item not found in cart, skipping removal');
+        return;
+      }
 
       try {
+        // Save snapshot BEFORE making changes
+        get().saveSnapshot('remove_item', { 
+          quote: { 
+            id: item.quote.id, 
+            display_id: item.quote.display_id || 'N/A',
+            total: item.quote.total_quote_origincurrency
+          } 
+        });
+        
         // Optimistic update
         set(prev => ({
           ...prev,
           items: prev.items.filter(item => item.id !== quoteId)
         }));
 
+        console.log(`[CART STORE] Optimistic removal completed, cart now has ${get().items.length} items`);
+        
         // Auto-save to localStorage
         get().saveToLocalStorage();
 
         // Update database
+        console.log('[CART STORE] Updating database to remove item...');
         const { error } = await supabase
           .from('quotes_v2')
           .update({ in_cart: false })
           .eq('id', quoteId);
 
         if (error) {
-          // Revert optimistic update
-          set(prev => ({ ...prev, items: originalItems }));
-          throw error;
+          console.error('[CART STORE] Database update failed, reverting removal:', error);
+          // Revert optimistic update AND remove from history
+          set(prev => {
+            // Remove the snapshot we just added since operation failed
+            const revertedHistory = prev.history.slice(0, -1);
+            return {
+              ...prev,
+              items: originalItems,
+              history: revertedHistory,
+              historyIndex: revertedHistory.length - 1
+            };
+          });
+          
+          logger.error('Failed to remove item from cart - database error', { quoteId, error });
+          throw new Error(`Failed to remove item from cart: ${error.message}`);
         }
 
-        logger.info('Item removed from cart', { quoteId });
+        console.log('[CART STORE] Item removed successfully from database');
+        logger.info('Item removed from cart successfully', { quoteId });
 
       } catch (error) {
+        console.error('[CART STORE] Remove item operation failed:', error);
         logger.error('Failed to remove item from cart', { quoteId, error });
         throw error;
       }
     },
 
-    // Clear cart
+    // Clear cart with enhanced error handling
     clearCart: async () => {
       const state = get();
-      if (!state.currentUserId || state.items.length === 0) return;
+      console.log('[CART STORE] clearCart called:', { hasUser: !!state.currentUserId, itemCount: state.items.length });
+      
+      if (!state.currentUserId) {
+        logger.warn('Cannot clear cart - user not authenticated');
+        throw new Error('User not authenticated');
+      }
+      
+      if (state.items.length === 0) {
+        console.log('[CART STORE] Cart already empty, skipping clear operation');
+        return;
+      }
 
       const originalItems = state.items;
       const itemIds = originalItems.map(item => item.id);
 
       try {
+        // Save snapshot BEFORE making changes
+        get().saveSnapshot('clear_cart', { 
+          clearedItems: originalItems.map(item => ({
+            id: item.quote.id,
+            display_id: item.quote.display_id || 'N/A',
+            total: item.quote.total_quote_origincurrency
+          }))
+        });
+        
         // Optimistic update
         set(prev => ({ ...prev, items: [] }));
 
+        console.log('[CART STORE] Optimistic clear completed, cart now empty');
+        
         // Auto-save to localStorage
         get().saveToLocalStorage();
 
         // Update database
+        console.log('[CART STORE] Updating database to clear all items...');
         const { error } = await supabase
           .from('quotes_v2')
           .update({ in_cart: false })
           .in('id', itemIds);
 
         if (error) {
-          // Revert optimistic update
-          set(prev => ({ ...prev, items: originalItems }));
-          throw error;
+          console.error('[CART STORE] Database update failed, reverting clear operation:', error);
+          // Revert optimistic update AND remove from history
+          set(prev => {
+            // Remove the snapshot we just added since operation failed
+            const revertedHistory = prev.history.slice(0, -1);
+            return {
+              ...prev,
+              items: originalItems,
+              history: revertedHistory,
+              historyIndex: revertedHistory.length - 1
+            };
+          });
+          
+          logger.error('Failed to clear cart - database error', { itemCount: originalItems.length, error });
+          throw new Error(`Failed to clear cart: ${error.message}`);
         }
 
-        logger.info('Cart cleared', { itemCount: originalItems.length });
+        console.log('[CART STORE] Cart cleared successfully from database');
+        logger.info('Cart cleared successfully', { itemCount: originalItems.length });
 
       } catch (error) {
+        console.error('[CART STORE] Clear cart operation failed:', error);
         logger.error('Failed to clear cart', error);
         throw error;
       }
@@ -606,11 +886,27 @@ export const useCartStore = create<SimpleCartStore>()(
         console.log('[CART STORE] Starting server sync...');
         set(prev => ({ ...prev, syncStatus: 'syncing' }));
 
+        // Get current user to check both customer_id and customer_email (like RLS policies)
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('[CART STORE] No authenticated user found for sync');
+          set(prev => ({ ...prev, items: [], syncStatus: 'guest' }));
+          return;
+        }
+
+        console.log('[CART STORE] Syncing cart for user:', { 
+          userId: user.id, 
+          email: user.email,
+          storedUserId: state.currentUserId 
+        });
+
+        // Query matches RLS policy logic: check both customer_id and customer_email
         const { data: quotes, error } = await supabase
           .from('quotes_v2')
           .select('*')
           .eq('in_cart', true)
-          .eq('customer_id', state.currentUserId);
+          .or(`customer_id.eq.${user.id},customer_email.eq.${user.email}`);
 
         console.log('[CART STORE] Sync query result:', {
           success: !error,
@@ -620,65 +916,32 @@ export const useCartStore = create<SimpleCartStore>()(
 
         if (error) throw error;
 
-        const cartItems: CartItem[] = await Promise.all((quotes || []).map(async (quote, index) => {
+        const cartItems: CartItem[] = (quotes || []).map((quote, index) => {
           console.log(`[CART STORE] Sync processing quote ${index + 1}:`, {
             id: quote.id,
             display_id: quote.display_id,
             total_quote_origincurrency: quote.total_quote_origincurrency,
-            final_total_origin: quote.final_total_origin,
-            customer_currency: quote.customer_currency
+            final_total_origincurrency: quote.final_total_origincurrency,
+            origin_country: quote.origin_country
           });
 
-          // PHASE 2 FIX: Apply smart currency detection during sync
-          const { detectQuoteCurrency, logCurrencyDetection } = 
-            await import('@/utils/quoteCurrency');
-          
-          // Log currency detection for debugging
-          logCurrencyDetection(quote, 'CART_SYNC');
-          
-          // Get the correct currency for this quote
-          const currencyValidation = detectQuoteCurrency(quote);
-          const safeCurrency = currencyValidation.detectedCurrency;
-          
-          console.log(`[CART STORE] Sync quote ${index + 1} currency validation:`, {
-            originalCurrency: quote.customer_currency,
-            detectedCurrency: safeCurrency,
-            isValid: currencyValidation.isValid,
-            issues: currencyValidation.issues
-          });
-
-          // Warn if currency issues detected during sync
-          if (!currencyValidation.isValid) {
-            logger.warn('Cart sync found item with currency issues', {
-              quoteId: quote.id,
-              issues: currencyValidation.issues,
-              originalCurrency: quote.customer_currency,
-              correctedCurrency: safeCurrency
-            });
-          }
-
+          const originCurrency = getOriginCurrency(quote.origin_country);
           return {
             id: quote.id,
             quote: {
-              ...quote,
-              // Use the validated/corrected currency
-              customer_currency: safeCurrency
+              ...quote
+              // No currency modification needed - use origin currency
             },
             addedAt: new Date(quote.created_at),
             lastUpdated: new Date(quote.updated_at),
             metadata: {
               addedFrom: 'sync',
-              priceAtAdd: quote.total_quote_origincurrency || quote.final_total_origin,
-              currencyAtAdd: safeCurrency,
-              originalCurrencyFromDB: quote.customer_currency, // Track original for debugging
-              currencyValidation: {
-                isValid: currencyValidation.isValid,
-                confidence: currencyValidation.confidence,
-                issues: currencyValidation.issues
-              }
+              priceAtAdd: quote.total_quote_origincurrency || quote.final_total_origincurrency,
+              currencyAtAdd: originCurrency, // Store origin currency
+              originCountry: quote.origin_country
             }
           };
-        }));
+        });
 
         console.log(`[CART STORE] Sync created ${cartItems.length} cart items`);
 
@@ -688,7 +951,27 @@ export const useCartStore = create<SimpleCartStore>()(
           syncStatus: 'synced'
         }));
 
+        // Save snapshot for sync operation (only if items changed)
+        const itemsChanged = JSON.stringify(state.items.map(i => i.id).sort()) !== JSON.stringify(cartItems.map(i => i.id).sort());
+        if (itemsChanged) {
+          get().saveSnapshot('sync_with_server', { 
+            syncedItems: cartItems.map(item => ({
+              id: item.quote.id,
+              display_id: item.quote.display_id || 'N/A'
+            }))
+          });
+        }
+        
         console.log('[CART STORE] Sync completed successfully');
+        console.log('[CART STORE] Final cart state:', {
+          itemCount: cartItems.length,
+          items: cartItems.map(item => ({
+            id: item.id,
+            quoteId: item.quote.id,
+            displayId: item.quote.display_id,
+            total: item.quote.total_quote_origincurrency
+          }))
+        });
         logger.info('Cart synced with server', { itemCount: cartItems.length });
 
         // PHASE 3 FIX: Post-sync integrity check
@@ -711,7 +994,13 @@ export const useCartStore = create<SimpleCartStore>()(
 
     // Utilities
     hasItem: (quoteId: string) => {
-      return get().items.some(item => item.id === quoteId);
+      const hasItem = get().items.some(item => item.id === quoteId);
+      console.log(`[CART STORE] hasItem(${quoteId}):`, {
+        hasItem,
+        currentItems: get().items.map(item => ({ id: item.id, addedAt: item.addedAt })),
+        totalItems: get().items.length
+      });
+      return hasItem;
     },
 
     getItem: (quoteId: string) => {
@@ -729,40 +1018,36 @@ export const useCartStore = create<SimpleCartStore>()(
         return 0;
       }
 
-      // PHASE 2 FIX: Handle multi-currency cart properly
+      // SIMPLIFIED: Return total in origin currencies (no conversion here)
+      // UI components will handle conversion using CurrencyService + user preferences
       const currencySummary: Record<string, number> = {};
       
       items.forEach((item) => {
         const priceOrigin = item.quote.total_quote_origincurrency;
-        const priceFinal = item.quote.final_total_origin;
+        const priceFinal = item.quote.final_total_origincurrency;
         const priceUsed = priceOrigin || priceFinal || 0;
-        const currency = item.quote.customer_currency || 'USD';
         
-        // Group by currency
-        if (!currencySummary[currency]) {
-          currencySummary[currency] = 0;
+        // Use origin country to determine currency
+        const originCurrency = getOriginCurrency(item.quote.origin_country);
+        
+        if (!currencySummary[originCurrency]) {
+          currencySummary[originCurrency] = 0;
         }
-        currencySummary[currency] += priceUsed;
+        currencySummary[originCurrency] += priceUsed;
       });
 
-      // For backward compatibility, if all items are in USD, return the USD total
+      // For backward compatibility, return first currency total
+      // UI components should use getTotalValueWithCurrency() for proper handling
       const currencies = Object.keys(currencySummary);
-      if (currencies.length === 1 && currencies[0] === 'USD') {
-        return currencySummary['USD'];
-      }
-
-      // For mixed currencies, we need to convert to a common base currency
-      // This is a temporary solution - the useCart hook will handle proper conversion
       if (currencies.length === 1) {
-        // Single currency cart (non-USD)
         return currencySummary[currencies[0]];
       }
 
-      // Mixed currency cart - this should be handled by the useCart hook
+      // Mixed currency cart - return sum (not ideal, but for backward compatibility)
       return Object.values(currencySummary).reduce((a, b) => a + b, 0);
     },
 
-    // PHASE 2 FIX: New method to get currency-aware totals
+    // SIMPLIFIED: Get totals grouped by origin currency (no conversion in cart store)
     getTotalValueWithCurrency: () => {
       const items = get().items;
       
@@ -774,14 +1059,16 @@ export const useCartStore = create<SimpleCartStore>()(
       
       items.forEach((item) => {
         const priceOrigin = item.quote.total_quote_origincurrency;
-        const priceFinal = item.quote.final_total_origin;
+        const priceFinal = item.quote.final_total_origincurrency;
         const priceUsed = priceOrigin || priceFinal || 0;
-        const currency = item.quote.customer_currency || 'USD';
         
-        if (!totalsByCurrency[currency]) {
-          totalsByCurrency[currency] = 0;
+        // Use origin country to determine currency (simplified approach)
+        const originCurrency = getOriginCurrency(item.quote.origin_country);
+        
+        if (!totalsByCurrency[originCurrency]) {
+          totalsByCurrency[originCurrency] = 0;
         }
-        totalsByCurrency[currency] += priceUsed;
+        totalsByCurrency[originCurrency] += priceUsed;
       });
       
       return { 
@@ -863,6 +1150,42 @@ export const useCartStore = create<SimpleCartStore>()(
         logger.error('Failed to run cart integrity check', error);
         throw error;
       }
+    },
+
+    // Debug utilities
+    debugCartState: () => {
+      const state = get();
+      console.log('🛒 CART DEBUG STATE:', {
+        isInitialized: state.isInitialized,
+        isLoading: state.isLoading,
+        syncStatus: state.syncStatus,
+        itemCount: state.items.length,
+        currentUserId: state.currentUserId,
+        session: state.session,
+        // Undo/Redo info
+        historyCount: state.history.length,
+        historyIndex: state.historyIndex,
+        canUndo: state.canUndo(),
+        canRedo: state.canRedo(),
+        lastOperation: state.lastOperation,
+        items: state.items.map(item => ({
+          id: item.id,
+          quoteId: item.quote.id,
+          displayId: item.quote.display_id,
+          addedAt: item.addedAt,
+          total: item.quote.total_quote_origincurrency
+        }))
+      });
+    },
+
+    forceSync: async () => {
+      console.log('🔄 FORCING CART SYNC...');
+      try {
+        await get().syncWithServer();
+        console.log('✅ FORCED SYNC COMPLETED');
+      } catch (error) {
+        console.error('❌ FORCED SYNC FAILED:', error);
+      }
     }
   }))
 );
@@ -887,6 +1210,30 @@ export const useCartActions = () => {
   
   return { addItem, removeItem, clearCart, syncWithServer };
 };
+
+// Debug utilities
+export const useCartDebug = () => {
+  const debugCartState = useCartStore(state => state.debugCartState);
+  const forceSync = useCartStore(state => state.forceSync);
+  
+  return { debugCartState, forceSync };
+};
+
+// Global debug utilities (for browser console)
+if (typeof window !== 'undefined') {
+  (window as any).debugCart = {
+    getState: () => useCartStore.getState().debugCartState(),
+    forceSync: () => useCartStore.getState().forceSync(),
+    hasItem: (id: string) => useCartStore.getState().hasItem(id),
+    // Undo/Redo utilities
+    undo: () => useCartStore.getState().undo(),
+    redo: () => useCartStore.getState().redo(),
+    canUndo: () => useCartStore.getState().canUndo(),
+    canRedo: () => useCartStore.getState().canRedo(),
+    getHistory: () => useCartStore.getState().getHistoryInfo(),
+    clearHistory: () => useCartStore.getState().clearHistory()
+  };
+}
 
 // Initialize lazily when needed
 let initializationPromise: Promise<void> | null = null;

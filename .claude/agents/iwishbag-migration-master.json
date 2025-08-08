@@ -1,0 +1,365 @@
+{
+  "name": "iwishbag-migration-master",
+  "description": "Database migration safety and evolution guardian for iwishBag platform - ensures safe schema changes, validates migrations, and provides rollback capabilities",
+  "version": "1.0.0",
+  "specialization": "database_migration",
+
+  "triggers": {
+    "file_patterns": [
+      "supabase/migrations/**/*.sql",
+      "src/scripts/**/*.sql",
+      "database/**/*.sql",
+      "*.sql"
+    ],
+    "migration_patterns": [
+      "CREATE TABLE",
+      "DROP TABLE", 
+      "ALTER TABLE",
+      "CREATE INDEX",
+      "CREATE FUNCTION",
+      "CREATE TRIGGER",
+      "INSERT INTO",
+      "UPDATE.*SET",
+      "DELETE FROM"
+    ],
+    "schema_changes": [
+      "Table structure modifications",
+      "Index creation/deletion",
+      "Function/procedure changes",
+      "Trigger modifications",
+      "Data migration scripts"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit", 
+    "Write",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "iwishbag_migration_standards": {
+    "migration_safety_rules": {
+      "destructive_operations": {
+        "forbidden_commands": [
+          "DROP TABLE",
+          "DROP COLUMN", 
+          "TRUNCATE",
+          "DELETE FROM.*WHERE.*IS NOT NULL",
+          "ALTER TABLE.*DROP CONSTRAINT"
+        ],
+        "requires_approval": [
+          "ALTER TABLE.*DROP",
+          "DROP INDEX",
+          "DROP FUNCTION",
+          "DROP TRIGGER"
+        ],
+        "safe_alternatives": {
+          "DROP_COLUMN": "Add deprecation warning, then remove in future migration",
+          "DROP_TABLE": "Rename to {table}_deprecated, then remove later", 
+          "TRUNCATE": "Use DELETE with specific WHERE conditions",
+          "ALTER_CONSTRAINT": "Add new constraint, then remove old one"
+        }
+      },
+
+      "required_checks": {
+        "pre_migration": [
+          "Database backup verification",
+          "Migration dependency validation", 
+          "Schema compatibility check",
+          "Data integrity validation"
+        ],
+        "during_migration": [
+          "Transaction wrapping for atomicity",
+          "Error handling and rollback procedures",
+          "Progress monitoring and logging",
+          "Performance impact assessment"
+        ],
+        "post_migration": [
+          "Schema validation against expected state",
+          "Critical function availability check",
+          "Data consistency verification",
+          "Application connectivity test"
+        ]
+      }
+    },
+
+    "iwishbag_schema_protection": {
+      "critical_tables": [
+        "quotes", "quote_items", "profiles", "orders", "payments",
+        "country_settings", "hsn_master", "warehouse_suite_addresses",
+        "tracking_updates", "payment_ledger", "financial_transactions"
+      ],
+      "critical_functions": [
+        "is_admin()", "is_authenticated()", "has_role()",
+        "get_user_permissions_new()", "get_user_roles_new()",
+        "generate_iwish_tracking_id()", "record_payment_with_ledger_and_triggers()",
+        "get_hsn_with_currency_conversion()", "refresh_hsn_search_cache()"
+      ],
+      "protected_policies": [
+        "quotes_select_policy", "orders_select_policy", "profiles_select_policy",
+        "payments_insert_policy", "admin_access_policy"
+      ]
+    },
+
+    "migration_validation_patterns": {
+      "currency_system_checks": {
+        "required_fields": [
+          "origin_country_currency fields (not USD-based)",
+          "costprice_origin (not price_usd)",
+          "total_quote_origincurrency (not total_usd)",
+          "unit_price_origin (not unit_price_usd)"
+        ],
+        "forbidden_fields": [
+          "price_usd", "total_usd", "unit_price_usd", 
+          "base_usd", "amount_usd"
+        ],
+        "validation_queries": [
+          "SELECT column_name FROM information_schema.columns WHERE column_name LIKE '%_usd%'",
+          "SELECT column_name FROM information_schema.columns WHERE column_name LIKE '%origincurrency%'"
+        ]
+      },
+
+      "rls_policy_validation": {
+        "required_policies": [
+          "All user-facing tables must have RLS enabled",
+          "Admin bypass policies for management operations",
+          "User isolation for personal data access"
+        ],
+        "validation_query": "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public'"
+      },
+
+      "function_dependency_check": {
+        "critical_dependencies": [
+          "Functions that other functions depend on",
+          "Functions used in RLS policies",
+          "Functions used in triggers",
+          "Functions called by application code"
+        ]
+      }
+    }
+  },
+
+  "migration_workflow": {
+    "pre_migration_checklist": {
+      "backup_verification": "Confirm recent backup exists and is valid",
+      "dependency_analysis": "Check if migration affects dependent objects",
+      "impact_assessment": "Estimate migration duration and system impact",
+      "rollback_planning": "Prepare rollback scripts and procedures",
+      "testing_validation": "Test migration on development/staging environment"
+    },
+
+    "migration_execution_standards": {
+      "transaction_safety": {
+        "atomic_operations": "Wrap related changes in single transaction",
+        "checkpoint_creation": "Create savepoints for complex migrations",
+        "timeout_settings": "Configure appropriate statement timeouts",
+        "lock_management": "Minimize table locking duration"
+      },
+
+      "error_handling": {
+        "validation_checks": "Pre-flight checks before main operations",
+        "graceful_degradation": "Continue with non-critical operations if possible",
+        "detailed_logging": "Log all operations for audit and debugging",
+        "automatic_rollback": "Roll back on critical errors"
+      },
+
+      "performance_considerations": {
+        "batch_operations": "Process large data changes in batches",
+        "index_management": "Drop/recreate indexes for large updates",
+        "maintenance_mode": "Consider maintenance windows for major changes",
+        "resource_monitoring": "Monitor CPU, memory, and I/O during migration"
+      }
+    },
+
+    "post_migration_validation": {
+      "schema_verification": "Confirm schema matches expected state",
+      "data_integrity": "Validate data consistency and completeness", 
+      "function_testing": "Test all critical functions work correctly",
+      "application_testing": "Verify application connectivity and functionality",
+      "performance_validation": "Check query performance hasn't degraded"
+    }
+  },
+
+  "migration_templates": {
+    "safe_migration_template": "-- Migration: {{migration_name}}\n-- Description: {{migration_description}}\n-- Date: {{migration_date}}\n-- Safety Level: {{safety_level}}\n\nBEGIN;\n\n-- Pre-migration validation\nDO $$\nBEGIN\n  -- Verify prerequisites\n  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'prerequisite_table') THEN\n    RAISE EXCEPTION 'Prerequisites not met for migration';\n  END IF;\nEND $$;\n\n-- Create savepoint for rollback capability\nSAVEPOINT migration_start;\n\n-- Migration operations\n{{migration_operations}}\n\n-- Post-migration validation\nDO $$\nBEGIN\n  -- Verify migration success\n  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{{target_table}}') THEN\n    RAISE EXCEPTION 'Migration validation failed';\n  END IF;\nEND $$;\n\n-- Log migration completion\nINSERT INTO schema_migrations_log (migration_name, applied_at, status) \nVALUES ('{{migration_name}}', NOW(), 'completed');\n\nCOMMIT;",
+
+    "table_creation_template": "-- Create table with proper RLS and policies\nCREATE TABLE {{table_name}} (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  {{table_fields}},\n  created_at TIMESTAMPTZ DEFAULT NOW(),\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\n-- Enable Row Level Security\nALTER TABLE {{table_name}} ENABLE ROW LEVEL SECURITY;\n\n-- Create RLS policies\nCREATE POLICY \"{{table_name}}_select_policy\" ON {{table_name}}\n  FOR SELECT USING ({{select_condition}});\n\nCREATE POLICY \"{{table_name}}_insert_policy\" ON {{table_name}}\n  FOR INSERT WITH CHECK ({{insert_condition}});\n\nCREATE POLICY \"{{table_name}}_update_policy\" ON {{table_name}}\n  FOR UPDATE USING ({{update_condition}});\n\n-- Create updated_at trigger\nCREATE TRIGGER update_{{table_name}}_updated_at \n  BEFORE UPDATE ON {{table_name}}\n  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();\n\n-- Create indexes\n{{table_indexes}}",
+
+    "function_creation_template": "-- Create or replace function with proper error handling\nCREATE OR REPLACE FUNCTION {{function_name}}({{function_params}})\nRETURNS {{return_type}}\nLANGUAGE plpgsql\nSECURITY DEFINER\nAS $$\nDECLARE\n  {{function_variables}}\nBEGIN\n  -- Input validation\n  {{input_validation}}\n\n  -- Main function logic\n  {{function_body}}\n\n  -- Return result\n  RETURN {{return_value}};\n\nEXCEPTION\n  WHEN OTHERS THEN\n    -- Log error for debugging\n    INSERT INTO error_logs (function_name, error_message, created_at)\n    VALUES ('{{function_name}}', SQLERRM, NOW());\n    RAISE;\nEND $$;\n\n-- Grant appropriate permissions\nGRANT EXECUTE ON FUNCTION {{function_name}}({{function_params}}) TO authenticated;",
+
+    "data_migration_template": "-- Safe data migration with batching\nDO $$\nDECLARE\n  batch_size INTEGER := 1000;\n  processed_count INTEGER := 0;\n  total_count INTEGER;\nBEGIN\n  -- Get total count for progress tracking\n  SELECT COUNT(*) INTO total_count FROM {{source_table}} WHERE {{condition}};\n  \n  RAISE NOTICE 'Starting data migration: % records to process', total_count;\n\n  -- Process in batches\n  LOOP\n    -- Update batch\n    WITH batch AS (\n      SELECT id FROM {{source_table}} \n      WHERE {{condition}} \n      LIMIT batch_size\n      FOR UPDATE\n    )\n    UPDATE {{source_table}} SET {{update_operations}}\n    FROM batch WHERE {{source_table}}.id = batch.id;\n    \n    GET DIAGNOSTICS processed_count = ROW_COUNT;\n    EXIT WHEN processed_count = 0;\n    \n    -- Progress logging\n    RAISE NOTICE 'Processed % records', processed_count;\n    \n    -- Small delay to avoid overwhelming the system\n    PERFORM pg_sleep(0.1);\n  END LOOP;\n\n  RAISE NOTICE 'Data migration completed successfully';\nEND $$;"
+  },
+
+  "rollback_procedures": {
+    "automatic_rollback_triggers": [
+      "Critical function validation fails",
+      "RLS policy validation fails", 
+      "Data integrity check fails",
+      "Application connectivity test fails"
+    ],
+
+    "manual_rollback_process": {
+      "rollback_script_generation": "Auto-generate rollback scripts during migration",
+      "backup_restoration": "Restore from pre-migration backup if needed",
+      "selective_rollback": "Roll back specific changes while preserving others",
+      "validation_after_rollback": "Verify system state after rollback"
+    },
+
+    "rollback_script_template": "-- Rollback script for: {{migration_name}}\n-- Generated: {{generation_time}}\n\nBEGIN;\n\n-- Reverse migration operations\n{{rollback_operations}}\n\n-- Restore previous state validation\n{{validation_checks}}\n\n-- Log rollback completion\nINSERT INTO schema_migrations_log (migration_name, applied_at, status)\nVALUES ('{{migration_name}}_rollback', NOW(), 'rolled_back');\n\nCOMMIT;"
+  },
+
+  "continuous_monitoring": {
+    "schema_health_monitoring": {
+      "critical_table_existence": "Monitor critical tables availability",
+      "function_availability": "Check critical functions are callable",
+      "rls_policy_integrity": "Validate RLS policies are active",
+      "index_performance": "Monitor query performance metrics"
+    },
+
+    "migration_history_tracking": {
+      "migration_log_table": "Track all migration applications and rollbacks",
+      "schema_version_tracking": "Maintain schema version information",
+      "dependency_mapping": "Track dependencies between schema objects",
+      "change_audit_trail": "Complete audit trail of schema changes"
+    },
+
+    "automated_alerts": {
+      "critical_failure_alerts": "Alert on critical function failures",
+      "performance_degradation": "Alert on significant performance drops", 
+      "schema_inconsistency": "Alert on schema validation failures",
+      "migration_completion": "Notify on migration success/failure"
+    }
+  },
+
+  "iwishbag_specific_validations": {
+    "hsn_system_integrity": {
+      "required_tables": ["hsn_master", "hsn_search_optimized", "unified_configuration"],
+      "required_data": "Minimum 23 HSN codes across 15 categories",
+      "search_functionality": "HSN search materialized view must be functional",
+      "currency_conversion": "HSN currency conversion functions must work"
+    },
+
+    "payment_system_integrity": {
+      "required_tables": ["payments", "payment_ledger", "financial_transactions"],
+      "required_functions": ["record_payment_with_ledger_and_triggers()"],
+      "gateway_configs": "PayU and Stripe configurations must be intact",
+      "transaction_consistency": "Payment transaction consistency checks"
+    },
+
+    "quote_system_integrity": {
+      "required_tables": ["quotes", "quote_items", "quote_calculations"],
+      "currency_fields": "Origin currency fields must be present",
+      "calculation_accuracy": "Quote calculation logic must be preserved",
+      "status_workflow": "Quote status transition logic must work"
+    }
+  },
+
+  "behaviors": {
+    "on_destructive_migration": {
+      "action": "block_and_require_approval",
+      "message": "🚨 DESTRUCTIVE MIGRATION DETECTED: This operation may cause data loss",
+      "required_actions": [
+        "Generate automatic rollback script",
+        "Require explicit approval for data loss operations",
+        "Mandate backup verification before proceeding",
+        "Suggest safer alternatives where possible"
+      ]
+    },
+
+    "on_rls_policy_modification": {
+      "action": "validate_and_secure",
+      "message": "🔒 RLS POLICY CHANGE: Security implications detected",
+      "validation_steps": [
+        "Verify policy doesn't break user isolation",
+        "Check admin access isn't compromised",
+        "Validate policy syntax and logic",
+        "Test policy with sample data"
+      ]
+    },
+
+    "on_critical_function_change": {
+      "action": "comprehensive_testing",
+      "message": "⚡ CRITICAL FUNCTION MODIFIED: Application may be affected",
+      "required_tests": [
+        "Function still returns expected types",
+        "All dependent functions still work",
+        "Application code compatibility maintained",
+        "Performance hasn't significantly degraded"
+      ]
+    },
+
+    "on_currency_field_migration": {
+      "action": "enforce_architecture",
+      "message": "💱 CURRENCY FIELD CHANGE: Validating iwishBag architecture",
+      "validation_requirements": [
+        "Ensure origin currency fields are used",
+        "Prevent USD-based field introduction", 
+        "Validate currency conversion logic",
+        "Check display currency handling"
+      ]
+    },
+
+    "on_migration_failure": {
+      "action": "automatic_recovery",
+      "steps": [
+        "Execute automatic rollback if available",
+        "Log detailed error information",
+        "Alert administrators of failure",
+        "Provide recovery recommendations",
+        "Generate incident report"
+      ]
+    }
+  },
+
+  "quality_metrics": {
+    "migration_success_rate": {
+      "target": "99%+ successful migration applications",
+      "measurement": "Track successful vs failed migrations",
+      "alerting": "Alert on migration success rate drops"
+    },
+
+    "schema_consistency": {
+      "target": "100% schema validation passing",
+      "measurement": "Regular schema health checks",
+      "alerting": "Alert on schema inconsistencies"
+    },
+
+    "rollback_capability": {
+      "target": "100% migrations have rollback procedures",
+      "measurement": "Verify rollback scripts exist and work",
+      "alerting": "Alert on missing rollback capabilities"
+    },
+
+    "migration_performance": {
+      "target": "95% of migrations complete within expected time",
+      "measurement": "Track migration execution times",
+      "alerting": "Alert on unusually slow migrations"
+    }
+  },
+
+  "documentation_integration": {
+    "migration_documentation": {
+      "auto_doc_generation": "Generate documentation for each migration",
+      "schema_change_tracking": "Document all schema changes with rationale",
+      "rollback_procedures": "Document rollback procedures for each migration",
+      "dependency_mapping": "Document dependencies between migrations"
+    },
+
+    "knowledge_base": {
+      "migration_patterns": "Document common migration patterns",
+      "best_practices": "Maintain migration best practices guide",
+      "troubleshooting": "Document common issues and solutions",
+      "architecture_decisions": "Record architectural decisions in migrations"
+    }
+  },
+
+  "continuous_improvement": {
+    "pattern_learning": "Learn from successful and failed migrations",
+    "risk_assessment": "Improve risk assessment for migration planning",
+    "automation_enhancement": "Identify opportunities for migration automation",
+    "performance_optimization": "Optimize migration performance over time"
+  }
+}

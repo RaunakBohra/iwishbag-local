@@ -1,0 +1,313 @@
+{
+  "name": "iwishbag-service-architect",
+  "description": "Service layer architecture enforcer for iwishBag platform - ensures consistent service patterns, caching strategies, and architectural excellence",
+  "version": "1.0.0",
+  "specialization": "service_architecture",
+
+  "triggers": {
+    "file_patterns": [
+      "src/services/**/*.ts",
+      "src/hooks/use*.ts",
+      "src/contexts/**/*.tsx",
+      "src/stores/**/*.ts",
+      "src/lib/**/*.ts"
+    ],
+    "service_patterns": [
+      "class.*Service",
+      "getInstance\\(\\)",
+      "clearCache\\(\\)",
+      "export.*Service",
+      "singleton"
+    ],
+    "architectural_changes": [
+      "New service creation",
+      "Service method modifications",
+      "Caching logic changes",
+      "State management updates",
+      "External API integrations"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit", 
+    "Write",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "iwishbag_service_standards": {
+    "singleton_pattern": {
+      "required_structure": {
+        "private_constructor": "private constructor()",
+        "static_instance": "private static instance: ServiceName",
+        "get_instance": "static getInstance(): ServiceName",
+        "instance_creation": "if (!ServiceName.instance) { ServiceName.instance = new ServiceName(); }"
+      },
+      "validation_checks": [
+        "No public constructor access",
+        "Single instance guarantee",
+        "Thread-safe instance creation",
+        "Proper type annotations"
+      ]
+    },
+
+    "caching_strategy": {
+      "required_components": {
+        "cache_storage": "private cache: Map<string, CacheItem> = new Map()",
+        "cache_ttl": "private readonly CACHE_TTL = 5 * 60 * 1000",
+        "cache_methods": ["clearCache()", "getCachedData()", "setCachedData()"],
+        "cache_invalidation": "Automatic expiration and manual clearing"
+      },
+      "cache_patterns": {
+        "memory_cache": "Fast access for frequently used data",
+        "storage_cache": "Persistent cache with localStorage integration",
+        "d1_edge_cache": "Global edge caching for performance",
+        "tiered_caching": "Memory → Storage → Database → API"
+      }
+    },
+
+    "error_handling": {
+      "required_patterns": [
+        "Try-catch blocks around external calls",
+        "Fallback strategies for cache failures",
+        "Graceful degradation for API timeouts",
+        "Proper error logging and reporting"
+      ],
+      "error_types": {
+        "network_errors": "Handle API and database connection issues",
+        "cache_errors": "Fallback when cache operations fail",
+        "validation_errors": "Input parameter validation failures",
+        "business_logic_errors": "Domain-specific error handling"
+      }
+    },
+
+    "performance_standards": {
+      "response_times": {
+        "cache_hit": "< 10ms for memory cache access",
+        "cache_miss": "< 500ms for database queries",
+        "api_calls": "< 2000ms with proper timeouts",
+        "batch_operations": "Process in chunks to avoid blocking"
+      },
+      "optimization_techniques": [
+        "Lazy loading for expensive operations",
+        "Debounced updates for frequent changes",
+        "Connection pooling for database access",
+        "Request deduplication for identical calls"
+      ]
+    }
+  },
+
+  "iwishbag_specific_patterns": {
+    "currency_service_architecture": {
+      "base_pattern": "Origin country currency storage and conversion",
+      "cache_layers": [
+        "Memory cache for exchange rates (5 min TTL)",
+        "localStorage for currency data (30 min TTL)",
+        "D1 edge cache for global performance",
+        "Database as source of truth"
+      ],
+      "required_methods": [
+        "getExchangeRate(originCountry, destCountry)",
+        "convertAmount(amount, fromCurrency, toCurrency)",
+        "formatAmount(amount, currencyCode)",
+        "getCurrencyForCountry(countryCode)"
+      ]
+    },
+
+    "quote_calculator_architecture": {
+      "calculation_flow": "Items (origin currency) → Shipping → Customs → Display (user currency)",
+      "cache_strategy": "Cache calculations for quote combinations (15 min TTL)",
+      "required_validations": [
+        "Input parameter validation",
+        "Currency conversion accuracy",
+        "Customs calculation correctness",
+        "Total amount precision"
+      ]
+    },
+
+    "payment_service_architecture": {
+      "gateway_selection": "Country-based gateway optimization",
+      "fee_calculation": "Real-time fee computation with caching",
+      "security_measures": [
+        "No payment data in logs",
+        "Encrypted sensitive information",
+        "PCI compliance validation",
+        "Fraud detection integration"
+      ]
+    },
+
+    "tracking_service_architecture": {
+      "id_generation": "IWB{YEAR}{SEQUENCE} format",
+      "status_transitions": "Validated state machine pattern",
+      "notification_integration": "Event-driven status updates",
+      "audit_trail": "Complete tracking history"
+    }
+  },
+
+  "architectural_enforcement": {
+    "service_creation_rules": {
+      "naming_convention": "ServiceName ending with 'Service'",
+      "file_location": "src/services/ directory",
+      "export_pattern": "Named export + default getInstance export",
+      "documentation": "JSDoc with service purpose and usage examples"
+    },
+
+    "dependency_management": {
+      "service_dependencies": "Services can depend on other services via getInstance()",
+      "circular_dependency_prevention": "Detect and prevent circular service dependencies",
+      "external_dependency_wrapping": "Wrap external libraries in service layer",
+      "injection_patterns": "Use dependency injection for testability"
+    },
+
+    "state_management_rules": {
+      "service_state": "Services maintain internal state through caching",
+      "external_state": "Use Zustand stores for component state",
+      "persistence": "Critical state persisted to localStorage",
+      "synchronization": "State sync between services and stores"
+    }
+  },
+
+  "code_generation_templates": {
+    "new_service_template": {
+      "basic_service": "class {{ServiceName}} {\n  private static instance: {{ServiceName}};\n  private cache: Map<string, { data: any; expires: number }> = new Map();\n  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes\n\n  private constructor() {\n    // Initialize service\n  }\n\n  static getInstance(): {{ServiceName}} {\n    if (!{{ServiceName}}.instance) {\n      {{ServiceName}}.instance = new {{ServiceName}}();\n    }\n    return {{ServiceName}}.instance;\n  }\n\n  clearCache(): void {\n    this.cache.clear();\n  }\n\n  // Service methods here\n}\n\nexport const {{serviceName}} = {{ServiceName}}.getInstance();",
+      "currency_service": "Template for currency-related services",
+      "api_service": "Template for external API integration services",
+      "calculation_service": "Template for business calculation services"
+    },
+
+    "service_method_template": "async {{methodName}}({{parameters}}): Promise<{{returnType}}> {\n  try {\n    // Check cache first\n    const cacheKey = `{{methodName}}_${JSON.stringify(arguments)}`;\n    const cached = this.getCachedData(cacheKey);\n    if (cached) return cached;\n\n    // Perform operation\n    const result = await this.{{operationName}}({{parameters}});\n    \n    // Cache result\n    this.setCachedData(cacheKey, result);\n    \n    return result;\n  } catch (error) {\n    logger.error('{{ServiceName}}.{{methodName}} failed:', error);\n    throw new Error(`Failed to {{operation description}}: ${error.message}`);\n  }\n}"
+  },
+
+  "integration_patterns": {
+    "with_components": {
+      "hook_usage": "Components use services through custom hooks",
+      "error_boundaries": "Services handle errors, components show user-friendly messages",
+      "loading_states": "Services provide loading state information",
+      "data_transformation": "Services return display-ready data"
+    },
+
+    "with_database": {
+      "supabase_integration": "Services wrap Supabase client calls",
+      "rls_compliance": "All queries respect Row Level Security",
+      "transaction_handling": "Services manage database transactions",
+      "connection_pooling": "Efficient database connection usage"
+    },
+
+    "with_external_apis": {
+      "rate_limiting": "Services implement API rate limiting",
+      "retry_strategies": "Exponential backoff for failed requests",
+      "timeout_handling": "Configurable timeouts for external calls",
+      "response_validation": "Validate external API responses"
+    }
+  },
+
+  "quality_metrics": {
+    "service_health": {
+      "cache_hit_rate": "Target: >80% for frequently accessed data",
+      "response_time": "Target: <500ms for cached data, <2s for fresh data",
+      "error_rate": "Target: <1% for service method calls",
+      "availability": "Target: 99.9% uptime"
+    },
+
+    "code_quality": {
+      "test_coverage": "Target: >90% for service methods",
+      "cyclomatic_complexity": "Target: <10 per method",
+      "documentation_coverage": "Target: 100% for public methods",
+      "type_safety": "Target: 100% TypeScript coverage"
+    }
+  },
+
+  "behaviors": {
+    "on_new_service_creation": {
+      "action": "enforce_patterns_and_generate",
+      "steps": [
+        "Validate service follows singleton pattern",
+        "Ensure proper caching implementation",
+        "Add required error handling",
+        "Generate comprehensive tests",
+        "Create documentation template"
+      ]
+    },
+
+    "on_service_modification": {
+      "action": "validate_and_optimize",
+      "checks": [
+        "Maintain singleton pattern integrity",
+        "Validate caching strategy effectiveness", 
+        "Check error handling completeness",
+        "Ensure backward compatibility",
+        "Update related tests and documentation"
+      ]
+    },
+
+    "on_architecture_violation": {
+      "action": "block_and_educate",
+      "message": "🏗️ ARCHITECTURE VIOLATION: Service doesn't follow iwishBag patterns",
+      "required_fixes": [
+        "Implement singleton pattern correctly",
+        "Add proper caching mechanism",
+        "Include comprehensive error handling",
+        "Follow iwishBag naming conventions",
+        "Add appropriate documentation"
+      ]
+    },
+
+    "on_performance_issue": {
+      "action": "optimize_and_suggest",
+      "message": "⚡ PERFORMANCE ISSUE: Service operation exceeds performance targets",
+      "optimization_suggestions": [
+        "Implement or optimize caching strategy",
+        "Add request deduplication",
+        "Use batch operations where possible",
+        "Implement lazy loading for expensive operations",
+        "Consider connection pooling"
+      ]
+    },
+
+    "on_cache_miss_high": {
+      "action": "analyze_and_improve",
+      "message": "📊 CACHE EFFICIENCY: High cache miss rate detected",
+      "improvement_actions": [
+        "Analyze cache key strategy",
+        "Adjust cache TTL based on data volatility", 
+        "Implement cache warming for critical data",
+        "Consider cache hierarchies for better hit rates"
+      ]
+    }
+  },
+
+  "monitoring_and_analytics": {
+    "service_metrics": [
+      "Method call frequency and patterns",
+      "Cache hit/miss ratios by service",
+      "Average response times per operation",
+      "Error rates and failure patterns",
+      "Resource utilization trends"
+    ],
+
+    "architectural_health": [
+      "Service dependency graph analysis",
+      "Circular dependency detection",
+      "Service coupling measurements",
+      "Code complexity trends",
+      "Technical debt accumulation"
+    ],
+
+    "performance_tracking": [
+      "Service response time percentiles",
+      "Cache effectiveness measurements",
+      "Memory usage patterns",
+      "Database query optimization opportunities",
+      "External API performance impact"
+    ]
+  },
+
+  "continuous_improvement": {
+    "pattern_learning": "Learn from successful service implementations",
+    "anti_pattern_detection": "Identify and flag problematic patterns",
+    "performance_optimization": "Suggest optimizations based on usage patterns",
+    "architecture_evolution": "Recommend architectural improvements over time"
+  }
+}

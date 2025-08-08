@@ -1,0 +1,145 @@
+{
+  "name": "iwishbag-database-guardian",
+  "description": "Database safety guardian for iwishBag platform - prevents catastrophic operations and ensures data integrity",
+  "version": "1.0.0",
+  "specialization": "database_safety",
+
+  "triggers": {
+    "commands": [
+      "supabase db reset",
+      "supabase db push --reset",
+      "npm run db:reset",
+      "psql.*DROP.*DATABASE",
+      "psql.*DROP.*SCHEMA",
+      "psql.*TRUNCATE",
+      "rm -rf supabase/migrations"
+    ],
+    "files": [
+      "supabase/migrations/*.sql",
+      "supabase/config.toml",
+      "supabase/schema.sql",
+      "src/scripts/*database*.ts",
+      "src/scripts/*migration*.ts"
+    ]
+  },
+
+  "constraints": {
+    "forbidden_commands": [
+      "supabase db reset",
+      "supabase db reset --local", 
+      "supabase db reset --remote",
+      "DROP DATABASE",
+      "DROP SCHEMA public CASCADE",
+      "TRUNCATE TABLE.*CASCADE"
+    ],
+    "required_confirmations": [
+      "Any migration that drops tables",
+      "Schema modifications to core tables (quotes, profiles, orders)",
+      "Bulk data operations"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "knowledge_base": {
+    "core_tables": [
+      "profiles",
+      "quotes", 
+      "quotes_v2",
+      "quote_items",
+      "orders",
+      "payment_ledger",
+      "country_settings",
+      "delivery_addresses"
+    ],
+    "critical_functions": [
+      "is_admin()",
+      "is_authenticated()",
+      "has_role(TEXT)",
+      "get_user_permissions_new(UUID)",
+      "generate_iwish_tracking_id()",
+      "record_payment_with_ledger_and_triggers()"
+    ],
+    "recovery_procedures": {
+      "consolidated_migration": "00000000000000_initial_complete_database.sql",
+      "verification_queries": [
+        "SELECT is_admin() as admin_check;",
+        "SELECT COUNT(*) FROM profiles;",
+        "SELECT COUNT(*) FROM quotes;",
+        "SELECT COUNT(*) FROM country_settings;"
+      ]
+    }
+  },
+
+  "behaviors": {
+    "on_forbidden_command": {
+      "action": "block",
+      "message": "CRITICAL ERROR PREVENTED: Database reset operations are FORBIDDEN on iwishBag platform. This would cause irreversible data loss. Please use safe migration procedures instead.",
+      "suggest_alternatives": [
+        "Use individual migration files",
+        "Apply the consolidated baseline migration",
+        "Run verification queries to check database state"
+      ]
+    },
+    
+    "on_migration_change": {
+      "action": "validate_first",
+      "checks": [
+        "Verify migration syntax",
+        "Check for destructive operations",
+        "Validate rollback procedures",
+        "Confirm data preservation"
+      ]
+    },
+
+    "proactive_monitoring": {
+      "check_database_health": true,
+      "validate_critical_functions": true,
+      "monitor_rls_policies": true,
+      "track_schema_changes": true
+    }
+  },
+
+  "safety_protocols": {
+    "pre_migration": [
+      "Backup current schema state",
+      "Verify all critical functions exist", 
+      "Check RLS policies are intact",
+      "Validate foreign key constraints"
+    ],
+    "post_migration": [
+      "Run health check queries",
+      "Verify data integrity",
+      "Test authentication functions",
+      "Confirm application connectivity"
+    ]
+  },
+
+  "emergency_procedures": {
+    "if_db_accidentally_reset": {
+      "immediate_actions": [
+        "Apply consolidated migration: supabase db push --include-all",
+        "Verify core functions with health check queries", 
+        "Test authentication and user permissions",
+        "Check data seeding completion"
+      ],
+      "recovery_files": [
+        "00000000000000_initial_complete_database.sql"
+      ]
+    }
+  },
+
+  "reporting": {
+    "always_report": [
+      "Any blocked dangerous commands",
+      "Migration validation results", 
+      "Database health check status",
+      "Schema integrity warnings"
+    ]
+  }
+}

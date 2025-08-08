@@ -11,18 +11,14 @@
  * Inspired by Shopify, Stripe, and Amazon pricing management interfaces
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePricingMatrix } from '@/hooks/usePricingMatrix';
+import { useBulkOperations } from '@/hooks/useBulkOperations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -33,42 +29,15 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Globe,
-  Map,
-  DollarSign,
-  Percent,
-  TrendingUp,
-  Settings,
-  RefreshCw,
-  Download,
-  Upload,
-  Eye,
-  Edit2,
-  Save,
   Calculator,
   BarChart3,
-  Zap,
-  AlertTriangle,
-  CheckCircle,
-  Plus,
-  Minus,
-  X,
-  Target,
+  Settings,
+  RefreshCw,
   Users,
-  Package,
-  Shield,
-  Gift,
-  Camera,
-  Headphones,
-  Search
+  TreePine,
+  Activity,
+  Download
 } from 'lucide-react';
 
 import { regionalPricingService, AddonService, PricingCalculation } from '@/services/RegionalPricingService';
@@ -76,6 +45,14 @@ import { currencyService } from '@/services/CurrencyService';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SettingsDialog } from '@/components/admin/regional-pricing/SettingsDialog';
+import { BulkEditingPanel } from '@/components/admin/regional-pricing/BulkEditingPanel';
+import { HierarchicalPricingTree } from '@/components/admin/regional-pricing/HierarchicalPricingTree';
+import { CSVImportExport } from '@/components/admin/regional-pricing/CSVImportExport';
+import { ServiceSelector } from '@/components/admin/regional-pricing/ServiceSelector';
+import { PricingAuditLog } from '@/components/admin/regional-pricing/PricingAuditLog';
+import { PricingStatsPanel } from '@/components/admin/regional-pricing/PricingStatsPanel';
+import { PricingTableView } from '@/components/admin/regional-pricing/PricingTableView';
+import type { CountryPricing } from '@/components/admin/regional-pricing/BulkEditingPanel';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -127,29 +104,11 @@ interface RevenueImpactCalculation {
   confidence_score: number;
 }
 
-// ============================================================================
-// SERVICE ICON MAPPING
-// ============================================================================
-const ServiceIconMap: Record<string, React.ComponentType<any>> = {
-  'package_protection': Shield,
-  'express_processing': Zap,
-  'priority_support': Headphones,
-  'gift_wrapping': Gift,
-  'photo_documentation': Camera,
-};
+// ServiceIconMap moved to ServiceSelector component
 
 // ============================================================================
 // CONTINENTAL MAPPINGS
 // ============================================================================
-const ContinentalColors = {
-  'Asia': 'bg-blue-500',
-  'Europe': 'bg-green-500',
-  'North America': 'bg-purple-500',
-  'South America': 'bg-orange-500',
-  'Africa': 'bg-yellow-500',
-  'Oceania': 'bg-pink-500',
-  'Antarctica': 'bg-gray-500',
-} as const;
 
 const PredefinedRegions: RegionTemplate[] = [
   {
@@ -200,14 +159,20 @@ const PredefinedRegions: RegionTemplate[] = [
 // MAIN COMPONENT
 // ============================================================================
 
-export const RegionalPricingManager: React.FC = () => {
+export const RegionalPricingManager: React.FC = React.memo(() => {
   const [selectedService, setSelectedService] = useState<string>('package_protection');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterContinent, setFilterContinent] = useState<string>('all');
-  const [editingCountry, setEditingCountry] = useState<string | null>(null);
-  const [editRate, setEditRate] = useState<string>('');
+  
+  // Memoize the service change handler to prevent unnecessary re-renders
+  const handleServiceChange = useCallback((serviceKey: string) => {
+    setSelectedService(serviceKey);
+    // Clear any existing revenue impact when switching services
+    setRevenueImpact(null);
+  }, []);
   const [revenueImpact, setRevenueImpact] = useState<RevenueImpactCalculation | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [isBulkMode, setIsBulkMode] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'table' | 'hierarchy' | 'import-export' | 'audit'>('table');
 
   const queryClient = useQueryClient();
 
@@ -230,490 +195,38 @@ export const RegionalPricingManager: React.FC = () => {
     },
   });
 
-  // Load pricing matrix for selected service
-  const { data: pricingMatrix, isLoading: pricingLoading } = useQuery({
-    queryKey: ['pricing-matrix', selectedService],
-    queryFn: async () => {
-      if (!selectedService || countries.length === 0) return null;
-      
-      const service = services.find(s => s.service_key === selectedService);
-      if (!service) return null;
-
-      // Get pricing for all countries
-      const pricingPromises = countries.map(async (country) => {
-        try {
-          const result = await regionalPricingService.calculatePricing({
-            service_keys: [selectedService],
-            country_code: country.code,
-            order_value: 100, // Sample order value for calculation
-            use_cache: true
-          });
-
-          const calculation = result.calculations[0];
-          return {
-            country_code: country.code,
-            country_name: country.name,
-            continent: country.continent,
-            rate: calculation.applicable_rate,
-            tier: calculation.pricing_tier,
-            source: calculation.source_description,
-            min_amount: calculation.min_amount,
-            max_amount: calculation.max_amount,
-          };
-        } catch (error) {
-          console.warn(`Failed to get pricing for ${country.code}:`, error);
-          return {
-            country_code: country.code,
-            country_name: country.name,
-            continent: country.continent,
-            rate: service.default_rate,
-            tier: 'global' as const,
-            source: 'Default rate (error fallback)',
-            min_amount: service.min_amount || 0,
-            max_amount: service.max_amount,
-          };
-        }
-      });
-
-      const countryPricing = await Promise.all(pricingPromises);
-      
-      return {
-        service_key: selectedService,
-        service_name: service.service_name,
-        pricing_type: service.pricing_type,
-        icon_name: service.icon_name,
-        countries: countryPricing.reduce((acc, cp) => {
-          acc[cp.country_code] = {
-            rate: cp.rate,
-            tier: cp.tier,
-            source: cp.source,
-            min_amount: cp.min_amount,
-            max_amount: cp.max_amount,
-          };
-          return acc;
-        }, {} as Record<string, any>)
-      };
-    },
-    enabled: !!selectedService && countries.length > 0 && services.length > 0,
+  // Use custom hooks for pricing matrix and bulk operations
+  const {
+    pricingMatrix,
+    pricingStats,
+    countriesByContinent,
+    isLoading: pricingLoading,
+    error: pricingError,
+    refetch: refetchPricing
+  } = usePricingMatrix(selectedService, services, countries, {
+    adminMode: true, // Enable faster updates for admin interface
   });
 
-  // Group countries by continent for easier management
-  const countriesByContinent = useMemo(() => {
-    return countries.reduce((acc, country) => {
-      const continent = country.continent || 'Other';
-      if (!acc[continent]) acc[continent] = [];
-      acc[continent].push(country);
-      return acc;
-    }, {} as Record<string, any[]>);
-  }, [countries]);
-
-  // Calculate pricing statistics
-  const pricingStats = useMemo(() => {
-    if (!pricingMatrix) return null;
-
-    const rates = Object.values(pricingMatrix.countries).map(c => c.rate);
-    const tiers = Object.values(pricingMatrix.countries).map(c => c.tier);
-    
-    return {
-      min_rate: Math.min(...rates),
-      max_rate: Math.max(...rates),
-      avg_rate: rates.reduce((sum, rate) => sum + rate, 0) / rates.length,
-      tier_distribution: tiers.reduce((acc, tier) => {
-        acc[tier] = (acc[tier] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      total_countries: countries.length,
-      coverage_percentage: (Object.keys(pricingMatrix.countries).length / countries.length) * 100,
-    };
-  }, [pricingMatrix, countries.length]);
+  const {
+    handleBulkUpdate,
+    handleHierarchicalRateUpdate,
+    handleCountryRateUpdate,
+    calculateRevenueImpact
+  } = useBulkOperations(selectedService, services, countries, pricingMatrix);
 
   // ============================================================================
   // EDITING FUNCTIONS
   // ============================================================================
-
-  const handleEditStart = (countryCode: string, currentRate: number) => {
-    setEditingCountry(countryCode);
-    setEditRate(currentRate.toString());
-  };
-
-  const handleEditCancel = () => {
-    setEditingCountry(null);
-    setEditRate('');
-  };
-
-  const handleEditSave = useCallback(async (countryCode: string) => {
-    const service = services.find(s => s.service_key === selectedService);
-    if (!service) {
-      toast({ title: 'Service not found', variant: 'destructive' });
-      return;
-    }
-
-    const newRate = parseFloat(editRate);
-    if (isNaN(newRate) || newRate < 0) {
-      toast({ title: 'Invalid rate', description: 'Please enter a valid positive number', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      // Create or update country override
-      const { error } = await supabase
-        .from('country_pricing_overrides')
-        .upsert({
-          service_id: service.id,
-          country_code: countryCode,
-          rate: newRate,
-          reason: `Manual update - ${new Date().toLocaleDateString()}`,
-          is_active: true,
-          effective_from: new Date().toISOString(),
-        }, {
-          onConflict: 'service_id,country_code'
-        });
-
-      if (error) throw error;
-
-      // Refresh data
-      queryClient.invalidateQueries({ queryKey: ['pricing-matrix'] });
-      
-      toast({ 
-        title: 'Rate updated successfully', 
-        description: `${countryCode} rate set to ${newRate}${pricingMatrix?.pricing_type === 'percentage' ? '%' : ' USD'}`
-      });
-
-      setEditingCountry(null);
-      setEditRate('');
-
-    } catch (error) {
-      console.error('Update failed:', error);
-      toast({ title: 'Update failed', variant: 'destructive' });
-    }
-  }, [selectedService, services, editRate, queryClient, pricingMatrix?.pricing_type]);
 
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
 
   // ============================================================================
-  // REVENUE IMPACT CALCULATOR
-  // ============================================================================
-
-  const calculateRevenueImpact = useCallback(async (oldRate: number, newRate: number, affectedCountries: string[]) => {
-    try {
-      // This would integrate with your analytics service
-      // For now, we'll use sample calculations
-      const estimatedMonthlyOrders = affectedCountries.length * 50; // Sample data
-      const averageOrderValue = 150;
-      const currentRevenue = estimatedMonthlyOrders * averageOrderValue * oldRate;
-      const projectedRevenue = estimatedMonthlyOrders * averageOrderValue * newRate;
-      
-      const impact: RevenueImpactCalculation = {
-        current_monthly_revenue: currentRevenue,
-        projected_monthly_revenue: projectedRevenue,
-        impact_amount: projectedRevenue - currentRevenue,
-        impact_percentage: ((projectedRevenue - currentRevenue) / currentRevenue) * 100,
-        affected_countries: affectedCountries,
-        confidence_score: 0.85 // Based on historical data
-      };
-
-      setRevenueImpact(impact);
-    } catch (error) {
-      console.error('Revenue impact calculation failed:', error);
-    }
-  }, []);
-
-  // ============================================================================
   // RENDER FUNCTIONS
   // ============================================================================
 
-  const renderServiceSelector = () => (
-    <div className="flex items-center gap-4 mb-6">
-      <div className="flex items-center gap-2">
-        <Package className="w-5 h-5 text-blue-600" />
-        <Label className="text-sm font-medium">Service:</Label>
-      </div>
-      <Select value={selectedService} onValueChange={setSelectedService}>
-        <SelectTrigger className="w-[300px]">
-          <SelectValue placeholder="Select addon service" />
-        </SelectTrigger>
-        <SelectContent>
-          {services.map((service) => {
-            const IconComponent = ServiceIconMap[service.service_key] || Package;
-            return (
-              <SelectItem key={service.service_key} value={service.service_key}>
-                <div className="flex items-center gap-2">
-                  <IconComponent className="w-4 h-4" />
-                  <span>{service.service_name}</span>
-                  {service.badge_text && (
-                    <Badge variant="secondary" className="text-xs">
-                      {service.badge_text}
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-      
-      {pricingStats && (
-        <div className="flex items-center gap-4 ml-auto">
-          <Badge variant="outline">
-            {pricingStats.total_countries} countries
-          </Badge>
-          <Badge variant="outline">
-            Coverage: {pricingStats.coverage_percentage.toFixed(1)}%
-          </Badge>
-          <Badge variant={pricingStats.avg_rate > 0.02 ? 'destructive' : 'default'}>
-            Avg: {(pricingStats.avg_rate * 100).toFixed(2)}%
-          </Badge>
-        </div>
-      )}
-    </div>
-  );
 
-  const renderPricingMatrix = () => {
-    if (!pricingMatrix || !pricingStats) {
-      return <div className="flex items-center justify-center h-64">Loading pricing matrix...</div>;
-    }
-
-    // Prepare and filter data for table view
-    const allTableData = countries.map((country) => {
-      const pricing = pricingMatrix.countries[country.code];
-      return {
-        code: country.code,
-        name: country.name,
-        continent: country.continent || 'Other',
-        currency: country.currency || 'USD',
-        rate: pricing.rate,
-        tier: pricing.tier,
-        source: pricing.source,
-        min_amount: pricing.min_amount,
-        max_amount: pricing.max_amount,
-      };
-    });
-
-    // Apply filters
-    const tableData = allTableData.filter((row) => {
-      const matchesSearch = !searchTerm || 
-        row.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.code.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesContinent = filterContinent === 'all' || 
-        row.continent === filterContinent;
-      
-      return matchesSearch && matchesContinent;
-    });
-
-    // Get unique continents for filter
-    const continents = Array.from(new Set(allTableData.map(row => row.continent))).sort();
-
-    return (
-      <div className="space-y-6">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium">Min Rate</span>
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                {(pricingStats.min_rate * 100).toFixed(2)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-red-600" />
-                <span className="text-sm font-medium">Max Rate</span>
-              </div>
-              <p className="text-2xl font-bold text-red-600">
-                {(pricingStats.max_rate * 100).toFixed(2)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium">Average</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-600">
-                {(pricingStats.avg_rate * 100).toFixed(2)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium">Coverage</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-600">
-                {pricingStats.coverage_percentage.toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filter */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 max-w-md relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="text"
-                  placeholder="Search countries..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Continent:</Label>
-                <Select value={filterContinent} onValueChange={setFilterContinent}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Continents</SelectItem>
-                    {continents.map((continent) => (
-                      <SelectItem key={continent} value={continent}>
-                        {continent}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Badge variant="outline" className="text-sm">
-                {tableData.length} of {countries.length} countries
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Simple List/Table View */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              Regional Pricing Configuration - {pricingMatrix.service_name}
-            </CardTitle>
-            <CardDescription>
-              {pricingMatrix.pricing_type} pricing • Showing {tableData.length} countries
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Code</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Continent</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-right">Min Amount</TableHead>
-                  <TableHead className="text-right">Max Amount</TableHead>
-                  <TableHead className="w-32">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tableData.map((row) => (
-                  <TableRow key={row.code} className="hover:bg-gray-50">
-                    <TableCell className="font-mono font-medium">{row.code}</TableCell>
-                    <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${ContinentalColors[row.continent as keyof typeof ContinentalColors] || 'bg-gray-400'}`} />
-                        {row.continent}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono">{row.currency}</TableCell>
-                    <TableCell className="text-right">
-                      {editingCountry === row.code ? (
-                        <div className="flex items-center gap-2 justify-end">
-                          <Input
-                            type="number"
-                            step="0.001"
-                            value={editRate}
-                            onChange={(e) => setEditRate(e.target.value)}
-                            className="w-20 text-right"
-                            autoFocus
-                          />
-                          <span className="text-xs text-gray-500">
-                            {pricingMatrix.pricing_type === 'percentage' ? '%' : 'USD'}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="font-bold text-green-600">
-                          {pricingMatrix.pricing_type === 'percentage' 
-                            ? (row.rate * 100).toFixed(3) + '%'
-                            : '$' + row.rate.toFixed(2)
-                          }
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={row.tier === 'country' ? 'default' : 'secondary'}
-                        className="text-xs capitalize"
-                      >
-                        {row.tier}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-xs truncate" title={row.source}>
-                      {row.source}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      ${row.min_amount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {row.max_amount ? '$' + row.max_amount.toFixed(2) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {editingCountry === row.code ? (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            onClick={() => handleEditSave(row.code)}
-                            className="h-8 w-8 p-0"
-                            title="Save changes"
-                          >
-                            <Save className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleEditCancel}
-                            className="h-8 w-8 p-0"
-                            title="Cancel"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditStart(row.code, row.rate)}
-                          className="h-8 w-8 p-0"
-                          title="Edit rate"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
 
   const renderRevenueeImpactAnalytics = () => (
     <div className="space-y-6">
@@ -784,36 +297,242 @@ export const RegionalPricingManager: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Globe className="w-6 h-6 text-blue-600" />
-            Regional Pricing Management
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Manage add-on service pricing across {countries.length} countries with hierarchical rules
-          </p>
+    <div className="space-y-8">
+      {/* Modern Header with Stats */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-100 rounded-2xl p-8 border border-blue-200">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold flex items-center gap-3 text-gray-900">
+              <Globe className="w-8 h-8 text-blue-600" />
+              Regional Pricing
+            </h1>
+            <p className="text-lg text-gray-700 mt-2">
+              Intelligent pricing management across global markets
+            </p>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{services.length}</div>
+              <div className="text-sm text-gray-600 font-medium">Services</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">{countries.length}</div>
+              <div className="text-sm text-gray-600 font-medium">Countries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">6</div>
+              <div className="text-sm text-gray-600 font-medium">Continents</div>
+            </div>
+          </div>
         </div>
-        
+
+        {/* Service Selector */}
+        <ServiceSelector
+          services={services}
+          selectedService={selectedService}
+          onServiceChange={handleServiceChange}
+          pricingStats={pricingStats}
+          isLoading={pricingLoading}
+        />
+      </div>
+
+      {/* View Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {/* View Mode Selector */}
+          <div className="flex items-center gap-1 bg-white border-2 border-gray-200 rounded-xl p-1 shadow-sm">
+            <Button 
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-10 px-4"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Table
+            </Button>
+            <Button 
+              variant={viewMode === 'hierarchy' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('hierarchy')}
+              className="h-10 px-4"
+            >
+              <TreePine className="w-4 h-4 mr-2" />
+              Hierarchy
+            </Button>
+            <Button 
+              variant={viewMode === 'import-export' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('import-export')}
+              className="h-10 px-4"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Import/Export
+            </Button>
+            <Button 
+              variant={viewMode === 'audit' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('audit')}
+              className="h-10 px-4"
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              Audit Log
+            </Button>
+          </div>
+
+          {/* Mode-specific controls */}
+          {viewMode === 'table' && (
+            <Button 
+              variant={isBulkMode ? "default" : "outline"}
+              onClick={() => setIsBulkMode(!isBulkMode)}
+              className="h-10"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              {isBulkMode ? 'Exit Bulk' : 'Bulk Edit'}
+            </Button>
+          )}
+        </div>
+
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button variant="outline" className="h-10">
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+          <Button 
+            variant="outline"
+            className="h-10"
+            onClick={() => {
+              if (selectedCountries.length > 0 && pricingMatrix) {
+                const avgCurrentRate = selectedCountries.reduce((sum, code) => {
+                  return sum + (pricingMatrix.countries[code]?.rate || 0);
+                }, 0) / selectedCountries.length;
+                calculateRevenueImpact(avgCurrentRate, avgCurrentRate * 1.1, selectedCountries);
+              } else {
+                toast({ 
+                  title: 'Revenue Impact Calculator', 
+                  description: 'Select countries and enable bulk mode to calculate revenue impact.',
+                  variant: 'default'
+                });
+              }
+            }}
+          >
+            <Calculator className="w-4 h-4 mr-2" />
+            Revenue Impact
+          </Button>
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="h-10">
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
         </div>
       </div>
 
-      {renderServiceSelector()}
+      {/* Bulk Editing Panel */}
+      {isBulkMode && (
+        <BulkEditingPanel
+          countries={countries.map(country => {
+            const pricing = pricingMatrix?.countries[country.code];
+            return {
+              code: country.code,
+              name: country.name,
+              continent: country.continent || 'Other',
+              currency: country.currency || 'USD',
+              rate: pricing?.rate || 0,
+              tier: pricing?.tier || 'global',
+              source: pricing?.source || 'Default',
+              min_amount: pricing?.min_amount || 0,
+              max_amount: pricing?.max_amount,
+            };
+          })}
+          selectedCountries={selectedCountries}
+          onSelectionChange={setSelectedCountries}
+          onBulkUpdate={handleBulkUpdate}
+          isLoading={false}
+        />
+      )}
+
+      {/* Revenue Impact Analytics */}
+      {revenueImpact && (
+        <div className="mt-6">
+          {renderRevenueeImpactAnalytics()}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="mt-6">
-        {renderPricingMatrix()}
+        {viewMode === 'table' ? (
+          <PricingTableView
+            pricingMatrix={pricingMatrix}
+            countries={countries}
+            onEditRate={async (countryCode: string, newRate: number, currency?: string, localAmount?: number) => {
+              const service = services.find(s => s.service_key === selectedService);
+              if (!service) {
+                throw new Error('Service not found');
+              }
+
+              // Determine the reason based on whether this is a currency conversion
+              const reason = currency && localAmount 
+                ? `Local currency update: ${currency} ${localAmount} → $${newRate.toFixed(4)} USD`
+                : `Manual update - ${new Date().toLocaleDateString()}`;
+
+              // Create or update country override
+              const { error } = await supabase
+                .from('country_pricing_overrides')
+                .upsert({
+                  service_id: service.id,
+                  country_code: countryCode,
+                  rate: newRate,
+                  currency_code: currency || 'USD', // Store the original currency
+                  reason: reason,
+                  notes: currency && localAmount ? `Original amount: ${currency} ${localAmount}` : undefined,
+                  is_active: true,
+                  effective_from: new Date().toISOString(),
+                }, {
+                  onConflict: 'service_id,country_code'
+                });
+
+              if (error) throw error;
+
+              // Clear service cache for immediate updates
+              regionalPricingService.clearCache();
+              
+              // Clear database cache for the specific service and country
+              try {
+                await supabase
+                  .from('pricing_calculation_cache')
+                  .delete()
+                  .eq('service_id', service.id)
+                  .eq('country_code', countryCode);
+              } catch (cacheError) {
+                console.warn('Failed to clear database cache:', cacheError);
+              }
+
+              // Refresh React Query data
+              queryClient.invalidateQueries({ queryKey: ['pricing-matrix', selectedService] });
+            }}
+            isLoading={pricingLoading}
+            pricingType={services.find(s => s.service_key === selectedService)?.pricing_type || 'percentage'}
+          />
+        ) : viewMode === 'hierarchy' ? (
+          <HierarchicalPricingTree
+            serviceKey={selectedService}
+            serviceName={services.find(s => s.service_key === selectedService)?.service_name || 'Unknown Service'}
+            pricingType={services.find(s => s.service_key === selectedService)?.pricing_type || 'percentage'}
+            pricingMatrix={pricingMatrix}
+            countries={countries}
+            onRateUpdate={handleHierarchicalRateUpdate}
+          />
+        ) : viewMode === 'import-export' ? (
+          <CSVImportExport
+            services={services}
+            onDataUpdate={() => queryClient.invalidateQueries({ queryKey: ['pricing-matrix', selectedService] })}
+          />
+        ) : (
+          <PricingAuditLog
+            serviceKey={selectedService}
+          />
+        )}
       </div>
 
       {/* Settings Dialog */}
@@ -827,4 +546,6 @@ export const RegionalPricingManager: React.FC = () => {
       />
     </div>
   );
-};
+});
+
+RegionalPricingManager.displayName = 'RegionalPricingManager';

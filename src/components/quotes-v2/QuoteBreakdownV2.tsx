@@ -30,9 +30,8 @@ interface QuoteV2 {
   destination_country: string;
   items: any[];
   calculation_data: any;
-  total_quote_origincurrency?: number; // Legacy
-  total_customer_display_currency?: number; // Legacy
-  customer_currency?: string; // Legacy
+  total_quote_origincurrency?: number; // Origin currency amount
+  customer_currency?: string; // DEPRECATED - use user profile instead
   total_origin_currency?: number; // New system
   created_at: string;
   calculated_at?: string;

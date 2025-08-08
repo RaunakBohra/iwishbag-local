@@ -43,7 +43,7 @@ import {
   MobileProgress
 } from './ShopifyMobileOptimizations';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
-import { ProfessionalBreakdown } from './ProfessionalBreakdown';
+import { CustomerBreakdown } from './CustomerBreakdown';
 import { WeightPolicySection } from './WeightPolicySection';
 import { EnhancedAddonServicesSelector } from '@/components/quote/EnhancedAddonServicesSelector';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
@@ -209,7 +209,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     itemsConverted: false
   });
   
-  // State to receive shared total from ProfessionalBreakdown
+  // State to receive shared total from CustomerBreakdown
   const [sharedTotal, setSharedTotal] = useState<{
     formatted: string;
     numeric: number;
@@ -1023,7 +1023,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             </Card>
 
             {/* Pricing Breakdown */}
-            <ProfessionalBreakdown 
+            <CustomerBreakdown 
               quote={quote}
               formatCurrency={formatCurrency}
               displayCurrency={displayCurrency}

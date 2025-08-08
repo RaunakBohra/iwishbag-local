@@ -1,0 +1,341 @@
+{
+  "name": "iwishbag-component-curator",
+  "description": "Component architecture and UI/UX curator for iwishBag platform - ensures consistent design system, accessibility, and component excellence",
+  "version": "1.0.0", 
+  "specialization": "component_architecture",
+
+  "triggers": {
+    "file_patterns": [
+      "src/components/**/*.tsx",
+      "src/components/**/*.ts", 
+      "src/pages/**/*.tsx",
+      "src/hooks/use*.ts",
+      "src/contexts/**/*.tsx"
+    ],
+    "ui_patterns": [
+      "export.*function.*Component",
+      "interface.*Props",
+      "const.*=.*React\\.forwardRef",
+      "useState\\(",
+      "useEffect\\("
+    ],
+    "design_system_changes": [
+      "New component creation",
+      "Props interface modifications", 
+      "Styling and theme changes",
+      "Accessibility updates",
+      "Performance optimizations"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit",
+    "Write", 
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "iwishbag_design_system": {
+    "component_hierarchy": {
+      "atoms": {
+        "definition": "Basic building blocks (buttons, inputs, labels)",
+        "location": "src/components/ui/",
+        "characteristics": ["No business logic", "Highly reusable", "Minimal props"]
+      },
+      "molecules": {
+        "definition": "Combinations of atoms (form fields, cards, modals)",
+        "location": "src/components/common/",
+        "characteristics": ["Simple business logic", "Composable", "Domain-agnostic"]
+      },
+      "organisms": {
+        "definition": "Complex components (forms, tables, dashboards)",
+        "location": "src/components/",
+        "characteristics": ["Rich business logic", "Feature-specific", "Data-aware"]
+      },
+      "templates": {
+        "definition": "Page layouts and structures",
+        "location": "src/components/layouts/",
+        "characteristics": ["Layout-focused", "Slot-based", "Responsive"]
+      }
+    },
+
+    "shadcn_ui_integration": {
+      "base_components": [
+        "Button", "Input", "Select", "Card", "Dialog", "Sheet",
+        "Table", "Form", "Tabs", "Badge", "Avatar", "Skeleton"
+      ],
+      "customization_rules": [
+        "Extend via className prop", 
+        "Use CSS variables for theming",
+        "Maintain accessibility standards",
+        "Follow variant patterns"
+      ],
+      "composition_patterns": [
+        "Compound components for complex UI",
+        "Render props for flexible layouts",
+        "Forward refs for proper DOM access",
+        "Polymorphic components with 'asChild'"
+      ]
+    },
+
+    "theming_system": {
+      "color_palette": {
+        "primary": "Brand colors for main actions",
+        "secondary": "Supporting colors for secondary actions", 
+        "accent": "Highlight colors for special elements",
+        "neutral": "Gray scale for text and backgrounds",
+        "semantic": "Success, warning, error, info colors"
+      },
+      "typography": {
+        "scale": "Consistent font size scale",
+        "weights": "Regular, medium, semibold font weights",
+        "line_heights": "Optimal line heights for readability",
+        "letter_spacing": "Appropriate tracking for each size"
+      },
+      "spacing": {
+        "scale": "8px base unit spacing system",
+        "responsive": "Adaptive spacing for different screen sizes",
+        "component_spacing": "Consistent internal component spacing"
+      }
+    }
+  },
+
+  "iwishbag_component_patterns": {
+    "currency_display_components": {
+      "required_props": [
+        "amount: number",
+        "currencyCode: string", 
+        "displayMode?: 'symbol' | 'code' | 'full'",
+        "precision?: number"
+      ],
+      "behavior": "Always use CurrencyService.formatAmount()",
+      "accessibility": "Include currency information for screen readers"
+    },
+
+    "quote_components": {
+      "calculation_display": {
+        "pattern": "Show origin currency → user currency flow",
+        "breakdown": "Itemize costs (products, shipping, customs, fees)",
+        "validation": "Validate total calculations match sum of parts"
+      },
+      "status_indicators": {
+        "visual_feedback": "Clear status visualization",
+        "progress_tracking": "Show completion percentage",
+        "action_buttons": "Context-appropriate actions"
+      }
+    },
+
+    "form_components": {
+      "address_forms": {
+        "country_validation": "Validate against supported countries",
+        "format_validation": "Country-specific address formats", 
+        "autocomplete": "Support address autocomplete where available"
+      },
+      "payment_forms": {
+        "gateway_integration": "Seamless PayU/Stripe integration",
+        "security_display": "Show security badges and SSL indicators",
+        "error_handling": "User-friendly payment error messages"
+      }
+    },
+
+    "admin_components": {
+      "dual_currency_display": "Show both origin and display currencies",
+      "bulk_operations": "Efficient selection and batch actions",
+      "data_tables": "Sortable, filterable, paginated tables",
+      "status_management": "Workflow-aware status controls"
+    }
+  },
+
+  "component_quality_standards": {
+    "accessibility": {
+      "wcag_compliance": "WCAG 2.1 AA compliance minimum",
+      "semantic_html": "Proper HTML semantics and structure",
+      "keyboard_navigation": "Full keyboard accessibility",
+      "screen_reader": "Comprehensive screen reader support",
+      "focus_management": "Logical focus order and visibility",
+      "aria_labels": "Descriptive ARIA labels and landmarks"
+    },
+
+    "performance": {
+      "bundle_size": "Minimize component bundle impact",
+      "lazy_loading": "Code-split large components",
+      "memoization": "React.memo for expensive renders",
+      "virtualization": "Virtual scrolling for large lists",
+      "image_optimization": "Proper image loading and sizing"
+    },
+
+    "responsive_design": {
+      "breakpoints": "Mobile-first responsive design",
+      "touch_targets": "44px minimum touch targets",
+      "content_hierarchy": "Clear information hierarchy",
+      "adaptive_layouts": "Layout adapts to screen constraints"
+    },
+
+    "internationalization": {
+      "text_externalization": "All user-facing text externalized",
+      "rtl_support": "Right-to-left language support",
+      "number_formatting": "Locale-appropriate number formatting",
+      "date_formatting": "Cultural date and time formatting"
+    }
+  },
+
+  "component_architecture_patterns": {
+    "composition_over_inheritance": {
+      "compound_components": "Related components working together",
+      "render_props": "Flexible component behavior injection",
+      "children_as_function": "Advanced composition patterns",
+      "slot_based_layouts": "Flexible content placement"
+    },
+
+    "state_management": {
+      "local_state": "useState for component-specific state",
+      "context_state": "useContext for component tree state",
+      "external_state": "Zustand stores for global state", 
+      "server_state": "React Query for server data"
+    },
+
+    "error_handling": {
+      "error_boundaries": "Graceful error recovery",
+      "fallback_ui": "User-friendly error states",
+      "error_reporting": "Automatic error logging",
+      "retry_mechanisms": "User-initiated error recovery"
+    },
+
+    "loading_states": {
+      "skeleton_screens": "Content-aware loading placeholders",
+      "progressive_loading": "Incremental content revelation", 
+      "optimistic_updates": "Immediate UI feedback",
+      "background_updates": "Non-blocking data refreshes"
+    }
+  },
+
+  "component_testing_standards": {
+    "unit_testing": {
+      "render_testing": "Component renders without crashing",
+      "props_testing": "All props variations tested",
+      "interaction_testing": "User interactions tested",
+      "accessibility_testing": "A11y compliance verified"
+    },
+
+    "integration_testing": {
+      "context_integration": "Component works within contexts",
+      "state_management": "State updates work correctly",
+      "api_integration": "Server data integration tested"
+    },
+
+    "visual_regression": {
+      "storybook_stories": "All component variations documented",
+      "chromatic_testing": "Visual regression prevention",
+      "responsive_testing": "All breakpoints tested"
+    }
+  },
+
+  "code_generation_templates": {
+    "component_template": "interface {{ComponentName}}Props {\n  {{props}}\n}\n\nexport function {{ComponentName}}({\n  {{destructuredProps}}\n}: {{ComponentName}}Props) {\n  return (\n    <{{htmlElement}} className={cn(\"{{defaultClasses}}\", className)}>\n      {{children}}\n    </{{htmlElement}}>\n  )\n}",
+
+    "form_component_template": "interface {{FormName}}Props extends React.HTMLAttributes<HTMLFormElement> {\n  onSubmit: (data: {{DataType}}) => void\n  isLoading?: boolean\n  initialData?: Partial<{{DataType}}>\n}\n\nexport function {{FormName}}({\n  onSubmit,\n  isLoading,\n  initialData,\n  ...props\n}: {{FormName}}Props) {\n  const form = useForm<{{DataType}}>({\n    defaultValues: initialData,\n    resolver: zodResolver({{validationSchema}})\n  })\n\n  return (\n    <Form {...form}>\n      <form onSubmit={form.handleSubmit(onSubmit)} {...props}>\n        {{formFields}}\n        \n        <Button type=\"submit\" disabled={isLoading}>\n          {isLoading ? \"{{loadingText}}\" : \"{{submitText}}\"}\n        </Button>\n      </form>\n    </Form>\n  )\n}",
+
+    "currency_component_template": "interface {{ComponentName}}Props {\n  amount: number\n  currencyCode: string\n  displayMode?: 'symbol' | 'code' | 'full'\n  className?: string\n}\n\nexport function {{ComponentName}}({\n  amount,\n  currencyCode,\n  displayMode = 'symbol',\n  className\n}: {{ComponentName}}Props) {\n  const formattedAmount = currencyService.formatAmount(amount, currencyCode)\n  \n  return (\n    <span \n      className={cn(\"{{defaultClasses}}\", className)}\n      aria-label={`${amount} ${currencyCode}`}\n    >\n      {formattedAmount}\n    </span>\n  )\n}"
+  },
+
+  "storybook_integration": {
+    "story_generation": {
+      "default_story": "Basic component usage",
+      "variant_stories": "All component variants",
+      "interactive_stories": "User interaction examples",
+      "accessibility_stories": "A11y testing scenarios"
+    },
+
+    "documentation": {
+      "props_documentation": "Automatic props table generation",
+      "usage_examples": "Code examples for common use cases",
+      "design_tokens": "Visual design token display",
+      "accessibility_notes": "A11y usage guidelines"
+    }
+  },
+
+  "behaviors": {
+    "on_new_component": {
+      "action": "enforce_standards_and_generate",
+      "steps": [
+        "Validate component follows design system patterns",
+        "Ensure accessibility compliance",
+        "Generate comprehensive prop types",
+        "Create Storybook story template",
+        "Add testing template"
+      ]
+    },
+
+    "on_component_modification": {
+      "action": "validate_and_maintain",
+      "checks": [
+        "Maintain backward compatibility",
+        "Update prop types and documentation",
+        "Verify accessibility standards",
+        "Update related stories and tests",
+        "Check performance impact"
+      ]
+    },
+
+    "on_accessibility_violation": {
+      "action": "block_and_fix",
+      "message": "♿ ACCESSIBILITY VIOLATION: Component doesn't meet WCAG 2.1 standards",
+      "required_fixes": [
+        "Add proper ARIA labels and roles",
+        "Ensure keyboard navigation support",
+        "Implement focus management",
+        "Add semantic HTML structure",
+        "Include screen reader support"
+      ]
+    },
+
+    "on_design_system_violation": {
+      "action": "correct_and_guide",
+      "message": "🎨 DESIGN SYSTEM VIOLATION: Component doesn't follow iwishBag patterns",
+      "corrections": [
+        "Use Shadcn UI base components",
+        "Apply consistent spacing and typography",
+        "Follow component hierarchy patterns",
+        "Use design tokens for styling",
+        "Maintain visual consistency"
+      ]
+    },
+
+    "on_performance_issue": {
+      "action": "optimize_and_suggest",
+      "message": "⚡ PERFORMANCE ISSUE: Component may impact rendering performance",
+      "optimizations": [
+        "Add React.memo for expensive components",
+        "Implement lazy loading for large components",
+        "Optimize re-render patterns",
+        "Use efficient list virtualization",
+        "Minimize bundle size impact"
+      ]
+    }
+  },
+
+  "quality_metrics": {
+    "component_health": {
+      "accessibility_score": "Target: 100% WCAG 2.1 AA compliance",
+      "performance_score": "Target: <100ms render time",
+      "bundle_size_impact": "Target: <10KB per component",
+      "test_coverage": "Target: >95% line coverage"
+    },
+
+    "design_consistency": {
+      "design_token_usage": "Target: 100% design token compliance",
+      "component_reuse": "Target: >80% component reuse rate", 
+      "pattern_adherence": "Target: 100% pattern compliance",
+      "visual_regression": "Target: 0 unintended visual changes"
+    }
+  },
+
+  "continuous_improvement": {
+    "pattern_analysis": "Identify reusable component patterns",
+    "performance_monitoring": "Track component performance metrics",
+    "accessibility_auditing": "Regular accessibility compliance checks",
+    "user_feedback_integration": "Incorporate UX feedback into component design"
+  }
+}

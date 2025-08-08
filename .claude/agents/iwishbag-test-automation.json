@@ -1,0 +1,346 @@
+{
+  "name": "iwishbag-test-automation",
+  "description": "Intelligent testing automation for iwishBag platform - generates, runs, and maintains comprehensive test suites",
+  "version": "1.0.0", 
+  "specialization": "test_automation",
+
+  "triggers": {
+    "file_patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/services/**/*",
+      "src/components/**/*", 
+      "src/hooks/**/*",
+      "src/utils/**/*"
+    ],
+    "commands": [
+      "npm test",
+      "npm run test",
+      "npm run e2e",
+      "vitest",
+      "jest",
+      "playwright test"
+    ],
+    "test_triggers": [
+      "New function or method added",
+      "Service layer modifications",
+      "Currency handling changes",
+      "Database operations updates",
+      "Critical business logic changes"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Write", 
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "testing_frameworks": {
+    "unit_testing": {
+      "framework": "vitest",
+      "config_file": "vitest.config.ts",
+      "test_patterns": ["**/*.test.ts", "**/*.spec.ts"],
+      "coverage_threshold": 80
+    },
+    
+    "integration_testing": {
+      "framework": "vitest",
+      "database": "supabase local",
+      "test_patterns": ["**/*.integration.test.ts"],
+      "coverage_threshold": 70
+    },
+    
+    "e2e_testing": {
+      "framework": "playwright",
+      "config_file": "playwright.config.ts", 
+      "test_patterns": ["e2e/**/*.spec.ts"],
+      "browsers": ["chromium", "firefox", "webkit"]
+    },
+    
+    "component_testing": {
+      "framework": "vitest + @testing-library/react",
+      "test_patterns": ["**/*.component.test.tsx"],
+      "coverage_threshold": 85
+    }
+  },
+
+  "test_generation_rules": {
+    "services": {
+      "patterns": [
+        "Test singleton instance creation",
+        "Test cache functionality and invalidation", 
+        "Test error handling and fallbacks",
+        "Test concurrent access scenarios",
+        "Test performance under load"
+      ],
+      "iwishbag_specific": [
+        "Test currency conversion accuracy",
+        "Test origin→user currency flow",
+        "Test exchange rate caching",
+        "Test minimum payment validation"
+      ]
+    },
+    
+    "components": {
+      "patterns": [
+        "Test rendering with different props",
+        "Test user interactions and events",
+        "Test accessibility compliance",
+        "Test responsive design",
+        "Test error boundary handling"
+      ],
+      "iwishbag_specific": [
+        "Test currency display formatting",
+        "Test quote calculation displays",
+        "Test admin vs customer views",
+        "Test payment gateway integrations"
+      ]
+    },
+    
+    "utilities": {
+      "patterns": [
+        "Test pure function input/output",
+        "Test edge cases and boundary conditions",
+        "Test error scenarios",
+        "Test performance characteristics"
+      ],
+      "iwishbag_specific": [
+        "Test customer display utilities",
+        "Test address validation functions",
+        "Test phone number formatting",
+        "Test weight calculations"
+      ]
+    },
+    
+    "hooks": {
+      "patterns": [
+        "Test hook initialization",
+        "Test state updates and side effects",
+        "Test cleanup on unmount",
+        "Test dependency array changes"
+      ],
+      "iwishbag_specific": [
+        "Test cart state management",
+        "Test currency context updates",
+        "Test authentication state changes",
+        "Test real-time data updates"
+      ]
+    }
+  },
+
+  "test_categories": {
+    "critical_path": {
+      "priority": "highest",
+      "coverage_required": 95,
+      "includes": [
+        "Quote calculation logic",
+        "Payment processing flow",
+        "User authentication",
+        "Order status transitions",
+        "Currency conversions"
+      ]
+    },
+    
+    "business_logic": {
+      "priority": "high", 
+      "coverage_required": 85,
+      "includes": [
+        "Customer management",
+        "Address handling",
+        "Shipping calculations", 
+        "Tax computations",
+        "Discount applications"
+      ]
+    },
+    
+    "ui_components": {
+      "priority": "medium",
+      "coverage_required": 75,
+      "includes": [
+        "Form validations",
+        "Data displays",
+        "Interactive elements",
+        "Navigation components",
+        "Layout components"
+      ]
+    },
+    
+    "utilities": {
+      "priority": "medium",
+      "coverage_required": 80,
+      "includes": [
+        "Helper functions",
+        "Formatting utilities", 
+        "Validation functions",
+        "Calculation helpers",
+        "Data transformations"
+      ]
+    }
+  },
+
+  "test_data_management": {
+    "fixtures": {
+      "quotes": "Generate realistic quote data with various currencies",
+      "customers": "Create test customer profiles for different countries", 
+      "products": "Mock product data from different origins",
+      "addresses": "Valid address data for supported countries",
+      "payments": "Test payment scenarios for different gateways"
+    },
+    
+    "mocks": {
+      "external_apis": "Mock currency exchange APIs, shipping APIs",
+      "payment_gateways": "Mock PayU, Stripe responses",
+      "database": "Mock Supabase client for unit tests",
+      "file_system": "Mock file operations for testing",
+      "network": "Mock HTTP requests and responses"
+    },
+    
+    "factories": {
+      "quote_factory": "Generate quotes with realistic data",
+      "user_factory": "Create test users with proper permissions",
+      "address_factory": "Generate addresses for different countries",
+      "payment_factory": "Create payment test scenarios"
+    }
+  },
+
+  "automated_test_generation": {
+    "function_analysis": {
+      "input_types": "Analyze parameter types and generate test cases",
+      "return_types": "Validate return type consistency",
+      "side_effects": "Test side effects and state changes",
+      "error_conditions": "Generate tests for error scenarios"
+    },
+    
+    "coverage_analysis": {
+      "branch_coverage": "Ensure all code branches are tested",
+      "line_coverage": "Achieve target coverage percentages",
+      "function_coverage": "Test all public functions",
+      "integration_coverage": "Test component interactions"
+    },
+    
+    "regression_testing": {
+      "bug_reproduction": "Generate tests for reported bugs",
+      "edge_case_discovery": "Find and test edge cases",
+      "performance_regression": "Track performance over time",
+      "api_contract_testing": "Validate API responses"
+    }
+  },
+
+  "test_execution_strategies": {
+    "continuous_testing": {
+      "watch_mode": "Run tests automatically on file changes",
+      "parallel_execution": "Run tests in parallel for speed",
+      "selective_testing": "Only run tests affected by changes",
+      "incremental_testing": "Build on previous test results"
+    },
+    
+    "pre_commit_testing": {
+      "quick_tests": "Run fast unit tests before commit",
+      "critical_path": "Ensure critical functionality works",
+      "lint_and_type": "Check code quality and types",
+      "security_scan": "Quick security vulnerability scan"
+    },
+    
+    "deployment_testing": {
+      "integration_suite": "Full integration test suite",
+      "e2e_critical": "End-to-end tests for critical flows",
+      "performance_tests": "Load and performance validation",
+      "security_tests": "Comprehensive security testing"
+    }
+  },
+
+  "iwishbag_specific_tests": {
+    "currency_system": [
+      "Test origin currency storage and retrieval",
+      "Test currency conversion accuracy across all supported currencies",
+      "Test exchange rate caching and refresh mechanisms", 
+      "Test minimum payment amount validation",
+      "Test currency display formatting for different locales"
+    ],
+    
+    "quote_system": [
+      "Test quote calculation with various product combinations",
+      "Test customs calculations for different countries",
+      "Test shipping cost calculations and routing",
+      "Test discount application and validation",
+      "Test quote approval workflow and notifications"
+    ],
+    
+    "payment_system": [
+      "Test payment gateway selection logic",
+      "Test fee calculations for different gateways and countries",
+      "Test payment failure handling and retry mechanisms",
+      "Test refund processing workflows",
+      "Test payment security and fraud detection"
+    ],
+    
+    "user_management": [
+      "Test user registration and profile creation",
+      "Test address management and validation",
+      "Test role-based access control (admin vs customer)",
+      "Test authentication flows and session management",
+      "Test user data privacy and GDPR compliance"
+    ]
+  },
+
+  "test_maintenance": {
+    "flaky_test_detection": "Identify and fix unreliable tests",
+    "test_performance": "Monitor test execution time and optimize",
+    "test_debt_management": "Remove obsolete tests and update outdated ones",
+    "test_documentation": "Keep test descriptions current and helpful"
+  },
+
+  "reporting_and_analytics": {
+    "test_results": {
+      "pass_fail_rates": "Track test success rates over time",
+      "coverage_trends": "Monitor code coverage changes",
+      "performance_metrics": "Test execution time trends",
+      "flaky_test_report": "Identify problematic tests"
+    },
+    
+    "quality_insights": {
+      "code_quality_correlation": "Link test coverage to bug rates",
+      "deployment_confidence": "Test results impact on deployment decisions",
+      "developer_productivity": "How testing affects development speed",
+      "business_impact": "Connect test quality to business metrics"
+    }
+  },
+
+  "behaviors": {
+    "on_code_change": {
+      "action": "generate_and_run_tests",
+      "steps": [
+        "Analyze changed code for testing requirements",
+        "Generate appropriate test cases automatically", 
+        "Run affected tests to validate changes",
+        "Report coverage and quality metrics",
+        "Suggest additional test scenarios if needed"
+      ]
+    },
+    
+    "on_test_failure": {
+      "action": "analyze_and_assist", 
+      "steps": [
+        "Analyze failure cause and provide debugging info",
+        "Suggest potential fixes for the failing test",
+        "Check if failure indicates a regression",
+        "Recommend additional test coverage if needed"
+      ]
+    },
+    
+    "on_coverage_drop": {
+      "action": "identify_and_suggest",
+      "message": "📊 TEST COVERAGE DROP: Code coverage has decreased below target threshold",
+      "required_actions": [
+        "Identify which code is not covered by tests",
+        "Generate test cases for uncovered code paths",
+        "Ensure critical business logic is fully tested",
+        "Update coverage thresholds if appropriate"
+      ]
+    }
+  }
+}

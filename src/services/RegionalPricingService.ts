@@ -89,8 +89,64 @@ class RegionalPricingServiceClass {
   private static instance: RegionalPricingServiceClass;
   private cache = new Map<string, { data: any; expires: number }>();
   private readonly CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+  private globalConfig: {
+    default_rate: number;
+    min_amount: number;
+    max_amount: number;
+  } | null = null;
   
   private constructor() {}
+
+  /**
+   * Load global pricing configuration from system_settings
+   */
+  private async loadGlobalConfig(): Promise<void> {
+    if (this.globalConfig) return; // Already loaded
+
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', [
+          'global_default_pricing_rate',
+          'global_pricing_min_amount', 
+          'global_pricing_max_amount'
+        ]);
+
+      if (error) throw error;
+
+      if (data) {
+        const configMap = data.reduce((acc, setting) => {
+          acc[setting.setting_key] = setting.setting_value;
+          return acc;
+        }, {} as Record<string, string>);
+
+        this.globalConfig = {
+          default_rate: parseFloat(configMap.global_default_pricing_rate || '0.025'),
+          min_amount: parseFloat(configMap.global_pricing_min_amount || '2.00'),
+          max_amount: parseFloat(configMap.global_pricing_max_amount || '250.00')
+        };
+
+        logger.info('Global pricing configuration loaded', { config: this.globalConfig });
+      } else {
+        // Fallback to hardcoded values if no config found
+        this.globalConfig = {
+          default_rate: 0.025,
+          min_amount: 2.00,
+          max_amount: 250.00
+        };
+        logger.warn('No global pricing config found, using defaults', { config: this.globalConfig });
+      }
+    } catch (error) {
+      logger.error('Failed to load global pricing config', { error });
+      // Fallback to hardcoded values
+      this.globalConfig = {
+        default_rate: 0.025,
+        min_amount: 2.00,
+        max_amount: 250.00
+      };
+    }
+  }
   
   public static getInstance(): RegionalPricingServiceClass {
     if (!RegionalPricingServiceClass.instance) {
@@ -213,6 +269,9 @@ class RegionalPricingServiceClass {
     const startTime = Date.now();
     const operationId = `pricing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     let cacheHits = 0;
+
+    // Load global config if not already loaded
+    await this.loadGlobalConfig();
     let totalQueries = 0;
 
     // Start performance monitoring
@@ -443,10 +502,15 @@ class RegionalPricingServiceClass {
         throw new Error('Service configuration not found for fallback');
       }
 
+      // Use configurable global rate if available, otherwise fall back to service default
+      const globalRate = this.globalConfig?.default_rate || service.default_rate;
+      const globalMinAmount = this.globalConfig?.min_amount || service.min_amount || 0;
+      const globalMaxAmount = this.globalConfig?.max_amount || service.max_amount;
+
       return {
-        rate: service.default_rate,
-        min_amount: service.min_amount || 0,
-        max_amount: service.max_amount,
+        rate: globalRate,
+        min_amount: globalMinAmount,
+        max_amount: globalMaxAmount,
         tier: 'global' as const,
         description: 'Global default rate - no specific regional pricing available'
       };

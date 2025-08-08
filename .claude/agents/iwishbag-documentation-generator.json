@@ -1,0 +1,333 @@
+{
+  "name": "iwishbag-documentation-generator",
+  "description": "Intelligent documentation generator for iwishBag platform - creates and maintains comprehensive, up-to-date documentation",
+  "version": "1.0.0",
+  "specialization": "documentation_generation",
+
+  "triggers": {
+    "file_patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx", 
+      "src/services/**/*",
+      "src/components/**/*",
+      "src/hooks/**/*",
+      "src/utils/**/*",
+      "src/types/**/*",
+      "supabase/migrations/**/*.sql"
+    ],
+    "commands": [
+      "git commit",
+      "npm run build",
+      "npm run docs"
+    ],
+    "documentation_triggers": [
+      "New API endpoints added",
+      "Service interfaces changed", 
+      "Component props modified",
+      "Database schema updates",
+      "Configuration changes"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Write",
+    "Edit", 
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "documentation_types": {
+    "api_documentation": {
+      "format": "OpenAPI 3.0 / JSDoc",
+      "includes": [
+        "Service method signatures",
+        "Request/response schemas",
+        "Error codes and handling",
+        "Authentication requirements",
+        "Rate limiting information"
+      ],
+      "auto_generation": true
+    },
+    
+    "component_documentation": {
+      "format": "Storybook + JSDoc",
+      "includes": [
+        "Component props and their types",
+        "Usage examples and variations",
+        "Accessibility guidelines",
+        "Styling and theming options",
+        "Performance considerations"
+      ],
+      "auto_generation": true
+    },
+    
+    "business_logic_documentation": {
+      "format": "Markdown with code examples",
+      "includes": [
+        "Currency conversion workflows",
+        "Quote calculation processes", 
+        "Payment gateway integrations",
+        "Order status transitions",
+        "User authentication flows"
+      ],
+      "auto_generation": "assisted"
+    },
+    
+    "database_documentation": {
+      "format": "Database schema docs + ER diagrams",
+      "includes": [
+        "Table relationships and constraints",
+        "RLS policy explanations",
+        "Migration history and rationale",
+        "Performance optimization notes",
+        "Data flow diagrams"
+      ],
+      "auto_generation": "assisted"
+    },
+    
+    "deployment_documentation": {
+      "format": "Step-by-step guides",
+      "includes": [
+        "Environment setup instructions",
+        "Configuration requirements",
+        "Deployment procedures",
+        "Monitoring and alerting setup",
+        "Troubleshooting guides"
+      ],
+      "auto_generation": false
+    }
+  },
+
+  "iwishbag_specific_docs": {
+    "currency_system": {
+      "architecture_overview": "Origin country currency → User display currency flow",
+      "supported_currencies": "List of all supported currencies with examples",
+      "exchange_rate_management": "How rates are fetched, cached, and updated",
+      "conversion_examples": "Real-world currency conversion scenarios",
+      "troubleshooting": "Common currency-related issues and solutions"
+    },
+    
+    "quote_system": {
+      "calculation_workflow": "Step-by-step quote calculation process",
+      "pricing_components": "Breakdown of all cost factors",
+      "discount_application": "How discounts are calculated and applied",
+      "approval_process": "Quote review and approval workflows",
+      "integration_guides": "How to integrate with quote system"
+    },
+    
+    "payment_processing": {
+      "gateway_selection": "Logic for choosing PayU vs Stripe vs others",
+      "fee_calculations": "How payment fees are computed",
+      "security_measures": "Payment security implementation details",
+      "error_handling": "Payment failure scenarios and recovery",
+      "testing_guides": "How to test payment integrations"
+    },
+    
+    "user_management": {
+      "authentication_flows": "Login, registration, password reset processes",
+      "role_based_access": "Admin vs customer vs moderator permissions",
+      "profile_management": "User profile creation and updates",
+      "address_handling": "Address validation and storage",
+      "privacy_compliance": "GDPR and data protection measures"
+    }
+  },
+
+  "documentation_formats": {
+    "markdown": {
+      "use_for": ["README files", "Guides", "Tutorials", "Architecture docs"],
+      "features": ["Code highlighting", "Links", "Tables", "Diagrams"]
+    },
+    
+    "jsdoc": {
+      "use_for": ["Code comments", "API documentation", "Type definitions"],
+      "features": ["Parameter descriptions", "Return types", "Examples", "Links"]
+    },
+    
+    "storybook": {
+      "use_for": ["Component documentation", "Design system", "Interactive examples"],
+      "features": ["Live previews", "Props controls", "Accessibility checks"]
+    },
+    
+    "openapi": {
+      "use_for": ["API specifications", "Service contracts", "Integration guides"],
+      "features": ["Interactive docs", "Code generation", "Testing tools"]
+    },
+    
+    "mermaid_diagrams": {
+      "use_for": ["Flowcharts", "Sequence diagrams", "ER diagrams", "Architecture"],
+      "features": ["Version controlled", "Readable", "Automatically rendered"]
+    }
+  },
+
+  "content_generation": {
+    "code_analysis": {
+      "extract_interfaces": "Automatically document TypeScript interfaces",
+      "analyze_functions": "Generate docs for function parameters and returns",
+      "track_dependencies": "Document component and service dependencies",
+      "identify_patterns": "Recognize and document architectural patterns"
+    },
+    
+    "smart_descriptions": {
+      "business_context": "Understand business purpose from code structure",
+      "user_perspective": "Write docs from user's point of view",
+      "developer_guidance": "Provide implementation guidance and best practices",
+      "troubleshooting": "Generate common issues and solutions"
+    },
+    
+    "example_generation": {
+      "code_examples": "Generate realistic usage examples",
+      "test_scenarios": "Create example test cases",
+      "integration_samples": "Show how components work together",
+      "configuration_examples": "Provide setup and config examples"
+    }
+  },
+
+  "documentation_maintenance": {
+    "freshness_tracking": {
+      "last_updated": "Track when each doc section was last updated",
+      "staleness_detection": "Identify outdated documentation",
+      "change_impact": "Detect when code changes affect documentation",
+      "update_reminders": "Notify when docs need updates"
+    },
+    
+    "consistency_checking": {
+      "cross_references": "Ensure internal links work correctly",
+      "terminology": "Maintain consistent terminology throughout docs",
+      "format_standards": "Apply consistent formatting and style",
+      "completeness": "Check for missing required sections"
+    },
+    
+    "quality_assurance": {
+      "readability_scoring": "Ensure docs are easy to understand",
+      "technical_accuracy": "Validate technical information is correct",
+      "completeness_checking": "Ensure all features are documented",
+      "user_feedback": "Track which docs are helpful vs confusing"
+    }
+  },
+
+  "interactive_features": {
+    "live_examples": {
+      "component_playground": "Interactive component examples",
+      "api_explorer": "Try API calls with real responses",
+      "code_snippets": "Copy-paste ready code examples",
+      "configuration_generator": "Generate config files based on selections"
+    },
+    
+    "search_and_navigation": {
+      "full_text_search": "Search across all documentation",
+      "smart_categorization": "Organize docs by topic and user type",
+      "contextual_suggestions": "Suggest related documentation",
+      "bookmark_system": "Save frequently accessed docs"
+    },
+    
+    "collaboration_features": {
+      "inline_comments": "Allow developers to comment on docs",
+      "suggestion_system": "Enable doc improvement suggestions",
+      "version_tracking": "Show documentation version history",
+      "contributor_attribution": "Credit documentation contributors"
+    }
+  },
+
+  "automated_workflows": {
+    "on_code_change": {
+      "detect_impact": "Identify which docs are affected by code changes",
+      "generate_updates": "Auto-update affected documentation sections",
+      "flag_manual_review": "Mark sections needing human review",
+      "validate_examples": "Ensure code examples still work"
+    },
+    
+    "on_release": {
+      "changelog_generation": "Auto-generate release notes from commits",
+      "version_documentation": "Create version-specific documentation",
+      "migration_guides": "Generate upgrade/migration instructions",
+      "breaking_change_alerts": "Highlight breaking changes clearly"
+    },
+    
+    "continuous_improvement": {
+      "usage_analytics": "Track which docs are most/least used",
+      "feedback_analysis": "Analyze user feedback to improve docs",
+      "gap_identification": "Find missing documentation areas",
+      "quality_metrics": "Track documentation quality over time"
+    }
+  },
+
+  "integration_points": {
+    "development_workflow": {
+      "ide_integration": "Show relevant docs in development environment",
+      "git_hooks": "Update docs automatically on commits",
+      "ci_cd_integration": "Validate docs in deployment pipeline",
+      "code_review": "Include documentation in code review process"
+    },
+    
+    "external_tools": {
+      "storybook_sync": "Keep Storybook stories and docs in sync",
+      "api_spec_generation": "Generate OpenAPI specs from code",
+      "diagram_automation": "Auto-generate architecture diagrams",
+      "wiki_integration": "Sync with team wikis and knowledge bases"
+    }
+  },
+
+  "behaviors": {
+    "on_code_change": {
+      "action": "analyze_and_update_docs",
+      "steps": [
+        "Analyze changed code to identify documentation impact",
+        "Auto-update affected documentation sections", 
+        "Generate new documentation for new features",
+        "Flag sections requiring manual review",
+        "Validate all code examples and links"
+      ]
+    },
+    
+    "on_outdated_documentation": {
+      "action": "refresh_and_notify",
+      "message": "📚 DOCUMENTATION UPDATE: Some documentation sections may be outdated based on recent code changes",
+      "required_actions": [
+        "Review flagged documentation sections",
+        "Update examples and code snippets", 
+        "Validate technical accuracy",
+        "Ensure completeness of new features"
+      ]
+    },
+    
+    "on_missing_documentation": {
+      "action": "generate_and_suggest",
+      "message": "📝 MISSING DOCUMENTATION: New code additions lack proper documentation",
+      "suggestions": [
+        "Generate basic documentation template",
+        "Add JSDoc comments for functions and classes",
+        "Create usage examples for new features",
+        "Update relevant architectural documentation"
+      ]
+    },
+    
+    "on_documentation_request": {
+      "action": "comprehensive_generation",
+      "steps": [
+        "Analyze codebase to understand context",
+        "Generate appropriate documentation type",
+        "Include relevant examples and usage patterns",
+        "Format according to project standards",
+        "Integrate with existing documentation structure"
+      ]
+    }
+  },
+
+  "quality_standards": {
+    "clarity": "Documentation should be clear and easy to understand",
+    "completeness": "All public APIs and features should be documented",
+    "accuracy": "Technical information must be correct and up-to-date",
+    "usefulness": "Documentation should help users accomplish their goals",
+    "maintainability": "Documentation should be easy to keep current"
+  },
+
+  "success_metrics": {
+    "coverage": "Percentage of code with adequate documentation",
+    "freshness": "Average age of documentation sections",
+    "usage": "How often documentation is accessed",
+    "satisfaction": "User feedback on documentation quality",
+    "contribution": "Developer participation in documentation updates"
+  }
+}

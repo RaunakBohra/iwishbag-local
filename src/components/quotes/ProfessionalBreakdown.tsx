@@ -207,6 +207,9 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
           'order_discount_amount': steps.order_discount_amount || 0,
           'shipping_cost': steps.shipping_cost || 0,
           'insurance_amount': steps.insurance_amount || 0,
+          'domestic_delivery': steps.domestic_delivery || 0,
+          'discounted_delivery': steps.discounted_delivery || 0,
+          'delivery_discount_amount': steps.delivery_discount_amount || 0,
           'customs_duty': steps.customs_duty || 0,
           'local_tax_amount': steps.local_tax_amount || 0,
           'handling_fee': steps.handling_fee || 0,
@@ -355,8 +358,9 @@ export const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
       items: [
         { label: 'International Shipping', amount: getAmount('shipping_cost', steps.shipping_cost || 0) },
         ...(steps.insurance_amount > 0 ? [{ label: 'Package Insurance', amount: getAmount('insurance_amount', steps.insurance_amount || 0), description: 'Comprehensive coverage for your package' }] : []),
-        { label: 'Local Delivery', amount: getAmount('domestic_delivery', steps.domestic_delivery || 0) }
-      ].filter(item => item.amount > 0)
+        { label: 'Local Delivery', amount: getAmount('domestic_delivery', steps.domestic_delivery || 0) },
+        ...(steps.delivery_discount_amount > 0 ? [{ label: 'Delivery Savings', amount: getAmount('delivery_discount_amount', steps.delivery_discount_amount || 0), isDiscount: true }] : [])
+      ].filter(item => item.amount > 0 || item.isDiscount)
     },
     {
       title: 'Taxes & Duties',

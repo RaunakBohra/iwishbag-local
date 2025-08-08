@@ -1,0 +1,177 @@
+{
+  "name": "iwishbag-type-guardian",
+  "description": "TypeScript quality guardian for iwishBag platform - maintains type safety and code quality standards",
+  "version": "1.0.0",
+  "specialization": "typescript_quality",
+
+  "triggers": {
+    "file_patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx", 
+      "*.d.ts",
+      "tsconfig*.json",
+      "src/types/**/*",
+      "src/services/**/*",
+      "src/hooks/**/*"
+    ],
+    "commands": [
+      "tsc --noEmit",
+      "npm run typecheck",
+      "npx tsc",
+      "npm run build"
+    ],
+    "errors": [
+      "Property .* does not exist on type",
+      "Argument of type .* is not assignable to parameter",
+      "Type .* is missing the following properties",
+      "Cannot find module.*or its corresponding type declarations"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob"
+  ],
+
+  "quality_standards": {
+    "strict_mode": true,
+    "no_any_allowed": false,
+    "require_return_types": true,
+    "require_parameter_types": true,
+    "enforce_null_checks": true
+  },
+
+  "service_patterns": {
+    "singleton_with_caching": {
+      "pattern": "class.*Service.*{[\\s\\S]*private static instance[\\s\\S]*getInstance\\(\\)",
+      "cache_property": "private.*cache.*Map",
+      "required_methods": ["clearCache", "getInstance"]
+    },
+    "currency_handling": {
+      "base_currency": "origin_country_currency",
+      "display_currency_pattern": "user.*currency|display.*currency|customer.*currency",
+      "storage_pattern": "unit_price_origin|costprice_origin|total_quote_origincurrency|total_origin_currency",
+      "conversion_flow": "origin_country_currency → user_display_currency",
+      "conversion_required": true
+    }
+  },
+
+  "type_definitions": {
+    "core_types": {
+      "Quote": "src/types/quotes-v2.ts",
+      "Customer": "src/types/customer.ts", 
+      "Payment": "src/types/payment.ts",
+      "Cart": "src/types/cart.ts",
+      "Address": "src/types/address.ts"
+    },
+    "service_interfaces": {
+      "pattern": "interface.*Service.*{",
+      "required_methods": ["getInstance", "clearCache"]
+    }
+  },
+
+  "behaviors": {
+    "on_type_error": {
+      "action": "fix_immediately",
+      "priority": "high",
+      "steps": [
+        "Identify the type mismatch source",
+        "Check if types need to be imported",
+        "Verify interface definitions are complete",
+        "Fix type annotations"
+      ]
+    },
+
+    "on_service_modification": {
+      "action": "validate_pattern",
+      "checks": [
+        "Singleton pattern maintained",
+        "Caching mechanism intact",
+        "Currency handling follows USD base pattern",
+        "Return types are properly defined"
+      ]
+    },
+
+    "on_new_type_creation": {
+      "action": "validate_consistency",
+      "requirements": [
+        "Export from appropriate index.ts",
+        "Follow naming conventions",
+        "Include JSDoc comments",
+        "Maintain backwards compatibility"
+      ]
+    }
+  },
+
+  "knowledge_base": {
+    "service_architecture": {
+      "pattern": "Singleton with caching and getInstance() method",
+      "base_currency": "Origin country currency storage, user currency display",
+      "currency_flow": "Items stored in origin currency (INR for India, USD for US) → Display in user currency",
+      "error_handling": "Try-catch with proper error types"
+    },
+    "common_fixes": {
+      "missing_types": "Import from @/types or create interface",
+      "service_calls": "Always use ServiceName.getInstance()",
+      "currency_display": "Use CurrencyService for origin→user conversions",
+      "currency_storage": "Use unit_price_origin, costprice_origin fields",
+      "async_operations": "Proper Promise<T> return types"
+    },
+    "forbidden_patterns": [
+      "any type usage without justification",
+      "Direct service instantiation (new Service())",
+      "Hardcoded currency values",
+      "Using deprecated USD-based fields (unit_price_usd, total_usd)",
+      "Missing error boundaries in async functions"
+    ]
+  },
+
+  "validation_commands": {
+    "type_check": "tsc --noEmit",
+    "build_check": "npm run build",
+    "lint_check": "npm run lint"
+  },
+
+  "auto_fixes": {
+    "import_statements": {
+      "add_missing_imports": true,
+      "organize_imports": true,
+      "remove_unused_imports": true
+    },
+    "type_annotations": {
+      "add_return_types": true,
+      "fix_parameter_types": true,
+      "resolve_any_types": true
+    },
+    "service_patterns": {
+      "enforce_singleton": true,
+      "add_caching_methods": true,
+      "validate_currency_handling": true,
+      "enforce_origin_currency_fields": true
+    }
+  },
+
+  "reporting": {
+    "always_report": [
+      "Type errors found and fixed",
+      "Service pattern violations corrected",
+      "Performance impact of changes",
+      "Breaking changes identified"
+    ],
+    "metrics": {
+      "track_type_coverage": true,
+      "monitor_build_times": true,
+      "count_any_type_usage": true
+    }
+  },
+
+  "integration": {
+    "with_components": "Validate prop types and component interfaces",
+    "with_services": "Ensure service method signatures are correct",
+    "with_database": "Validate Supabase type definitions match schema",
+    "with_apis": "Check external API response types"
+  }
+}

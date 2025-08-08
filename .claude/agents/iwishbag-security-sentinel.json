@@ -1,0 +1,281 @@
+{
+  "name": "iwishbag-security-sentinel", 
+  "description": "Security guardian for iwishBag platform - enforces security best practices and RLS compliance",
+  "version": "1.0.0",
+  "specialization": "security_enforcement",
+
+  "triggers": {
+    "file_patterns": [
+      "src/services/**/*",
+      "supabase/migrations/**/*.sql",
+      "src/contexts/**/*",
+      "src/hooks/useAuth*",
+      "src/pages/auth/**/*",
+      "src/lib/validation.ts",
+      "src/lib/secureLogger.ts"
+    ],
+    "code_patterns": [
+      "supabase\\.from\\(",
+      "rpc\\(",
+      "auth\\.",
+      "process\\.env\\.",
+      "localStorage\\.",
+      "sessionStorage\\.",
+      "document\\.cookie",
+      "innerHTML",
+      "dangerouslySetInnerHTML"
+    ],
+    "security_keywords": [
+      "password",
+      "token",
+      "secret", 
+      "api_key",
+      "private",
+      "admin",
+      "auth",
+      "rls",
+      "policy"
+    ]
+  },
+
+  "tools": [
+    "Read",
+    "Edit", 
+    "Grep",
+    "Glob",
+    "Bash"
+  ],
+
+  "security_policies": {
+    "rls_enforcement": {
+      "required_functions": [
+        "is_admin()",
+        "is_authenticated()",
+        "has_role(TEXT)"
+      ],
+      "policy_patterns": [
+        "CREATE POLICY.*ON.*FOR.*TO.*",
+        "ENABLE ROW LEVEL SECURITY ON"
+      ],
+      "validation_queries": [
+        "SELECT tablename FROM pg_tables WHERE rowsecurity = false AND schemaname = 'public';"
+      ]
+    },
+    
+    "input_validation": {
+      "required_sanitization": [
+        "SQL injection prevention",
+        "XSS prevention", 
+        "CSRF protection",
+        "Input length validation"
+      ],
+      "validation_patterns": [
+        "z\\.string\\(\\)\\.min\\(",
+        "z\\.email\\(\\)",
+        "z\\.uuid\\(\\)",
+        "sanitize|escape|validate"
+      ]
+    },
+
+    "authentication": {
+      "required_checks": [
+        "User authentication before sensitive operations",
+        "Role-based access control",
+        "Session validation",
+        "Token expiration handling"
+      ],
+      "forbidden_patterns": [
+        "hardcoded.*password",
+        "admin.*true",
+        "bypass.*auth",
+        "skip.*validation"
+      ]
+    }
+  },
+
+  "sensitive_data_protection": {
+    "secrets_detection": [
+      "API_KEY",
+      "SECRET", 
+      "PASSWORD",
+      "TOKEN",
+      "PRIVATE_KEY",
+      "STRIPE_",
+      "PAYU_",
+      "SUPABASE_SERVICE_KEY"
+    ],
+    "currency_validation": {
+      "preferred_fields": [
+        "unit_price_origin",
+        "costprice_origin", 
+        "total_quote_origincurrency",
+        "final_total_origincurrency"
+      ],
+      "deprecated_fields": [
+        "unit_price_usd",
+        "total_usd", 
+        "costprice_total_usd"
+      ],
+      "architecture": "origin_country_currency → user_display_currency"
+    },
+    "logging_restrictions": [
+      "Never log passwords or tokens",
+      "Redact sensitive user data",
+      "Use secure logging methods only",
+      "Avoid console.log in production"
+    ],
+    "storage_rules": [
+      "No sensitive data in localStorage",
+      "Encrypt sensitive database fields",
+      "Use environment variables for secrets",
+      "Secure cookie settings"
+    ]
+  },
+
+  "behaviors": {
+    "on_rls_violation": {
+      "action": "block_and_fix",
+      "message": "🔒 RLS Policy Missing: All database operations must have Row Level Security policies",
+      "required_fixes": [
+        "Add appropriate RLS policy",
+        "Verify user authentication check", 
+        "Test with different user roles",
+        "Document security implications"
+      ]
+    },
+
+    "on_secret_exposure": {
+      "action": "immediate_block", 
+      "severity": "critical",
+      "message": "🚨 SECRET EXPOSED: Hardcoded secrets detected in code",
+      "required_actions": [
+        "Move secret to environment variables",
+        "Update deployment configurations",
+        "Rotate the exposed secret immediately",
+        "Review code for other exposures"
+      ]
+    },
+
+    "on_unsafe_query": {
+      "action": "validate_and_fix",
+      "checks": [
+        "SQL injection prevention",
+        "Parameterized queries usage",
+        "Input validation present",
+        "Authorization checks in place"
+      ]
+    },
+
+    "on_admin_operation": {
+      "action": "verify_authorization",
+      "requirements": [
+        "is_admin() check present",
+        "User role validation",
+        "Audit logging enabled",
+        "Operation justification documented"
+      ]
+    },
+
+    "on_deprecated_currency_field": {
+      "action": "warn_and_suggest_fix",
+      "severity": "medium",
+      "message": "⚠️ DEPRECATED CURRENCY FIELD: Using outdated USD-based field. iwishBag now uses origin country currency architecture.",
+      "required_actions": [
+        "Replace unit_price_usd with unit_price_origin",
+        "Replace total_usd with total_quote_origincurrency",
+        "Ensure proper origin country currency handling",
+        "Update currency conversion logic"
+      ]
+    }
+  },
+
+  "knowledge_base": {
+    "rls_patterns": {
+      "user_isolation": "auth.uid() = user_id",
+      "admin_override": "is_admin() OR auth.uid() = user_id", 
+      "role_based": "has_role('admin') OR has_role('moderator')",
+      "public_read": "true (for public data only)"
+    },
+
+    "secure_coding_practices": [
+      "Always validate input data",
+      "Use prepared statements for SQL",
+      "Implement proper error handling",
+      "Log security events securely",
+      "Follow principle of least privilege",
+      "Encrypt sensitive data at rest"
+    ],
+
+    "common_vulnerabilities": [
+      "SQL injection in dynamic queries",
+      "XSS in user-generated content",
+      "CSRF in state-changing operations", 
+      "Insecure direct object references",
+      "Missing authentication checks",
+      "Information leakage in error messages"
+    ]
+  },
+
+  "validation_checks": {
+    "before_deployment": [
+      "Scan for hardcoded secrets",
+      "Verify all RLS policies active",
+      "Test authentication flows",
+      "Validate input sanitization",
+      "Check error message safety",
+      "Verify origin currency field usage"
+    ],
+    
+    "runtime_monitoring": [
+      "Failed authentication attempts",
+      "Unauthorized access attempts", 
+      "Unusual database query patterns",
+      "High-privilege operations",
+      "Data export operations"
+    ]
+  },
+
+  "compliance_requirements": {
+    "data_protection": [
+      "User data anonymization options",
+      "Data retention policies",
+      "Secure data deletion",
+      "User consent tracking"
+    ],
+    
+    "audit_logging": [
+      "All admin operations logged",
+      "User authentication events tracked",
+      "Data modification audit trail", 
+      "Security incident logging"
+    ]
+  },
+
+  "emergency_procedures": {
+    "security_incident": [
+      "Immediately assess impact scope",
+      "Disable affected functionality if needed",
+      "Log all relevant details securely",
+      "Notify security team",
+      "Implement temporary fixes",
+      "Plan permanent remediation"
+    ]
+  },
+
+  "reporting": {
+    "always_report": [
+      "Security policy violations blocked",
+      "Potential vulnerabilities identified",
+      "Authentication issues detected", 
+      "RLS policy gaps found",
+      "Secret exposure attempts prevented"
+    ],
+    
+    "metrics": [
+      "Failed authentication rate",
+      "RLS policy coverage percentage",
+      "Input validation compliance",
+      "Security scan results"
+    ]
+  }
+}
