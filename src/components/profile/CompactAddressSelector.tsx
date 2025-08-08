@@ -31,7 +31,7 @@ export function CompactAddressSelector({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Tables<'delivery_addresses'> | undefined>(undefined);
 
-  const { data: addresses, isLoading } = useQuery({
+  const { data: addresses, isLoading, error: queryError } = useQuery({
     queryKey: ['delivery_addresses', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -43,9 +43,11 @@ export function CompactAddressSelector({
         .order('created_at', { ascending: false });
 
       if (error) throw new Error(error.message);
-      return data;
+      return data || [];
     },
     enabled: !!user,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const handleAddressAdded = (newAddress?: Tables<'delivery_addresses'>) => {
@@ -70,12 +72,49 @@ export function CompactAddressSelector({
     }
   }, [addresses, selectedAddressId, autoSelectDefault, onSelectAddress]);
 
+  // Debug logging can be enabled if needed for troubleshooting
+  // useEffect(() => {
+  //   if (!user) {
+  //     console.debug('CompactAddressSelector: No user found');
+  //   } else {
+  //     console.debug('CompactAddressSelector: User found', user.id);
+  //   }
+  //   
+  //   if (addresses !== undefined) {
+  //     console.debug('CompactAddressSelector: Addresses loaded', addresses.length);
+  //   }
+  //   
+  //   if (queryError) {
+  //     console.error('CompactAddressSelector: Query error', queryError);
+  //   }
+  // }, [user, addresses, queryError]);
+
   if (isLoading) {
     return (
       <div className="space-y-2">
         {[1, 2].map((i) => (
           <Skeleton key={i} className="h-16 w-full rounded-lg" />
         ))}
+      </div>
+    );
+  }
+
+  if (queryError) {
+    return (
+      <div className="text-center py-6 border-2 border-red-200 rounded-lg bg-red-50">
+        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+          <MapPin className="h-5 w-5 text-red-400" />
+        </div>
+        <p className="text-red-600 mb-3 text-sm">Failed to load addresses</p>
+        <p className="text-red-500 text-xs mb-3">{queryError.message}</p>
+        <Button
+          onClick={() => window.location.reload()}
+          variant="outline"
+          size="sm"
+          className="border-red-300 text-red-600"
+        >
+          Try Again
+        </Button>
       </div>
     );
   }

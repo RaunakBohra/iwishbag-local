@@ -127,7 +127,7 @@ class RegionalPricingServiceClass {
           max_amount: parseFloat(configMap.global_pricing_max_amount || '250.00')
         };
 
-        logger.info('Global pricing configuration loaded', { config: this.globalConfig });
+        logger.debug('Global pricing configuration loaded', { config: this.globalConfig });
       } else {
         // Fallback to hardcoded values if no config found
         this.globalConfig = {
@@ -135,7 +135,7 @@ class RegionalPricingServiceClass {
           min_amount: 2.00,
           max_amount: 250.00
         };
-        logger.warn('No global pricing config found, using defaults', { config: this.globalConfig });
+        logger.debug('No global pricing config found, using defaults', { config: this.globalConfig });
       }
     } catch (error) {
       logger.error('Failed to load global pricing config', { error });
@@ -237,7 +237,7 @@ class RegionalPricingServiceClass {
         { serviceCount: services.length }
       );
       
-      logger.info(`[RegionalPricing] Loaded ${services.length} addon services`);
+      logger.debug(`[RegionalPricing] Loaded ${services.length} addon services`);
       return services;
       
     } catch (error) {
@@ -285,11 +285,11 @@ class RegionalPricingServiceClass {
       // Validate and normalize country code
       let normalizedCountry = request.country_code?.toUpperCase();
       if (!this.isValidCountryCode(normalizedCountry)) {
-        logger.warn(`Invalid country code received: ${request.country_code}, falling back to US`);
+        logger.debug(`Invalid country code received: ${request.country_code}, falling back to US`);
         normalizedCountry = 'US';
       }
 
-      logger.info(`[RegionalPricing] Calculating pricing for ${request.service_keys?.length || 0} services, country: ${normalizedCountry}`);
+      logger.debug(`[RegionalPricing] Calculating pricing for ${request.service_keys?.length || 0} services, country: ${normalizedCountry}`);
 
       const calculations: PricingCalculation[] = [];
       const currency = request.currency_code || 'USD';
@@ -346,7 +346,7 @@ class RegionalPricingServiceClass {
         }
       );
 
-      logger.info(`[RegionalPricing] Pricing calculated in ${duration}ms, cache hit rate: ${response.cache_hit_rate?.toFixed(1)}%`);
+      logger.debug(`[RegionalPricing] Pricing calculated in ${duration}ms, cache hit rate: ${response.cache_hit_rate?.toFixed(1)}%`);
       return response;
 
     } catch (error) {
@@ -443,7 +443,7 @@ class RegionalPricingServiceClass {
       // Also cache in database for longer-term storage
       if (order_value) {
         this.cacheInDatabase(service.id, country_code, order_value, pricingRule, calculatedAmount.amount).catch(err => {
-          logger.warn('Failed to cache pricing in database:', err);
+          logger.debug('Failed to cache pricing in database:', err);
         });
       }
 
@@ -600,7 +600,7 @@ class RegionalPricingServiceClass {
       .single();
 
     if (countryError) {
-      logger.warn(`Country ${country_code} not found in country_settings`);
+      logger.debug(`Country ${country_code} not found in country_settings`);
       return null;
     }
 
@@ -665,7 +665,7 @@ class RegionalPricingServiceClass {
         const rate = currencyService.getRate('USD', currency_code);
         amount = amount * rate;
       } catch (error) {
-        logger.warn(`Currency conversion failed for ${currency_code}, using USD amount`);
+        logger.debug(`Currency conversion failed for ${currency_code}, using USD amount`);
       }
     }
 
@@ -737,7 +737,7 @@ class RegionalPricingServiceClass {
         });
     } catch (error) {
       // Non-critical error, just log it
-      logger.warn('Failed to cache pricing in database:', error);
+      logger.debug('Failed to cache pricing in database:', error);
     }
   }
 
@@ -847,7 +847,7 @@ class RegionalPricingServiceClass {
    */
   clearCache(): void {
     this.cache.clear();
-    logger.info('[RegionalPricing] All caches cleared');
+    logger.debug('[RegionalPricing] All caches cleared');
   }
 
   /**

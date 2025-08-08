@@ -70,7 +70,7 @@ export function useCountryDetection(options: UseCountryDetectionOptions = {}): U
       try {
         result = await EnhancedGeoLocationService.getCountryInfo(detectionOptions);
       } catch (enhancedError) {
-        console.warn('Enhanced detection failed, using fallback:', enhancedError);
+        // Enhanced detection failed, falling back to basic detection
         // Fallback to original service
         const fallbackCountry = await GeoLocationService.getUserCountry();
         result = {

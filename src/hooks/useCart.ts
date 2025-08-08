@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { useCartStore, useCartActions, useCartItems, useCartSyncStatus, ensureInitialized } from '@/stores/cartStore';
+import { useCartStore, useCartActions, useCartItems, useCartSyncStatus, useCartHistory, ensureInitialized } from '@/stores/cartStore';
 import { currencyService } from '@/services/CurrencyService';
 import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
@@ -17,6 +17,7 @@ export function useCart() {
   const actions = useCartActions();
   const items = useCartItems();
   const syncStatus = useCartSyncStatus();
+  const history = useCartHistory();
 
   // Ensure cart is initialized when hook is first used
   useEffect(() => {
@@ -58,6 +59,24 @@ export function useCart() {
       await actions.syncWithServer();
     } catch (error) {
       logger.error('Failed to sync cart', error);
+      throw error;
+    }
+  }, [actions]);
+
+  const undo = useCallback(async () => {
+    try {
+      await actions.undo();
+    } catch (error) {
+      logger.error('Failed to undo cart operation', error);
+      throw error;
+    }
+  }, [actions]);
+
+  const redo = useCallback(async () => {
+    try {
+      await actions.redo();
+    } catch (error) {
+      logger.error('Failed to redo cart operation', error);
       throw error;
     }
   }, [actions]);
@@ -155,6 +174,14 @@ export function useCart() {
     removeItem,
     clearCart,
     syncWithServer,
+
+    // Undo/Redo
+    undo,
+    redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    lastOperation: history.lastOperation,
+    historyCount: history.historyCount,
 
     // Utilities
     hasItem,

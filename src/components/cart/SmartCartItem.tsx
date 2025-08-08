@@ -187,7 +187,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                         className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
                       >
                         {removeLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4" />
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
@@ -285,7 +285,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
                         >
                           {removeLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4" />
                           ) : (
                             <Trash2 className="w-4 h-4" />
                           )}

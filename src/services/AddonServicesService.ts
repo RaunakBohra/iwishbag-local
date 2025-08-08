@@ -83,7 +83,7 @@ class AddonServicesServiceClass {
     currency_code: string = 'USD'
   ): Promise<AddonServicesResult> {
     try {
-      logger.info(`[AddonServices] Getting recommendations for ${eligibility.country_code}, order value: ${eligibility.order_value}`);
+      logger.debug(`[AddonServices] Getting recommendations for ${eligibility.country_code}, order value: ${eligibility.order_value}`);
 
       // 1. Get all available services
       const availableServices = await regionalPricingService.getAvailableServices();
@@ -114,12 +114,18 @@ class AddonServicesServiceClass {
         eligibility
       );
 
-      // 5. Create suggested service bundles
-      const suggestedBundles = await this.createServiceBundles(
-        recommendations,
-        eligibility.order_value,
-        currency_code
-      );
+      // 5. Create suggested service bundles with error handling
+      let suggestedBundles: AddonServicesBundle[] = [];
+      try {
+        suggestedBundles = await this.createServiceBundles(
+          recommendations,
+          eligibility.order_value,
+          currency_code
+        );
+      } catch (bundleError) {
+        logger.debug('Bundle creation failed, continuing without bundles:', bundleError);
+        suggestedBundles = [];
+      }
 
       // 6. Calculate total cost if all recommended services are selected
       const recommendedServices = recommendations.filter(r => r.recommendation_score >= 0.6);
@@ -130,12 +136,12 @@ class AddonServicesServiceClass {
         available_services: applicableServices,
         recommendations: recommendations.sort((a, b) => b.recommendation_score - a.recommendation_score),
         pricing_calculations: pricingResult.calculations,
-        suggested_bundles,
+        suggested_bundles: suggestedBundles,
         total_addon_cost,
         currency_code,
       };
 
-      logger.info(`[AddonServices] Generated ${recommendations.length} recommendations, ${suggestedBundles.length} bundles`);
+      logger.debug(`[AddonServices] Generated ${recommendations.length} recommendations, ${suggestedBundles.length} bundles`);
       return result;
 
     } catch (error) {
@@ -283,7 +289,10 @@ class AddonServicesServiceClass {
     currencyCode: string
   ): Promise<AddonServicesBundle[]> {
     
+    
     const bundles: AddonServicesBundle[] = [];
+    
+    try {
     
     // Bundle 1: Complete Protection Bundle
     const protectionServices = recommendations.filter(r => 
@@ -332,6 +341,11 @@ class AddonServicesServiceClass {
     }
 
     return bundles;
+    
+    } catch (error) {
+      logger.error('Error in createServiceBundles:', error);
+      throw new Error(`Bundle creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -345,7 +359,7 @@ class AddonServicesServiceClass {
   ): Promise<{ success: boolean; total_addon_cost: number; error?: string }> {
     
     try {
-      logger.info(`[AddonServices] Applying ${selections.length} services to ${target_type} ${target_id}`);
+      logger.debug(`[AddonServices] Applying ${selections.length} services to ${target_type} ${target_id}`);
 
       let total_addon_cost = 0;
 
@@ -366,7 +380,7 @@ class AddonServicesServiceClass {
       // Update the total cost on the target record
       await this.updateTargetTotalCost(target_id, target_type, total_addon_cost);
 
-      logger.info(`[AddonServices] Successfully applied services, total cost: ${total_addon_cost}`);
+      logger.debug(`[AddonServices] Successfully applied services, total cost: ${total_addon_cost}`);
       
       return {
         success: true,
@@ -479,7 +493,7 @@ class AddonServicesServiceClass {
   private async applyToOrder(orderId: string, selection: AddonServiceSelection, customerId?: string): Promise<void> {
     // Implementation would depend on your orders table structure
     // For now, this is a placeholder
-    logger.info(`Applying ${selection.service_key} to order ${orderId}`);
+    logger.debug(`Applying ${selection.service_key} to order ${orderId}`);
   }
 
   /**

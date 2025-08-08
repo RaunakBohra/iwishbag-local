@@ -48,7 +48,9 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
-  Target
+  Target,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 import { addonServicesService, type AddonServiceRecommendation, type AddonServicesBundle } from '@/services/AddonServicesService';
@@ -120,61 +122,106 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
   const [selections, setSelections] = useState<Map<string, AddonServiceSelection>>(new Map());
   const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
   const [showAllServices, setShowAllServices] = useState(false);
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
   
-  // Enhanced country detection with pricing integration
-  const { countryCode: detectedCountry, hasRegionalPricing, countryInfo } = useCountryWithPricing();
-  const finalCountryCode = customerCountry || detectedCountry || 'US';
+  // Enhanced country detection with pricing integration and fallbacks
+  const { countryCode: detectedCountry, hasRegionalPricing, countryInfo, isLoading: countryLoading } = useCountryWithPricing();
+  
+  // More robust country code detection with multiple fallbacks
+  const finalCountryCode = useMemo(() => {
+    // Priority: customerCountry → detectedCountry → user profile → US fallback
+    if (customerCountry && customerCountry.length === 2) return customerCountry;
+    if (detectedCountry && detectedCountry.length === 2) return detectedCountry;
+    return 'US'; // Always fallback to US
+  }, [customerCountry, detectedCountry]);
+  
+  // More robust order value calculation with fallbacks
+  const validOrderValue = useMemo(() => {
+    if (!orderValue || isNaN(orderValue) || orderValue <= 0) {
+      console.warn('⚠️ [AddonServices] Invalid order value, using fallback:', orderValue);
+      return 1; // Minimum fallback value to enable the query
+    }
+    return Math.max(orderValue, 0.01); // Ensure positive value
+  }, [orderValue]);
+  
+  // Country detection completed
   
   // Show pricing optimization badge if we have regional pricing
   const showRegionalPricingBadge = hasRegionalPricing && countryInfo?.pricingInfo?.hasRegionalPricing;
 
-  // Load addon service recommendations
-  const { data: addonData, isLoading, error } = useQuery({
-    queryKey: ['addon-services-recommendations', finalCountryCode, orderValue, customerTier],
+  // Query enablement conditions with enhanced validation
+  const queryEnabled = validOrderValue > 0 && !countryLoading && !!finalCountryCode;
+  
+  // Debug logging can be enabled for troubleshooting if needed
+  // React.useEffect(() => {
+  //   console.log('🔍 [AddonServices Debug] Query conditions:', {
+  //     originalOrderValue: orderValue,
+  //     validOrderValue,
+  //     finalCountryCode,
+  //     queryEnabled,
+  //     currency,
+  //     customerTier,
+  //   });
+  // }, [orderValue, validOrderValue, finalCountryCode, queryEnabled, currency, customerTier]);
+
+  // Load addon service recommendations with timeout and enhanced error handling
+  const { data: addonData, isLoading, error, refetch } = useQuery({
+    queryKey: ['addon-services-recommendations', finalCountryCode, validOrderValue, customerTier],
     queryFn: async () => {
-      console.log('[AddonServices] Starting query with params:', {
-        finalCountryCode,
-        orderValue,
-        customerTier,
-        currency
-      });
-      
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+      // Add timeout promise race condition
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Addon services request timed out after 15 seconds'));
+        }, 15000); // 15 second timeout
       });
       
       const servicePromise = addonServicesService.getRecommendedServices(
         {
           country_code: finalCountryCode,
-          order_value: orderValue,
+          order_value: validOrderValue,
           order_type: 'quote',
           customer_tier: customerTier,
         },
         currency
       );
 
-      const result = await Promise.race([servicePromise, timeoutPromise]);
-      console.log('[AddonServices] Service result:', result);
+      try {
+        const result = await Promise.race([servicePromise, timeoutPromise]);
 
-      if (!result.success) {
-        console.error('[AddonServices] Service failed:', result.error);
-        throw new Error(result.error || 'Failed to load recommendations');
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load recommendations');
+        }
+
+        return result;
+      } catch (error) {
+        console.error('❌ [AddonServices] Query failed:', error);
+        throw error;
       }
-
-      return result;
     },
-    enabled: orderValue > 0,
-    retry: 1,
+    enabled: queryEnabled,
+    retry: 2, // Increased from 1 to 2 retries
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1s, 2s, 4s
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    onError: (error) => {
-      console.error('[AddonServices] Query error:', error);
-    },
-    onSuccess: (data) => {
-      console.log('[AddonServices] Query success:', data);
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    meta: {
+      errorMessage: 'Failed to load addon services'
     }
   });
+
+  // Loading timeout - show enhanced error message if loading takes too long
+  React.useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setLoadingTooLong(true);
+      }, 20000); // 20 seconds timeout
+      
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTooLong(false);
+    }
+  }, [isLoading]);
 
   // Calculate total cost when selections change
   const totalAddonCost = useMemo(() => {
@@ -457,8 +504,24 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
   // MAIN RENDER
   // ============================================================================
 
+  // Handle loading states
+  if (countryLoading) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-2">Detecting your location...</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-2 text-center">
+            Setting up personalized pricing for your region
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
-    console.log('[AddonServices] Component is loading. Query enabled?', orderValue > 0, 'Order value:', orderValue);
     return (
       <Card className={className}>
         <CardContent className="p-6">
@@ -466,35 +529,74 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-2">Loading personalized recommendations...</span>
           </div>
-          <div className="text-xs text-gray-500 mt-2 text-center">
-            Debug: Order value = {orderValue}, Country = {finalCountryCode}, Enabled = {orderValue > 0 ? 'Yes' : 'No'}
-          </div>
+          {loadingTooLong && (
+            <div className="mt-4 text-center">
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  This is taking longer than expected. You can wait a bit more or try refreshing.
+                  <br />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh Page
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   }
 
   if (error || !addonData) {
-    console.error('[AddonServices] Rendering error state:', error);
-    
-    // Show a fallback with manual service options instead of completely failing
+    // Show enhanced error state with retry functionality
     return (
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-blue-600" />
             Add-on Services
-            <Badge variant="secondary">Basic Options</Badge>
+            <Badge variant="secondary">Error Loading</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Unable to load personalized recommendations. Showing basic options instead.
-              {error && <div className="text-xs mt-1">Error: {error.message}</div>}
+              {error?.message?.includes('timed out') ? (
+                <>
+                  Request timed out while loading personalized recommendations.
+                  <div className="text-xs mt-1 text-red-500">
+                    This might be due to slow network or server issues. Please try again.
+                  </div>
+                </>
+              ) : (
+                <>
+                  Unable to load personalized recommendations. Showing basic options instead.
+                  {error && <div className="text-xs mt-1 text-red-500">Error: {error.message}</div>}
+                </>
+              )}
             </AlertDescription>
           </Alert>
+          
+          {/* Debug info for development */}
+          {import.meta.env.DEV && (
+            <Alert className="mb-4 bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <div className="text-xs">
+                  <strong>Debug Info:</strong><br/>
+                  Country: {finalCountryCode} | Order Value: {validOrderValue} | Currency: {currency}
+                  <br/>Query Enabled: {queryEnabled ? 'Yes' : 'No'}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="space-y-3">
             <div className="p-3 border rounded-lg">
@@ -520,13 +622,31 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
             </div>
           </div>
           
-          <Button 
-            variant="outline" 
-            className="w-full mt-4" 
-            onClick={() => window.location.reload()}
-          >
-            Try Loading Again
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              className="flex-1" 
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Retrying...
+                </>
+              ) : (
+                'Try Again'
+              )}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => window.location.reload()}
+              title="Reload entire page"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

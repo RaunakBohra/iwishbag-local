@@ -26,7 +26,10 @@ import { cartDesignTokens } from '@/styles/cart-design-system';
 
 import { SmartCartItem, SmartCartItemSkeleton } from '@/components/cart/SmartCartItem';
 import { CartSummary } from '@/components/cart/CartSummary';
+import { CartUndoRedo } from '@/components/cart/CartUndoRedo';
+import { DeletedItemPlaceholder } from '@/components/cart/DeletedItemPlaceholder';
 import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { useRecentlyDeleted } from '@/stores/cartStore';
 import { logger } from '@/utils/logger';
 
 type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low';
@@ -35,7 +38,8 @@ type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low';
 const Cart: React.FC = React.memo(() => {
   const navigate = useNavigate();
   // Use the enhanced original cart system
-  const { items, clearCart, isLoading, syncStatus } = useCart();
+  const { items, clearCart, isLoading, syncStatus, historyCount } = useCart();
+  const { recentlyDeleted } = useRecentlyDeleted();
 
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [clearingCart, setClearingCart] = useState(false);
@@ -57,6 +61,30 @@ const Cart: React.FC = React.memo(() => {
       }
     });
   }, [items, sortBy]);
+
+  // Create a combined list of items and deleted placeholders in correct positions
+  const displayItems = useMemo(() => {
+    const result: Array<{ type: 'item' | 'deleted'; data: any; originalPosition?: number }> = [];
+    
+    // Add all current items
+    sortedItems.forEach((item, index) => {
+      result.push({ type: 'item', data: item });
+    });
+    
+    // Insert deleted items at their original positions
+    recentlyDeleted
+      .sort((a, b) => a.position - b.position) // Sort by original position
+      .forEach(deleted => {
+        const insertIndex = Math.min(deleted.position, result.length);
+        result.splice(insertIndex, 0, { 
+          type: 'deleted', 
+          data: deleted, 
+          originalPosition: deleted.position 
+        });
+      });
+    
+    return result;
+  }, [sortedItems, recentlyDeleted]);
 
 
   // Handle clear cart
@@ -107,7 +135,7 @@ const Cart: React.FC = React.memo(() => {
           
           <div className={cartDesignTokens.layout.flex.itemRow}>
             <ShoppingCart className="w-6 h-6 text-blue-600 mr-3" />
-            <div>
+            <div className="flex-1">
               <h1 className={cartDesignTokens.typography.title.large}>
                 Shopping Cart
               </h1>
@@ -115,6 +143,9 @@ const Cart: React.FC = React.memo(() => {
                 {items.length} {items.length === 1 ? 'item' : 'items'}
               </p>
             </div>
+            
+            {/* Removed header undo/redo - moved to bottom */}
+            
           </div>
         </div>
         {isLoading ? (
@@ -134,8 +165,8 @@ const Cart: React.FC = React.memo(() => {
               </Card>
             </div>
           </div>
-        ) : items.length === 0 ? (
-          // Empty State
+        ) : items.length === 0 && recentlyDeleted.length === 0 ? (
+          // Empty State - only when no items AND no recently deleted
           <div className="text-center py-16">
             <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-gray-400 mb-4">Your cart is empty</h2>
@@ -157,28 +188,38 @@ const Cart: React.FC = React.memo(() => {
           <div className={cartDesignTokens.layout.grid.cartMain}>
             {/* Cart Items */}
             <div className={cartDesignTokens.layout.grid.cartItems}>
-              {/* Simple Sort Options */}
-              {items.length > 1 && (
+              {/* Cart Controls - Sort Options */}
+              {(items.length > 1 || (items.length === 0 && recentlyDeleted.length > 0)) && (
                 <Card className="mb-4">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-sm text-gray-600">
-                        {items.length} {items.length === 1 ? 'item' : 'items'} in your cart
+                        {items.length > 0 ? (
+                          `${items.length} ${items.length === 1 ? 'item' : 'items'} in your cart`
+                        ) : (
+                          'No items in cart'
+                        )}
                       </span>
                       
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">Sort by:</span>
-                        <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                          <SelectTrigger className="w-36">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="newest">Recently added</SelectItem>
-                            <SelectItem value="oldest">Oldest first</SelectItem>
-                            <SelectItem value="price_high">Price: High to low</SelectItem>
-                            <SelectItem value="price_low">Price: Low to high</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center gap-4">
+                        
+                        {/* Sort options */}
+                        {items.length > 1 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">Sort by:</span>
+                            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                              <SelectTrigger className="w-36">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="newest">Recently added</SelectItem>
+                                <SelectItem value="oldest">Oldest first</SelectItem>
+                                <SelectItem value="price_high">Price: High to low</SelectItem>
+                                <SelectItem value="price_low">Price: Low to high</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -186,15 +227,33 @@ const Cart: React.FC = React.memo(() => {
               )}
 
 
-              {/* Cart Items */}
+              {/* Cart Items and Deleted Item Placeholders */}
               <div className="space-y-4">
-                {sortedItems.map(item => (
-                  <SmartCartItem
-                    key={item.id}
-                    item={item}
-                    showActions={true}
-                  />
-                ))}
+                {displayItems.map((displayItem, index) => {
+                  if (displayItem.type === 'item') {
+                    return (
+                      <SmartCartItem
+                        key={displayItem.data.id}
+                        item={displayItem.data}
+                        showActions={true}
+                      />
+                    );
+                  } else {
+                    return (
+                      <DeletedItemPlaceholder
+                        key={`deleted-${displayItem.data.item.id}-${displayItem.data.deletedAt.getTime()}`}
+                        deletedItem={displayItem.data}
+                        onUndo={() => {
+                          logger.info('Item restored via contextual undo', { 
+                            quoteId: displayItem.data.item.id,
+                            originalPosition: displayItem.data.position
+                          });
+                        }}
+                      />
+                    );
+                  }
+                })}
+                
               </div>
 
             </div>
@@ -206,8 +265,10 @@ const Cart: React.FC = React.memo(() => {
                 showShippingEstimate={false}
                 showTaxEstimate={false}
               />
+              
             </div>
           </div>
+          
         )}
       </div>
     </div>

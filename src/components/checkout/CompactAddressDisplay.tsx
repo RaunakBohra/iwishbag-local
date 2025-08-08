@@ -127,7 +127,6 @@ export function CompactAddressDisplay({
         selectedAddress={selectedAddress}
         onAddressChange={(address) => {
           onAddressChange(address);
-          setIsChangeModalOpen(false);
         }}
       />
     </div>

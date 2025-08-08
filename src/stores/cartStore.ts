@@ -58,6 +58,13 @@ interface CartSnapshot {
   operationData?: any;
 }
 
+// Recently deleted item for contextual undo
+interface RecentlyDeletedItem {
+  item: CartItem;
+  deletedAt: Date;
+  position: number; // Original position in the cart
+}
+
 // Enhanced store state with undo/redo
 interface SimpleCartStore {
   // State
@@ -75,6 +82,10 @@ interface SimpleCartStore {
   historyIndex: number;
   maxHistorySize: number;
   lastOperation: string | null;
+  
+  // Recently deleted items (for contextual undo)
+  recentlyDeleted: RecentlyDeletedItem[];
+  deletedItemTimeout: number; // milliseconds to show undo option
   
   // Actions
   initialize: () => Promise<void>;
@@ -104,6 +115,12 @@ interface SimpleCartStore {
   saveSnapshot: (operation: string, operationData?: any) => void;
   clearHistory: () => void;
   getHistoryInfo: () => { canUndo: boolean; canRedo: boolean; lastOperation: string | null };
+  
+  // Recently deleted item management
+  isRecentlyDeleted: (quoteId: string) => boolean;
+  getRecentlyDeletedItem: (quoteId: string) => RecentlyDeletedItem | undefined;
+  undoDeleteItem: (quoteId: string) => Promise<void>;
+  clearRecentlyDeleted: (quoteId?: string) => void;
   
   // Debug utilities
   debugCartState: () => void;
@@ -137,6 +154,10 @@ export const useCartStore = create<SimpleCartStore>()(
     historyIndex: -1,
     maxHistorySize: 20,
     lastOperation: null,
+    
+    // Recently deleted items state
+    recentlyDeleted: [],
+    deletedItemTimeout: 10000, // 10 seconds to undo
 
     // Create cart session
     createSession: () => {
@@ -363,6 +384,100 @@ export const useCartStore = create<SimpleCartStore>()(
           isLoading: false, 
           syncStatus: 'error'
         }));
+      }
+    },
+
+    // Recently deleted item management
+    isRecentlyDeleted: (quoteId: string) => {
+      const state = get();
+      return state.recentlyDeleted.some(deleted => deleted.item.id === quoteId);
+    },
+
+    getRecentlyDeletedItem: (quoteId: string) => {
+      const state = get();
+      return state.recentlyDeleted.find(deleted => deleted.item.id === quoteId);
+    },
+
+    undoDeleteItem: async (quoteId: string) => {
+      const state = get();
+      console.log(`[CART STORE] undoDeleteItem called for: ${quoteId}`);
+      
+      const recentlyDeletedItem = state.recentlyDeleted.find(deleted => deleted.item.id === quoteId);
+      if (!recentlyDeletedItem) {
+        console.log('[CART STORE] Item not found in recently deleted');
+        return;
+      }
+
+      try {
+        // Remove from recently deleted list
+        set(prev => ({
+          ...prev,
+          recentlyDeleted: prev.recentlyDeleted.filter(deleted => deleted.item.id !== quoteId)
+        }));
+
+        // Add back to cart at original position
+        const restoredItem = {
+          ...recentlyDeletedItem.item,
+          lastUpdated: new Date()
+        };
+        
+        set(prev => {
+          const newItems = [...prev.items];
+          // Insert at original position, or at end if position is invalid
+          const insertPosition = Math.min(recentlyDeletedItem.position, newItems.length);
+          newItems.splice(insertPosition, 0, restoredItem);
+          
+          return {
+            ...prev,
+            items: newItems
+          };
+        });
+
+        console.log(`[CART STORE] Item restored to position ${recentlyDeletedItem.position}`);
+
+        // Update database
+        const { error } = await supabase
+          .from('quotes_v2')
+          .update({ in_cart: true })
+          .eq('id', quoteId);
+
+        if (error) {
+          console.error('[CART STORE] Database restore failed, reverting:', error);
+          // Revert the restore
+          set(prev => ({
+            ...prev,
+            items: prev.items.filter(item => item.id !== quoteId),
+            recentlyDeleted: [...prev.recentlyDeleted, recentlyDeletedItem]
+          }));
+          throw new Error(`Failed to restore item: ${error.message}`);
+        }
+
+        console.log('[CART STORE] Item successfully restored to cart');
+        logger.info('Item restored from recently deleted', { 
+          quoteId, 
+          position: recentlyDeletedItem.position 
+        });
+
+        // Save to localStorage
+        get().saveToLocalStorage();
+
+      } catch (error) {
+        console.error('[CART STORE] Undo delete item failed:', error);
+        logger.error('Failed to undo delete item', { quoteId, error });
+        throw error;
+      }
+    },
+
+    clearRecentlyDeleted: (quoteId?: string) => {
+      if (quoteId) {
+        // Clear specific item
+        set(prev => ({
+          ...prev,
+          recentlyDeleted: prev.recentlyDeleted.filter(deleted => deleted.item.id !== quoteId)
+        }));
+      } else {
+        // Clear all
+        set(prev => ({ ...prev, recentlyDeleted: [] }));
       }
     },
 
@@ -720,9 +835,10 @@ export const useCartStore = create<SimpleCartStore>()(
       }
 
       const originalItems = state.items;
-      const item = originalItems.find(item => item.id === quoteId);
+      const itemIndex = originalItems.findIndex(item => item.id === quoteId);
+      const item = originalItems[itemIndex];
       
-      if (!item) {
+      if (!item || itemIndex === -1) {
         console.log('[CART STORE] Item not found in cart, skipping removal');
         return;
       }
@@ -737,13 +853,32 @@ export const useCartStore = create<SimpleCartStore>()(
           } 
         });
         
-        // Optimistic update
+        // Add to recently deleted with position info
+        const recentlyDeletedItem: RecentlyDeletedItem = {
+          item: { ...item },
+          deletedAt: new Date(),
+          position: itemIndex
+        };
+        
+        // Clear any existing timeout for this item
+        const existingIndex = state.recentlyDeleted.findIndex(deleted => deleted.item.id === quoteId);
+        
+        // Optimistic update - remove from cart and add to recently deleted
         set(prev => ({
           ...prev,
-          items: prev.items.filter(item => item.id !== quoteId)
+          items: prev.items.filter(item => item.id !== quoteId),
+          recentlyDeleted: existingIndex !== -1 
+            ? prev.recentlyDeleted.map((deleted, i) => i === existingIndex ? recentlyDeletedItem : deleted)
+            : [...prev.recentlyDeleted, recentlyDeletedItem]
         }));
 
-        console.log(`[CART STORE] Optimistic removal completed, cart now has ${get().items.length} items`);
+        console.log(`[CART STORE] Item moved to recently deleted at position ${itemIndex}`);
+        
+        // Set timeout to automatically clear recently deleted item
+        setTimeout(() => {
+          console.log(`[CART STORE] Auto-clearing recently deleted item: ${quoteId}`);
+          get().clearRecentlyDeleted(quoteId);
+        }, state.deletedItemTimeout);
         
         // Auto-save to localStorage
         get().saveToLocalStorage();
@@ -764,6 +899,7 @@ export const useCartStore = create<SimpleCartStore>()(
             return {
               ...prev,
               items: originalItems,
+              recentlyDeleted: prev.recentlyDeleted.filter(deleted => deleted.item.id !== quoteId),
               history: revertedHistory,
               historyIndex: revertedHistory.length - 1
             };
@@ -774,7 +910,7 @@ export const useCartStore = create<SimpleCartStore>()(
         }
 
         console.log('[CART STORE] Item removed successfully from database');
-        logger.info('Item removed from cart successfully', { quoteId });
+        logger.info('Item removed from cart successfully', { quoteId, position: itemIndex });
 
       } catch (error) {
         console.error('[CART STORE] Remove item operation failed:', error);
@@ -995,11 +1131,7 @@ export const useCartStore = create<SimpleCartStore>()(
     // Utilities
     hasItem: (quoteId: string) => {
       const hasItem = get().items.some(item => item.id === quoteId);
-      console.log(`[CART STORE] hasItem(${quoteId}):`, {
-        hasItem,
-        currentItems: get().items.map(item => ({ id: item.id, addedAt: item.addedAt })),
-        totalItems: get().items.length
-      });
+      // Removed excessive logging to prevent console spam
       return hasItem;
     },
 
@@ -1207,16 +1339,57 @@ export const useCartActions = () => {
   const removeItem = useCartStore(state => state.removeItem);
   const clearCart = useCartStore(state => state.clearCart);
   const syncWithServer = useCartStore(state => state.syncWithServer);
+  const undo = useCartStore(state => state.undo);
+  const redo = useCartStore(state => state.redo);
   
-  return { addItem, removeItem, clearCart, syncWithServer };
+  return { addItem, removeItem, clearCart, syncWithServer, undo, redo };
+};
+
+// Undo/Redo hooks
+export const useCartHistory = () => {
+  const canUndo = useCartStore(state => state.canUndo());
+  const canRedo = useCartStore(state => state.canRedo());
+  const lastOperation = useCartStore(state => state.lastOperation);
+  const historyCount = useCartStore(state => state.history.length);
+  const undo = useCartStore(state => state.undo);
+  const redo = useCartStore(state => state.redo);
+  const clearHistory = useCartStore(state => state.clearHistory);
+  
+  return { 
+    canUndo, 
+    canRedo, 
+    lastOperation, 
+    historyCount, 
+    undo, 
+    redo, 
+    clearHistory 
+  };
+};
+
+// Recently deleted items hooks
+export const useRecentlyDeleted = () => {
+  const recentlyDeleted = useCartStore(state => state.recentlyDeleted);
+  const isRecentlyDeleted = useCartStore(state => state.isRecentlyDeleted);
+  const getRecentlyDeletedItem = useCartStore(state => state.getRecentlyDeletedItem);
+  const undoDeleteItem = useCartStore(state => state.undoDeleteItem);
+  const clearRecentlyDeleted = useCartStore(state => state.clearRecentlyDeleted);
+  
+  return { 
+    recentlyDeleted,
+    isRecentlyDeleted, 
+    getRecentlyDeletedItem, 
+    undoDeleteItem, 
+    clearRecentlyDeleted 
+  };
 };
 
 // Debug utilities
 export const useCartDebug = () => {
   const debugCartState = useCartStore(state => state.debugCartState);
   const forceSync = useCartStore(state => state.forceSync);
+  const getHistoryInfo = useCartStore(state => state.getHistoryInfo);
   
-  return { debugCartState, forceSync };
+  return { debugCartState, forceSync, getHistoryInfo };
 };
 
 // Global debug utilities (for browser console)

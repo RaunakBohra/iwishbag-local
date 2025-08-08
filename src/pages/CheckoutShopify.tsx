@@ -276,25 +276,31 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <EnhancedAddonServicesSelector
-                  orderValue={items.reduce((total, item) => total + (item.quote.final_total_origincurrency || 0), 0)}
-                  currency={displayCurrency}
-                  customerCountry={selectedAddress?.destination_country || user?.profile?.country}
-                  customerTier="regular"
-                  onSelectionChange={(selections, totalCost) => {
-                    console.log('Addon services changed:', selections, totalCost);
-                    setSelectedAddonServices(selections.filter(s => s.is_selected).map(s => ({
-                      service_key: s.service_key,
-                      service_name: s.service_key.replace('_', ' '),
-                      calculated_amount: s.calculated_amount,
-                      pricing_tier: 'regional',
-                      recommendation_score: s.recommendation_score
-                    })));
-                  }}
-                  showRecommendations={true}
-                  showBundles={true}
-                  compact={true}
-                />
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="ml-2">Loading services...</span>
+                  </div>
+                }>
+                  <EnhancedAddonServicesSelector
+                    orderValue={items.reduce((total, item) => total + (item.quote.final_total_origincurrency || 0), 0)}
+                    currency={displayCurrency}
+                    customerCountry={selectedAddress?.destination_country || user?.profile?.country}
+                    customerTier="regular"
+                    onSelectionChange={(selections, totalCost) => {
+                      setSelectedAddonServices(selections.filter(s => s.is_selected).map(s => ({
+                        service_key: s.service_key,
+                        service_name: s.service_key.replace('_', ' '),
+                        calculated_amount: s.calculated_amount,
+                        pricing_tier: 'regional',
+                        recommendation_score: s.recommendation_score
+                      })));
+                    }}
+                    showRecommendations={true}
+                    showBundles={true}
+                    compact={true}
+                  />
+                </React.Suspense>
               </CardContent>
             </Card>
 
