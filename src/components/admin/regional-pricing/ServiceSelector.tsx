@@ -23,12 +23,8 @@ import {
   Globe,
   Target,
   TrendingUp,
-  Shield,
-  Zap,
-  Headphones,
-  Gift,
-  Camera
 } from 'lucide-react';
+import { getServiceIcon } from '@/components/addon-services/shared/ServiceIconMap';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -63,13 +59,7 @@ interface ServiceSelectorProps {
 // SERVICE ICON MAPPING
 // ============================================================================
 
-const ServiceIconMap: Record<string, React.ComponentType<any>> = {
-  'package_protection': Shield,
-  'express_processing': Zap,
-  'priority_support': Headphones,
-  'gift_wrapping': Gift,
-  'photo_documentation': Camera,
-};
+// Using shared ServiceIconMap from @/components/addon-services/shared/ServiceIconMap
 
 // ============================================================================
 // MAIN COMPONENT
@@ -102,7 +92,7 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = React.memo(({
             {services
               .filter(service => service.is_active)
               .map((service) => {
-                const IconComponent = ServiceIconMap[service.service_key] || Package;
+                const IconComponent = getServiceIcon(service.service_key);
                 return (
                   <SelectItem key={service.service_key} value={service.service_key}>
                     <div className="flex items-center gap-3">

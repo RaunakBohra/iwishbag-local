@@ -176,23 +176,55 @@ export const RegionalPricingManager: React.FC = React.memo(() => {
 
   const queryClient = useQueryClient();
 
-  // Load addon services
+  // Load addon services with timeout optimization
   const { data: services = [], isLoading: servicesLoading } = useQuery({
     queryKey: ['addon-services'],
-    queryFn: () => regionalPricingService.getAvailableServices(),
+    queryFn: async () => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Services request timed out')), 5000);
+      });
+      
+      const servicesPromise = regionalPricingService.getAvailableServices();
+      
+      try {
+        return await Promise.race([servicesPromise, timeoutPromise]);
+      } catch (error) {
+        console.error('❌ [Admin] Failed to load addon services:', error);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
-  // Load countries with continents
+  // Load countries with continents with timeout optimization
   const { data: countries = [], isLoading: countriesLoading } = useQuery({
     queryKey: ['countries-with-continents'],
     queryFn: async () => {
-      const { data } = await supabase
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Countries request timed out')), 3000);
+      });
+      
+      const countriesPromise = supabase
         .from('country_settings')
         .select('code, name, continent, currency')
         .eq('is_active', true)
         .order('name');
-      return data || [];
+      
+      try {
+        const { data } = await Promise.race([countriesPromise, timeoutPromise]);
+        return data || [];
+      } catch (error) {
+        console.error('❌ [Admin] Failed to load countries:', error);
+        return []; // Return empty array as fallback
+      }
     },
+    retry: 1,
+    retryDelay: 500,
+    staleTime: 10 * 60 * 1000, // 10 minutes (countries don't change often)
+    refetchOnWindowFocus: false,
   });
 
   // Use custom hooks for pricing matrix and bulk operations

@@ -42,7 +42,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
 import { UnifiedOrderSummary } from '@/components/checkout/UnifiedOrderSummary';
-import { EnhancedAddonServicesSelector } from '@/components/quote/EnhancedAddonServicesSelector';
 import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
 
@@ -267,60 +266,9 @@ const CheckoutShopify: React.FC = React.memo(() => {
               </CardContent>
             </Card>
 
-            {/* Addon Services */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5" />
-                  Add-on Services
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <React.Suspense fallback={
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="ml-2">Loading services...</span>
-                  </div>
-                }>
-                  <EnhancedAddonServicesSelector
-                    orderValue={(() => {
-                      const calculatedValue = items.reduce((total, item) => {
-                        const itemValue = item.quote?.final_total_origincurrency || item.quote?.total_quote_origincurrency || 0;
-                        return total + itemValue;
-                      }, 0);
-                      console.debug('🧮 [Checkout] Order value calculation:', {
-                        itemsCount: items.length,
-                        calculatedValue,
-                        items: items.map(item => ({
-                          id: item.quote?.id,
-                          final_total: item.quote?.final_total_origincurrency,
-                          total_quote: item.quote?.total_quote_origincurrency,
-                        }))
-                      });
-                      return calculatedValue;
-                    })()}
-                    currency={displayCurrency}
-                    customerCountry={selectedAddress?.destination_country || user?.profile?.country}
-                    customerTier="regular"
-                    onSelectionChange={(selections, totalCost) => {
-                      setSelectedAddonServices(selections.filter(s => s.is_selected).map(s => ({
-                        service_key: s.service_key,
-                        service_name: s.service_key.replace('_', ' '),
-                        calculated_amount: s.calculated_amount,
-                        pricing_tier: 'regional',
-                        recommendation_score: s.recommendation_score
-                      })));
-                    }}
-                    showRecommendations={true}
-                    showBundles={true}
-                    compact={true}
-                  />
-                </React.Suspense>
-              </CardContent>
-            </Card>
 
             {/* Mobile Order Summary */}
-            <div className="lg:hidden">
+            <div className="lg:hidden space-y-4">
               <UnifiedOrderSummary
                 onPlaceOrder={handlePlaceOrder}
                 isProcessingOrder={processingOrder}

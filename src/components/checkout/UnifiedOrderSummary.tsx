@@ -39,6 +39,7 @@ import { cartDesignTokens } from '@/styles/cart-design-system';
 // Import existing components we'll integrate
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { CompactPackageProtection } from '@/components/cart/CompactPackageProtection';
+import { IntegratedAddonServices } from '@/components/checkout/IntegratedAddonServices';
 
 interface UnifiedOrderSummaryProps {
   onPlaceOrder?: () => void;
@@ -54,6 +55,8 @@ interface SummaryCalculations {
   insurance: number;
   insuranceFormatted: string;
   insuranceRate: number;
+  addons: number;
+  addonsFormatted: string;
   discount: number;
   discountFormatted: string;
   total: number;
@@ -79,6 +82,15 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
   const [error, setError] = useState<string | null>(null);
   const [includeInsurance, setIncludeInsurance] = useState(false);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
+
+  // Addon services state management
+  const [selectedAddonServices, setSelectedAddonServices] = useState<Array<{
+    service_key: string;
+    is_selected: boolean;
+    calculated_amount: number;
+    recommendation_score?: number;
+  }>>([]);
+  const [totalAddonCost, setTotalAddonCost] = useState(0);
 
   // Coupon state management
   const [appliedCoupons, setAppliedCoupons] = useState<Array<{
@@ -132,6 +144,17 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       setInsuranceLoading(false);
     }
   };
+
+  // Handle addon services changes
+  const handleAddonServicesChange = useCallback((selections: Array<{
+    service_key: string;
+    is_selected: boolean;
+    calculated_amount: number;
+    recommendation_score?: number;
+  }>, totalCost: number) => {
+    setSelectedAddonServices(selections);
+    setTotalAddonCost(totalCost);
+  }, []);
 
   // Handle coupon application
   const handleDiscountApplied = useCallback((discount: {
@@ -203,10 +226,13 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     const insurance = includeInsurance ? subtotal * insuranceRate : 0;
     const insuranceFormatted = currencyService.formatAmount(insurance, displayCurrency);
 
+    const addons = totalAddonCost;
+    const addonsFormatted = currencyService.formatAmount(addons, displayCurrency);
+
     const discount = totalDiscount;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    const total = subtotal + insurance - discount;
+    const total = subtotal + insurance + addons - discount;
     const totalFormatted = currencyService.formatAmount(total, displayCurrency);
 
     return {
@@ -215,13 +241,15 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       insurance,
       insuranceFormatted,
       insuranceRate,
+      addons,
+      addonsFormatted,
       discount,
       discountFormatted,
       total,
       totalFormatted,
       currency: displayCurrency
     };
-  }, [items, displayCurrency, getTotalValue, includeInsurance, totalDiscount]);
+  }, [items, displayCurrency, getTotalValue, includeInsurance, totalDiscount, totalAddonCost]);
 
   // Recalculate when dependencies change
   useEffect(() => {
@@ -259,7 +287,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     return () => {
       isMounted = false;
     };
-  }, [calculateSummary, items.length]);
+  }, [calculateSummary, items.length, totalAddonCost]);
 
   // Load initial insurance state
   useEffect(() => {
@@ -505,6 +533,17 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
               onToggle={handleInsuranceToggle}
               isLoading={insuranceLoading}
               isInternational={items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country}
+            />
+          )}
+
+          {/* Integrated Addon Services */}
+          {calculations && (
+            <IntegratedAddonServices
+              orderValue={calculations.subtotal}
+              currency={displayCurrency}
+              customerCountry={items.length > 0 ? items[0].quote.destination_country : undefined}
+              onSelectionChange={handleAddonServicesChange}
+              className="border-t border-gray-100 pt-2"
             />
           )}
 

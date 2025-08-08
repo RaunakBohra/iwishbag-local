@@ -58,6 +58,7 @@ import { regionalPricingService } from '@/services/RegionalPricingService';
 import { currencyService } from '@/services/CurrencyService';
 import { useCountryWithPricing } from '@/hooks/useCountryDetection';
 import { toast } from '@/hooks/use-toast';
+import { getServiceIcon, getServiceColors } from '@/components/addon-services/shared/ServiceIconMap';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -86,21 +87,7 @@ interface AddonServiceSelection {
 // ============================================================================
 // SERVICE ICON MAPPING
 // ============================================================================
-const ServiceIconMap: Record<string, React.ComponentType<any>> = {
-  'package_protection': Shield,
-  'express_processing': Zap,
-  'priority_support': Headphones,
-  'gift_wrapping': Gift,
-  'photo_documentation': Camera,
-};
-
-const ServiceColors = {
-  'package_protection': 'text-green-600 bg-green-50 border-green-200',
-  'express_processing': 'text-blue-600 bg-blue-50 border-blue-200',
-  'priority_support': 'text-purple-600 bg-purple-50 border-purple-200',
-  'gift_wrapping': 'text-pink-600 bg-pink-50 border-pink-200',
-  'photo_documentation': 'text-orange-600 bg-orange-50 border-orange-200',
-};
+// Using shared ServiceIconMap and ServiceColors from @/components/addon-services/shared/ServiceIconMap
 
 // ============================================================================
 // MAIN COMPONENT
@@ -354,11 +341,11 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
   // ============================================================================
 
   const renderServiceRecommendation = (rec: AddonServiceRecommendation) => {
-    const IconComponent = ServiceIconMap[rec.service_key] || Package;
+    const IconComponent = getServiceIcon(rec.service_key);
     const selection = selections.get(rec.service_key);
     const isSelected = selection?.is_selected || false;
     const badge = getRecommendationBadge(rec.recommendation_score);
-    const serviceColor = ServiceColors[rec.service_key as keyof typeof ServiceColors] || 'text-gray-600 bg-gray-50 border-gray-200';
+    const serviceColor = getServiceColors(rec.service_key);
 
     return (
       <div
@@ -503,7 +490,7 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
                   const rec = addonData?.recommendations.find(r => r.service_key === serviceKey);
                   if (!rec) return null;
 
-                  const IconComponent = ServiceIconMap[serviceKey] || Package;
+                  const IconComponent = getServiceIcon(serviceKey);
                   return (
                     <div key={serviceKey} className="flex items-center justify-between p-2 bg-white rounded">
                       <div className="flex items-center gap-2">
@@ -652,8 +639,12 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
               <div key={service.service_key} className="p-3 border rounded-lg bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {service.service_key === 'package_protection' && <Shield className="w-4 h-4 text-green-600" />}
-                    {service.service_key === 'express_processing' && <Zap className="w-4 h-4 text-blue-600" />}
+                    {(() => {
+                      const IconComponent = getServiceIcon(service.service_key);
+                      return <IconComponent className={`w-4 h-4 ${
+                        service.service_key === 'package_protection' ? 'text-green-600' : 'text-blue-600'
+                      }`} />;
+                    })()}
                     <span className="font-medium">{service.service_name}</span>
                   </div>
                   <div className="flex items-center gap-2">
