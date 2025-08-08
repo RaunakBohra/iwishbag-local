@@ -68,16 +68,18 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
           {/* Left Section: Mobile Menu + Logo + Navigation */}
           <div className="flex items-center gap-4">
             
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-9 w-9 hover:bg-gray-50 transition-colors"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5 text-gray-700" />
-              <span className="sr-only">Open menu</span>
-            </Button>
+            {/* Mobile Menu Toggle - Only show for guests */}
+            {(!user || isAnonymous) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-9 w-9 hover:bg-gray-50 transition-colors"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu className="h-5 w-5 text-gray-700" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            )}
 
             {/* Logo */}
             <Link to="/" className="flex items-center flex-shrink-0">
@@ -143,38 +145,30 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
                 avatarUrl={getAvatarUrl()}
               />
             ) : (
-              /* Guest Actions */
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden sm:inline-flex text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                  onClick={() => navigate('/help')}
-                >
-                  Help
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all"
-                  onClick={() => navigate('/auth')}
-                >
-                  Sign In
-                </Button>
-              </div>
+              /* Guest Actions - Simplified */
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all"
+                onClick={() => navigate('/auth')}
+              >
+                Sign In
+              </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      <MobileMenu
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        user={user}
-        isAnonymous={isAnonymous}
-        isInAdminArea={isInAdminArea}
-      />
+      {/* Mobile Menu Overlay - Only for guests */}
+      {(!user || isAnonymous) && (
+        <MobileMenu
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          user={user}
+          isAnonymous={isAnonymous}
+          isInAdminArea={isInAdminArea}
+        />
+      )}
     </header>
   );
 });
