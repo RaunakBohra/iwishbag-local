@@ -473,20 +473,30 @@ export class CheckoutService {
           *,
           order_items (
             *,
-            quotes_v2 (id, display_id, status, customer_email)
+            quotes_v2 (id, quote_number, status, customer_email)
           )
         `)
         .eq('id', orderId)
         .single();
 
-      if (error || !order) {
+      if (error) {
+        logger.error('Database error fetching order:', { orderId, error });
+        if (error.code === 'PGRST116') {
+          throw new Error('Order not found');
+        }
+        throw new Error(`Database error: ${error.message || 'Unknown error'}`);
+      }
+
+      if (!order) {
+        logger.warn('Order not found in database:', { orderId });
         throw new Error('Order not found');
       }
 
+      logger.debug('Order fetched successfully:', { orderId, orderNumber: order.order_number });
       return order;
 
     } catch (error) {
-      logger.error('Failed to get order:', error);
+      logger.error('Failed to get order:', { orderId, error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   }
