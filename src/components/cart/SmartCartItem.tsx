@@ -12,8 +12,7 @@
 
 import React, { memo, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ExternalLink, AlertCircle, Loader2, Package, Calendar, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
+import { Trash2, ExternalLink, AlertCircle, Loader2, Package, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,36 +27,12 @@ import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
 import type { CartItem } from '@/types/cart';
 
-// Helper component for "Price when added" display with currency conversion
-const PriceAtAddDisplay: React.FC<{ amount: number; quote: any }> = ({ amount, quote }) => {
-  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
-  const [formattedAmount, setFormattedAmount] = useState<string>('...');
-
-  React.useEffect(() => {
-    const updatePrice = async () => {
-      try {
-        const sourceCurrency = getSourceCurrency(quote);
-        const formatted = await formatAmountWithConversion(amount, sourceCurrency);
-        setFormattedAmount(formatted);
-      } catch (error) {
-        logger.error('Failed to format price at add', { amount, quote: quote.id, error });
-        const { currencyService } = await import('@/services/CurrencyService');
-        const sourceCurrency = getSourceCurrency(quote);
-        setFormattedAmount(currencyService.formatAmount(amount, sourceCurrency));
-      }
-    };
-
-    updatePrice();
-  }, [amount, quote, formatAmountWithConversion, getSourceCurrency]);
-
-  return <>{formattedAmount}</>;
-};
+// Removed PriceAtAddDisplay helper - no longer needed for cleaner UX
 
 interface SmartCartItemProps {
   item: CartItem;
   compact?: boolean;
   showActions?: boolean;
-  showMetadata?: boolean;
   className?: string;
   onRemove?: (item: CartItem) => void;
   onError?: (error: Error, item: CartItem) => void;
@@ -67,7 +42,6 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
   item,
   compact = false,
   showActions = true,
-  showMetadata = false,
   className = '',
   onRemove,
   onError
@@ -343,27 +317,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
               </div>
             </div>
 
-            {/* Metadata */}
-            {showMetadata && (
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 pt-4 border-t">
-                <div className="space-y-1">
-                  <p className="font-medium">Added to cart</p>
-                  <p className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {format(item.addedAt, 'MMM dd, yyyy HH:mm')}
-                  </p>
-                </div>
-                
-                {item.metadata?.priceAtAdd && (
-                  <div className="space-y-1">
-                    <p className="font-medium">Price when added</p>
-                    <p>
-                      <PriceAtAddDisplay amount={item.metadata.priceAtAdd} quote={item.quote} />
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Removed unnecessary metadata for cleaner UX */}
 
             {/* Error Display */}
             {error && (

@@ -216,7 +216,6 @@ const Cart: React.FC = React.memo(() => {
                     key={item.id}
                     item={item}
                     showActions={true}
-                    showMetadata={true}
                   />
                 ))}
               </div>

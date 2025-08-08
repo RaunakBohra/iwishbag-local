@@ -41,10 +41,17 @@ import { supabase } from '@/integrations/supabase/client';
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
-import { CompactOrderItems } from '@/components/checkout/CompactOrderItems';
-import { ProfessionalOrderSummary } from '@/components/checkout/ProfessionalOrderSummary';
+import { UnifiedOrderSummary } from '@/components/checkout/UnifiedOrderSummary';
 import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
+
+// Order summary interface for checkout
+interface OrderSummary {
+  subtotal: number;
+  total: number;
+  currency: string;
+  items: any[];
+}
 
 
 const CheckoutShopify: React.FC = React.memo(() => {
@@ -257,67 +264,47 @@ const CheckoutShopify: React.FC = React.memo(() => {
               </CardContent>
             </Card>
 
-            {/* Place Order Button - Mobile */}
-            <div className="sticky bottom-4 bg-white p-4 border rounded-lg shadow-lg lg:hidden">
-              <Button
-                onClick={handlePlaceOrder}
-                disabled={!canPlaceOrder}
-                className="w-full h-12 text-lg font-medium"
-              >
-                {processingOrder ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processing Order...
-                  </>
-                ) : (
-                  <>Place Order</>
-                )}
-              </Button>
+            {/* Mobile Order Summary */}
+            <div className="lg:hidden">
+              <UnifiedOrderSummary
+                onPlaceOrder={handlePlaceOrder}
+                isProcessingOrder={processingOrder}
+                showPlaceOrderButton={true}
+                canPlaceOrder={canPlaceOrder}
+              />
+              
+              {/* Validation Messages - Mobile */}
+              {(!isAddressValid || !isPaymentValid) && (
+                <div className="mt-4 space-y-2">
+                  {!isAddressValid && (
+                    <p className="text-sm text-red-600">Please select a delivery address</p>
+                  )}
+                  {!isPaymentValid && (
+                    <p className="text-sm text-red-600">Please select a payment method</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Side: Order Summary */}
+          {/* Right Side: Unified Order Summary */}
           <div className="space-y-6">
-            <div className="lg:sticky lg:top-4">
-              {/* Compact Order Items */}
-              <div className="mb-6">
-                <CompactOrderItems
-                  items={items}
-                  showDetails={false}
-                />
-              </div>
-
-              {/* Professional Order Summary */}
-              <ProfessionalOrderSummary
-                showInsuranceOption={true}
-                compact={false}
-                className="order-summary"
-              />
-
-              {/* Place Order Button - Desktop */}
-              <div className="hidden lg:block mt-6">
-                <Button
-                  onClick={handlePlaceOrder}
-                  disabled={!canPlaceOrder}
-                  className="w-full h-12 text-lg font-medium"
-                >
-                  {processingOrder ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Processing Order...
-                    </>
-                  ) : (
-                    <>Place Order</>
-                  )}
-                </Button>
-                
-                {!isAddressValid && (
-                  <p className="text-sm text-red-600 mt-2">Please select a delivery address</p>
-                )}
-                {!isPaymentValid && (
-                  <p className="text-sm text-red-600 mt-2">Please select a payment method</p>
-                )}
-              </div>
+            <UnifiedOrderSummary
+              onPlaceOrder={handlePlaceOrder}
+              isProcessingOrder={processingOrder}
+              showPlaceOrderButton={true}
+              canPlaceOrder={canPlaceOrder}
+              className="hidden lg:block"
+            />
+            
+            {/* Validation Messages - Desktop */}
+            <div className="hidden lg:block">
+              {!isAddressValid && (
+                <p className="text-sm text-red-600">Please select a delivery address</p>
+              )}
+              {!isPaymentValid && (
+                <p className="text-sm text-red-600">Please select a payment method</p>
+              )}
             </div>
           </div>
         </div>
