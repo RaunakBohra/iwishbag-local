@@ -91,15 +91,9 @@ export function CompactAddressDisplay({
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-gray-900 truncate">
+            <span className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate">
               {formatCompactAddress(selectedAddress)}
             </span>
-            {selectedAddress.is_default && (
-              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-300">
-                <Check className="w-3 h-3 mr-1" />
-                Primary
-              </Badge>
-            )}
           </div>
           
           {selectedAddress.phone && (
@@ -110,15 +104,15 @@ export function CompactAddressDisplay({
         </div>
       </div>
 
-      {/* Change Button */}
+      {/* Change Button - Pencil Icon Only */}
       <Button 
         variant="outline" 
         size="sm" 
-        className="flex-shrink-0 ml-3"
+        className="flex-shrink-0 ml-2 px-2 py-2 h-auto"
         onClick={() => setIsChangeModalOpen(true)}
+        title="Change address"
       >
-        <Edit2 className="w-4 h-4 mr-2" />
-        Change
+        <Edit2 className="w-4 h-4" />
       </Button>
 
       {/* Address Change Modal */}

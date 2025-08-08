@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { SimpleCartSyncIndicator } from '@/components/cart/SimpleCartSyncIndicator';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
-import { PackageProtection } from '@/components/cart/PackageProtection';
+import { CompactPackageProtection } from '@/components/cart/CompactPackageProtection';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
@@ -476,20 +476,17 @@ export const CartSummary = memo<CartSummaryProps>(({
           <span className="font-medium text-gray-900">{subtotalFormatted}</span>
         </div>
 
-        {/* Enhanced Package Protection */}
+        {/* Compact Package Protection - Shopify/Amazon Style */}
         {showInsuranceOption && calculations && (
-          <div className="py-2">
-            <PackageProtection
-              orderValue={calculations.subtotal}
-              currency={displayCurrency}
-              insuranceRate={calculations.insuranceRate}
-              isSelected={includeInsurance}
-              onToggle={handleInsuranceToggle}
-              isLoading={insuranceLoading}
-              isInternational={items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country}
-              destinationCountry={items.length > 0 ? items[0].quote.destination_country : undefined}
-            />
-          </div>
+          <CompactPackageProtection
+            orderValue={calculations.subtotal}
+            currency={displayCurrency}
+            insuranceRate={calculations.insuranceRate}
+            isSelected={includeInsurance}
+            onToggle={handleInsuranceToggle}
+            isLoading={insuranceLoading}
+            isInternational={items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country}
+          />
         )}
 
         {/* Coupon Input - Clean Design */}
