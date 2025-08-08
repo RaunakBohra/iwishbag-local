@@ -61,8 +61,8 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-sm shadow-sm ${className}`}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <header className={`sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur-sm shadow-sm ${className}`}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="flex h-16 items-center justify-between">
           
           {/* Left Section: Mobile Menu + Logo + Navigation */}
@@ -72,10 +72,10 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden h-9 w-9"
+              className="lg:hidden h-9 w-9 hover:bg-gray-50 transition-colors"
               onClick={() => setMobileMenuOpen(true)}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-5 text-gray-700" />
               <span className="sr-only">Open menu</span>
             </Button>
 
@@ -120,14 +120,14 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
             <Button
               variant="ghost"
               size="icon"
-              className="relative h-9 w-9"
+              className="relative h-9 w-9 hover:bg-gray-50 transition-colors"
               onClick={() => navigate('/cart')}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5 text-gray-700" />
               {cartCount > 0 && (
                 <Badge 
                   variant="destructive"
-                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-xs font-bold flex items-center justify-center min-w-[1.25rem] px-1"
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-xs font-bold flex items-center justify-center min-w-[1.25rem] px-1 bg-red-500 text-white border-2 border-white"
                 >
                   {cartCount > 99 ? '99+' : cartCount}
                 </Badge>
@@ -148,7 +148,7 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="hidden sm:inline-flex"
+                  className="hidden sm:inline-flex text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                   onClick={() => navigate('/help')}
                 >
                   Help
@@ -156,7 +156,7 @@ export const SimpleHeader = memo<SimpleHeaderProps>(({ className = '' }) => {
                 <Button
                   variant="default"
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all"
                   onClick={() => navigate('/auth')}
                 >
                   Sign In
