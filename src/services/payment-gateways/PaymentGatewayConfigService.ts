@@ -44,6 +44,10 @@ export class PaymentGatewayConfigService {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for config data
 
+  // Country code mapping cache
+  private countryCodeMap = new Map<string, string>(); // name -> code mapping
+  private reverseCountryCodeMap = new Map<string, string>(); // code -> name mapping
+
   // Gateway configuration requirements
   private readonly GATEWAY_REQUIREMENTS: Record<PaymentGateway, string[]> = {
     stripe: ['publishable_key', 'secret_key'],
@@ -59,6 +63,100 @@ export class PaymentGatewayConfigService {
 
   constructor() {
     logger.info('PaymentGatewayConfigService initialized');
+    this.initializeCountryMappings();
+  }
+
+  /**
+   * Initialize country code mappings from the database
+   */
+  private async initializeCountryMappings(): Promise<void> {
+    try {
+      const { data: countries, error } = await supabase
+        .from('country_settings')
+        .select('code, name');
+
+      if (error) {
+        logger.error('Failed to load country mappings:', error);
+        return;
+      }
+
+      // Build bidirectional mapping
+      countries?.forEach(country => {
+        this.countryCodeMap.set(country.name, country.code);
+        this.reverseCountryCodeMap.set(country.code, country.name);
+      });
+
+      logger.info('Country mappings initialized', { 
+        count: countries?.length || 0 
+      });
+    } catch (error) {
+      logger.error('Error initializing country mappings:', error);
+    }
+  }
+
+  /**
+   * Convert country name to country code (e.g., "Nepal" -> "NP")
+   */
+  private getCountryCode(countryName: string): string {
+    // If it's already a 2-letter code, return as-is
+    if (countryName.length === 2 && countryName === countryName.toUpperCase()) {
+      return countryName;
+    }
+
+    // Try to find in mapping
+    const code = this.countryCodeMap.get(countryName);
+    if (code) {
+      return code;
+    }
+
+    // Fallback: if no mapping found, assume it's already a code
+    logger.warn('Country name not found in mappings, assuming it\'s a code:', countryName);
+    return countryName;
+  }
+
+  /**
+   * Convert country code to country name (e.g., "NP" -> "Nepal")
+   */
+  private getCountryName(countryCode: string): string {
+    // If it's longer than 2 characters, assume it's already a name
+    if (countryCode.length > 2) {
+      return countryCode;
+    }
+
+    // Try to find in mapping
+    const name = this.reverseCountryCodeMap.get(countryCode);
+    if (name) {
+      return name;
+    }
+
+    // Fallback: return the code if no mapping found
+    logger.warn('Country code not found in mappings:', countryCode);
+    return countryCode;
+  }
+
+  /**
+   * Check if a country (name or code) is supported by a gateway
+   */
+  private isCountrySupported(gatewayCountries: string[], inputCountry: string): boolean {
+    if (!gatewayCountries || gatewayCountries.length === 0) {
+      return true; // If no restrictions, all countries are supported
+    }
+
+    // Convert input to both code and name for comparison
+    const inputCode = this.getCountryCode(inputCountry);
+    const inputName = this.getCountryName(inputCountry);
+
+    // Check if any supported country matches (by code or name)
+    return gatewayCountries.some(supportedCountry => {
+      const supportedCode = this.getCountryCode(supportedCountry);
+      const supportedName = this.getCountryName(supportedCountry);
+      
+      return (
+        supportedCountry === inputCountry ||
+        supportedCode === inputCode ||
+        supportedName === inputName
+      );
+    });
   }
 
   /**
@@ -179,9 +277,9 @@ export class PaymentGatewayConfigService {
             return false;
           }
 
-          // Check country support
+          // Check country support using flexible matching
           if (gateway.supported_countries && 
-              !gateway.supported_countries.includes(countryCode)) {
+              !this.isCountrySupported(gateway.supported_countries, countryCode)) {
             return false;
           }
 
@@ -215,10 +313,10 @@ export class PaymentGatewayConfigService {
             return false;
           }
 
-          // Check country support if specified
+          // Check country support if specified using flexible matching
           if (filter.country && 
               gateway.supported_countries && 
-              !gateway.supported_countries.includes(filter.country)) {
+              !this.isCountrySupported(gateway.supported_countries, filter.country)) {
             return false;
           }
 
@@ -263,10 +361,11 @@ export class PaymentGatewayConfigService {
         if (!filter.isGuest && filter.userProfile?.cod_enabled) {
           result.push('cod');
         }
-        // For guests: check if country supports COD
+        // For guests: check if country supports COD using flexible matching
         else if (filter.isGuest && 
                  filter.country &&
-                 codGateway.supported_countries?.includes(filter.country)) {
+                 codGateway.supported_countries &&
+                 this.isCountrySupported(codGateway.supported_countries, filter.country)) {
           result.push('cod');
         }
       }
@@ -417,7 +516,10 @@ export class PaymentGatewayConfigService {
   async supportsCountry(gatewayCode: PaymentGateway, country: string): Promise<boolean> {
     try {
       const config = await this.getGatewayConfig(gatewayCode);
-      return config?.supported_countries?.includes(country) || false;
+      if (!config?.supported_countries) {
+        return true; // No restrictions means all countries supported
+      }
+      return this.isCountrySupported(config.supported_countries, country);
     } catch (error) {
       logger.error('Error checking country support:', error);
       return false;

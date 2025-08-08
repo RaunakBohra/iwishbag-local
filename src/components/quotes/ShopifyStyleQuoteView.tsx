@@ -9,27 +9,26 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   CheckCircle, 
   Package, 
   Truck, 
   Shield, 
   Clock, 
-  Download,
   MessageCircle,
   ChevronRight,
+  ChevronDown,
   Star,
-  Heart,
   ArrowLeft,
   Lock,
   CreditCard,
-  Tag,
   Zap,
   X,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Scale
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
@@ -46,6 +45,7 @@ import {
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
 import { WeightPolicySection } from './WeightPolicySection';
+import { EnhancedAddonServicesSelector } from '@/components/quote/EnhancedAddonServicesSelector';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import { useCart } from '@/hooks/useCart';
@@ -102,7 +102,7 @@ const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
+const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   viewMode
 }) => {
   const navigate = useNavigate();
@@ -273,18 +273,25 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [mobileBreakdownExpanded, setMobileBreakdownExpanded] = useState(false);
   const [quoteOptions, setQuoteOptions] = useState({
     shipping: 'express',
-    discountCode: '',
     adjustedTotal: 0,
-    shippingAdjustment: 0,
-    discountAmount: 0
+    shippingAdjustment: 0
   });
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
-  const [discountApplied, setDiscountApplied] = useState(false);
-  const [discountError, setDiscountError] = useState('');
-  const [couponsModalOpen, setCouponsModalOpen] = useState(false);
   const [weightPolicyAccepted, setWeightPolicyAccepted] = useState(false);
+  const [shippingOptionsExpanded, setShippingOptionsExpanded] = useState(false);
+  
+  // Addon services state
+  const [addonSelections, setAddonSelections] = useState([]);
+  const [addonTotalCost, setAddonTotalCost] = useState(0);
+
+  // Handle addon services selection changes
+  const handleAddonServicesChange = useCallback((selections, totalCost) => {
+    console.log('[ShopifyStyleQuoteView] Addon services updated:', { selections, totalCost });
+    setAddonSelections(selections);
+    setAddonTotalCost(totalCost);
+  }, []);
   
   // Cart functionality - reactive to cart state changes
   const cartItem = useCartItem(quote?.id || '');
@@ -363,172 +370,64 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   }, [refetchQuote]);
 
 
-  // Available coupons for this order - fetch real data from database
-  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
-  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
-  const fetchAvailableCoupons = async () => {
-    if (!quote || !user) return [];
-    
-    setLoadingCoupons(true);
-    try {
-      const orderTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-      const handlingFee = quote.calculation_data?.calculation_steps?.handling_fee || 0;
-      
-      const { data, error } = await supabase.rpc('calculate_applicable_discounts', {
-        p_customer_id: user.id,
-        p_quote_total: orderTotal,
-        p_handling_fee: handlingFee,
-        p_payment_method: 'card', // Default payment method
-        p_country_code: quote.destination_country
-      });
-
-      if (error) {
-        console.error('❌ Failed to fetch coupons:', error);
-        return [];
-      }
-
-      console.log('🎫 Raw coupon data from DB:', data);
-      
-      const coupons = (data || []).map((discount: any) => {
-        const title = getDiscountTitle(discount.discount_code, discount.discount_type);
-        const discountDisplay = discount.discount_type === 'percentage' ? `${discount.value}% off` : `$${discount.value} off`;
-        
-        console.log('🏷️ Processing coupon:', {
-          code: discount.discount_code,
-          originalType: discount.discount_type,
-          generatedTitle: title,
-          discountDisplay
-        });
-        
-        return {
-          code: discount.discount_code,
-          name: title,
-          discount: discountDisplay,
-          description: getDiscountDescription(discount.discount_code),
-          savings: discount.discount_amount,
-          applicable_amount: discount.applicable_amount,
-          priority: discount.priority,
-          type: discount.discount_type
-        };
-      });
-
-      setAvailableCoupons(coupons);
-      return coupons;
-    } catch (error) {
-      console.error('❌ Error fetching coupons:', error);
-      return [];
-    } finally {
-      setLoadingCoupons(false);
-    }
-  };
-
-  const getDiscountTitle = (code: string, type: string) => {
-    const titles: { [key: string]: string } = {
-      'FIRST_TIME_FEES_50': 'First Time Customer Discount',
-      'CUSTOMS_WAIVER_1000': 'Free Customs Duty',
-      'NO_HANDLING_500': 'Free Handling',
-      'BULK_HANDLING_25': 'Bulk Order Discount',
-      'PREMIUM_ALL_FEES': 'Premium Order Benefits',
-      'PLUS_CUSTOMS_50': 'Plus Member Savings',
-      'WELCOME10': 'Welcome Offer',
-      'BULK15': 'Bulk Purchase Discount',
-      'TEST20': 'Limited Time Offer',
-      'SAVE25': 'Save $25 Off',
-      'DASHAIN2025': 'Festival Special Offer',
-      'INDIA_SHIP_10': 'India Shipping Discount'
-    };
-    return titles[code] || `${type === 'percentage' ? 'Percentage' : 'Fixed Amount'} Discount`;
-  };
-
-  const getDiscountDescription = (code: string) => {
-    const descriptions: { [key: string]: string } = {
-      'FIRST_TIME_FEES_50': 'Special welcome offer for new customers',
-      'CUSTOMS_WAIVER_1000': 'No customs duty on orders above $1000',
-      'NO_HANDLING_500': 'No handling fee for orders over $500',
-      'BULK_HANDLING_25': 'Save on handling for bulk orders (10+ items)',
-      'PREMIUM_ALL_FEES': 'All fees waived for premium orders ($2000+)',
-      'PLUS_CUSTOMS_50': 'Exclusive savings for Plus members',
-      'WELCOME10': 'Welcome discount for new customers',
-      'BULK15': 'Save on bulk orders (5+ items)',
-      'TEST20': 'Limited time special offer',
-      'SAVE25': 'Instant savings on your order',
-      'DASHAIN2025': 'Celebrate the festival with savings',
-      'INDIA_SHIP_10': 'Special discount for Indian deliveries'
-    };
-    return descriptions[code] || 'Special discount for your order';
-  };
-
-  // Fetch coupons when quote changes
-  useEffect(() => {
-    fetchAvailableCoupons();
-  }, [quote, user]);
-
-  // Handle coupon selection
-  const handleSelectCoupon = (couponCode: string) => {
-    // Calculate discount amount based on the selected coupon
-    let discountAmount = 0;
-    const baseTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-    
-    // Find the selected coupon to get actual discount amount
-    const selectedCoupon = availableCoupons.find(c => c.code === couponCode);
-    if (selectedCoupon) {
-      discountAmount = selectedCoupon.savings;
-    } else {
-      // Fallback discount calculation
-      if (couponCode.toUpperCase().includes('10')) {
-        discountAmount = baseTotal * 0.1;
-      } else if (couponCode.toUpperCase().includes('20')) {
-        discountAmount = baseTotal * 0.2;
-      } else if (couponCode.toUpperCase().includes('25')) {
-        discountAmount = 25;
-      } else {
-        discountAmount = baseTotal * 0.05;
-      }
-    }
-    
-    setQuoteOptions(prev => ({
-      ...prev,
-      discountCode: couponCode,
-      discountAmount,
-      adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) - discountAmount
-    }));
-    setDiscountApplied(true);
-    setCouponsModalOpen(false);
-    
-    toast({
-      title: "Discount Applied",
-      description: `Code "${couponCode}" has been applied - Save ${formatCurrency(discountAmount, displayCurrency)}`,
-    });
-  };
 
 
   const handleApprove = async () => {
     try {
       // Use adjusted total if options have been changed - CLEAR: This is in origin currency
-      const finalTotalOriginCurrency = quoteOptions.adjustedTotal || quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-      const finalTotal = finalTotalOriginCurrency; // Same value, clearer naming
+      const baseTotalOriginCurrency = quoteOptions.adjustedTotal || quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+      const finalTotalWithAddons = baseTotalOriginCurrency + addonTotalCost; // Include addon services
 
-      // Update quote status to approved with selected options
+      console.log('[ShopifyStyleQuoteView] Approving quote with addons:', {
+        baseTotal: baseTotalOriginCurrency,
+        addonCost: addonTotalCost,
+        finalTotal: finalTotalWithAddons,
+        selectedAddons: addonSelections.filter(s => s.is_selected)
+      });
+
+      // Apply addon services to the quote first
+      if (addonSelections.length > 0) {
+        const { addonServicesService } = await import('@/services/AddonServicesService');
+        const applyResult = await addonServicesService.applyAddonServices(
+          quote.id,
+          'quote',
+          addonSelections,
+          user?.id
+        );
+
+        if (!applyResult.success) {
+          console.error('Failed to apply addon services:', applyResult.error);
+          toast({
+            title: 'Error applying add-on services',
+            description: applyResult.error || 'Please try again',
+            variant: 'destructive'
+          });
+          return;
+        }
+      }
+
+      // Update quote status to approved with selected options and addon services
       await supabase
         .from('quotes_v2')
         .update({ 
           status: 'approved',
           approved_at: new Date().toISOString(),
-          final_total_origincurrency: finalTotal,
-          // Store selected options in applied_discounts JSONB field
+          final_total_origincurrency: finalTotalWithAddons,
+          // Store selected options and addon services in applied_discounts JSONB field
           applied_discounts: {
             shipping: quoteOptions.shipping,
-            discountCode: quoteOptions.discountCode,
-            finalTotal: finalTotal,
+            finalTotal: finalTotalWithAddons,
+            baseTotal: baseTotalOriginCurrency,
+            addonServices: {
+              totalCost: addonTotalCost,
+              selections: addonSelections.filter(s => s.is_selected),
+              currency: displayCurrency
+            },
             adjustments: {
-              shippingAdjustment: quoteOptions.shippingAdjustment,
-              discountAmount: quoteOptions.discountAmount
+              shippingAdjustment: quoteOptions.shippingAdjustment
             }
-          },
-          // Update discount-related fields
-          applied_discount_codes: quoteOptions.discountCode ? [quoteOptions.discountCode] : [],
-          discount_amounts: quoteOptions.discountAmount ? { total: quoteOptions.discountAmount } : {}
+          }
         })
         .eq('id', quote.id);
       
@@ -840,7 +739,19 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                               <span className="text-gray-600"> + {items.length - 1} more</span>
                             </>
                           ) : (
-                            <span>{items[0]?.name}</span>
+                            // Single item - make name clickable
+                            items[0]?.url ? (
+                              <a 
+                                href={items[0].url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {items[0]?.name}
+                              </a>
+                            ) : (
+                              <span>{items[0]?.name}</span>
+                            )
                           )}
                         </h3>
                         <div className="text-sm text-muted-foreground">
@@ -852,18 +763,21 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <CheckCircle className="w-4 h-4 mr-1" />
                           <span className="text-sm font-medium">All items verified</span>
                         </div>
-                        <div className="flex items-center text-blue-600">
-                          <Truck className="w-4 h-4 mr-1" />
-                          <span className="text-sm font-medium">Express shipping</span>
-                        </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">
-                          Total value: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
-                          <span className="text-blue-700 ml-2">
-                            → {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
-                          </span>
-                        </span>
+                        <div className="space-y-1">
+                          <div>
+                            <span className="font-medium">
+                              Item costs: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              (in {getOriginCurrency(quote.origin_country)})
+                            </span>
+                          </div>
+                          <div className="text-blue-700 font-semibold">
+                            Total quote: {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -901,7 +815,8 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
                 </div>
 
-                {/* Individual Item Details */}
+                {/* Individual Item Details - Only show for multiple items */}
+                {items.length > 1 && (
                 <div className="space-y-3">
                   {items.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -936,54 +851,42 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <span>•</span>
                           <span>{item.weight || 0}kg</span>
                           <span>•</span>
-                          <span className="font-medium">
-                            {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))}
-                            {(() => {
-                              // Calculate proportional quote price for this item using converted total
-                              const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
-                              const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
-                              
-                              // Use converted total numeric value for accurate calculations
-                              if (convertedAmounts.totalNumeric > 0) {
-                                const itemQuotePrice = convertedAmounts.totalNumeric * itemProportion;
-                                return (
-                                  <span className="text-blue-700 ml-2">
-                                    → {formatCurrency(itemQuotePrice, displayCurrency)}
-                                  </span>
-                                );
-                              } else {
-                                // Fallback to origin currency total
-                                const quoteTotal = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-                                const itemQuotePrice = quoteTotal * itemProportion;
-                                return (
-                                  <span className="text-blue-700 ml-2">
-                                    → {formatCurrency(itemQuotePrice, getBreakdownSourceCurrency(quote))}
-                                  </span>
-                                );
-                              }
-                            })()}
+                          <span className="font-medium text-gray-700">
+                            {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))} each
+                          </span>
+                          <span>•</span>
+                          <span className="font-semibold text-gray-900">
+                            Total: {formatCurrency(item.costprice_origin * item.quantity, getOriginCurrency(quote.origin_country))}
                           </span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                )}
 
               </CardContent>
             </Card>
 
-            {/* Shipping Options */}
+            {/* Shipping Options - Collapsible */}
             <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-blue-600" />
-                  Choose Your Shipping Speed
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setShippingOptionsExpanded(!shippingOptionsExpanded)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-lg">Choose Your Shipping Speed</CardTitle>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
+                </div>
+                <p className="text-sm text-muted-foreground text-left">
                   Select your preferred shipping option. Faster shipping costs more but gets your items quicker.
                 </p>
               </CardHeader>
-              <CardContent>
+              {shippingOptionsExpanded && (
+                <CardContent>
                 <div className="grid gap-3">
                   {/* Standard Shipping */}
                   <div 
@@ -994,7 +897,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'standard',
                       shippingAdjustment: 0,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1006,7 +909,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'standard',
                           shippingAdjustment: 0,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1033,7 +936,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'express',
                       shippingAdjustment: 25,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1045,7 +948,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'express',
                           shippingAdjustment: 25,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25 - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1072,7 +975,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       ...prev, 
                       shipping: 'priority',
                       shippingAdjustment: 45,
-                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 - (prev.discountAmount || 0)
+                      adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                     }))}
                   >
                     <div className="flex items-center gap-3">
@@ -1084,7 +987,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           ...prev, 
                           shipping: 'priority',
                           shippingAdjustment: 45,
-                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45 - (prev.discountAmount || 0)
+                          adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                         }))}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
@@ -1116,6 +1019,7 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
                 </div>
               </CardContent>
+              )}
             </Card>
 
             {/* Pricing Breakdown */}
@@ -1126,14 +1030,59 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               onTotalCalculated={handleTotalCalculated}
             />
 
-            {/* Weight Policy Section - Only show for pending/rejected quotes that need approval */}
+            {/* Simple Weight Policy Notice - Only show for pending/rejected quotes */}
             {(quote.status === 'pending' || quote.status === 'rejected') && (
-              <WeightPolicySection
-                currentWeight={items.reduce((sum, item) => sum + (item.weight || 0), 0)}
-                currentTotal={quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0}
+              <Card className="border-blue-200 bg-blue-50 mb-6">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Scale className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-blue-900 mb-2">Important: Weight & Shipping Information</h4>
+                      <p className="text-sm text-blue-800 mb-3">
+                        International shipping weights often increase 15-50% due to protective packaging and retail boxes. 
+                        By approving this quote, you agree to our 
+                        <a 
+                          href="/terms-conditions#weight-policy" 
+                          target="_blank"
+                          className="text-blue-600 hover:text-blue-800 underline ml-1 mr-1"
+                        >
+                          Weight & Pricing Policy
+                        </a>
+                        regarding potential additional costs at actual carrier rates.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={weightPolicyAccepted}
+                            onCheckedChange={setWeightPolicyAccepted}
+                            className="mt-0.5"
+                          />
+                          <span className="text-sm text-blue-900">
+                            I understand weights may vary and agree to the policy terms
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes */}
+            {(quote.status === 'pending' || quote.status === 'rejected') && quote.total_quote_origincurrency && (
+              <EnhancedAddonServicesSelector
+                quoteId={quote.id}
+                orderValue={quote.total_quote_origincurrency}
                 currency={displayCurrency}
-                onPolicyAccepted={setWeightPolicyAccepted}
-                isAccepted={weightPolicyAccepted}
+                customerCountry={quote.destination_country}
+                customerTier={user ? 'regular' : 'new'}
+                onSelectionChange={handleAddonServicesChange}
+                showRecommendations={true}
+                showBundles={true}
+                compact={false}
+                className="mb-6"
               />
             )}
           </div>
@@ -1142,160 +1091,66 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           <div className="hidden md:block">
             {/* Quote Summary */}
             <Card className="mb-6 sticky top-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Quote Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
-                    <div className="text-3xl font-bold">
-                      {(() => {
-                        // Priority 1: Use adjusted total if options have been modified
-                        if (quoteOptions.adjustedTotal > 0) {
-                          return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
-                        }
-                        
-                        // Priority 2: Use shared total from CustomerBreakdown (connected approach)
-                        if (sharedTotal?.formatted) {
-                          return sharedTotal.formatted;
-                        }
-                        
-                        // Priority 3: Use converted amounts (legacy approach)
-                        if (convertedAmounts.total) {
-                          return convertedAmounts.total;
-                        }
-                        
-                        // Priority 4: Direct calculation fallback
-                        const total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
-                        const currency = displayCurrency || getBreakdownSourceCurrency(quote);
-                        
-                        return formatCurrency(total, currency);
-                      })()} 
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Expiry */}
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground mb-1">Valid until</div>
-                    <div className="font-medium">
-                      {quote.expires_at ? 
-                        new Date(quote.expires_at).toLocaleDateString('en-US', { 
-                          month: 'long', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        }) : 'No expiry'
+              <CardContent className="p-6">
+                {/* Quote Info */}
+                <div className="space-y-3 mb-6">
+                  {/* Base Quote Total */}
+                  <div className="text-lg font-semibold text-gray-900">
+                    Quote total: {(() => {
+                      if (quoteOptions.adjustedTotal > 0) {
+                        return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
                       }
-                    </div>
-                    {daysLeft && (
-                      <div className="text-sm text-muted-foreground">
-                        ({daysLeft} day{daysLeft !== 1 ? 's' : ''} left)
-                      </div>
-                    )}
+                      if (sharedTotal?.formatted) {
+                        return sharedTotal.formatted;
+                      }
+                      if (convertedAmounts.total) {
+                        return convertedAmounts.total;
+                      }
+                      const total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
+                      const currency = displayCurrency || getBreakdownSourceCurrency(quote);
+                      return formatCurrency(total, currency);
+                    })()}
                   </div>
 
-
-                  <Separator />
-
-                  {/* Quote Options - Insurance & Coupon */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-gray-700">Quick Options</div>
-                      {(quoteOptions.adjustedTotal > 0 || discountApplied || quoteOptions.shipping !== 'express') && (
-                        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                          Modified
-                        </div>
-                      )}
+                  {/* Addon Services Cost */}
+                  {addonTotalCost > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Add-on services:</span>
+                      <span className="font-medium text-blue-600">
+                        +{formatCurrency(addonTotalCost, displayCurrency)}
+                      </span>
                     </div>
-                    
-                    {/* Insurance Note - Moved to cart level */}
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                      <Shield className="w-4 h-4 text-blue-600" />
-                      <div className="text-sm text-blue-700">
-                        <span className="font-medium">Package Protection</span>
-                        <div className="text-xs">Available at checkout with dynamic rates</div>
+                  )}
+
+                  {/* Total with Add-ons */}
+                  {addonTotalCost > 0 && (
+                    <div className="pt-2 border-t">
+                      <div className="text-xl font-bold text-green-600">
+                        Total amount: {(() => {
+                          const baseTotal = quoteOptions.adjustedTotal > 0 
+                            ? quoteOptions.adjustedTotal
+                            : quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
+                          return formatCurrency(baseTotal + addonTotalCost, displayCurrency);
+                        })()}
                       </div>
                     </div>
-
-                    {/* Discount Code Input */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium">Discount Code</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Enter code"
-                          value={quoteOptions.discountCode}
-                          onChange={(e) => setQuoteOptions(prev => ({
-                            ...prev,
-                            discountCode: e.target.value
-                          }))}
-                          className="flex-1 text-sm"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={async () => {
-                            if (quoteOptions.discountCode) {
-                              // Simple discount calculation for demo
-                              let discountAmount = 0;
-                              const baseTotal = quote.total_quote_origincurrency || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-                              
-                              // Apply discount based on code
-                              if (quoteOptions.discountCode.toUpperCase().includes('10')) {
-                                discountAmount = baseTotal * 0.1; // 10% off
-                              } else if (quoteOptions.discountCode.toUpperCase().includes('20')) {
-                                discountAmount = baseTotal * 0.2; // 20% off
-                              } else if (quoteOptions.discountCode.toUpperCase().includes('25')) {
-                                discountAmount = 25; // $25 off
-                              } else {
-                                discountAmount = baseTotal * 0.05; // Default 5% off
-                              }
-                              
-                              setQuoteOptions(prev => ({
-                                ...prev,
-                                discountAmount,
-                                adjustedTotal: baseTotal + (prev.shippingAdjustment || 0) - discountAmount
-                              }));
-                              
-                              setDiscountApplied(true);
-                              toast({
-                                title: "Discount Applied",
-                                description: `Code "${quoteOptions.discountCode}" has been applied - Save ${formatCurrency(discountAmount, displayCurrency)}`,
-                              });
-                            }
-                          }}
-                          disabled={!quoteOptions.discountCode || discountApplied}
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                      {discountApplied && (
-                        <div className="flex items-center gap-2 text-xs text-green-600">
-                          <CheckCircle className="w-3 h-3" />
-                          Discount code applied
-                        </div>
-                      )}
-                      
-                      {/* Browse Available Coupons */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs text-blue-600 hover:text-blue-800"
-                        onClick={() => setCouponsModalOpen(true)}
-                      >
-                        <Tag className="w-3 h-3 mr-1" />
-                        Browse available discounts
-                      </Button>
-                    </div>
+                  )}
+                  
+                  <div className="text-sm text-gray-600">
+                    Valid until {quote.expires_at ? 
+                      new Date(quote.expires_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'No expiry'
+                    }{daysLeft && ` (${daysLeft} day${daysLeft !== 1 ? 's' : ''} left)`}
                   </div>
+                </div>
 
-                  <Separator />
+                <Separator className="mb-6" />
 
-                  {/* Actions - Dynamic buttons based on quote status and cart state */}
-                  <div className="space-y-3">
+                {/* Actions - Dynamic buttons based on quote status and cart state */}
+                <div className="space-y-3">
                     {/* Primary Action Button */}
                     {quote.status === 'approved' ? (
                       // For approved quotes: Show Add to Cart / Added to Cart
@@ -1369,62 +1224,25 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="ghost" size="sm" className="h-10">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save for Later
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-10">
-                        <Download className="w-4 h-4 mr-2" />
-                        Download PDF
-                      </Button>
-                    </div>
                   </div>
 
                   <Separator />
 
                   {/* Trust Signals */}
                   <div className="text-center text-xs text-muted-foreground">
-                    <div className="flex items-center justify-center mb-2">
-                      <Lock className="w-3 h-3 mr-1" />
-                      Secure • Trusted by 1M+ customers
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <a href="/terms-conditions#weight-policy" className="text-blue-600 hover:underline">Weight Policy</a>
+                      <span>•</span>
+                      <a href="/terms-conditions#shipping" className="text-blue-600 hover:underline">Shipping Terms</a>
+                      <span>•</span>
+                      <a href="/help" className="text-blue-600 hover:underline">FAQ</a>
                     </div>
                   </div>
-                </div>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Customer Testimonials */}
-        <Card className="mt-8">
-          <CardContent className="p-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="text-center p-4">
-                <div className="flex items-center justify-center mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-sm italic text-muted-foreground mb-2">
-                  "Fast approval, great packaging, arrived exactly on time!"
-                </p>
-                <p className="text-xs font-medium">- Sarah M.</p>
-              </div>
-              <div className="text-center p-4">
-                <div className="flex items-center justify-center mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-sm italic text-muted-foreground mb-2">
-                  "Customer service helped me save $200 on shipping!"
-                </p>
-                <p className="text-xs font-medium">- Mike K.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Approve Modal */}
@@ -1594,115 +1412,6 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Coupons Modal - Professional Design */}
-      <Dialog open={couponsModalOpen} onOpenChange={setCouponsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-lg font-semibold text-gray-900">
-              Available Discount Codes
-            </DialogTitle>
-            <p className="text-sm text-gray-600 mt-1">
-              Select a discount code to apply to your order
-            </p>
-          </DialogHeader>
-          
-          {loadingCoupons ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600 text-sm">Loading available discounts...</span>
-            </div>
-          ) : availableCoupons.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-12 h-12 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-                <Tag className="w-6 h-6 text-gray-400" />
-              </div>
-              <h3 className="font-medium text-gray-900 mb-1">No discount codes available</h3>
-              <p className="text-gray-600 text-sm">
-                No applicable discount codes for this order
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {availableCoupons.map((coupon, index) => (
-                <div 
-                  key={coupon.code} 
-                  className="group border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-                  onClick={() => handleSelectCoupon(coupon.code)}
-                >
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        {/* Discount badge */}
-                        <div className="flex-shrink-0">
-                          <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-sm font-medium">
-                            {coupon.discount}
-                          </div>
-                        </div>
-                        
-                        {/* Coupon details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
-                              {coupon.name}
-                            </h4>
-                            {index === 0 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                Recommended
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                            {coupon.description}
-                          </p>
-                          <div className="flex items-center space-x-4">
-                            <code className="inline-flex items-center px-2 py-1 rounded text-xs font-mono bg-gray-100 text-gray-800 border">
-                              {coupon.code}
-                            </code>
-                            <span className="text-sm font-medium text-green-600">
-                              Save {formatCurrency(coupon.savings, displayCurrency)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Apply button */}
-                      <div className="flex-shrink-0 ml-4">
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectCoupon(coupon.code);
-                          }}
-                        >
-                          Apply Code
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="border-t pt-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {availableCoupons.length > 0 && (
-                  <span>{availableCoupons.length} discount{availableCoupons.length !== 1 ? 's' : ''} available</span>
-                )}
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={() => setCouponsModalOpen(false)}
-                className="text-gray-700 border-gray-300 hover:bg-gray-50"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Mobile Sticky Bar */}
       <MobileStickyBar 
@@ -1725,3 +1434,5 @@ export const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     </div>
   );
 };
+
+export default ShopifyStyleQuoteView;

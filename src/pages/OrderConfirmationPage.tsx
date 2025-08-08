@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { CheckoutService } from '@/services/CheckoutService';
 
 interface QuoteItem {
   product_name: string;
@@ -78,53 +79,44 @@ const OrderConfirmationPage: React.FC = () => {
 
     const fetchOrderDetails = async () => {
       try {
-        const { data, error } = await supabase
-          .from('quotes_v2')
-          .select(
-            `
-            id,
-            display_id,
-            final_total_origincurrency,
-            destination_currency,
-            payment_method,
-            email,
-            customer_name,
-            is_anonymous,
-            quote_items (
-              product_name,
-              quantity,
-              item_price
-            )
-          `,
-          )
-          .eq('id', orderId)
-          .single();
+        const checkoutService = CheckoutService.getInstance();
+        const order = await checkoutService.getOrderById(orderId);
 
-        if (error) throw error;
-
-        if (data) {
+        if (order) {
+          // Extract order data and quote information
+          const orderData = order.order_data || {};
+          const items = orderData.items || [];
+          
+          // Get first quote for basic info (could be improved to aggregate multiple quotes)
+          const firstQuote = order.order_items?.[0]?.quotes_v2 || {};
+          
           const formattedOrder = {
-            id: data.id,
-            displayId: data.display_id,
-            amount: data.final_total_origincurrency,
-            currency: data.destination_currency,
-            paymentMethod: data.payment_method,
-            email: data.email,
-            customerName: data.customer_name,
-            items: data.quote_items,
-            isAnonymous: data.is_anonymous,
+            id: order.id,
+            displayId: order.order_number,
+            amount: order.total_amount,
+            currency: order.currency,
+            paymentMethod: order.payment_method,
+            email: firstQuote.customer_email || '',
+            customerName: firstQuote.customer_name || '',
+            items: items.map(item => ({
+              product_name: item.quoteName || `Quote ${item.quoteId?.slice(0, 8)}`,
+              quantity: 1,
+              item_price: item.amount
+            })),
+            isAnonymous: false, // Orders are linked to users
           };
+          
           setOrderDetails({
             ...formattedOrder,
-            quotes: {
-              display_id: data.display_id || '',
-              quote_items: data.quote_items || [],
+            quotes: { 
+              display_id: order.order_number, 
+              quote_items: formattedOrder.items
             },
           });
 
           // Store guest email in localStorage for convenience
-          if (!user && data.email) {
-            localStorage.setItem('guestOrderEmail', data.email);
+          if (!user && formattedOrder.email) {
+            localStorage.setItem('guestOrderEmail', formattedOrder.email);
           }
         } else {
           throw new Error('Order not found.');

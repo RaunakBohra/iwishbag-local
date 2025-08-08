@@ -10,6 +10,7 @@ import { autoSaveService } from '@/services/AutoSaveService';
 import type { QuoteItem } from './QuoteFormStateService';
 import { toast } from '@/hooks/use-toast';
 import { getOriginCurrency } from '@/utils/originCurrency';
+import { countryStandardizationService } from '../CountryStandardizationService';
 
 export interface QuoteData {
   id?: string;
@@ -456,7 +457,10 @@ export class QuotePersistenceService {
       }
       
       if (filters?.country) {
-        queryBuilder = queryBuilder.eq('destination_country', filters.country);
+        // Standardize the country filter to country code
+        await countryStandardizationService.initialize();
+        const standardizedCountry = countryStandardizationService.standardizeCountry(filters.country);
+        queryBuilder = queryBuilder.eq('destination_country', standardizedCountry);
       }
 
       if (filters?.dateFrom) {

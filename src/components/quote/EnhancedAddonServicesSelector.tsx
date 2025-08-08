@@ -1,0 +1,637 @@
+/**
+ * EnhancedAddonServicesSelector - Smart Add-on Services for Customer Quotes
+ * 
+ * Features:
+ * - Intelligent service recommendations based on location/order
+ * - Real-time pricing with regional optimization
+ * - Bundle suggestions with savings calculations
+ * - Smart defaults and upselling
+ * - Seamless integration with quote flow
+ * 
+ * Designed for maximum conversion and customer satisfaction
+ */
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Shield,
+  Zap,
+  Headphones,
+  Gift,
+  Camera,
+  Package,
+  Star,
+  TrendingUp,
+  CheckCircle,
+  Info,
+  AlertTriangle,
+  DollarSign,
+  Percent,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Target
+} from 'lucide-react';
+
+import { addonServicesService, type AddonServiceRecommendation, type AddonServicesBundle } from '@/services/AddonServicesService';
+import { regionalPricingService } from '@/services/RegionalPricingService';
+import { currencyService } from '@/services/CurrencyService';
+import { useCountryWithPricing } from '@/hooks/useCountryDetection';
+import { toast } from '@/hooks/use-toast';
+
+// ============================================================================
+// TYPES AND INTERFACES
+// ============================================================================
+
+interface EnhancedAddonServicesSelectorProps {
+  quoteId?: string;
+  orderValue: number;
+  currency: string;
+  customerCountry?: string;
+  customerTier?: 'new' | 'regular' | 'vip';
+  onSelectionChange: (selections: AddonServiceSelection[], totalCost: number) => void;
+  showRecommendations?: boolean;
+  showBundles?: boolean;
+  compact?: boolean;
+  className?: string;
+}
+
+interface AddonServiceSelection {
+  service_key: string;
+  is_selected: boolean;
+  calculated_amount: number;
+  recommendation_score?: number;
+}
+
+// ============================================================================
+// SERVICE ICON MAPPING
+// ============================================================================
+const ServiceIconMap: Record<string, React.ComponentType<any>> = {
+  'package_protection': Shield,
+  'express_processing': Zap,
+  'priority_support': Headphones,
+  'gift_wrapping': Gift,
+  'photo_documentation': Camera,
+};
+
+const ServiceColors = {
+  'package_protection': 'text-green-600 bg-green-50 border-green-200',
+  'express_processing': 'text-blue-600 bg-blue-50 border-blue-200',
+  'priority_support': 'text-purple-600 bg-purple-50 border-purple-200',
+  'gift_wrapping': 'text-pink-600 bg-pink-50 border-pink-200',
+  'photo_documentation': 'text-orange-600 bg-orange-50 border-orange-200',
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelectorProps> = ({
+  quoteId,
+  orderValue,
+  currency,
+  customerCountry,
+  customerTier = 'regular',
+  onSelectionChange,
+  showRecommendations = true,
+  showBundles = true,
+  compact = false,
+  className = '',
+}) => {
+  
+  const [selections, setSelections] = useState<Map<string, AddonServiceSelection>>(new Map());
+  const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
+  const [showAllServices, setShowAllServices] = useState(false);
+  
+  // Enhanced country detection with pricing integration
+  const { countryCode: detectedCountry, hasRegionalPricing, countryInfo } = useCountryWithPricing();
+  const finalCountryCode = customerCountry || detectedCountry || 'US';
+  
+  // Show pricing optimization badge if we have regional pricing
+  const showRegionalPricingBadge = hasRegionalPricing && countryInfo?.pricingInfo?.hasRegionalPricing;
+
+  // Load addon service recommendations
+  const { data: addonData, isLoading, error } = useQuery({
+    queryKey: ['addon-services-recommendations', finalCountryCode, orderValue, customerTier],
+    queryFn: async () => {
+      console.log('[AddonServices] Starting query with params:', {
+        finalCountryCode,
+        orderValue,
+        customerTier,
+        currency
+      });
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+      });
+      
+      const servicePromise = addonServicesService.getRecommendedServices(
+        {
+          country_code: finalCountryCode,
+          order_value: orderValue,
+          order_type: 'quote',
+          customer_tier: customerTier,
+        },
+        currency
+      );
+
+      const result = await Promise.race([servicePromise, timeoutPromise]);
+      console.log('[AddonServices] Service result:', result);
+
+      if (!result.success) {
+        console.error('[AddonServices] Service failed:', result.error);
+        throw new Error(result.error || 'Failed to load recommendations');
+      }
+
+      return result;
+    },
+    enabled: orderValue > 0,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    onError: (error) => {
+      console.error('[AddonServices] Query error:', error);
+    },
+    onSuccess: (data) => {
+      console.log('[AddonServices] Query success:', data);
+    }
+  });
+
+  // Calculate total cost when selections change
+  const totalAddonCost = useMemo(() => {
+    return Array.from(selections.values())
+      .filter(s => s.is_selected)
+      .reduce((sum, s) => sum + s.calculated_amount, 0);
+  }, [selections]);
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    const selectedServices = Array.from(selections.values());
+    onSelectionChange(selectedServices, totalAddonCost);
+  }, [selections, totalAddonCost, onSelectionChange]);
+
+  // Auto-select recommended services on load
+  useEffect(() => {
+    if (addonData && addonData.recommendations.length > 0) {
+      const newSelections = new Map<string, AddonServiceSelection>();
+      
+      addonData.recommendations.forEach(rec => {
+        const isAutoSelected = 
+          rec.recommendation_score >= 0.8 || // Highly recommended
+          (rec.pricing.calculated_amount <= 5 && rec.recommendation_score >= 0.6); // Low cost, good score
+
+        newSelections.set(rec.service_key, {
+          service_key: rec.service_key,
+          is_selected: isAutoSelected,
+          calculated_amount: rec.pricing.calculated_amount,
+          recommendation_score: rec.recommendation_score,
+        });
+      });
+
+      setSelections(newSelections);
+    }
+  }, [addonData]);
+
+  // Handle service selection toggle
+  const handleServiceToggle = useCallback((serviceKey: string, isSelected: boolean) => {
+    setSelections(prev => {
+      const newSelections = new Map(prev);
+      const current = newSelections.get(serviceKey);
+      
+      if (current) {
+        newSelections.set(serviceKey, {
+          ...current,
+          is_selected: isSelected,
+        });
+      }
+
+      return newSelections;
+    });
+
+    // Track selection for analytics
+    if (isSelected) {
+      toast({
+        title: 'Service Added',
+        description: `${serviceKey.replace('_', ' ')} has been added to your order`,
+        duration: 2000,
+      });
+    }
+  }, []);
+
+  // Handle bundle selection
+  const handleBundleSelect = useCallback((bundle: AddonServicesBundle) => {
+    setSelections(prev => {
+      const newSelections = new Map(prev);
+      
+      // Select all services in the bundle
+      bundle.included_services.forEach(serviceKey => {
+        const current = newSelections.get(serviceKey);
+        if (current) {
+          newSelections.set(serviceKey, {
+            ...current,
+            is_selected: true,
+          });
+        }
+      });
+
+      return newSelections;
+    });
+
+    toast({
+      title: 'Bundle Selected',
+      description: `${bundle.bundle_name} added - you save $${bundle.savings_amount.toFixed(2)}!`,
+      duration: 3000,
+    });
+  }, []);
+
+  // Get recommendation level styling
+  const getRecommendationStyling = (score: number) => {
+    if (score >= 0.8) return 'border-l-4 border-l-green-500 bg-green-50';
+    if (score >= 0.6) return 'border-l-4 border-l-blue-500 bg-blue-50';
+    if (score >= 0.4) return 'border-l-4 border-l-yellow-500 bg-yellow-50';
+    return 'border-l-4 border-l-gray-300 bg-gray-50';
+  };
+
+  const getRecommendationBadge = (score: number) => {
+    if (score >= 0.8) return { text: 'Highly Recommended', color: 'bg-green-600' };
+    if (score >= 0.6) return { text: 'Recommended', color: 'bg-blue-600' };
+    if (score >= 0.4) return { text: 'Consider', color: 'bg-yellow-600' };
+    return { text: 'Optional', color: 'bg-gray-600' };
+  };
+
+  // ============================================================================
+  // RENDER FUNCTIONS
+  // ============================================================================
+
+  const renderServiceRecommendation = (rec: AddonServiceRecommendation) => {
+    const IconComponent = ServiceIconMap[rec.service_key] || Package;
+    const selection = selections.get(rec.service_key);
+    const isSelected = selection?.is_selected || false;
+    const badge = getRecommendationBadge(rec.recommendation_score);
+    const serviceColor = ServiceColors[rec.service_key as keyof typeof ServiceColors] || 'text-gray-600 bg-gray-50 border-gray-200';
+
+    return (
+      <div
+        key={rec.service_key}
+        className={`p-4 rounded-lg border transition-all ${
+          isSelected ? 'ring-2 ring-blue-500 ' + serviceColor : 'border-gray-200 hover:border-gray-300'
+        } ${getRecommendationStyling(rec.recommendation_score)}`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg ${serviceColor}`}>
+              <IconComponent className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-medium">{rec.service_name}</h4>
+                <Badge className={`text-white text-xs ${badge.color}`}>
+                  {badge.text}
+                </Badge>
+                {rec.recommendation_score >= 0.8 && (
+                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-2">{rec.recommendation_reason}</p>
+              
+              {/* Pricing Information */}
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <span className="font-medium text-green-600">
+                    {currencyService.formatAmount(rec.pricing.calculated_amount, currency)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-500">
+                  <Target className="w-4 h-4" />
+                  <span>{(rec.customer_acceptance_rate * 100).toFixed(0)}% choose this</span>
+                </div>
+                {rec.pricing.pricing_tier !== 'global' && (
+                  <Badge variant="outline" className="text-xs">
+                    {rec.pricing.pricing_tier} rate
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    Recommendation Score: {(rec.recommendation_score * 100).toFixed(0)}%<br/>
+                    {rec.pricing.source_description}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <Switch
+              checked={isSelected}
+              onCheckedChange={(checked) => handleServiceToggle(rec.service_key, checked)}
+            />
+          </div>
+        </div>
+
+        {/* Value Proposition */}
+        {rec.recommendation_score >= 0.6 && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <TrendingUp className="w-4 h-4" />
+            <AlertDescription className="text-sm">
+              This service adds approximately <strong>${rec.estimated_value_add.toFixed(0)}</strong> in protection value to your order.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+    );
+  };
+
+  const renderServiceBundle = (bundle: AddonServicesBundle) => {
+    const isExpanded = expandedBundle === bundle.bundle_id;
+    const allSelected = bundle.included_services.every(serviceKey => 
+      selections.get(serviceKey)?.is_selected
+    );
+
+    return (
+      <Card key={bundle.bundle_id} className="border-2 border-dashed border-purple-300 bg-purple-50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              <CardTitle className="text-lg">{bundle.bundle_name}</CardTitle>
+              {bundle.is_recommended && (
+                <Badge className="bg-purple-600 text-white">
+                  Best Value
+                </Badge>
+              )}
+            </div>
+            <Button 
+              variant={allSelected ? "secondary" : "default"}
+              onClick={() => handleBundleSelect(bundle)}
+              disabled={allSelected}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {allSelected ? 'Selected' : `Save $${bundle.savings_amount.toFixed(2)}`}
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">
+              {bundle.included_services.length} services included
+            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-500 line-through">
+                {currencyService.formatAmount(bundle.total_individual_cost, currency)}
+              </span>
+              <span className="text-lg font-bold text-purple-600">
+                {currencyService.formatAmount(bundle.bundle_cost, currency)}
+              </span>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">
+                {bundle.bundle_discount_percentage.toFixed(0)}% OFF
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+
+        <Collapsible open={isExpanded} onOpenChange={() => 
+          setExpandedBundle(isExpanded ? null : bundle.bundle_id)
+        }>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between">
+              View included services
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="space-y-2">
+                {bundle.included_services.map(serviceKey => {
+                  const rec = addonData?.recommendations.find(r => r.service_key === serviceKey);
+                  if (!rec) return null;
+
+                  const IconComponent = ServiceIconMap[serviceKey] || Package;
+                  return (
+                    <div key={serviceKey} className="flex items-center justify-between p-2 bg-white rounded">
+                      <div className="flex items-center gap-2">
+                        <IconComponent className="w-4 h-4" />
+                        <span className="font-medium">{rec.service_name}</span>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {currencyService.formatAmount(rec.pricing.calculated_amount, currency)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    );
+  };
+
+  // ============================================================================
+  // MAIN RENDER
+  // ============================================================================
+
+  if (isLoading) {
+    console.log('[AddonServices] Component is loading. Query enabled?', orderValue > 0, 'Order value:', orderValue);
+    return (
+      <Card className={className}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2">Loading personalized recommendations...</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-2 text-center">
+            Debug: Order value = {orderValue}, Country = {finalCountryCode}, Enabled = {orderValue > 0 ? 'Yes' : 'No'}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !addonData) {
+    console.error('[AddonServices] Rendering error state:', error);
+    
+    // Show a fallback with manual service options instead of completely failing
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-600" />
+            Add-on Services
+            <Badge variant="secondary">Basic Options</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Unable to load personalized recommendations. Showing basic options instead.
+              {error && <div className="text-xs mt-1">Error: {error.message}</div>}
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-3">
+            <div className="p-3 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="font-medium">Package Protection</span>
+                </div>
+                <Badge variant="outline">Coming Soon</Badge>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Protect your package during shipping</p>
+            </div>
+            
+            <div className="p-3 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">Express Processing</span>
+                </div>
+                <Badge variant="outline">Coming Soon</Badge>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Faster processing and handling</p>
+            </div>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            className="w-full mt-4" 
+            onClick={() => window.location.reload()}
+          >
+            Try Loading Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const topRecommendations = addonData.recommendations.filter(r => r.recommendation_score >= 0.5);
+  const otherServices = addonData.recommendations.filter(r => r.recommendation_score < 0.5);
+  const selectedCount = Array.from(selections.values()).filter(s => s.is_selected).length;
+
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-600" />
+            Add-on Services
+            {selectedCount > 0 && (
+              <Badge variant="secondary">{selectedCount} selected</Badge>
+            )}
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Personalized recommendations for {finalCountryCode} • Order value: {currencyService.formatAmount(orderValue, currency)}
+            {showRegionalPricingBadge && (
+              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-700">
+                Optimized Regional Pricing
+              </Badge>
+            )}
+          </p>
+        </div>
+
+        {totalAddonCost > 0 && (
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Total Add-ons</p>
+            <p className="text-xl font-bold text-green-600">
+              {currencyService.formatAmount(totalAddonCost, currency)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Service Bundles */}
+      {showBundles && addonData.suggested_bundles.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            Special Bundles
+          </h4>
+          {addonData.suggested_bundles.map(renderServiceBundle)}
+        </div>
+      )}
+
+      {/* Top Recommendations */}
+      {showRecommendations && topRecommendations.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium flex items-center gap-2">
+            <Star className="w-4 h-4 text-yellow-500" />
+            Recommended for You
+          </h4>
+          <div className="grid gap-3">
+            {topRecommendations.map(renderServiceRecommendation)}
+          </div>
+        </div>
+      )}
+
+      {/* Other Services */}
+      {otherServices.length > 0 && (
+        <div className="space-y-3">
+          <Collapsible open={showAllServices} onOpenChange={setShowAllServices}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                Other Available Services ({otherServices.length})
+                {showAllServices ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid gap-3 mt-3">
+                {otherServices.map(renderServiceRecommendation)}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+
+      {/* Selection Summary */}
+      {selectedCount > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
+                <span className="font-medium">
+                  {selectedCount} service{selectedCount !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Additional Cost</p>
+                <p className="text-xl font-bold text-blue-600">
+                  {currencyService.formatAmount(totalAddonCost, currency)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};

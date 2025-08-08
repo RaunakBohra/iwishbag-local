@@ -1,4 +1,3 @@
-import { StateProvinceService } from '@/services/StateProvinceService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Body, BodySmall } from '@/components/ui/typography';
@@ -37,8 +36,8 @@ export const AddressCard = ({
   // Get country name from code
   const countryName = countries?.find(c => c.code === address.destination_country)?.name || address.destination_country;
   
-  // Get state/province name from code
-  const stateName = StateProvinceService.getStateName(address.destination_country, address.state_province_region) || address.state_province_region;
+  // Use state/province name directly (no conversion needed)
+  const stateName = address.state_province_region;
   
   // Check if this is a Nepal address
   const isNepal = address.destination_country === 'NP';

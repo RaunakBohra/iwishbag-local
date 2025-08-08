@@ -35,13 +35,14 @@ import { StandardLoading } from '@/components/patterns';
 import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
-import { CheckoutService } from '@/services/CheckoutService';
+import { CheckoutService, AddonServiceSelection } from '@/services/CheckoutService';
 import { supabase } from '@/integrations/supabase/client';
 
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
 import { UnifiedOrderSummary } from '@/components/checkout/UnifiedOrderSummary';
+import { EnhancedAddonServicesSelector } from '@/components/quote/EnhancedAddonServicesSelector';
 import { Tables } from '@/integrations/supabase/types';
 import { PaymentGateway } from '@/types/payment';
 
@@ -69,6 +70,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
   const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentGateway | null>(null);
   const [orderNotes, setOrderNotes] = useState('');
+  const [selectedAddonServices, setSelectedAddonServices] = useState<AddonServiceSelection[]>([]);
   
   // Services
   const checkoutService = useMemo(() => CheckoutService.getInstance(), []);
@@ -136,7 +138,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
       
       // Calculate order summary on demand for order creation
       const destinationCountry = selectedAddress?.destination_country || user?.profile?.country || 'US';
-      const orderSummary = await checkoutService.calculateOrderSummary(items, destinationCountry);
+      const orderSummary = await checkoutService.calculateOrderSummary(items, destinationCountry, selectedAddonServices);
       
       // Create order
       const order = await checkoutService.createOrder({
@@ -144,7 +146,8 @@ const CheckoutShopify: React.FC = React.memo(() => {
         address: selectedAddress!,
         paymentMethod: selectedPaymentMethod!,
         orderSummary,
-        userId: user!.id
+        userId: user!.id,
+        addonServices: selectedAddonServices
       });
       
       // Clear cart after successful order
@@ -260,6 +263,37 @@ const CheckoutShopify: React.FC = React.memo(() => {
                   onChange={(e) => setOrderNotes(e.target.value)}
                   placeholder="Add any special instructions for your order..."
                   rows={3}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Addon Services */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5" />
+                  Add-on Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EnhancedAddonServicesSelector
+                  orderValue={items.reduce((total, item) => total + (item.quote.final_total_origincurrency || 0), 0)}
+                  currency={displayCurrency}
+                  customerCountry={selectedAddress?.destination_country || user?.profile?.country}
+                  customerTier="regular"
+                  onSelectionChange={(selections, totalCost) => {
+                    console.log('Addon services changed:', selections, totalCost);
+                    setSelectedAddonServices(selections.filter(s => s.is_selected).map(s => ({
+                      service_key: s.service_key,
+                      service_name: s.service_key.replace('_', ' '),
+                      calculated_amount: s.calculated_amount,
+                      pricing_tier: 'regional',
+                      recommendation_score: s.recommendation_score
+                    })));
+                  }}
+                  showRecommendations={true}
+                  showBundles={true}
+                  compact={true}
                 />
               </CardContent>
             </Card>

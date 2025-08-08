@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { countryStandardizationService } from './CountryStandardizationService';
 
 export interface PaymentGatewayInfo {
   id: string;
@@ -325,13 +326,24 @@ class PaymentGatewayService {
   }
 
   /**
-   * Check if gateway supports a specific country
+   * Check if gateway supports a specific country (standardized to country codes)
    */
-  async isGatewaySupportedForCountry(gatewayCode: string, countryCode: string): Promise<boolean> {
+  async isGatewaySupportedForCountry(gatewayCode: string, countryInput: string): Promise<boolean> {
     const gateway = await this.getGateway(gatewayCode);
     if (!gateway) return false;
 
-    return gateway.supported_countries.includes(countryCode);
+    // If no country restrictions, it supports all countries
+    if (!gateway.supported_countries || gateway.supported_countries.length === 0) {
+      return true;
+    }
+
+    // Standardize the input country to country code format
+    await countryStandardizationService.initialize();
+    const standardizedInput = countryStandardizationService.standardizeCountry(countryInput);
+    
+    // Check if the standardized country code is in supported countries
+    // (supported_countries should already be in standardized format)
+    return gateway.supported_countries.includes(standardizedInput);
   }
 }
 

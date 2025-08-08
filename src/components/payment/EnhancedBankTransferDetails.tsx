@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { PaymentProofButton } from './PaymentProofButton';
+import { countryStandardizationService } from '@/services/CountryStandardizationService';
+import { CheckoutService } from '@/services/CheckoutService';
 
 type BankAccountType = Tables<'bank_account_details'>;
 
@@ -38,18 +40,51 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Initialize country standardization service
+  const [isCountryServiceReady, setIsCountryServiceReady] = useState(false);
+
+  useEffect(() => {
+    const initializeCountryService = async () => {
+      await countryStandardizationService.initialize();
+      setIsCountryServiceReady(true);
+    };
+    initializeCountryService();
+  }, []);
+
   // Get the destination country and payment status from the order
+  // First try orders table, then fallback to quotes_v2 for backward compatibility
   const { data: orderDetails } = useQuery({
     queryKey: ['order-destination', orderId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quotes_v2')
-        .select('destination_country, payment_status')
-        .eq('id', orderId)
-        .single();
+      try {
+        // First try to get from orders table
+        const checkoutService = CheckoutService.getInstance();
+        const order = await checkoutService.getOrderById(orderId);
+        
+        if (order && order.delivery_address) {
+          return {
+            destination_country: order.delivery_address.destination_country || order.delivery_address.country,
+            payment_status: order.status === 'pending_payment' ? 'pending' : 'paid',
+            order_type: 'order'
+          };
+        }
+      } catch (orderError) {
+        console.log('Order not found, trying quotes_v2 for backward compatibility');
+      }
 
-      if (error) throw error;
-      return data;
+      // Fallback to quotes_v2 for backward compatibility
+      try {
+        const { data, error } = await supabase
+          .from('quotes_v2')
+          .select('destination_country, payment_status')
+          .eq('id', orderId)
+          .single();
+
+        if (error) throw error;
+        return { ...data, order_type: 'quote' };
+      } catch (error) {
+        throw new Error('Could not find order or quote details');
+      }
     },
   });
 
@@ -59,20 +94,39 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
     isError,
     error,
   } = useQuery<BankAccountType[], Error>({
-    queryKey: ['bankAccounts', currency, orderDetails?.destination_country],
+    queryKey: ['bankAccounts', currency, orderDetails?.destination_country, isCountryServiceReady],
     queryFn: async () => {
-      // First, try to get country-specific bank accounts
-      if (orderDetails?.destination_country) {
-        const { data: countrySpecific, error: countryError } = await supabase
-          .from('bank_account_details')
-          .select('*')
-          .eq('is_active', true)
-          .eq('currency_code', currency)
-          .eq('destination_country', orderDetails.destination_country);
-
-        if (!countryError && countrySpecific && countrySpecific.length > 0) {
-          return countrySpecific as BankAccountType[];
+      if (!orderDetails?.destination_country) {
+        // No destination country, get fallback accounts only
+        let query = supabase.from('bank_account_details').select('*').eq('is_active', true);
+        
+        if (currency) {
+          query = query.eq('currency_code', currency);
         }
+        
+        query = query
+          .or('is_fallback.eq.true,destination_country.is.null')
+          .order('is_fallback', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as BankAccountType[];
+      }
+
+      // Standardize the destination country to country code
+      const standardizedCountry = countryStandardizationService.standardizeCountry(orderDetails.destination_country);
+
+      // First, try to get country-specific bank accounts using standardized country code
+      const { data: countrySpecific, error: countryError } = await supabase
+        .from('bank_account_details')
+        .select('*')
+        .eq('is_active', true)
+        .eq('currency_code', currency)
+        .eq('destination_country', standardizedCountry);
+
+      if (!countryError && countrySpecific && countrySpecific.length > 0) {
+        return countrySpecific as BankAccountType[];
       }
 
       // If no country-specific accounts, get fallback accounts
@@ -92,23 +146,25 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
       if (error) throw error;
       return data as BankAccountType[];
     },
-    enabled: !!orderDetails,
+    enabled: !!orderDetails && isCountryServiceReady, // Wait for both order details and country service
   });
 
   // Check if payment proof exists (via messages) - get latest one
   const { data: paymentProofMessages } = useQuery({
-    queryKey: ['payment-proof-messages', orderId],
+    queryKey: ['payment-proof-messages', orderId, orderDetails?.order_type],
     queryFn: async () => {
+      // Query based on whether this is an order or quote
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('quote_id', orderId)
+        .or(`quote_id.eq.${orderId},order_id.eq.${orderId}`) // Look for both order_id and quote_id
         .eq('message_type', 'payment_proof')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data; // Return all, we'll use the first (latest) one
     },
+    enabled: !!orderDetails, // Only run when we have order details
     refetchInterval: 5000, // Refetch every 5 seconds to get updates
   });
 
@@ -475,6 +531,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
                         quoteId={orderId}
                         orderId={orderDisplayId}
                         recipientId={null}
+                        orderType={orderDetails?.order_type === 'order' ? 'order' : 'quote'}
                       />
                     </div>
                   </>
@@ -491,6 +548,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
                     quoteId={orderId}
                     orderId={orderDisplayId}
                     recipientId={null}
+                    orderType={orderDetails?.order_type === 'order' ? 'order' : 'quote'}
                   />
                 </div>
               </>

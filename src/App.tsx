@@ -76,6 +76,8 @@ const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes
 const StatusManagementPage = React.lazy(() => import('@/pages/admin/StatusManagement'));
 const SupportTicketsPage = React.lazy(() => import('@/pages/admin/SupportTickets'));
 const AutoAssignmentPage = React.lazy(() => import('@/pages/admin/AutoAssignment'));
+const RegionalPricingAdminPage = React.lazy(() => import('@/pages/admin/RegionalPricingAdminPage'));
+const SystemPerformance = React.lazy(() => import('@/pages/admin/SystemPerformance'));
 const EnhancedCustomerManagementPage = React.lazy(() => import('@/components/admin/SimpleCustomerManagement'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
 const CountrySettings = React.lazy(() => import('@/components/admin/CountrySettings'));
@@ -121,7 +123,7 @@ const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integra
 const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
 const RouteShippingDesigns = React.lazy(() => import('@/pages/demo/RouteShippingDesigns'));
-const ShopifyStyleQuoteView = React.lazy(() => import('@/components/quotes/ShopifyStyleQuoteView').then((m) => ({ default: m.ShopifyStyleQuoteView })));
+const ShopifyStyleQuoteView = React.lazy(() => import('@/components/quotes/ShopifyStyleQuoteView'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 // Smart Intelligence Management pages
@@ -188,6 +190,22 @@ const router = createBrowserRouter([
           // { path: 'users', element: <UserManagementPage /> }, // User management removed
           { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'auto-assignment', element: <AutoAssignmentPage /> },
+          {
+            path: 'regional-pricing',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <RegionalPricingAdminPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'system-performance',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <SystemPerformance />
+              </ErrorBoundary>
+            ),
+          },
           // { path: 'templates', element: <QuoteTemplatesPage /> }, // Component not found - commented out
           {
             path: 'quotes/:id',

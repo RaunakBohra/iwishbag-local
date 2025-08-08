@@ -1,5 +1,6 @@
 import { supabase } from '../integrations/supabase/client';
 import type { ShippingRouteDB } from '../types/shipping';
+import { countryStandardizationService } from './CountryStandardizationService';
 
 export interface RouteCalculations {
   // For Step 5: International Shipping
@@ -163,25 +164,31 @@ export class DynamicShippingService {
   }
 
   /**
-   * Get shipping route from database
+   * Get shipping route from database (using standardized country codes)
    */
   private async getShippingRoute(
     originCountry: string, 
     destinationCountry: string
   ): Promise<ShippingRouteDB | null> {
+    // Standardize both countries to country codes
+    await countryStandardizationService.initialize();
+    const standardizedOrigin = countryStandardizationService.standardizeCountry(originCountry);
+    const standardizedDest = countryStandardizationService.standardizeCountry(destinationCountry);
+
     const { data, error } = await supabase
       .from('shipping_routes')
       .select('*')
-      .eq('origin_country', originCountry)
-      .eq('destination_country', destinationCountry)
+      .eq('origin_country', standardizedOrigin)
+      .eq('destination_country', standardizedDest)
       .eq('is_active', true)
       .single();
 
     if (error) {
-      console.error('Error fetching shipping route:', error);
+      console.error(`❌ [DynamicShipping] No route found for ${standardizedOrigin} → ${standardizedDest}:`, error.message);
       return null;
     }
 
+    console.log(`✅ [DynamicShipping] Route found: ${standardizedOrigin} → ${standardizedDest}`);
     return data;
   }
 

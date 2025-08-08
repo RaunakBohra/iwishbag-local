@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { countryStandardizationService } from './CountryStandardizationService';
 
 type Quote = Tables<'quotes'>;
 type ShippingRoute = Tables<'shipping_routes'>;
@@ -72,26 +73,33 @@ export class RouteService {
   }
 
   /**
-   * Find or create a shipping route
+   * Find or create a shipping route (using standardized country codes)
    * This ensures every quote has a proper shipping_route_id
    */
   static async findOrCreateRoute(origin: string, destination: string): Promise<number | null> {
-    // First, try to find an existing route
+    // Standardize countries to country codes
+    await countryStandardizationService.initialize();
+    const standardizedOrigin = countryStandardizationService.standardizeCountry(origin);
+    const standardizedDest = countryStandardizationService.standardizeCountry(destination);
+
     const { data: existingRoute, error: findError } = await supabase
       .from('shipping_routes')
       .select('id')
-      .eq('origin_country', origin)
-      .eq('destination_country', destination)
+      .eq('origin_country', standardizedOrigin)
+      .eq('destination_country', standardizedDest)
       .eq('is_active', true)
       .single();
 
-    if (existingRoute) {
+    // If we found a match, return it
+    if (!findError && existingRoute) {
+      console.log(`✅ [RouteService] Route found: ${standardizedOrigin} → ${standardizedDest}`);
       return existingRoute.id;
     }
 
     // If no route exists, check if we should create one
     // For now, return null and let the system use quote fields
     // In the future, we might auto-create routes here
+    console.log(`❌ [RouteService] No route found for ${standardizedOrigin} → ${standardizedDest}`);
     return null;
   }
 

@@ -15,6 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
 import { PaymentActionsService } from '@/services/payment-management/PaymentActionsService';
 import { trackingService } from '@/services/TrackingService';
+import { addonServicesService } from '@/services/AddonServicesService';
+import { EnhancedGeoLocationService } from '@/services/EnhancedGeoLocationService';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import type { CartItem } from '@/types/cart';
 
@@ -23,9 +25,19 @@ export interface OrderSummary {
   shippingTotal: number;
   taxesTotal: number;
   serviceFeesTotal: number;
+  addonServicesTotal: number; // NEW: Regional addon services
   finalTotal: number;
   currency: string;
   savings?: number;
+  addonServices?: AddonServiceSelection[]; // NEW: Selected addon services
+}
+
+export interface AddonServiceSelection {
+  service_key: string;
+  service_name: string;
+  calculated_amount: number;
+  pricing_tier: string;
+  recommendation_score?: number;
 }
 
 export interface CreateOrderRequest {
@@ -34,6 +46,7 @@ export interface CreateOrderRequest {
   paymentMethod: string;
   orderSummary: OrderSummary;
   userId: string;
+  addonServices?: AddonServiceSelection[]; // NEW: Optional addon services
 }
 
 export interface OrderResult {
@@ -111,9 +124,13 @@ export class CheckoutService {
   }
 
   /**
-   * Calculate comprehensive order summary
+   * Calculate comprehensive order summary with regional pricing
    */
-  async calculateOrderSummary(items: CartItem[], destinationCountry: string): Promise<OrderSummary> {
+  async calculateOrderSummary(
+    items: CartItem[], 
+    destinationCountry: string,
+    selectedAddonServices: AddonServiceSelection[] = []
+  ): Promise<OrderSummary> {
     try {
       console.log(`[CHECKOUT SERVICE] Calculating order summary for ${items.length} items, destination: ${destinationCountry}`);
       logger.info(`Calculating order summary for ${items.length} items, destination: ${destinationCountry}`);
@@ -122,6 +139,7 @@ export class CheckoutService {
       let shippingTotal = 0;
       let taxesTotal = 0;
       let serviceFeesTotal = 0;
+      let addonServicesTotal = 0;
       let savings = 0;
 
       // Get user's preferred currency
@@ -207,16 +225,44 @@ export class CheckoutService {
         savings += quoteSavings;
       }
 
-      const finalTotal = itemsTotal + shippingTotal + taxesTotal + serviceFeesTotal;
+      // Calculate addon services total with regional pricing
+      if (selectedAddonServices.length > 0) {
+        console.log(`[CHECKOUT SERVICE] Processing ${selectedAddonServices.length} addon services for ${destinationCountry}`);
+        
+        for (const addon of selectedAddonServices) {
+          // Convert addon service cost to user currency if needed
+          let addonCost = addon.calculated_amount;
+          
+          // Addon services are calculated in USD, convert to user currency if different
+          if (userCurrency !== 'USD') {
+            try {
+              const addonConversionRate = await currencyService.getExchangeRateByCurrency('USD', userCurrency);
+              addonCost = addonCost * addonConversionRate;
+              console.log(`[CHECKOUT SERVICE] Addon ${addon.service_key} converted: ${addon.calculated_amount} USD -> ${addonCost} ${userCurrency}`);
+            } catch (error) {
+              console.warn(`[CHECKOUT SERVICE] Failed to convert addon service cost, using original amount`);
+            }
+          }
+          
+          addonServicesTotal += addonCost;
+          console.log(`[CHECKOUT SERVICE] Added ${addon.service_name}: ${addonCost} ${userCurrency} (${addon.pricing_tier} pricing)`);
+        }
+        
+        console.log(`[CHECKOUT SERVICE] Total addon services cost: ${addonServicesTotal} ${userCurrency}`);
+      }
+
+      const finalTotal = itemsTotal + shippingTotal + taxesTotal + serviceFeesTotal + addonServicesTotal;
 
       console.log(`[CHECKOUT SERVICE] Order summary totals:`, {
         itemsTotal,
         shippingTotal,
         taxesTotal,
         serviceFeesTotal,
+        addonServicesTotal,
         finalTotal,
         currency: userCurrency,
-        savings
+        savings,
+        addonServicesCount: selectedAddonServices.length
       });
 
       const summary: OrderSummary = {
@@ -224,9 +270,11 @@ export class CheckoutService {
         shippingTotal,
         taxesTotal,
         serviceFeesTotal,
+        addonServicesTotal,
         finalTotal,
         currency: userCurrency,
-        savings: savings > 0 ? savings : undefined
+        savings: savings > 0 ? savings : undefined,
+        addonServices: selectedAddonServices.length > 0 ? selectedAddonServices : undefined
       };
 
       logger.info('Order summary calculated:', {
@@ -234,9 +282,11 @@ export class CheckoutService {
         shippingTotal,
         taxesTotal,
         serviceFeesTotal,
+        addonServicesTotal,
         finalTotal,
         currency: userCurrency,
-        savings
+        savings,
+        addonServicesCount: selectedAddonServices.length
       });
 
       return summary;
@@ -297,7 +347,9 @@ export class CheckoutService {
               (item.quote.destination_country ? getDestinationCurrency(item.quote.destination_country) : 'USD')
           })),
           summary: request.orderSummary,
-          checkout_timestamp: new Date().toISOString()
+          addonServices: request.addonServices || [],
+          checkout_timestamp: new Date().toISOString(),
+          regional_pricing_used: request.addonServices && request.addonServices.length > 0
         }
       })
       .select()
@@ -547,6 +599,120 @@ export class CheckoutService {
     } catch (error) {
       logger.error('Failed to cancel order:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get recommended addon services for checkout based on order details
+   */
+  async getRecommendedAddonServices(
+    items: CartItem[], 
+    destinationCountry: string,
+    userId?: string
+  ): Promise<AddonServiceSelection[]> {
+    try {
+      console.log(`[CHECKOUT SERVICE] Getting addon service recommendations for ${destinationCountry}`);
+      
+      // Calculate total order value
+      const orderValue = items.reduce((total, item) => {
+        return total + (item.quote.final_total_origincurrency || 0);
+      }, 0);
+      
+      // Get customer tier based on order value and history (simplified)
+      const customerTier = orderValue > 500 ? 'vip' : orderValue > 100 ? 'regular' : 'new';
+      
+      // Enhanced country detection for better recommendations
+      const countryInfo = await EnhancedGeoLocationService.getCountryInfo({
+        userId,
+        includePricingData: true
+      });
+      
+      const finalCountry = destinationCountry || countryInfo.country || 'US';
+      
+      console.log(`[CHECKOUT SERVICE] Recommendation context:`, {
+        country: finalCountry,
+        orderValue,
+        customerTier,
+        hasCountryPricingData: !!countryInfo.pricingInfo
+      });
+      
+      // Get recommendations using addon services
+      const result = await addonServicesService.getRecommendedServices(
+        {
+          country_code: finalCountry,
+          order_value: orderValue,
+          order_type: 'checkout',
+          customer_tier: customerTier
+        },
+        'USD' // Base currency for calculations
+      );
+      
+      if (!result.success) {
+        console.warn(`[CHECKOUT SERVICE] Failed to get recommendations:`, result.error);
+        return [];
+      }
+      
+      // Convert to checkout format
+      const recommendations: AddonServiceSelection[] = result.recommendations.map(rec => ({
+        service_key: rec.service_key,
+        service_name: rec.service_name,
+        calculated_amount: rec.pricing.calculated_amount,
+        pricing_tier: rec.pricing.pricing_tier,
+        recommendation_score: rec.recommendation_score
+      }));
+      
+      console.log(`[CHECKOUT SERVICE] Found ${recommendations.length} addon service recommendations`);
+      
+      return recommendations;
+      
+    } catch (error) {
+      console.error(`[CHECKOUT SERVICE] Failed to get addon service recommendations:`, error);
+      logger.error('Failed to get addon service recommendations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Validate addon service selections
+   */
+  async validateAddonServices(
+    selectedServices: AddonServiceSelection[],
+    destinationCountry: string
+  ): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+    
+    try {
+      for (const service of selectedServices) {
+        // Validate service exists and is active
+        const { data: addonService, error } = await supabase
+          .from('addon_services')
+          .select('service_key, is_active')
+          .eq('service_key', service.service_key)
+          .eq('is_active', true)
+          .single();
+        
+        if (error || !addonService) {
+          errors.push(`Service ${service.service_key} is not available`);
+          continue;
+        }
+        
+        // Validate pricing (basic check)
+        if (service.calculated_amount < 0) {
+          errors.push(`Invalid pricing for ${service.service_name}`);
+        }
+      }
+      
+      return {
+        valid: errors.length === 0,
+        errors
+      };
+      
+    } catch (error) {
+      console.error('Addon service validation failed:', error);
+      return {
+        valid: false,
+        errors: ['Failed to validate addon services']
+      };
     }
   }
 

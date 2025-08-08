@@ -124,7 +124,7 @@ export const NepalAddressSection: React.FC<NepalAddressSectionProps> = ({
                 </FormControl>
                 <SelectContent>
                   {stateProvinces?.map((state) => (
-                    <SelectItem key={state.code} value={state.code}>
+                    <SelectItem key={state.code} value={state.name}>
                       {state.name}
                     </SelectItem>
                   ))}
@@ -165,7 +165,7 @@ export const NepalAddressSection: React.FC<NepalAddressSectionProps> = ({
                 </FormControl>
                 <SelectContent>
                   {districts.map((district) => (
-                    <SelectItem key={district.code} value={district.code}>
+                    <SelectItem key={district.code} value={district.name}>
                       {district.name}
                     </SelectItem>
                   ))}

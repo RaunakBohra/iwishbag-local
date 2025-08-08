@@ -36,13 +36,16 @@ import {
   Eye,
   Edit,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Globe,
+  DollarSign
 } from 'lucide-react';
 
 import { masterServiceOrchestrator } from '@/services/MasterServiceOrchestrator';
 import { unifiedUserContextService } from '@/services/UnifiedUserContextService';
 import { enhancedSupportService } from '@/services/EnhancedSupportService';
 import { currencyService } from '@/services/CurrencyService';
+import { RegionalPricingManager } from '@/components/admin/RegionalPricingManager';
 
 // ============================================================================
 // ADMIN DASHBOARD TYPES
@@ -224,12 +227,16 @@ export default function UnifiedAdminDashboard() {
       {/* Main Content Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <div className="flex items-center justify-between">
-          <TabsList className="grid w-full max-w-lg grid-cols-6">
+          <TabsList className="grid w-full max-w-4xl grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="quotes">Quotes</TabsTrigger>
             <TabsTrigger value="warehouse">Warehouse</TabsTrigger>
             <TabsTrigger value="support">Support</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Regional Pricing
+            </TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
@@ -276,6 +283,10 @@ export default function UnifiedAdminDashboard() {
         </TabsContent>
 
         {/* System Management Tab */}
+        <TabsContent value="pricing" className="space-y-4">
+          <RegionalPricingManager />
+        </TabsContent>
+
         <TabsContent value="system" className="space-y-4">
           <AdminSystemTab systemHealth={systemHealth} />
         </TabsContent>

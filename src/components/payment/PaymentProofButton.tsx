@@ -18,9 +18,10 @@ interface PaymentProofButtonProps {
   quoteId: string;
   orderId: string;
   recipientId?: string | null;
+  orderType?: 'order' | 'quote'; // NEW: Specify if this is for an order or quote
 }
 
-export const PaymentProofButton = ({ quoteId, orderId, recipientId }: PaymentProofButtonProps) => {
+export const PaymentProofButton = ({ quoteId, orderId, recipientId, orderType = 'quote' }: PaymentProofButtonProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,18 +95,26 @@ export const PaymentProofButton = ({ quoteId, orderId, recipientId }: PaymentPro
           .from('message-attachments')
           .getPublicUrl(fileName);
 
-        // Create message with payment proof
-        const { error: messageError } = await supabase.from('messages').insert({
+        // Create message with payment proof - handle both orders and quotes
+        const messageData: any = {
           sender_id: user.id,
           recipient_id: recipientId,
-          quote_id: quoteId,
-          subject: `Payment Proof for Order ${orderId}`,
-          content: `Payment proof uploaded for Order #${orderId}`,
+          subject: `Payment Proof for ${orderType === 'order' ? 'Order' : 'Quote'} ${orderId}`,
+          content: `Payment proof uploaded for ${orderType === 'order' ? 'Order' : 'Quote'} #${orderId}`,
           attachment_url: urlData.publicUrl,
           attachment_file_name: file.name,
           message_type: 'payment_proof',
           verification_status: 'pending', // Ensure new submissions are marked as pending
-        });
+        };
+
+        // Set the appropriate ID field based on order type
+        if (orderType === 'order') {
+          messageData.order_id = quoteId; // For orders, quoteId is actually the order ID
+        } else {
+          messageData.quote_id = quoteId; // For quotes, use quote_id as usual
+        }
+
+        const { error: messageError } = await supabase.from('messages').insert(messageData);
 
         if (messageError) {
           throw new Error(`Failed to save payment proof record: ${messageError.message}`);
@@ -130,7 +139,10 @@ export const PaymentProofButton = ({ quoteId, orderId, recipientId }: PaymentPro
     },
     onSuccess: () => {
       setShowSuccess(true);
+      // Invalidate relevant queries for both messages and payment proof
       queryClient.invalidateQueries({ queryKey: ['messages', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['payment-proof-messages', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['payment-proof-messages', quoteId, orderType] });
       toast({
         title: 'Payment proof uploaded!',
         description: 'Your payment proof has been sent to our team for verification.',

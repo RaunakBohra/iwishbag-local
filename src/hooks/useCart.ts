@@ -78,15 +78,9 @@ export function useCart() {
     // PHASE 2 FIX: Use currency-aware cart totals to prevent double-conversion
     const currencyBreakdown = store.getTotalValueWithCurrency();
     
-    console.log('[USE CART] getTotalValue called with currency-aware logic:', {
-      targetCurrency,
-      displayCurrency,
-      requestedCurrency: currency,
-      currencyBreakdown
-    });
+    // Debug logging removed to prevent infinite loops
     
     if (currencyBreakdown.isEmpty) {
-      console.log('[USE CART] Empty cart, returning 0');
       return 0;
     }
 
@@ -96,7 +90,7 @@ export function useCart() {
       
       // Check if this is the only currency in cart
       if (currencyBreakdown.isSingleCurrency && currencyBreakdown.currencies[0] === targetCurrency) {
-        console.log(`[USE CART] Cart is entirely in target currency ${targetCurrency}:`, directTotal);
+        // Cart is entirely in target currency
         return directTotal;
       }
     }
@@ -106,17 +100,15 @@ export function useCart() {
       const cartCurrency = currencyBreakdown.currencies[0];
       const cartTotal = currencyBreakdown.totalsByCurrency[cartCurrency];
       
-      console.log(`[USE CART] Single currency cart: ${cartTotal} ${cartCurrency} → ${targetCurrency}`);
+      // Single currency cart conversion
       
       if (cartCurrency === targetCurrency) {
-        console.log(`[USE CART] No conversion needed, same currency: ${cartTotal}`);
+        // No conversion needed, same currency
         return cartTotal;
       }
 
       try {
-        console.log(`[USE CART] Converting ${cartTotal} ${cartCurrency} to ${targetCurrency}...`);
         const converted = await currencyService.convertAmount(cartTotal, cartCurrency, targetCurrency);
-        console.log(`[USE CART] Conversion result: ${cartTotal} ${cartCurrency} = ${converted} ${targetCurrency}`);
         return converted;
       } catch (error) {
         console.error(`[USE CART] Currency conversion failed:`, { cartTotal, cartCurrency, targetCurrency, error });
@@ -126,28 +118,23 @@ export function useCart() {
     }
 
     // Handle multi-currency cart (convert each currency and sum)
-    console.log(`[USE CART] Multi-currency cart detected, converting each currency to ${targetCurrency}:`);
+    // Multi-currency cart conversion
     let convertedTotal = 0;
 
     for (const [cartCurrency, amount] of Object.entries(currencyBreakdown.totalsByCurrency)) {
       if (cartCurrency === targetCurrency) {
-        console.log(`[USE CART]   ${amount} ${cartCurrency} (no conversion needed)`);
         convertedTotal += amount;
       } else {
         try {
           const converted = await currencyService.convertAmount(amount, cartCurrency, targetCurrency);
-          console.log(`[USE CART]   ${amount} ${cartCurrency} = ${converted} ${targetCurrency}`);
           convertedTotal += converted;
         } catch (error) {
-          console.error(`[USE CART]   Failed to convert ${amount} ${cartCurrency}:`, error);
           logger.error('Multi-currency conversion failed', { amount, fromCurrency: cartCurrency, targetCurrency, error });
           // Add original amount as fallback (not ideal but prevents total loss)
           convertedTotal += amount;
         }
       }
     }
-
-    console.log(`[USE CART] Multi-currency total: ${convertedTotal} ${targetCurrency}`);
     return convertedTotal;
 
   }, [store, displayCurrency]);

@@ -725,32 +725,18 @@ export const useCartStore = create<SimpleCartStore>()(
     getTotalValue: () => {
       const items = get().items;
       
-      console.log(`[CART STORE] getTotalValue called with ${items.length} items:`);
-      
       if (items.length === 0) {
-        console.log(`[CART STORE] Empty cart, returning 0`);
         return 0;
       }
 
       // PHASE 2 FIX: Handle multi-currency cart properly
       const currencySummary: Record<string, number> = {};
       
-      items.forEach((item, index) => {
+      items.forEach((item) => {
         const priceOrigin = item.quote.total_quote_origincurrency;
         const priceFinal = item.quote.final_total_origin;
         const priceUsed = priceOrigin || priceFinal || 0;
         const currency = item.quote.customer_currency || 'USD';
-        
-        console.log(`[CART STORE] Item ${index + 1}:`, {
-          quoteId: item.quote.id,
-          displayId: item.quote.display_id,
-          currency: currency,
-          total_quote_origincurrency: priceOrigin,
-          final_total_origin: priceFinal,
-          priceUsed: priceUsed,
-          correctedFromOriginal: item.metadata?.originalCurrencyFromDB,
-          metadata: item.metadata
-        });
         
         // Group by currency
         if (!currencySummary[currency]) {
@@ -759,29 +745,20 @@ export const useCartStore = create<SimpleCartStore>()(
         currencySummary[currency] += priceUsed;
       });
 
-      console.log(`[CART STORE] Currency breakdown:`, currencySummary);
-
       // For backward compatibility, if all items are in USD, return the USD total
       const currencies = Object.keys(currencySummary);
       if (currencies.length === 1 && currencies[0] === 'USD') {
-        const total = currencySummary['USD'];
-        console.log(`[CART STORE] All items in USD, returning total: ${total}`);
-        return total;
+        return currencySummary['USD'];
       }
 
       // For mixed currencies, we need to convert to a common base currency
       // This is a temporary solution - the useCart hook will handle proper conversion
       if (currencies.length === 1) {
         // Single currency cart (non-USD)
-        const currency = currencies[0];
-        const total = currencySummary[currency];
-        console.log(`[CART STORE] Single currency (${currency}) cart, total: ${total}`);
-        return total;
+        return currencySummary[currencies[0]];
       }
 
       // Mixed currency cart - this should be handled by the useCart hook
-      console.warn(`[CART STORE] Mixed currency cart detected:`, currencySummary);
-      console.log(`[CART STORE] Returning sum of all amounts (will need conversion): ${Object.values(currencySummary).reduce((a, b) => a + b, 0)}`);
       return Object.values(currencySummary).reduce((a, b) => a + b, 0);
     },
 
@@ -789,33 +766,23 @@ export const useCartStore = create<SimpleCartStore>()(
     getTotalValueWithCurrency: () => {
       const items = get().items;
       
-      console.log(`[CART STORE] getTotalValueWithCurrency called with ${items.length} items:`);
-      
       if (items.length === 0) {
         return { totalsByCurrency: {}, isEmpty: true };
       }
 
       const totalsByCurrency: Record<string, number> = {};
       
-      items.forEach((item, index) => {
+      items.forEach((item) => {
         const priceOrigin = item.quote.total_quote_origincurrency;
         const priceFinal = item.quote.final_total_origin;
         const priceUsed = priceOrigin || priceFinal || 0;
         const currency = item.quote.customer_currency || 'USD';
-        
-        console.log(`[CART STORE] Item ${index + 1} for currency breakdown:`, {
-          quoteId: item.quote.id,
-          currency: currency,
-          priceUsed: priceUsed
-        });
         
         if (!totalsByCurrency[currency]) {
           totalsByCurrency[currency] = 0;
         }
         totalsByCurrency[currency] += priceUsed;
       });
-
-      console.log(`[CART STORE] Currency-aware totals:`, totalsByCurrency);
       
       return { 
         totalsByCurrency, 

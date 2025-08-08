@@ -360,7 +360,7 @@ export const SignUpSection: React.FC<SignUpSectionProps> = ({
                   <FormLabel className="text-sm">
                     I agree to the{' '}
                     <a
-                      href="/terms"
+                      href="/terms-conditions"
                       target="_blank"
                       className="text-teal-600 hover:text-teal-800 underline"
                     >

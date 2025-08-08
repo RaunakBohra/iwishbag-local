@@ -84,7 +84,7 @@ const Auth = () => {
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
                 By continuing, you agree to our{' '}
-                <a href="/terms" className="text-purple-600 hover:text-purple-800">
+                <a href="/terms-conditions" className="text-purple-600 hover:text-purple-800">
                   Terms of Service
                 </a>{' '}
                 and{' '}

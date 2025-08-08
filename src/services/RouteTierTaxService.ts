@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import * as Sentry from '@sentry/react';
+import { countryStandardizationService } from './CountryStandardizationService';
 
 export interface RouteTierTaxRates {
   customs: number;         // Customs percentage
@@ -67,8 +68,13 @@ class RouteTierTaxService {
     // });
 
     try {
-      // Generate cache key
-      const cacheKey = `${origin}:${destination}:${Math.floor(itemsTotal)}:${Math.floor(totalWeight)}`;
+      // Standardize countries to country codes
+      await countryStandardizationService.initialize();
+      const standardizedOrigin = countryStandardizationService.standardizeCountry(origin);
+      const standardizedDestination = countryStandardizationService.standardizeCountry(destination);
+
+      // Generate cache key with standardized countries
+      const cacheKey = `${standardizedOrigin}:${standardizedDestination}:${Math.floor(itemsTotal)}:${Math.floor(totalWeight)}`;
       
       // Check cache
       const cached = this.getFromCache(cacheKey);
@@ -79,18 +85,18 @@ class RouteTierTaxService {
       }
 
       console.log('🔍 [ROUTE TIER] Searching for matching tier:', {
-        origin,
-        destination,
+        origin: standardizedOrigin,
+        destination: standardizedDestination,
         itemsTotal,
         totalWeight,
       });
 
-      // Query route customs tiers
+      // Query route customs tiers (using standardized country codes)
       const { data: tiers, error } = await supabase
         .from('route_customs_tiers')
         .select('*')
-        .eq('origin_country', origin)
-        .eq('destination_country', destination)
+        .eq('origin_country', standardizedOrigin)
+        .eq('destination_country', standardizedDestination)
         .eq('is_active', true)
         .order('priority_order', { ascending: true });
 
@@ -231,11 +237,16 @@ class RouteTierTaxService {
     destination: string
   ): Promise<RouteTier[]> {
     try {
+      // Standardize countries to country codes
+      await countryStandardizationService.initialize();
+      const standardizedOrigin = countryStandardizationService.standardizeCountry(origin);
+      const standardizedDestination = countryStandardizationService.standardizeCountry(destination);
+
       const { data: tiers, error } = await supabase
         .from('route_customs_tiers')
         .select('*')
-        .eq('origin_country', origin)
-        .eq('destination_country', destination)
+        .eq('origin_country', standardizedOrigin)
+        .eq('destination_country', standardizedDestination)
         .order('priority_order', { ascending: true });
 
       if (error) {

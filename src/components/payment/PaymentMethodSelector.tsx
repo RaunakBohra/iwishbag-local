@@ -149,7 +149,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       <div
         key={method.code}
         className={cn(
-          'border rounded-lg transition-all duration-200',
+          'border rounded-lg',
           isSelected
             ? 'border-teal-500 bg-teal-50 shadow-sm'
             : 'border-gray-200 bg-white hover:border-gray-300',

@@ -13,6 +13,7 @@ import { MapPin, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddressChangeModal } from '@/components/checkout/AddressChangeModal';
 import { Tables } from '@/integrations/supabase/types';
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 interface CompactAddressDisplayProps {
   selectedAddress: Tables<'delivery_addresses'> | null;
@@ -26,6 +27,7 @@ export function CompactAddressDisplay({
   isLoading = false 
 }: CompactAddressDisplayProps) {
   const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
+  const { data: countries } = useAllCountries();
 
   if (isLoading) {
     return (
@@ -68,11 +70,14 @@ export function CompactAddressDisplay({
       address.postal_code
     ].filter(Boolean).join(', ');
     
+    // Get country name from code
+    const countryName = countries?.find(c => c.code === address.destination_country)?.name || address.destination_country;
+    
     return {
       name: address.recipient_name,
       street: streetAddress,
       cityStateZip,
-      country: address.destination_country,
+      country: countryName,
       phone: address.phone
     };
   };
@@ -80,7 +85,7 @@ export function CompactAddressDisplay({
   const addressLines = formatMultilineAddress(selectedAddress);
 
   return (
-    <div className={`p-4 rounded-lg border transition-all ${
+    <div className={`p-4 rounded-lg border ${
       selectedAddress.is_default 
         ? 'border-green-300 bg-green-50' 
         : 'border-gray-200 bg-gray-50'
@@ -107,7 +112,7 @@ export function CompactAddressDisplay({
       <div className="text-sm text-gray-700 space-y-1">
         <p>{addressLines.street}</p>
         <p>{addressLines.cityStateZip}</p>
-        <p className="font-medium">{addressLines.country}</p>
+        <p>{addressLines.country}</p>
         {addressLines.phone && (
           <p className="text-xs text-gray-500 mt-2">
             Phone: {addressLines.phone}

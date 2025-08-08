@@ -534,9 +534,10 @@ export const CartSummary = memo<CartSummaryProps>(({
           </span>
         </div>
 
+
         {/* Checkout Button - International Standard */}
         {onCheckout && onCheckout.toString() !== '() => {}' && (
-          <div className="pt-6">
+          <div className="pt-2">
             <Button 
               onClick={onCheckout}
               className={`w-full ${cartDesignTokens.components.button.primary} ${animations.transition.all} h-12 text-base`}

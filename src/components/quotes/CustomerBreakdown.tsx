@@ -76,7 +76,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   useEffect(() => {
     const convertAmounts = async () => {
       // CLEAR: Always use origin country mapping for currency detection
-      const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+      // Using originCurrency from outer scope
       if (!displayCurrency || displayCurrency === originCurrency) {
         // No conversion needed, reset converted amounts
         setConvertedAmounts({});
@@ -86,7 +86,7 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       try {
         // CLEAR: Get the origin currency from origin_country column 
         // All amounts are stored in origin currency (e.g., INR for India), then converted for display
-        const fromCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+        const fromCurrency = originCurrency;
         
         // console.log(`[CustomerBreakdown] Currency conversion: ${fromCurrency} → ${displayCurrency} for quote ${quote.id}`);
         // console.log(`[CustomerBreakdown] Origin: ${quote.origin_country}, Destination: ${quote.destination_country}`);
@@ -156,11 +156,33 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
   }, [quote.id, quote.origin_country, displayCurrency, hasProportionalRounding]);
 
   // Helper to get converted amount or original - FIXED for origin currency system
+  // Using originCurrency from outer scope
+  
+  // Helper function to get amounts - items in origin currency, others in display currency
   const getAmount = (key: string, originalAmount: number) => {
+    // Always show item-related costs in origin currency
+    const itemCostKeys = ['items_subtotal', 'item_discounts', 'order_discount_amount', 'origin_sales_tax'];
+    
+    if (itemCostKeys.includes(key)) {
+      return originalAmount; // Keep in origin currency
+    }
+    
+    // Convert other amounts to display currency
     if (displayCurrency && convertedAmounts[key] !== undefined) {
       return convertedAmounts[key];
     }
     return originalAmount;
+  };
+
+  // Helper to format currency with appropriate currency symbol
+  const formatAmountWithCurrency = (amount: number, key: string) => {
+    const itemCostKeys = ['items_subtotal', 'item_discounts', 'order_discount_amount', 'origin_sales_tax'];
+    
+    if (itemCostKeys.includes(key)) {
+      return formatCurrency(amount, originCurrency);
+    }
+    
+    return formatCurrency(amount, displayCurrency || originCurrency);
   };
 
   // Helper function to get country-specific tax name
@@ -311,6 +333,16 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Currency Notice */}
+          {displayCurrency && displayCurrency !== originCurrency && (
+            <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded border border-blue-200">
+              <div className="flex items-center gap-1">
+                <Info className="w-3 h-3 text-blue-600" />
+                <span>Item costs shown in {originCurrency} (original prices), other amounts in {displayCurrency}</span>
+              </div>
+            </div>
+          )}
+          
           {/* Essential Breakdown (Always Visible) - Clean & Simple */}
           <div className="space-y-3">
             {essentialItems.map((item, index) => {
@@ -322,9 +354,19 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                     <span className="text-blue-600 mr-3">{item.icon}</span>
                     <span className="text-muted-foreground">{item.label}</span>
                   </div>
-                  <span className="font-medium">
-                    {formatCurrency(item.amount, currency)}
-                  </span>
+                  <div className="text-right">
+                    <span className="font-medium">
+                      {item.label === 'Items' ? 
+                        formatCurrency(item.amount, originCurrency) : 
+                        formatCurrency(item.amount, displayCurrency || originCurrency)
+                      }
+                    </span>
+                    {item.label === 'Items' && displayCurrency !== originCurrency && (
+                      <div className="text-xs text-gray-500">
+                        (in {originCurrency})
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -362,9 +404,19 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                               {item.label}
                             </span>
                             {!item.isInfo && (
-                              <span className={`${item.isDiscount ? 'text-green-600 font-medium' : ''}`}>
-                                {formatCurrency(item.amount, currency)}
-                              </span>
+                              <div className="text-right">
+                                <span className={`${item.isDiscount ? 'text-green-600 font-medium' : ''}`}>
+                                  {section.section === 'Items' ? 
+                                    formatCurrency(item.amount, originCurrency) : 
+                                    formatCurrency(item.amount, displayCurrency || originCurrency)
+                                  }
+                                </span>
+                                {section.section === 'Items' && displayCurrency !== originCurrency && (
+                                  <div className="text-xs text-gray-500">
+                                    ({originCurrency})
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                           {item.description && (
@@ -387,11 +439,11 @@ export const CustomerBreakdown: React.FC<CustomerBreakdownProps> = ({
                         <span className="text-green-800 font-semibold text-lg">Total Savings</span>
                       </div>
                       <span className="text-green-800 font-bold text-lg">
-                        -{formatCurrency(totalSavings, currency)}
+                        -{formatCurrency(totalSavings, displayCurrency || originCurrency)}
                       </span>
                     </div>
                     <p className="text-green-700 text-sm mt-2">
-                      You saved {formatCurrency(totalSavings, currency)} on this quote through various discounts and optimizations!
+                      You saved {formatCurrency(totalSavings, displayCurrency || originCurrency)} on this quote through various discounts and optimizations!
                     </p>
                   </div>
                 )}

@@ -35,7 +35,7 @@ export class GeoLocationService {
       return countryInfo.country;
     } catch (error) {
       console.warn('Country detection failed:', error);
-      return 'GLOBAL'; // Default fallback
+      return 'US'; // Default fallback to US instead of GLOBAL
     }
   }
 

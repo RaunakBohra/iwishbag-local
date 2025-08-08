@@ -12,6 +12,7 @@ import { AddressForm } from './AddressForm';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 interface AddressSelectorProps {
   selectedAddressId?: string;
@@ -30,6 +31,7 @@ export function AddressSelector({
 }: AddressSelectorProps) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: countries } = useAllCountries();
 
   const { data: addresses, isLoading } = useQuery({
     queryKey: ['delivery_addresses', user?.id],
@@ -146,7 +148,7 @@ export function AddressSelector({
                   <p>
                     {address.city}, {address.state_province_region} {address.postal_code}
                   </p>
-                  <p>{address.destination_country}</p>
+                  <p>{countries?.find(c => c.code === address.destination_country)?.name || address.destination_country}</p>
                   {address.phone && (
                     <p className="text-gray-500">Phone: {address.phone}</p>
                   )}

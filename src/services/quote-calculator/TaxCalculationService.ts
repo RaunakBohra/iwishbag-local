@@ -6,6 +6,7 @@
 
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
+import { countryStandardizationService } from '../CountryStandardizationService';
 
 export interface TaxCalculationRequest {
   taxableValue: number;
@@ -187,9 +188,13 @@ export class TaxCalculationService {
    */
   async calculateLocalTax(request: TaxCalculationRequest): Promise<TaxCalculationResult> {
     try {
-      const { taxableValue, destinationCountry, destinationState, taxType } = request;
+      const { taxableValue, destinationState, taxType } = request;
 
-      // Get tax system for country
+      // Standardize destination country to country code
+      await countryStandardizationService.initialize();
+      const destinationCountry = countryStandardizationService.standardizeCountry(request.destinationCountry);
+
+      // Get tax system for country (using standardized country code)
       const taxSystem = TAX_SYSTEMS[destinationCountry] || TAX_SYSTEMS['DEFAULT'];
       const effectiveTaxType = taxType === 'auto' || !taxType ? taxSystem.type : taxType;
 

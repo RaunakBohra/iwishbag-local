@@ -97,27 +97,27 @@ const Help = () => {
       faqs: [
         {
           question: 'Why do product weights often increase from what\'s listed?',
-          answer: 'Seller websites typically list product weight only, not including packaging. Actual shipped weight includes protective packaging (bubble wrap, foam), retail packaging, boxes, and sometimes unexpected accessories. Weight increases of 10-30% are common and expected.'
+          answer: 'Seller websites typically list only the product weight, not shipping weight. Actual shipped weight includes protective packaging (bubble wrap, foam), original retail boxes, brand packaging, and materials needed for safe international transport. Weight increases of 15-50% are normal in international forwarding.'
         },
         {
           question: 'What happens if the actual weight is higher than quoted?',
-          answer: 'We\'ll notify you within 2 hours of receiving your goods with the exact weight and any additional shipping/customs costs. You have 48 hours to approve the additional charges, request optimization, or discuss alternatives with our team.'
+          answer: 'We\'ll send you a WhatsApp/SMS notification within 2-4 hours of receiving your items at our facility, including photos and exact weight measurements. You have 48 hours to approve additional charges, request repackaging, or discuss alternatives with our customer service team.'
         },
         {
           question: 'How much do weight increases typically cost?',
-          answer: 'Additional costs vary by weight increase and destination. Generally, expect $8-12 per kg for additional shipping, plus 10-15% customs duty on the extra amount. Use our Weight Variance Calculator on the quote page for estimates.'
+          answer: 'Additional costs vary by destination: India ~₹400-600 per kg extra shipping plus applicable customs duties (0-42%). Nepal ~NPR 800-1200 per kg plus customs duties (5-80%). We charge a 5% processing fee on additional charges. All costs are calculated at actual carrier rates.'
         },
         {
           question: 'Can I get weight protection insurance?',
-          answer: 'Yes! For just $5 extra, our Weight Protection Plan covers weight increases up to 25%. This protects you from unexpected additional shipping costs and gives peace of mind.'
+          answer: 'We\'re developing a Weight Protection Plan that would cover unexpected weight increases up to a certain percentage. Currently, we handle each weight variation case individually with full transparency and customer consultation.'
         },
         {
           question: 'What if I think the weight increase is unreasonable?',
-          answer: 'Our customer service team will review any disputed weight increases within 24 hours. We can provide photos, explore repackaging options, or find alternative solutions. We\'re committed to fair and transparent pricing.'
+          answer: 'Contact our customer service immediately. We provide digital scale photos, packaging breakdown documentation, and can arrange third-party weight verification if needed. We offer repackaging options and, in genuine disputes, partial cost sharing. Call India: +91 9971093202, Nepal: +977 9813108332.'
         },
         {
           question: 'How can I minimize weight surprises?',
-          answer: 'Look for products with detailed packaging info, choose sellers with accurate descriptions, consider Weight Protection, and use our calculator to prepare for worst-case scenarios. Electronics and clothing often have the most packaging variations.'
+          answer: 'Choose sellers with detailed shipping weight information, avoid items with excessive retail packaging when possible, and understand that electronics (boxes), shoes (brand boxes), and clothing (hangers/tags) typically have higher packaging overhead. Our weight policy terms provide full transparency about typical increases.'
         }
       ]
     },

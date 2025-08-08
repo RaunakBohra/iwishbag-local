@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 interface ShippingAddressSectionProps {
   selectedAddress: Tables<'delivery_addresses'> | null;
@@ -34,6 +35,7 @@ export function ShippingAddressSection({
   loading = false
 }: ShippingAddressSectionProps) {
   const [changeModalOpen, setChangeModalOpen] = useState(false);
+  const { data: countries } = useAllCountries();
 
   const handleAddressSelect = (addressId: string) => {
     const address = addresses.find(a => a.id === addressId);
@@ -113,7 +115,7 @@ export function ShippingAddressSection({
                   <p>
                     {selectedAddress.city}, {selectedAddress.state_province_region} {selectedAddress.postal_code}
                   </p>
-                  <p className="font-medium">{selectedAddress.destination_country}</p>
+                  <p>{countries?.find(c => c.code === selectedAddress.destination_country)?.name || selectedAddress.destination_country}</p>
                   
                   {selectedAddress.phone && (
                     <p className="flex items-center gap-1 text-gray-500">
@@ -182,7 +184,7 @@ export function ShippingAddressSection({
                                 <p>{address.address_line1}</p>
                                 {address.address_line2 && <p>{address.address_line2}</p>}
                                 <p>{address.city}, {address.state_province_region} {address.postal_code}</p>
-                                <p className="font-medium">{address.destination_country}</p>
+                                <p>{countries?.find(c => c.code === address.destination_country)?.name || address.destination_country}</p>
                                 {address.phone && (
                                   <p className="flex items-center gap-1 mt-1">
                                     <Phone className="w-3 h-3" />

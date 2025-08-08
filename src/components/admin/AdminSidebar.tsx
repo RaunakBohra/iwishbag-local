@@ -27,6 +27,7 @@ import {
   User,
   Menu,
   X,
+  DollarSign,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -132,6 +133,16 @@ const menuGroups = [
     categoryIcon: Zap,
     primaryUrl: '/admin/returns',
     items: [
+      {
+        title: 'Regional Pricing',
+        url: '/admin/regional-pricing',
+        icon: DollarSign,
+      },
+      {
+        title: 'System Performance',
+        url: '/admin/system-performance',
+        icon: BarChart3,
+      },
       {
         title: 'Returns Management',
         url: '/admin/returns',

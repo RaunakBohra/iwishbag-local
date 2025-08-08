@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tables } from '@/integrations/supabase/types';
 import { AddressChangeModal } from './AddressChangeModal';
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 interface CheckoutAddressDisplayProps {
   selectedAddress: Tables<'delivery_addresses'> | null;
@@ -21,6 +22,7 @@ export function CheckoutAddressDisplay({
   className = '',
 }: CheckoutAddressDisplayProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: countries } = useAllCountries();
 
   const handleAddressSelect = (address: Tables<'delivery_addresses'>) => {
     onAddressChange(address);
@@ -104,8 +106,8 @@ export function CheckoutAddressDisplay({
                   <div>
                     {selectedAddress.city}, {selectedAddress.state_province_region} {selectedAddress.postal_code}
                   </div>
-                  <div className="font-medium">
-                    {selectedAddress.destination_country}
+                  <div>
+                    {countries?.find(c => c.code === selectedAddress.destination_country)?.name || selectedAddress.destination_country}
                   </div>
                 </div>
                 
