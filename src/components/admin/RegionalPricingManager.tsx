@@ -75,6 +75,7 @@ import { regionalPricingService, AddonService, PricingCalculation } from '@/serv
 import { currencyService } from '@/services/CurrencyService';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { SettingsDialog } from '@/components/admin/regional-pricing/SettingsDialog';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -206,6 +207,7 @@ export const RegionalPricingManager: React.FC = () => {
   const [editingCountry, setEditingCountry] = useState<string | null>(null);
   const [editRate, setEditRate] = useState<string>('');
   const [revenueImpact, setRevenueImpact] = useState<RevenueImpactCalculation | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const queryClient = useQueryClient();
 
@@ -800,7 +802,7 @@ export const RegionalPricingManager: React.FC = () => {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </Button>
@@ -813,6 +815,16 @@ export const RegionalPricingManager: React.FC = () => {
       <div className="mt-6">
         {renderPricingMatrix()}
       </div>
+
+      {/* Settings Dialog */}
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={(config) => {
+          console.log('Settings saved:', config);
+          // Handle settings save logic here
+        }}
+      />
     </div>
   );
 };
