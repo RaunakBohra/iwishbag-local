@@ -26,6 +26,7 @@ import {
   useAdminTickets,
   useTicketStats,
   useUpdateTicketStatus,
+  useUpdateTicket,
   useAssignTicket,
   useTicketDetail,
   useUserTickets,
@@ -109,6 +110,7 @@ const TicketRow = ({
   isSelected?: boolean;
 }) => {
   const updateStatusMutation = useUpdateTicketStatus();
+  const updateTicketMutation = useUpdateTicket();
   const assignTicketMutation = useAssignTicket();
   const { toast } = useToast();
 
@@ -126,6 +128,13 @@ const TicketRow = ({
     }
 
     updateStatusMutation.mutate({ ticketId: ticket.id, status });
+  };
+
+  const handlePriorityChange = (priority: TicketPriority) => {
+    updateTicketMutation.mutate({
+      ticketId: ticket.id,
+      updateData: { priority }
+    });
   };
 
   const handleAssign = (assignedTo: string) => {
@@ -174,7 +183,7 @@ const TicketRow = ({
             <CustomerAvatar customer={ticket.user_profile} size="md" />
             <div>
               <p className="font-medium text-gray-900">
-                {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+                {ticket.user_profile?.full_name || ticket.user_profile?.email || (ticket.user_id ? 'Anonymous' : 'System Generated')}
               </p>
               <p className="text-sm text-gray-500">{ticket.user_profile?.email}</p>
               {ticket.user_profile?.phone && (
@@ -194,10 +203,41 @@ const TicketRow = ({
       )}
 
       {!isCompact && (
-        <TableCell>
-          <Badge variant="outline" className={TICKET_PRIORITY_COLORS[ticket.priority]}>
-            {TICKET_PRIORITY_LABELS[ticket.priority]}
-          </Badge>
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={ticket.priority}
+            onValueChange={handlePriorityChange}
+            disabled={updateTicketMutation.isPending}
+          >
+            <SelectTrigger className="w-[120px] border-0 shadow-sm bg-white hover:bg-gray-50 transition-colors">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    ticket.priority === 'urgent' ? 'bg-red-500' : 
+                    ticket.priority === 'high' ? 'bg-orange-500' :
+                    ticket.priority === 'low' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {TICKET_PRIORITY_LABELS[ticket.priority]}
+                  </span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TICKET_PRIORITY_LABELS).map(([priority, label]) => (
+                <SelectItem key={priority} value={priority}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      priority === 'urgent' ? 'bg-red-500' : 
+                      priority === 'high' ? 'bg-orange-500' :
+                      priority === 'low' ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}></div>
+                    <span className="text-sm">{label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </TableCell>
       )}
 
@@ -349,6 +389,7 @@ const TicketCardView = ({
   adminUsers: any[];
 }) => {
   const updateStatusMutation = useUpdateTicketStatus();
+  const updateTicketMutation = useUpdateTicket();
   const assignTicketMutation = useAssignTicket();
   const { toast } = useToast();
 
@@ -365,6 +406,13 @@ const TicketCardView = ({
     }
 
     updateStatusMutation.mutate({ ticketId: ticket.id, status });
+  };
+
+  const handlePriorityChange = (ticket: TicketWithDetails, priority: TicketPriority) => {
+    updateTicketMutation.mutate({
+      ticketId: ticket.id,
+      updateData: { priority }
+    });
   };
 
   const priorityBorderColors = {
@@ -407,7 +455,7 @@ const TicketCardView = ({
             <CustomerAvatar customer={ticket.user_profile} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+                {ticket.user_profile?.full_name || ticket.user_profile?.email || (ticket.user_id ? 'Anonymous' : 'System Generated')}
               </p>
               <p className="text-xs text-gray-500 truncate">{ticket.user_profile?.email}</p>
               {ticket.user_profile?.phone && (
@@ -449,6 +497,42 @@ const TicketCardView = ({
                         {option.label}
                         {option.isSuggested && ' ✨'}
                       </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Priority Dropdown */}
+          <div onClick={(e) => e.stopPropagation()} className="mb-2">
+            <Select
+              value={ticket.priority}
+              onValueChange={(priority) => handlePriorityChange(ticket, priority as TicketPriority)}
+              disabled={updateTicketMutation.isPending}
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      ticket.priority === 'urgent' ? 'bg-red-500' : 
+                      ticket.priority === 'high' ? 'bg-orange-500' :
+                      ticket.priority === 'low' ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}></div>
+                    <span>{TICKET_PRIORITY_LABELS[ticket.priority]}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TICKET_PRIORITY_LABELS).map(([priority, label]) => (
+                  <SelectItem key={priority} value={priority}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        priority === 'urgent' ? 'bg-red-500' : 
+                        priority === 'high' ? 'bg-orange-500' :
+                        priority === 'low' ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}></div>
+                      <span className="text-xs">{label}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -535,7 +619,7 @@ const KanbanView = ({
                     <CustomerAvatar customer={ticket.user_profile} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-gray-600 truncate">
-                        {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+                        {ticket.user_profile?.full_name || ticket.user_profile?.email || (ticket.user_id ? 'Anonymous' : 'System Generated')}
                       </div>
                       {ticket.user_profile?.phone && (
                         <div className="text-xs text-gray-400">{ticket.user_profile.phone}</div>
@@ -607,7 +691,7 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
           <CustomerAvatar customer={customer} size="md" />
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-gray-900 truncate">
-              {customer?.full_name || 'Anonymous Customer'}
+              {customer?.full_name || customer?.email || (ticket.user_id ? 'Anonymous Customer' : 'System Generated')}
             </h4>
             <div className="space-y-1 mt-1">
               {customer?.email && (

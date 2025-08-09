@@ -188,18 +188,66 @@ export const useUpdateTicket = () => {
   return useMutation({
     mutationFn: ({ ticketId, updateData }: { ticketId: string; updateData: UpdateTicketData }) =>
       ticketService.updateTicket(ticketId, updateData),
+    
+    // Optimistic update
+    onMutate: async ({ ticketId, updateData }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ticketKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: ticketKeys.detail(ticketId) });
+
+      // Snapshot the previous values - get ALL list queries, not just the generic one
+      const previousTickets = queryClient.getQueriesData({ queryKey: ticketKeys.lists() });
+      const previousTicket = queryClient.getQueryData(ticketKeys.detail(ticketId));
+
+      // Optimistically update ALL ticket list queries (with any filters)
+      queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        
+        return oldData.map((ticket: any) =>
+          ticket.id === ticketId
+            ? { 
+                ...ticket, 
+                ...updateData,
+                // Update ticket_data for unified support system compatibility
+                ticket_data: ticket.ticket_data ? {
+                  ...ticket.ticket_data,
+                  ...updateData
+                } : updateData
+              }
+            : ticket
+        );
+      });
+
+      // Optimistically update specific ticket detail
+      if (previousTicket) {
+        queryClient.setQueryData(ticketKeys.detail(ticketId), (oldData: any) => ({
+          ...oldData,
+          ...updateData,
+          ticket_data: oldData.ticket_data ? {
+            ...oldData.ticket_data,
+            ...updateData
+          } : updateData
+        }));
+      }
+
+      return { previousTickets, previousTicket };
+    },
+
     onSuccess: (success, { ticketId }) => {
       if (success) {
-        // Invalidate specific ticket and lists
-        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
-        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: ticketKeys.stats() });
+        // ✅ Let optimistic update persist - no immediate invalidation to prevent race condition
+        // Data will be refreshed on next scheduled refetch (60s) or window focus
 
         toast({
           title: 'Ticket Updated',
           description: 'Ticket has been updated successfully.',
         });
       } else {
+        // Only invalidate on failure to trigger fresh data fetch
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.stats() });
+        
         toast({
           title: 'Error',
           description: 'Failed to update ticket. Please try again.',
@@ -207,8 +255,21 @@ export const useUpdateTicket = () => {
         });
       }
     },
-    onError: (error: any) => {
+
+    // Rollback on error
+    onError: (error: any, { ticketId }, context) => {
       console.error('Error updating ticket:', error);
+      
+      // Rollback optimistic updates
+      if (context?.previousTickets && Array.isArray(context.previousTickets)) {
+        context.previousTickets.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousTicket) {
+        queryClient.setQueryData(ticketKeys.detail(ticketId), context.previousTicket);
+      }
+
       toast({
         title: 'Error',
         description: 'Failed to update ticket. Please try again.',

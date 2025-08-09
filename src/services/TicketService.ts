@@ -373,22 +373,31 @@ class TicketService {
         supportRecords.map(async (record) => {
           const baseTicket = this.transformToLegacyTicketWithDetails(record);
           
-          // Fetch user profile separately
+          // Fetch user profile separately with phone from secure function
           if (record.user_id) {
             try {
+              // Get profile data
               const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name, email, phone, country, preferred_display_currency, created_at')
+                .select('id, full_name, email, country, preferred_display_currency, created_at')
                 .eq('id', record.user_id)
                 .single();
+                
+              // Get phone using secure database function
+              const { data: phoneData } = await supabase
+                .rpc('get_user_phone', { user_uuid: record.user_id });
               
               if (profileError) {
                 console.warn('Profile query error for ticket:', record.id, profileError);
               }
               
               if (profile) {
-                baseTicket.user_profile = profile;
-                console.log('✅ Profile found for ticket:', record.id, profile.full_name || profile.email);
+                // Combine profile data with phone from secure function
+                baseTicket.user_profile = {
+                  ...profile,
+                  phone: phoneData || null
+                };
+                console.log('✅ Profile found for ticket:', record.id, profile.full_name || profile.email, 'phone:', phoneData);
               } else {
                 console.warn('❌ No profile found for user_id:', record.user_id, 'ticket:', record.id);
               }
@@ -396,7 +405,9 @@ class TicketService {
               console.error('❌ Exception fetching user profile for ticket:', record.id, error);
             }
           } else {
-            console.warn('❌ No user_id found for ticket:', record.id);
+            // Handle system-generated tickets without users gracefully
+            console.log('ℹ️ System ticket without user_id:', record.id, 'subject:', record.ticket_data?.subject || 'Unknown');
+            baseTicket.user_profile = null;
           }
           
           // Fetch quote separately if it exists
@@ -487,22 +498,31 @@ class TicketService {
       // Transform to legacy format with full profile and quote details
       const ticket = this.transformToLegacyTicketWithDetails(supportRecord);
 
-      // Fetch user profile separately (same logic as getAdminTickets)
+      // Fetch user profile separately with phone from secure function (same logic as getAdminTickets)
       if (supportRecord.user_id) {
         try {
+          // Get profile data
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id, full_name, email, phone, country, preferred_display_currency, created_at')
+            .select('id, full_name, email, country, preferred_display_currency, created_at')
             .eq('id', supportRecord.user_id)
             .single();
+            
+          // Get phone using secure database function
+          const { data: phoneData } = await supabase
+            .rpc('get_user_phone', { user_uuid: supportRecord.user_id });
           
           if (profileError) {
             console.warn('Profile query error for ticket detail:', ticketId, profileError);
           }
           
           if (profile) {
-            ticket.user_profile = profile;
-            console.log('✅ Profile found for ticket detail:', ticketId, profile.full_name || profile.email);
+            // Combine profile data with phone from secure function
+            ticket.user_profile = {
+              ...profile,
+              phone: phoneData || null
+            };
+            console.log('✅ Profile found for ticket detail:', ticketId, profile.full_name || profile.email, 'phone:', phoneData);
           } else {
             console.warn('❌ No profile found for user_id in ticket detail:', supportRecord.user_id, 'ticket:', ticketId);
           }
@@ -510,7 +530,9 @@ class TicketService {
           console.error('❌ Exception fetching user profile for ticket detail:', ticketId, error);
         }
       } else {
-        console.warn('❌ No user_id found for ticket detail:', ticketId);
+        // Handle system-generated tickets without users gracefully
+        console.log('ℹ️ System ticket without user_id for detail view:', ticketId, 'subject:', supportRecord.ticket_data?.subject || 'Unknown');
+        ticket.user_profile = null;
       }
 
       // Fetch quote separately if it exists (same logic as getAdminTickets)
@@ -572,17 +594,45 @@ class TicketService {
     try {
       console.log('📝 Updating ticket:', ticketId, updateData);
 
-      const { error } = await supabase
-        .from('support_tickets')
-        .update(updateData)
-        .eq('id', ticketId);
+      // Direct database update using support_system table (like updateTicketStatus)
+      // Get current ticket data
+      const { data: currentTicket, error: fetchError } = await supabase
+        .from('support_system')
+        .select('ticket_data')
+        .eq('id', ticketId)
+        .eq('system_type', 'ticket')
+        .single();
 
-      if (error) {
-        console.error('❌ Error updating ticket:', error);
+      if (fetchError || !currentTicket) {
+        console.error('❌ Failed to fetch current ticket:', fetchError);
         return false;
       }
 
-      console.log('✅ Ticket updated successfully');
+      // Update the ticket_data with new values
+      const updatedTicketData = {
+        ...currentTicket.ticket_data,
+        ...updateData,
+        metadata: {
+          ...currentTicket.ticket_data.metadata,
+          last_priority_change: updateData.priority ? new Date().toISOString() : currentTicket.ticket_data.metadata?.last_priority_change,
+        },
+      };
+
+      // Update the record
+      const { error: updateError } = await supabase
+        .from('support_system')
+        .update({
+          ticket_data: updatedTicketData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ticketId);
+
+      if (updateError) {
+        console.error('❌ Error in direct ticket update:', updateError);
+        return false;
+      }
+
+      console.log('✅ Ticket updated successfully via support_system');
       this.clearCache();
       return true;
     } catch (error) {
