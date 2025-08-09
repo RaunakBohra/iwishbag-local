@@ -16,6 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { currencyService } from '@/services/CurrencyService';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
+import { getOriginCurrency } from '@/utils/originCurrency';
+import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 
 // Types
 interface CurrencyContext {
@@ -146,18 +148,26 @@ export function useCurrency(context?: CurrencyContext): CurrencyHookReturn {
   }, []);
   
   const getSourceCurrency = useCallback((quote?: any) => {
-    if (!quote) return displayCurrency;
+    if (!quote) return 'USD';
     
-    // Priority: customer_currency → origin country currency → destination country currency → USD
-    if (quote.customer_currency) return quote.customer_currency;
+    // FIXED: Correct priority - origin country first, NO customer_currency
+    // This ensures we identify the currency that final_total_origincurrency is actually stored in
     if (quote.origin_country) {
-      return currencyService.getCurrencyForCountrySync(quote.origin_country);
+      return getOriginCurrency(quote.origin_country);
     }
-    if (quote.destination_country) {
-      return currencyService.getCurrencyForCountrySync(quote.destination_country);  
+    
+    // Get from calculation_data.origin_currency (new quotes)
+    if (quote.calculation_data?.origin_currency) {
+      return quote.calculation_data.origin_currency;
     }
+    
+    // Last resort: Use legacy detection
+    if (quote) {
+      return getBreakdownSourceCurrency(quote);
+    }
+    
     return 'USD';
-  }, [displayCurrency]);
+  }, []);
   
   // Admin functions
   const formatForAdmin = useCallback((amount: number, quote?: any) => {
