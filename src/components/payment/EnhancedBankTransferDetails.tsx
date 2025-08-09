@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { PaymentProofButton } from './PaymentProofButton';
+import { ImprovedPaymentProofUpload } from './ImprovedPaymentProofUpload';
 import { countryStandardizationService } from '@/services/CountryStandardizationService';
 import { CheckoutService } from '@/services/CheckoutService';
 
@@ -100,8 +101,9 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
         // No destination country, get fallback accounts only
         let query = supabase.from('bank_account_details').select('*').eq('is_active', true);
         
+        // Try to match currency first, but also include accounts with no currency (universal fallbacks)
         if (currency) {
-          query = query.eq('currency_code', currency);
+          query = query.or(`currency_code.eq.${currency},currency_code.is.null`);
         }
         
         query = query
@@ -129,11 +131,12 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
         return countrySpecific as BankAccountType[];
       }
 
-      // If no country-specific accounts, get fallback accounts
+      // If no country-specific accounts, get fallback accounts with flexible currency matching
       let query = supabase.from('bank_account_details').select('*').eq('is_active', true);
 
+      // Try to match currency first, but also include accounts with no currency (universal fallbacks)
       if (currency) {
-        query = query.eq('currency_code', currency);
+        query = query.or(`currency_code.eq.${currency},currency_code.is.null`);
       }
 
       // Prioritize fallback accounts
@@ -153,16 +156,35 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
   const { data: paymentProofMessages } = useQuery({
     queryKey: ['payment-proof-messages', orderId, orderDetails?.order_type],
     queryFn: async () => {
-      // Query based on whether this is an order or quote
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`quote_id.eq.${orderId},order_id.eq.${orderId}`) // Look for both order_id and quote_id
-        .eq('message_type', 'payment_proof')
-        .order('created_at', { ascending: false });
+      try {
+        let query = supabase
+          .from('messages')
+          .select('*')
+          .eq('message_type', 'payment_proof')
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data; // Return all, we'll use the first (latest) one
+        // Query based on whether this is an order or quote
+        if (orderDetails?.order_type === 'order') {
+          // For orders, look for order_id
+          query = query.eq('order_id', orderId);
+        } else {
+          // For quotes (legacy/fallback), look for quote_id
+          query = query.eq('quote_id', orderId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.warn('Error fetching payment proof messages:', error.message);
+          // Don't throw error - just return empty array to allow component to work
+          return [];
+        }
+        
+        return data || []; // Return all, we'll use the first (latest) one
+      } catch (error) {
+        console.warn('Failed to fetch payment proof messages:', error);
+        return []; // Graceful fallback
+      }
     },
     enabled: !!orderDetails, // Only run when we have order details
     refetchInterval: 5000, // Refetch every 5 seconds to get updates
@@ -201,7 +223,7 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
         <AlertDescription>
           {isError
             ? `Error loading bank details: ${error?.message}`
-            : `No bank accounts found for ${currency} currency.`}
+            : `No active bank accounts found for ${currency} currency. Please contact support for bank transfer details.`}
         </AlertDescription>
       </Alert>
     );
@@ -471,90 +493,66 @@ export const EnhancedBankTransferDetails: React.FC<EnhancedBankTransferDetailsPr
 
       {/* Payment Proof Upload - Only show if payment not complete */}
       {!isPaymentComplete && (
-        <Card className="shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Upload Payment Proof</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {paymentProofMessages && paymentProofMessages.length > 0 ? (
-              <>
-                {/* Show status based on verification */}
-                {paymentProofMessages[0].verification_status === 'pending' && (
-                  <Alert className="border-yellow-200 bg-yellow-50">
-                    <Clock className="h-4 w-4 text-yellow-600" />
-                    <AlertDescription className="text-yellow-800">
-                      Payment proof uploaded on{' '}
-                      {new Date(paymentProofMessages[0].created_at).toLocaleDateString()}. Our team
-                      is reviewing it and will update you soon.
-                    </AlertDescription>
-                  </Alert>
-                )}
+        <div className="space-y-4">
+          {paymentProofMessages && paymentProofMessages.length > 0 && (
+            <div className="space-y-2">
+              {/* Show status based on verification */}
+              {paymentProofMessages[0].verification_status === 'pending' && (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    Payment proof uploaded on{' '}
+                    {new Date(paymentProofMessages[0].created_at).toLocaleDateString()}. Our team
+                    is reviewing it and will update you soon.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-                {paymentProofMessages[0].verification_status === 'verified' && (
-                  <Alert className="border-teal-200 bg-teal-50">
-                    <Check className="h-4 w-4 text-teal-600" />
-                    <AlertDescription className="text-teal-800">
-                      Payment proof verified! Waiting for final confirmation.
-                    </AlertDescription>
-                  </Alert>
-                )}
+              {paymentProofMessages[0].verification_status === 'verified' && (
+                <Alert className="border-teal-200 bg-teal-50">
+                  <Check className="h-4 w-4 text-teal-600" />
+                  <AlertDescription className="text-teal-800">
+                    Payment proof verified! Waiting for final confirmation.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-                {paymentProofMessages[0].verification_status === 'confirmed' && (
-                  <Alert className="border-green-200 bg-green-50">
-                    <Check className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      Payment confirmed! Your order is being processed.
-                    </AlertDescription>
-                  </Alert>
-                )}
+              {paymentProofMessages[0].verification_status === 'confirmed' && (
+                <Alert className="border-green-200 bg-green-50">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    Payment confirmed! Your order is being processed.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-                {paymentProofMessages[0].verification_status === 'rejected' && (
-                  <>
-                    <Alert className="border-red-200 bg-red-50">
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      <AlertDescription className="text-red-800">
-                        Your payment proof could not be verified.
-                        {paymentProofMessages[0].admin_notes && (
-                          <div className="mt-1 font-medium">
-                            Reason: {paymentProofMessages[0].admin_notes}
-                          </div>
-                        )}
-                      </AlertDescription>
-                    </Alert>
+              {paymentProofMessages[0].verification_status === 'rejected' && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    Your payment proof could not be verified.
+                    {paymentProofMessages[0].admin_notes && (
+                      <div className="mt-1 font-medium">
+                        Reason: {paymentProofMessages[0].admin_notes}
+                      </div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
 
-                    <p className="text-sm text-gray-600">
-                      Please upload a new payment proof with clear transaction details.
-                    </p>
-
-                    <div className="flex justify-center">
-                      <PaymentProofButton
-                        quoteId={orderId}
-                        orderId={orderDisplayId}
-                        recipientId={null}
-                        orderType={orderDetails?.order_type === 'order' ? 'order' : 'quote'}
-                      />
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-gray-600">
-                  After making the payment, upload a screenshot or receipt for faster processing.
-                </p>
-
-                <div className="flex justify-center">
-                  <PaymentProofButton
-                    quoteId={orderId}
-                    orderId={orderDisplayId}
-                    recipientId={null}
-                    orderType={orderDetails?.order_type === 'order' ? 'order' : 'quote'}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+          {/* Show upload component if no proof yet or if rejected */}
+          {(!paymentProofMessages || paymentProofMessages.length === 0 || 
+            paymentProofMessages[0].verification_status === 'rejected') && (
+            <ImprovedPaymentProofUpload
+              quoteId={orderId}
+              orderId={orderDisplayId}
+              recipientId={null}
+              orderType={orderDetails?.order_type === 'order' ? 'order' : 'quote'}
+            />
+          )}
+        </div>
       )}
 
       {/* Payment Complete Message */}

@@ -67,15 +67,18 @@ class TicketService {
       quote: supportRecord.quote
         ? {
             id: supportRecord.quote.id,
-            display_id: supportRecord.quote.display_id,
+            display_id: supportRecord.quote.quote_number,
             destination_country: supportRecord.quote.destination_country,
             status: supportRecord.quote.status,
             final_total_origincurrency: supportRecord.quote.final_total_origincurrency,
-            iwish_tracking_id: supportRecord.quote.iwish_tracking_id,
-            tracking_status: supportRecord.quote.tracking_status,
-            estimated_delivery_date: supportRecord.quote.estimated_delivery_date,
+            iwish_tracking_id: null, // Not available in quotes_v2
+            tracking_status: null, // Not available in quotes_v2
+            estimated_delivery_date: null, // Not available in quotes_v2
             items: supportRecord.quote.items,
-            customer_data: supportRecord.quote.customer_data,
+            customer_data: {
+              email: supportRecord.quote.customer_email,
+              name: supportRecord.quote.customer_name
+            },
           }
         : null,
     };
@@ -394,21 +397,33 @@ class TicketService {
                 .from('quotes_v2')
                 .select(`
                   id,
-                  display_id,
+                  quote_number,
                   destination_country,
                   status,
                   final_total_origincurrency,
-                  iwish_tracking_id,
-                  tracking_status,
-                  estimated_delivery_date,
                   items,
-                  customer_data
+                  customer_email,
+                  customer_name
                 `)
                 .eq('id', record.quote_id)
                 .single();
               
               if (quote) {
-                baseTicket.quote = quote;
+                baseTicket.quote = {
+                  id: quote.id,
+                  display_id: quote.quote_number,
+                  destination_country: quote.destination_country,
+                  status: quote.status,
+                  final_total_origincurrency: quote.final_total_origincurrency,
+                  iwish_tracking_id: null,
+                  tracking_status: null,
+                  estimated_delivery_date: null,
+                  items: quote.items,
+                  customer_data: {
+                    email: quote.customer_email,
+                    name: quote.customer_name
+                  }
+                };
               }
             } catch (error) {
               console.warn('Failed to fetch quote for ticket:', record.id);
@@ -500,24 +515,30 @@ class TicketService {
     try {
       console.log('💬 Fetching replies for ticket:', ticketId);
 
-      const { data, error } = await supabase
-        .from('ticket_replies')
-        .select(
-          `
-          *,
-          user_profile:profiles!ticket_replies_user_id_fkey(id, full_name, email)
-        `,
-        )
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
+      // Use unified support system to get interactions (replies)
+      const interactions = await unifiedSupportEngine.getInteractions(ticketId);
 
-      if (error) {
-        console.error('❌ Error fetching ticket replies:', error);
+      if (!interactions || interactions.length === 0) {
+        console.log('✅ No replies found for ticket');
         return [];
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} replies`);
-      return data as TicketReplyWithUser[];
+      // Transform interactions to legacy reply format
+      const replies = interactions
+        .filter(interaction => interaction.interaction_type === 'reply')
+        .map(interaction => ({
+          id: interaction.id,
+          ticket_id: interaction.support_id,
+          user_id: interaction.user_id,
+          message: interaction.content?.message || '',
+          is_internal: interaction.is_internal,
+          created_at: interaction.created_at,
+          updated_at: interaction.created_at,
+          user_profile: null, // Would need to fetch separately if needed
+        }));
+
+      console.log(`✅ Fetched ${replies.length} replies`);
+      return replies as TicketReplyWithUser[];
     } catch (error) {
       console.error('❌ Exception in getTicketReplies:', error);
       return [];

@@ -1,3 +1,8 @@
+// 🚨 SECURITY WARNING: This file has dangerous admin-level features exposed to users
+// 🚨 THIS FILE IS DEPRECATED AND SHOULD NOT BE USED
+// 🚨 Use MyTicketsSecure.tsx instead for proper security
+// 🚨 This file is kept only for reference - DO NOT ROUTE TO THIS COMPONENT
+
 import { useState } from 'react';
 import { 
   Plus, 
@@ -232,6 +237,9 @@ const EmptyState = ({ filter, onCreateTicket }: { filter: string; onCreateTicket
 );
 
 export default function MyTicketsPage() {
+  // 🚨 SECURITY ALERT: This component is deprecated due to security vulnerabilities
+  console.error('🚨 SECURITY ALERT: MyTickets.tsx is deprecated - use MyTicketsSecure.tsx instead');
+  
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

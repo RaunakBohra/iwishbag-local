@@ -354,22 +354,21 @@ class UnifiedSupportEngine {
         .select(
           `
           *,
-          quote:quotes(
+          quote:quotes_v2(
             id,
-            display_id,
+            quote_number,
             destination_country,
             status,
             final_total_origincurrency,
-            iwish_tracking_id,
-            tracking_status,
-            estimated_delivery_date,
+            created_at,
             items,
-            customer_data
+            customer_email,
+            customer_name
           )
         `,
         )
         .eq('id', ticketId)
-        .eq('system_type', 'ticket')
+        .in('system_type', ['ticket', 'quote_discussion'])
         .single();
 
       if (error) {
@@ -410,7 +409,7 @@ class UnifiedSupportEngine {
         .select(`
           *
         `)
-        .eq('system_type', 'ticket')
+        .in('system_type', ['ticket', 'quote_discussion'])
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -437,6 +436,11 @@ class UnifiedSupportEngine {
       // Apply assigned_to filter
       if (filters.assigned_to) {
         query = query.eq('ticket_data->>assigned_to', filters.assigned_to);
+      }
+
+      // Apply quote_id filter
+      if (filters.quote_id) {
+        query = query.eq('quote_id', filters.quote_id);
       }
 
       // Apply date range filter
@@ -1008,6 +1012,40 @@ class UnifiedSupportEngine {
       logger.error('❌ Exception in assignTicket:', error);
       Sentry.captureException(error);
       return false;
+    }
+  }
+
+  /**
+   * Get interactions (replies, notes, etc.) for a ticket
+   */
+  async getInteractions(ticketId: string): Promise<any[]> {
+    try {
+      console.log('💬 Fetching interactions for ticket:', ticketId);
+
+      const { data, error } = await supabase
+        .from('support_interactions')
+        .select(`
+          id,
+          support_id,
+          user_id,
+          interaction_type,
+          content,
+          is_internal,
+          created_at
+        `)
+        .eq('support_id', ticketId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error fetching interactions:', error);
+        return [];
+      }
+
+      console.log(`✅ Fetched ${data?.length || 0} interactions`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Exception in getInteractions:', error);
+      return [];
     }
   }
 

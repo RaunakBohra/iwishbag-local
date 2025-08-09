@@ -232,6 +232,7 @@ export const AdminTicketDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
+  const [quoteFilter, setQuoteFilter] = useState<'all' | 'with_quote' | 'without_quote'>('all');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const { users: adminUsers = [] } = useUserRoles();
@@ -248,18 +249,35 @@ export const AdminTicketDashboard = () => {
   const { data: tickets = [], isLoading } = useAdminTickets(filters);
   const { data: stats } = useTicketStats();
 
-  // Filter tickets by search input
+  // Filter tickets by search input and quote filter
   const filteredTickets = useMemo(() => {
-    if (!searchInput) return tickets;
-    const searchLower = searchInput.toLowerCase();
-    return tickets.filter(
-      (ticket) =>
-        ticket.subject.toLowerCase().includes(searchLower) ||
-        ticket.description.toLowerCase().includes(searchLower) ||
-        ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
-        ticket.user_profile?.full_name?.toLowerCase().includes(searchLower),
-    );
-  }, [tickets, searchInput]);
+    let filtered = tickets;
+    
+    // Apply quote filter first
+    if (quoteFilter === 'with_quote') {
+      filtered = filtered.filter(ticket => ticket.quote);
+    } else if (quoteFilter === 'without_quote') {
+      filtered = filtered.filter(ticket => !ticket.quote);
+    }
+    
+    // Then apply search filter
+    if (searchInput) {
+      const searchLower = searchInput.toLowerCase();
+      filtered = filtered.filter(
+        (ticket) =>
+          ticket.subject.toLowerCase().includes(searchLower) ||
+          ticket.description.toLowerCase().includes(searchLower) ||
+          ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
+          ticket.user_profile?.full_name?.toLowerCase().includes(searchLower) ||
+          // Enhanced: Search by quote/tracking data
+          ticket.quote?.iwish_tracking_id?.toLowerCase().includes(searchLower) ||
+          ticket.quote?.destination_country?.toLowerCase().includes(searchLower) ||
+          ticket.quote?.status?.toLowerCase().includes(searchLower),
+      );
+    }
+    
+    return filtered;
+  }, [tickets, searchInput, quoteFilter]);
 
   const handleTicketClick = (ticketId: string) => {
     setSelectedTicketId(ticketId);
@@ -295,6 +313,8 @@ export const AdminTicketDashboard = () => {
         onPriorityChange={setPriorityFilter}
         categoryFilter={categoryFilter}
         onCategoryChange={setCategoryFilter}
+        quoteFilter={quoteFilter}
+        onQuoteChange={setQuoteFilter}
         totalTickets={tickets.length}
         filteredCount={filteredTickets.length}
       />

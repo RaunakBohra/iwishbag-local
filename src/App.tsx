@@ -65,7 +65,7 @@ const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-fai
 const TrackingPage = React.lazy(() =>
   import('@/pages/TrackingPage').then((m) => ({ default: m.TrackingPage })),
 );
-const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTickets'));
+const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTicketsSecure'));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));

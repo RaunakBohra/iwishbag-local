@@ -26,11 +26,451 @@ import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import { useCart } from '@/hooks/useCart';
 import { useCartItem, ensureInitialized } from '@/stores/cartStore';
-import ReviewRequestModal from './ReviewRequestModal';
+import QuoteMessagingButton from './QuoteMessagingButton';
+import { QuoteMessagingErrorBoundary } from './QuoteMessagingErrorBoundary';
+import { Badge } from '@/components/ui/badge';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
 }
+
+// Professional Breakdown Component
+interface ProfessionalBreakdownProps {
+  quote: any;
+  formatCurrency: (amount: number, currency: string) => string;
+  className?: string;
+  displayCurrency?: string;
+  onTotalCalculated?: (total: string, numericTotal: number, currency: string) => void;
+}
+
+const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
+  quote,
+  formatCurrency,
+  className = "",
+  displayCurrency,
+  onTotalCalculated
+}) => {
+  const [showDetails, setShowDetails] = useState(false);
+  const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
+
+  // Currency conversion function
+  const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+    
+    try {
+      const { currencyService } = await import('@/services/CurrencyService');
+      return await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    } catch (error) {
+      console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+      return amount;
+    }
+  }, []);
+
+  if (!quote || !quote.calculation_data) {
+    return (
+      <Card className={`${className} border-slate-200 shadow-sm`}>
+        <CardContent className="p-8">
+          <div className="flex items-center justify-center text-slate-500">
+            <OptimizedIcon name="FileText" className="w-5 h-5 mr-2" />
+            <span className="text-sm">Breakdown not available</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const calc = quote.calculation_data;
+  const steps = calc.calculation_steps || {};
+  const originCurrency = quote.origin_country ? getOriginCurrency(quote.origin_country) : 'USD';
+  const currency = displayCurrency || originCurrency;
+
+  // Check if quote has proportional rounding applied
+  const hasProportionalRounding = quote.calculation_data?._proportional_rounding_applied || 
+                                 quote.calculation_data?.calculation_steps?._rounding_metadata;
+
+  // Convert amounts when displayCurrency changes
+  useEffect(() => {
+    const convertAmounts = async () => {
+      if (!displayCurrency || displayCurrency === originCurrency) {
+        setConvertedAmounts({});
+        return;
+      }
+
+      try {
+        const stepsToConvert = {
+          'items_subtotal': steps.discounted_items_subtotal || steps.items_subtotal || 0,
+          'shipping_total': (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
+                           (steps.insurance_amount || 0) + 
+                           (steps.discounted_delivery || steps.domestic_delivery || 0),
+          'taxes_total': (steps.discounted_customs_duty || steps.customs_duty || 0) + 
+                        (steps.discounted_tax_amount || steps.local_tax_amount || 0),
+          'service_fees': (steps.discounted_handling_fee || steps.handling_fee || 0) + 
+                         (steps.payment_gateway_fee || 0),
+          'final_total': steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency || 0,
+          'total_savings': steps.total_savings || 0,
+        };
+
+        const converted: { [key: string]: number } = {};
+        
+        for (const [key, amount] of Object.entries(stepsToConvert)) {
+          if (amount !== 0) {
+            const rawConverted = await convertCurrency(amount, originCurrency, displayCurrency);
+            
+            if (hasProportionalRounding) {
+              converted[key] = rawConverted;
+            } else {
+              const { currencyService } = await import('@/services/CurrencyService');
+              const formattedAmount = currencyService.formatAmount(rawConverted, displayCurrency);
+              const numericValue = parseFloat(formattedAmount.replace(/[^\d.-]/g, ''));
+              converted[key] = isNaN(numericValue) ? rawConverted : numericValue;
+            }
+          } else {
+            converted[key] = 0;
+          }
+        }
+
+        setConvertedAmounts(converted);
+      } catch (error) {
+        console.error('Failed to convert breakdown amounts:', error);
+        setConvertedAmounts({});
+      }
+    };
+    
+    convertAmounts();
+  }, [quote.id, quote.origin_country, displayCurrency, hasProportionalRounding, convertCurrency]);
+
+  // Helper function to get amounts
+  const getAmount = (key: string, originalAmount: number) => {
+    const itemCostKeys = ['items_subtotal', 'item_discounts', 'order_discount_amount'];
+    
+    if (itemCostKeys.includes(key)) {
+      return originalAmount; // Keep in origin currency
+    }
+    
+    if (displayCurrency && convertedAmounts[key] !== undefined) {
+      return convertedAmounts[key];
+    }
+    return originalAmount;
+  };
+
+  // Main category amounts for summary view
+  const summaryItems = [
+    {
+      icon: <Package className="w-4 h-4" />,
+      label: 'Items',
+      amount: getAmount('items_subtotal', steps.discounted_items_subtotal || steps.items_subtotal || 0),
+      currency: originCurrency, // Items always in origin currency
+      showCurrencyNote: displayCurrency !== originCurrency,
+      currencyNote: displayCurrency !== originCurrency ? `Shown in ${originCurrency}` : undefined
+    },
+    {
+      icon: <Truck className="w-4 h-4" />,
+      label: 'Shipping & Insurance',
+      amount: getAmount('shipping_total', (steps.discounted_shipping_cost || steps.shipping_cost || 0) + 
+              (steps.insurance_amount || 0) + 
+              (steps.discounted_delivery || steps.domestic_delivery || 0)),
+      currency: currency
+    },
+    {
+      icon: <OptimizedIcon name="FileText" className="w-4 h-4" />,
+      label: 'Customs & Duties',
+      amount: getAmount('taxes_total', (steps.discounted_customs_duty || steps.customs_duty || 0) + 
+              (steps.discounted_tax_amount || steps.local_tax_amount || 0)),
+      currency: currency
+    },
+    {
+      icon: <OptimizedIcon name="Settings" className="w-4 h-4" />,
+      label: 'Processing',
+      amount: getAmount('service_fees', (steps.discounted_handling_fee || steps.handling_fee || 0) + 
+              (steps.payment_gateway_fee || 0)),
+      currency: currency
+    }
+  ];
+
+  const finalTotal = getAmount('final_total', steps.total_origin_currency || quote.total_quote_origincurrency || quote.total_origin_currency || 0);
+  const totalSavings = getAmount('total_savings', steps.total_savings || 0);
+
+  // Share calculated total with parent component
+  const [lastSharedTotal, setLastSharedTotal] = React.useState<{total: number, currency: string} | null>(null);
+  
+  React.useEffect(() => {
+    if (onTotalCalculated && finalTotal !== undefined) {
+      if (!lastSharedTotal || lastSharedTotal.total !== finalTotal || lastSharedTotal.currency !== currency) {
+        const formattedTotal = formatCurrency(finalTotal, currency);
+        onTotalCalculated(formattedTotal, finalTotal, currency);
+        setLastSharedTotal({ total: finalTotal, currency });
+      }
+    }
+  }, [finalTotal, currency, onTotalCalculated, formatCurrency, lastSharedTotal]);
+
+  return (
+    <Card className={`${className} border-slate-200 shadow-sm bg-white`}>
+      <CardContent className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <OptimizedIcon name="FileText" className="w-5 h-5 text-slate-600" />
+            <h3 className="text-lg font-semibold text-slate-900">Quote Breakdown</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+          >
+            <span className="text-sm font-medium mr-2">
+              {showDetails ? 'Hide Details' : 'Show Details'}
+            </span>
+            {showDetails ? (
+              <OptimizedIcon name="ChevronUp" className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Currency Notice */}
+        {displayCurrency && displayCurrency !== originCurrency && (
+          <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <OptimizedIcon name="Info" className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-slate-600">
+                <span className="font-medium">Currency Note:</span> Item prices shown in {originCurrency}, 
+                other amounts converted to {displayCurrency} for your convenience.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Summary View - Main Categories */}
+        <div className="space-y-1">
+          {summaryItems.map((item, index) => (
+            <div key={index} className="flex items-center justify-between py-3">
+              <div className="flex items-center space-x-3">
+                <div className="text-slate-500 flex-shrink-0">
+                  {item.icon}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-slate-700 font-medium">
+                    {item.label}
+                  </span>
+                  {item.showCurrencyNote && item.currencyNote && (
+                    <span className="text-xs text-slate-500 mt-1">
+                      {item.currencyNote}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="font-mono font-medium text-slate-700">
+                  {formatCurrency(item.amount, item.currency)}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Total */}
+          <div className="flex items-center justify-between py-3 border-t border-slate-200 pt-4 mt-2">
+            <div className="flex items-center space-x-3">
+              <div className="text-slate-500 flex-shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-slate-900 text-lg">
+                  Total
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="font-mono font-bold text-lg text-slate-900">
+                {formatCurrency(finalTotal, currency)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Signals */}
+        <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="flex items-center justify-center space-x-6 text-xs text-slate-600">
+            <div className="flex items-center space-x-1">
+              <OptimizedIcon name="Shield" className="w-3 h-3" />
+              <span>Secure Payment</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <CheckCircle className="w-3 h-3" />
+              <span>All Taxes Included</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Truck className="w-3 h-3" />
+              <span>Insured Shipping</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Breakdown (Expandable) */}
+        {showDetails && (
+          <div className="mt-8 pt-6 border-t border-slate-200">
+            <div className="space-y-6">
+              {/* Items & Products */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                  Items & Products
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start text-sm">
+                    <span className="text-slate-600">Items Subtotal</span>
+                    <span className="font-mono font-medium ml-4 text-slate-700">
+                      {formatCurrency(steps.items_subtotal || 0, originCurrency)}
+                    </span>
+                  </div>
+                  {steps.item_discounts > 0 && (
+                    <div className="flex justify-between items-start text-sm">
+                      <span className="text-emerald-700">Item Discounts</span>
+                      <span className="font-mono font-medium ml-4 text-emerald-700">
+                        -{formatCurrency(steps.item_discounts || 0, originCurrency)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Shipping & Logistics */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                  Shipping & Logistics
+                </h4>
+                <div className="space-y-2">
+                  {steps.shipping_cost > 0 && (
+                    <div className="flex justify-between items-start text-sm">
+                      <span className="text-slate-600">International Shipping</span>
+                      <span className="font-mono font-medium ml-4 text-slate-700">
+                        {formatCurrency(steps.shipping_cost || 0, currency)}
+                      </span>
+                    </div>
+                  )}
+                  {steps.insurance_amount > 0 && (
+                    <div className="flex justify-between items-start text-sm">
+                      <span className="text-slate-600">Package Insurance</span>
+                      <span className="font-mono font-medium ml-4 text-slate-700">
+                        {formatCurrency(steps.insurance_amount || 0, currency)}
+                      </span>
+                    </div>
+                  )}
+                  {steps.domestic_delivery > 0 && (
+                    <div className="flex justify-between items-start text-sm">
+                      <span className="text-slate-600">Local Delivery</span>
+                      <span className="font-mono font-medium ml-4 text-slate-700">
+                        {formatCurrency(steps.domestic_delivery || 0, currency)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Taxes & Duties */}
+              {(steps.customs_duty > 0 || steps.local_tax_amount > 0) && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                    Taxes & Duties
+                  </h4>
+                  <div className="space-y-2">
+                    {steps.customs_duty > 0 && (
+                      <div className="flex justify-between items-start text-sm">
+                        <span className="text-slate-600">Import Duties</span>
+                        <span className="font-mono font-medium ml-4 text-slate-700">
+                          {formatCurrency(steps.customs_duty || 0, currency)}
+                        </span>
+                      </div>
+                    )}
+                    {steps.local_tax_amount > 0 && (
+                      <div className="flex justify-between items-start text-sm">
+                        <span className="text-slate-600">Local Tax</span>
+                        <span className="font-mono font-medium ml-4 text-slate-700">
+                          {formatCurrency(steps.local_tax_amount || 0, currency)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Service Fees */}
+              {(steps.handling_fee > 0 || steps.payment_gateway_fee > 0) && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                    Service Fees
+                  </h4>
+                  <div className="space-y-2">
+                    {steps.handling_fee > 0 && (
+                      <div className="flex justify-between items-start text-sm">
+                        <span className="text-slate-600">Handling Fee</span>
+                        <span className="font-mono font-medium ml-4 text-slate-700">
+                          {formatCurrency(steps.handling_fee || 0, currency)}
+                        </span>
+                      </div>
+                    )}
+                    {steps.payment_gateway_fee > 0 && (
+                      <div className="flex justify-between items-start text-sm">
+                        <span className="text-slate-600">Payment Processing</span>
+                        <span className="font-mono font-medium ml-4 text-slate-700">
+                          {formatCurrency(steps.payment_gateway_fee || 0, currency)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Total Savings */}
+              {totalSavings > 0 && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                        Savings
+                      </Badge>
+                      <span className="text-sm font-medium text-emerald-800">
+                        Total amount saved on this quote
+                      </span>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-800 font-mono">
+                      -{formatCurrency(totalSavings, currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Information */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="text-sm text-slate-600 space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <OptimizedIcon name="Info" className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-slate-800 mb-1">Additional Information</p>
+                      <ul className="space-y-1 text-slate-600">
+                        <li>• All prices include applicable taxes and duties</li>
+                        <li>• Package weight: {calc.inputs?.total_weight_kg || 0}kg</li>
+                        <li>• Exchange rates updated daily</li>
+                        {steps.insurance_amount > 0 && (
+                          <li>• Package insurance covers full value and shipping</li>
+                        )}
+                        {hasProportionalRounding && (
+                          <li className="text-emerald-700">• ✓ Enhanced accuracy with proportional rounding</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: string }) => {
   // Dynamic steps based on quote status
@@ -383,7 +823,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
   const [shippingOptionsExpanded, setShippingOptionsExpanded] = useState(false);
-  const [reviewRequestModalOpen, setReviewRequestModalOpen] = useState(false);
   
   // Addon services removed - only available in cart/checkout pages
   
@@ -1140,7 +1579,16 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             </Card>
             )}
 
-
+            {/* Professional Breakdown - Only show for full access */}
+            {shouldShowPricing(visibilityTier) && (
+              <ProfessionalBreakdown
+                quote={quote}
+                formatCurrency={formatCurrency}
+                displayCurrency={displayCurrency}
+                onTotalCalculated={handleTotalCalculated}
+                className="mb-6"
+              />
+            )}
 
             {/* Addon Services removed from quote page - only available in cart/checkout */}
           </div>
@@ -1246,17 +1694,17 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                     {/* Secondary Actions */}
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Request Review button - primary secondary action for quotes that can be modified */}
-                      {['sent', 'approved', 'rejected', 'expired'].includes(quote.status) && (
-                        <Button 
-                          variant="outline" 
-                          className="h-12 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700"
-                          onClick={() => setReviewRequestModalOpen(true)}
-                        >
-                          <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
-                          Request Changes
-                        </Button>
-                      )}
+                      {/* Message About Quote - simple unified messaging */}
+                      <QuoteMessagingButton
+                        quote={quote}
+                        variant="outline"
+                        size="lg"
+                        className="h-12 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                        onMessageSent={() => {
+                          // Refresh quote data after sending message
+                          refreshQuote();
+                        }}
+                      />
                       
                       {/* Reject button - show only for sent and expired quotes, hide for rejected quotes */}
                       {(quote.status === 'sent' || quote.status === 'expired') && (
@@ -1314,15 +1762,17 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       </p>
                     </div>
                     
-                    {/* Allow review requests for admin-only quotes too */}
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-12 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700"
-                      onClick={() => setReviewRequestModalOpen(true)}
-                    >
-                      <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
-                      Request Changes
-                    </Button>
+                    {/* Message About Quote - unified messaging */}
+                    <QuoteMessagingButton
+                      quote={quote}
+                      variant="outline"
+                      size="lg"
+                      className="w-full h-12 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                      onMessageSent={() => {
+                        // Refresh quote data after sending message  
+                        refreshQuote();
+                      }}
+                    />
                   </div>
                 )}
 
@@ -1510,16 +1960,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Review Request Modal */}
-      <ReviewRequestModal 
-        open={reviewRequestModalOpen}
-        onClose={() => setReviewRequestModalOpen(false)}
-        quote={quote}
-        onSuccess={() => {
-          // Refresh quote data to show new status
-          refreshQuote();
-        }}
-      />
 
       {/* Mobile Sticky Bar - Only show for full access */}
       {shouldShowActions(visibilityTier) && (
@@ -1532,7 +1972,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             handleApprove();
           }
         }}
-        onRequestChanges={() => setReviewRequestModalOpen(true)}
         onReject={() => setRejectModalOpen(true)}
         formatCurrency={formatCurrency}
         adjustedTotal={quoteOptions.adjustedTotal}

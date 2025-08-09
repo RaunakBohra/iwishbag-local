@@ -242,20 +242,30 @@ const OrderConfirmationPage: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="w-full max-w-4xl">
         <Card className="text-center shadow-lg">
-          <CardHeader className="bg-green-500 text-green-50 p-6">
+          <CardHeader className={`${orderDetails?.paymentMethod === 'bank_transfer' 
+              ? 'bg-amber-500 text-amber-50' 
+              : 'bg-green-500 text-green-50'} p-6`}>
             <div className="mx-auto bg-white rounded-full p-2 w-fit">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+              <CheckCircle className={`h-10 w-10 ${orderDetails?.paymentMethod === 'bank_transfer' 
+                ? 'text-amber-600' 
+                : 'text-green-600'}`} />
             </div>
             <CardTitle className="mt-4 text-2xl">
-              {user ? 'Payment Successful!' : 'Order Confirmed!'}
+              {orderDetails?.paymentMethod === 'bank_transfer' 
+                ? 'Order Confirmed!' 
+                : user ? 'Payment Successful!' : 'Order Confirmed!'}
             </CardTitle>
             {!user && orderDetails?.customerName && (
-              <p className="text-green-100 mt-2">Thank you, {orderDetails.customerName}!</p>
+              <p className={`${orderDetails?.paymentMethod === 'bank_transfer' 
+                ? 'text-amber-100' 
+                : 'text-green-100'} mt-2`}>Thank you, {orderDetails.customerName}!</p>
             )}
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <p className="text-lg text-muted-foreground">
-              Thank you for your purchase. Your order has been confirmed.
+              {orderDetails?.paymentMethod === 'bank_transfer' 
+                ? 'Thank you for your order. Please complete the payment using the details below.' 
+                : 'Thank you for your purchase. Your order has been confirmed.'}
             </p>
             <div className="border-t border-b py-4 space-y-2">
               <div className="flex justify-between items-center">

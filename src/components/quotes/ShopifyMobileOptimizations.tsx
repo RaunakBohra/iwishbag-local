@@ -24,11 +24,12 @@ import { OptimizedIcon } from '@/components/ui/OptimizedIcon';
 // import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency } from '@/utils/originCurrency';
+import QuoteMessagingButton from './QuoteMessagingButton';
 
 interface MobileStickyBarProps {
   quote: any;
   onApprove: () => void;
-  onRequestChanges: () => void;
+  onRequestChanges?: () => void; // Deprecated - use QuoteMessagingButton instead  
   onReject: () => void;
   formatCurrency: (amount: number, currency: string) => string;
   adjustedTotal?: number;
@@ -85,15 +86,12 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
             >
               Reject
             </Button>
-            <Button 
+            <QuoteMessagingButton 
+              quote={quote}
               variant="outline" 
               size="sm"
-              onClick={onRequestChanges}
               className="h-10"
-            >
-              <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-1" />
-              Ask
-            </Button>
+            />
           </div>
         </div>
 

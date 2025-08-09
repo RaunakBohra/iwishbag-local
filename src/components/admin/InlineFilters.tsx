@@ -28,6 +28,8 @@ interface InlineFiltersProps {
   onPriorityChange: (value: TicketPriority | 'all') => void;
   categoryFilter: TicketCategory | 'all';
   onCategoryChange: (value: TicketCategory | 'all') => void;
+  quoteFilter?: 'all' | 'with_quote' | 'without_quote';
+  onQuoteChange?: (value: 'all' | 'with_quote' | 'without_quote') => void;
   totalTickets: number;
   filteredCount: number;
 }
@@ -41,15 +43,17 @@ export const InlineFilters = ({
   onPriorityChange,
   categoryFilter,
   onCategoryChange,
+  quoteFilter,
+  onQuoteChange,
   totalTickets,
   filteredCount,
 }: InlineFiltersProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const hasActiveFilters =
-    statusFilter !== 'all' || priorityFilter !== 'all' || categoryFilter !== 'all' || searchInput;
-  const activeFilterCount = [statusFilter, priorityFilter, categoryFilter].filter(
-    (f) => f !== 'all',
+    statusFilter !== 'all' || priorityFilter !== 'all' || categoryFilter !== 'all' || (quoteFilter && quoteFilter !== 'all') || searchInput;
+  const activeFilterCount = [statusFilter, priorityFilter, categoryFilter, quoteFilter].filter(
+    (f) => f && f !== 'all',
   ).length;
 
   const clearAllFilters = () => {
@@ -57,6 +61,7 @@ export const InlineFilters = ({
     onStatusChange('all');
     onPriorityChange('all');
     onCategoryChange('all');
+    if (onQuoteChange) onQuoteChange('all');
   };
 
   return (
@@ -67,7 +72,7 @@ export const InlineFilters = ({
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search tickets, customers, or tracking IDs..."
+            placeholder="Search tickets, customers, tracking IDs, or destinations..."
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
@@ -151,6 +156,23 @@ export const InlineFilters = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Quote Filter */}
+                {quoteFilter && onQuoteChange && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Quote Status</label>
+                    <Select value={quoteFilter} onValueChange={onQuoteChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All tickets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Tickets</SelectItem>
+                        <SelectItem value="with_quote">With Quote/Order</SelectItem>
+                        <SelectItem value="without_quote">General Support</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
           </PopoverContent>

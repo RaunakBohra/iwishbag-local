@@ -141,6 +141,7 @@ export interface TicketFilters {
   category?: TicketCategory[];
   assigned_to?: string;
   user_id?: string;
+  quote_id?: string;
   date_range?: {
     start: string;
     end: string;
