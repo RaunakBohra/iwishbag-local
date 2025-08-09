@@ -43,6 +43,8 @@ import {
 import { useSLAStatus, useSLAUtils } from '@/hooks/useSLA';
 import { useManualAssignTicket } from '@/hooks/useAutoAssignment';
 import { formatDistanceToNow } from 'date-fns';
+import { unifiedSupportEngine } from '@/services/UnifiedSupportEngine';
+import { useToast } from '@/components/ui/use-toast';
 
 const StatusIcon = ({ status }: { status: string }) => {
   const iconClass = 'h-4 w-4';
@@ -76,8 +78,21 @@ const TicketRow = ({
 }) => {
   const updateStatusMutation = useUpdateTicketStatus();
   const assignTicketMutation = useAssignTicket();
+  const { toast } = useToast();
 
   const handleStatusChange = (status: TicketStatus) => {
+    // Proactive validation to prevent errors
+    const allowedTransitions = unifiedSupportEngine.getAllowedTransitions(ticket.status as TicketStatus);
+    
+    if (!allowedTransitions.includes(status)) {
+      toast({
+        title: 'Invalid Status Transition',
+        description: `Cannot change from "${ticket.status}" to "${status}". Allowed transitions: ${allowedTransitions.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     updateStatusMutation.mutate({ ticketId: ticket.id, status });
   };
 
@@ -144,11 +159,17 @@ const TicketRow = ({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(ADMIN_TICKET_STATUS_LABELS).map(([status, label]) => (
-              <SelectItem key={status} value={status}>
+            {unifiedSupportEngine.getValidStatusOptionsForDropdown(ticket.status as TicketStatus, true).map((option) => (
+              <SelectItem key={option.value} value={option.value}>
                 <div className="flex items-center gap-2">
-                  <StatusIcon status={status} />
-                  {label}
+                  <StatusIcon status={option.value} />
+                  <div className="flex flex-col">
+                    <span className={`text-sm font-medium ${option.isSuggested ? 'text-green-600' : ''}`}>
+                      {option.label}
+                      {option.isSuggested && <span className="ml-1 text-xs">✨ Suggested</span>}
+                    </span>
+                    <span className="text-xs text-gray-500">{option.description}</span>
+                  </div>
                 </div>
               </SelectItem>
             ))}

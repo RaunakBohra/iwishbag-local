@@ -241,6 +241,64 @@ class UnifiedSupportEngine {
     };
   }
 
+  /**
+   * Get valid status options for dropdown UI with labels and metadata
+   */
+  getValidStatusOptionsForDropdown(
+    currentStatus: TicketStatus,
+    isAdmin: boolean = true,
+  ): Array<{
+    value: TicketStatus;
+    label: string;
+    description: string;
+    isSuggested: boolean;
+    iconColor: string;
+  }> {
+    if (!isAdmin) {
+      return []; // Customers don't change status
+    }
+
+    const allowedTransitions = this.getAllowedTransitions(currentStatus);
+    const suggestions = this.getStatusSuggestions(currentStatus, isAdmin);
+
+    // Status metadata for UI
+    const statusMetadata: Record<TicketStatus, { label: string; description: string; iconColor: string }> = {
+      open: {
+        label: 'Open',
+        description: 'Ready for work to begin',
+        iconColor: 'text-blue-600',
+      },
+      in_progress: {
+        label: 'In Progress',
+        description: 'Currently being worked on',
+        iconColor: 'text-yellow-600',
+      },
+      pending: {
+        label: 'Awaiting Customer Reply',
+        description: 'Waiting for customer response',
+        iconColor: 'text-orange-600',
+      },
+      resolved: {
+        label: 'Resolved',
+        description: 'Issue has been fixed',
+        iconColor: 'text-green-600',
+      },
+      closed: {
+        label: 'Closed',
+        description: 'Ticket completed',
+        iconColor: 'text-gray-600',
+      },
+    };
+
+    return allowedTransitions.map((status) => ({
+      value: status,
+      label: statusMetadata[status].label,
+      description: statusMetadata[status].description,
+      isSuggested: status === suggestions.suggested,
+      iconColor: statusMetadata[status].iconColor,
+    }));
+  }
+
   // ============================================================================
   // Cache Management
   // ============================================================================
