@@ -1115,8 +1115,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
 
 
-            {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes with full access */}
-            {shouldShowInteractiveElements(visibilityTier) && (quote.status === 'pending' || quote.status === 'rejected') && quote.total_quote_origincurrency && (
+            {/* Enhanced Addon Services Selector - Only show for sent quotes (customers can add services during initial review) */}
+            {shouldShowInteractiveElements(visibilityTier) && quote.status === 'sent' && quote.total_quote_origincurrency && (
               <EnhancedAddonServicesSelector
                 quoteId={quote.id}
                 orderValue={quote.total_quote_origincurrency}
