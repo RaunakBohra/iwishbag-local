@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -170,9 +170,9 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
             </div>
             <div>
               <DialogTitle className="text-lg">Request Quote Review</DialogTitle>
-              <p className="text-sm text-muted-foreground">
+              <DialogDescription className="text-sm text-muted-foreground">
                 Tell us what needs to be changed
-              </p>
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>

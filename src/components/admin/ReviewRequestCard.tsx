@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertTriangle, Clock, User, MessageCircle, CheckCircle, X, Edit, DollarSign, Package, Truck, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -203,6 +203,9 @@ const ReviewRequestCard: React.FC<ReviewRequestCardProps> = ({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Complete Quote Review</DialogTitle>
+            <DialogDescription>
+              Process the customer's review request and update the quote status
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
