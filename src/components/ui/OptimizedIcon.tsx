@@ -97,6 +97,7 @@ const LAZY_ICONS: Record<string, () => Promise<{ default: IconComponent }>> = {
   Upload: () => import('lucide-react').then(mod => ({ default: mod.Upload })),
   Share: () => import('lucide-react').then(mod => ({ default: mod.Share })),
   Share2: () => import('lucide-react').then(mod => ({ default: mod.Share2 })),
+  Send: () => import('lucide-react').then(mod => ({ default: mod.Send })),
   
   // New icons from QuoteCalculatorV2 analysis
   Calculator: () => import('lucide-react').then(mod => ({ default: mod.Calculator })),

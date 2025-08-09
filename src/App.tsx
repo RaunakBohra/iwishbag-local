@@ -24,6 +24,7 @@ const Quote = React.lazy(() => import('@/pages/Quote'));
 const Auth = React.lazy(() => import('@/pages/Auth'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Cart = React.lazy(() => import('@/pages/Cart'));
+const CartRecovery = React.lazy(() => import('@/pages/CartRecovery'));
 const Checkout = React.lazy(() => import('@/pages/CheckoutShopify'));
 const CartTest = React.lazy(() => import('@/pages/CartTest'));
 // const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes')); // REMOVED: V1 customer quotes page
@@ -573,6 +574,10 @@ const router = createBrowserRouter([
           {
             path: 'cart',
             element: <Cart />,
+          },
+          {
+            path: 'cart-recovery',
+            element: <CartRecovery />,
           },
           {
             path: 'checkout',

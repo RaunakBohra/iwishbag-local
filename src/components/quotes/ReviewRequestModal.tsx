@@ -106,8 +106,8 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
       const { data, error } = await supabase.rpc('request_quote_review', {
         p_quote_id: quote.id,
         p_category: formData.category,
-        p_urgency: formData.urgency,
         p_description: formData.description.trim(),
+        p_urgency: formData.urgency,
         p_specific_items: specificItemsArray.length > 0 ? specificItemsArray : null,
         p_expected_changes: formData.expectedChanges?.trim() || null,
         p_budget_constraint: formData.budgetConstraint || null
@@ -162,41 +162,41 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-100 rounded-lg">
               <OptimizedIcon name="Edit" className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <DialogTitle className="text-xl">Request Quote Review</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Let us know what needs to be adjusted in your quote
+              <DialogTitle className="text-lg">Request Quote Review</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Tell us what needs to be changed
               </p>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Quote Info */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">Quote #{quote?.quote_number || quote?.id?.slice(0, 8)}</h3>
-              <Badge variant="outline">{quote?.status}</Badge>
+        <div className="space-y-4 py-3">
+          {/* Compact Quote Info */}
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-gray-900">Quote #{quote?.quote_number || quote?.id?.slice(0, 8)}</span>
+              <Badge variant="outline" className="text-xs">{quote?.status}</Badge>
             </div>
-            <p className="text-sm text-gray-600">
-              {items.length} item{items.length !== 1 ? 's' : ''} • Created {new Date(quote?.created_at).toLocaleDateString()}
+            <p className="text-xs text-gray-600 mt-1">
+              {items.length} item{items.length !== 1 ? 's' : ''} • {new Date(quote?.created_at).toLocaleDateString()}
             </p>
           </div>
 
-          {/* Category Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">What needs reviewing?</Label>
-            <div className="grid gap-3">
+          {/* Compact Category Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">What needs reviewing?</Label>
+            <div className="grid grid-cols-1 gap-2">
               {categoryOptions.map((option) => (
                 <div
                   key={option.value}
-                  className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
+                  className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all hover:bg-gray-50 ${
                     formData.category === option.value 
                       ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-200'
@@ -208,30 +208,28 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
                     name="category"
                     checked={formData.category === option.value}
                     onChange={() => {}}
-                    className="mt-1"
+                    className="text-blue-600"
                   />
+                  <OptimizedIcon name={option.icon} className="w-4 h-4 text-gray-600" />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <OptimizedIcon name={option.icon} className="w-4 h-4" />
-                      <span className="font-medium">{option.label}</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+                    <span className="font-medium text-sm">{option.label}</span>
+                    <p className="text-xs text-gray-500">{option.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Urgency Level */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">How urgent is this?</Label>
-            <div className="grid gap-2">
+          {/* Compact Urgency Level */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">How urgent is this?</Label>
+            <div className="grid grid-cols-3 gap-2">
               {urgencyOptions.map((option) => (
                 <div
                   key={option.value}
-                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-md cursor-pointer transition-all text-center ${
                     formData.urgency === option.value 
-                      ? 'border-blue-500' 
+                      ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                   onClick={() => setFormData(prev => ({ ...prev, urgency: option.value as any }))}
@@ -241,36 +239,34 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
                     name="urgency"
                     checked={formData.urgency === option.value}
                     onChange={() => {}}
+                    className="text-blue-600"
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${option.color} border-0`}>{option.label}</Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{option.description}</p>
-                  </div>
+                  <Badge className={`${option.color} border-0 text-xs`}>{option.label}</Badge>
+                  <p className="text-xs text-gray-600 leading-tight">{option.description}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Specific Items (if applicable) */}
+          {/* Compact Specific Items */}
           {(formData.category === 'items' || formData.category === 'pricing') && items.length > 1 && (
-            <div className="space-y-3">
-              <Label className="text-base font-medium">
-                Which items are you concerned about? (optional)
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Which items? (optional)
               </Label>
-              <div className="grid gap-2 max-h-32 overflow-y-auto">
+              <div className="grid gap-1 max-h-28 overflow-y-auto">
                 {items.map((item: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3 p-2 border rounded-lg">
+                  <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
                     <Checkbox
                       checked={selectedItems.has(item.id || index.toString())}
                       onCheckedChange={(checked) => 
                         handleItemToggle(item.id || index.toString(), checked as boolean)
                       }
+                      className="scale-75"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-gray-600">
+                      <p className="font-medium text-xs truncate">{item.name}</p>
+                      <p className="text-xs text-gray-500">
                         Qty: {item.quantity} • {Number(item.weight) || 0}kg
                       </p>
                     </div>
@@ -280,44 +276,44 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
             </div>
           )}
 
-          {/* Description */}
-          <div className="space-y-3">
-            <Label htmlFor="description" className="text-base font-medium">
-              What specifically needs to be changed? *
+          {/* Compact Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-sm font-medium">
+              What needs to be changed? *
             </Label>
             <Textarea
               id="description"
-              placeholder="Please be as specific as possible about what you'd like us to review or change. For example: 'The shipping cost seems high - can you check for cheaper options?' or 'I need this delivered by Dec 15th instead.'"
+              placeholder="Be specific: 'Shipping cost too high' or 'Need faster delivery' or 'Wrong item size'"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={4}
-              className="resize-none"
+              rows={3}
+              className="resize-none text-sm"
             />
             <p className="text-xs text-gray-500">
-              {formData.description.length}/500 characters (minimum 10)
+              {formData.description.length}/500 chars (min 10)
             </p>
           </div>
 
-          {/* Expected Changes */}
-          <div className="space-y-3">
-            <Label htmlFor="expectedChanges" className="text-base font-medium">
-              What outcome are you hoping for? (optional)
+          {/* Compact Expected Changes */}
+          <div className="space-y-2">
+            <Label htmlFor="expectedChanges" className="text-sm font-medium">
+              Expected outcome (optional)
             </Label>
             <Textarea
               id="expectedChanges"
-              placeholder="Example: 'Reduce total cost by $20' or 'Change delivery to express shipping' or 'Replace item X with item Y'"
+              placeholder="e.g., 'Reduce cost by $20' or 'Express shipping' or 'Replace item X'"
               value={formData.expectedChanges}
               onChange={(e) => setFormData(prev => ({ ...prev, expectedChanges: e.target.value }))}
               rows={2}
-              className="resize-none"
+              className="resize-none text-sm"
             />
           </div>
 
-          {/* Budget Constraint */}
+          {/* Compact Budget Constraint */}
           {formData.category === 'pricing' && (
-            <div className="space-y-3">
-              <Label htmlFor="budgetConstraint" className="text-base font-medium">
-                Do you have a target budget? (optional)
+            <div className="space-y-2">
+              <Label htmlFor="budgetConstraint" className="text-sm font-medium">
+                Target budget (optional)
               </Label>
               <div className="relative">
                 <Input
@@ -329,55 +325,53 @@ const ReviewRequestModal: React.FC<ReviewRequestModalProps> = ({
                     ...prev, 
                     budgetConstraint: e.target.value ? parseFloat(e.target.value) : undefined 
                   }))}
-                  className="pl-8"
+                  className="pl-8 text-sm"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
               </div>
-              <p className="text-xs text-gray-500">
-                This helps us understand your price expectations
-              </p>
             </div>
           )}
 
-          {/* Response Time Info */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
-              <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600 mt-0.5" />
+          {/* Compact Response Time Info */}
+          <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+            <div className="flex items-center gap-2">
+              <OptimizedIcon name="Clock" className="w-4 h-4 text-blue-600" />
               <div>
-                <p className="font-medium text-blue-900 mb-1">Response Time</p>
-                <p className="text-sm text-blue-800">
-                  We typically respond to review requests within 24-48 hours. 
-                  High priority requests are handled first. You'll receive an email when we send the updated quote.
+                <p className="font-medium text-blue-900 text-sm">24-48 hour response</p>
+                <p className="text-xs text-blue-700">
+                  High priority requests handled first. You'll get an email with the updated quote.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
+        {/* Compact Action Buttons */}
+        <div className="flex gap-2 pt-3 border-t">
           <Button 
             variant="outline" 
             onClick={handleClose} 
             disabled={isSubmitting}
-            className="flex-1"
+            className="flex-1 h-9"
+            size="sm"
           >
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit}
             disabled={isSubmitting || !formData.description.trim() || formData.description.trim().length < 10}
-            className="flex-1"
+            className="flex-1 h-9"
+            size="sm"
           >
             {isSubmitting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-2" />
                 Submitting...
               </>
             ) : (
               <>
-                <OptimizedIcon name="Send" className="w-4 h-4 mr-2" />
-                Submit Review Request
+                <OptimizedIcon name="Send" className="w-3 h-3 mr-2" />
+                Submit Request
               </>
             )}
           </Button>

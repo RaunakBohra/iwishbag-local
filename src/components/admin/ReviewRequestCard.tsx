@@ -53,8 +53,8 @@ const ReviewRequestCard: React.FC<ReviewRequestCardProps> = ({
 
       const { data, error } = await supabase.rpc('complete_quote_review', {
         p_quote_id: quote.id,
-        p_admin_notes: adminNotes.trim() || null,
-        p_new_status: newStatus
+        p_new_status: newStatus,
+        p_admin_notes: adminNotes.trim() || null
       });
 
       if (error) throw error;

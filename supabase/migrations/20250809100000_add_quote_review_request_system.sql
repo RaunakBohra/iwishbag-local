@@ -41,8 +41,8 @@ COMMENT ON COLUMN quotes_v2.review_request_data IS 'Customer review request data
 CREATE OR REPLACE FUNCTION request_quote_review(
   p_quote_id UUID,
   p_category TEXT,
-  p_urgency TEXT DEFAULT 'medium',
   p_description TEXT,
+  p_urgency TEXT DEFAULT 'medium',
   p_specific_items TEXT[] DEFAULT NULL,
   p_expected_changes TEXT DEFAULT NULL,
   p_budget_constraint DECIMAL DEFAULT NULL
@@ -189,8 +189,8 @@ $$;
 -- Create function to complete review request (admin only)
 CREATE OR REPLACE FUNCTION complete_quote_review(
   p_quote_id UUID,
-  p_admin_notes TEXT DEFAULT NULL,
-  p_new_status TEXT DEFAULT 'sent'
+  p_new_status TEXT DEFAULT 'sent',
+  p_admin_notes TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
