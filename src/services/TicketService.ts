@@ -376,18 +376,27 @@ class TicketService {
           // Fetch user profile separately
           if (record.user_id) {
             try {
-              const { data: profile } = await supabase
+              const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, full_name, email')
+                .select('id, full_name, email, phone, country, preferred_display_currency, created_at')
                 .eq('id', record.user_id)
                 .single();
               
+              if (profileError) {
+                console.warn('Profile query error for ticket:', record.id, profileError);
+              }
+              
               if (profile) {
                 baseTicket.user_profile = profile;
+                console.log('✅ Profile found for ticket:', record.id, profile.full_name || profile.email);
+              } else {
+                console.warn('❌ No profile found for user_id:', record.user_id, 'ticket:', record.id);
               }
             } catch (error) {
-              console.warn('Failed to fetch user profile for ticket:', record.id);
+              console.error('❌ Exception fetching user profile for ticket:', record.id, error);
             }
+          } else {
+            console.warn('❌ No user_id found for ticket:', record.id);
           }
           
           // Fetch quote separately if it exists
@@ -399,11 +408,13 @@ class TicketService {
                   id,
                   quote_number,
                   destination_country,
+                  origin_country,
                   status,
                   final_total_origincurrency,
                   items,
                   customer_email,
-                  customer_name
+                  customer_name,
+                  created_at
                 `)
                 .eq('id', record.quote_id)
                 .single();
@@ -413,11 +424,13 @@ class TicketService {
                   id: quote.id,
                   display_id: quote.quote_number,
                   destination_country: quote.destination_country,
+                  origin_country: quote.origin_country,
                   status: quote.status,
                   final_total_origincurrency: quote.final_total_origincurrency,
                   iwish_tracking_id: null,
                   tracking_status: null,
                   estimated_delivery_date: null,
+                  created_at: quote.created_at,
                   items: quote.items,
                   customer_data: {
                     email: quote.customer_email,
