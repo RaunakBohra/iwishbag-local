@@ -484,10 +484,80 @@ class TicketService {
         return null;
       }
 
-      // Transform to legacy format (simplified - would need additional queries for full details)
+      // Transform to legacy format with full profile and quote details
       const ticket = this.transformToLegacyTicketWithDetails(supportRecord);
 
-      console.log('✅ Ticket fetched successfully via unified engine:', ticket.id);
+      // Fetch user profile separately (same logic as getAdminTickets)
+      if (supportRecord.user_id) {
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, phone, country, preferred_display_currency, created_at')
+            .eq('id', supportRecord.user_id)
+            .single();
+          
+          if (profileError) {
+            console.warn('Profile query error for ticket detail:', ticketId, profileError);
+          }
+          
+          if (profile) {
+            ticket.user_profile = profile;
+            console.log('✅ Profile found for ticket detail:', ticketId, profile.full_name || profile.email);
+          } else {
+            console.warn('❌ No profile found for user_id in ticket detail:', supportRecord.user_id, 'ticket:', ticketId);
+          }
+        } catch (error) {
+          console.error('❌ Exception fetching user profile for ticket detail:', ticketId, error);
+        }
+      } else {
+        console.warn('❌ No user_id found for ticket detail:', ticketId);
+      }
+
+      // Fetch quote separately if it exists (same logic as getAdminTickets)
+      if (supportRecord.quote_id) {
+        try {
+          const { data: quote } = await supabase
+            .from('quotes_v2')
+            .select(`
+              id,
+              quote_number,
+              destination_country,
+              origin_country,
+              status,
+              final_total_origincurrency,
+              items,
+              customer_email,
+              customer_name,
+              created_at
+            `)
+            .eq('id', supportRecord.quote_id)
+            .single();
+          
+          if (quote) {
+            ticket.quote = {
+              id: quote.id,
+              display_id: quote.quote_number,
+              destination_country: quote.destination_country,
+              origin_country: quote.origin_country,
+              status: quote.status,
+              final_total_origincurrency: quote.final_total_origincurrency,
+              iwish_tracking_id: null,
+              tracking_status: null,
+              estimated_delivery_date: null,
+              created_at: quote.created_at,
+              items: quote.items,
+              customer_data: {
+                email: quote.customer_email,
+                name: quote.customer_name
+              }
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to fetch quote for ticket detail:', ticketId);
+        }
+      }
+
+      console.log('✅ Ticket with full details fetched successfully:', ticket.id, ticket.user_profile?.full_name || ticket.user_profile?.email || 'No profile');
       return ticket;
     } catch (error) {
       console.error('❌ Exception in getTicketById:', error);
