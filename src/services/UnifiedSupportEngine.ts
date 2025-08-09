@@ -447,7 +447,7 @@ class UnifiedSupportEngine {
   }
 
   /**
-   * Get tickets with filters and pagination
+   * Get tickets with filters and pagination - Returns paginated results with metadata
    */
   async getTickets(
     filters: TicketFilters = {},
@@ -460,7 +460,7 @@ class UnifiedSupportEngine {
       const cached = this.getFromCache<SupportRecord[]>(cacheKey);
       if (cached) return cached;
 
-      console.log('📋 Fetching tickets with filters:', filters);
+      console.log('📋 Fetching tickets with pagination:', { filters, limit, offset });
 
       let query = supabase
         .from('support_system')
@@ -519,12 +519,135 @@ class UnifiedSupportEngine {
       const tickets = data as SupportRecord[];
       this.setCache(cacheKey, tickets);
 
-      logger.info();
+      logger.info(`✅ Fetched ${tickets.length} tickets (page ${Math.floor(offset / limit) + 1})`);
       return tickets;
     } catch (error) {
       logger.error('❌ Exception in getTickets:', error);
       Sentry.captureException(error);
       return [];
+    }
+  }
+
+  /**
+   * Get paginated tickets with metadata for admin dashboard
+   */
+  async getTicketsWithPagination(
+    filters: TicketFilters = {},
+    userId?: string,
+    page: number = 1,
+    pageSize: number = 25,
+  ): Promise<{
+    data: SupportRecord[];
+    pagination: {
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      const offset = (page - 1) * pageSize;
+      const cacheKey = this.getCacheKey('tickets_paginated', { filters, userId, page, pageSize });
+      const cached = this.getFromCache<any>(cacheKey);
+      if (cached) return cached;
+
+      console.log('📋 Fetching paginated tickets:', { filters, userId, page, pageSize });
+
+      // Build base query for both count and data
+      let baseQuery = supabase
+        .from('support_system')
+        .select('*', { count: 'exact' })
+        .in('system_type', ['ticket', 'quote_discussion']);
+
+      // Apply filters to base query
+      if (userId) {
+        baseQuery = baseQuery.eq('user_id', userId);
+      }
+
+      if (filters.status && filters.status.length > 0) {
+        baseQuery = baseQuery.in('ticket_data->>status', filters.status);
+      }
+
+      if (filters.priority && filters.priority.length > 0) {
+        baseQuery = baseQuery.in('ticket_data->>priority', filters.priority);
+      }
+
+      if (filters.category && filters.category.length > 0) {
+        baseQuery = baseQuery.in('ticket_data->>category', filters.category);
+      }
+
+      if (filters.assigned_to) {
+        baseQuery = baseQuery.eq('ticket_data->>assigned_to', filters.assigned_to);
+      }
+
+      if (filters.quote_id) {
+        baseQuery = baseQuery.eq('quote_id', filters.quote_id);
+      }
+
+      if (filters.date_range) {
+        baseQuery = baseQuery
+          .gte('created_at', filters.date_range.start)
+          .lte('created_at', filters.date_range.end);
+      }
+
+      // Execute query with pagination
+      const { data, error, count } = await baseQuery
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        logger.error('❌ Error fetching paginated tickets:', error);
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pageSize,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        };
+      }
+
+      const total = count || 0;
+      const totalPages = Math.ceil(total / pageSize);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      const result = {
+        data: data as SupportRecord[],
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages,
+          hasNext,
+          hasPrev,
+        },
+      };
+
+      // Cache the result
+      this.setCache(cacheKey, result);
+
+      logger.info(`✅ Fetched ${data?.length || 0} tickets (page ${page}/${totalPages}, total: ${total})`);
+      return result;
+    } catch (error) {
+      logger.error('❌ Exception in getTicketsWithPagination:', error);
+      Sentry.captureException(error);
+      return {
+        data: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
     }
   }
 

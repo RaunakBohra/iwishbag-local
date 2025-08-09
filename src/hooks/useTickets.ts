@@ -45,7 +45,7 @@ export const useUserTickets = (userId?: string) => {
 };
 
 /**
- * Hook to fetch admin tickets with filtering
+ * Hook to fetch admin tickets with filtering (legacy - use useAdminTicketsPaginated for better performance)
  */
 export const useAdminTickets = (filters?: TicketFilters, sort?: TicketSortOptions) => {
   return useQuery({
@@ -54,6 +54,25 @@ export const useAdminTickets = (filters?: TicketFilters, sort?: TicketSortOption
     staleTime: 30 * 1000, // 30 seconds for admin view - faster updates
     refetchInterval: 60 * 1000, // Auto-refetch every minute
     refetchOnWindowFocus: true, // Refresh when window regains focus
+  });
+};
+
+/**
+ * Hook to fetch paginated admin tickets with filtering and sorting
+ */
+export const useAdminTicketsPaginated = (
+  filters?: TicketFilters,
+  sort?: TicketSortOptions,
+  page: number = 1,
+  pageSize: number = 25,
+) => {
+  return useQuery({
+    queryKey: [...ticketKeys.list({ ...filters, sort }), 'paginated', { page, pageSize }],
+    queryFn: () => ticketService.getAdminTicketsPaginated(filters, sort, page, pageSize),
+    staleTime: 30 * 1000, // 30 seconds for admin view - faster updates
+    refetchInterval: 60 * 1000, // Auto-refetch every minute
+    refetchOnWindowFocus: true, // Refresh when window regains focus
+    keepPreviousData: true, // Keep previous page data while loading new page
   });
 };
 
@@ -398,36 +417,79 @@ export const useAssignTicket = () => {
     
     // Optimistic update for assignment
     onMutate: async ({ ticketId, adminUserId }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ticketKeys.lists() });
+      // Cancel any outgoing refetches - use broader pattern to catch paginated queries
+      await queryClient.cancelQueries({ queryKey: ticketKeys.all });
       await queryClient.cancelQueries({ queryKey: ticketKeys.detail(ticketId) });
 
+      // Get the admin user profile for the dropdown display  
+      const adminUsers = (queryClient.getQueryData(['user-roles', 'admin-moderators']) as any[]) || [];
+      const assignedUser = adminUsers.find((user: any) => user.id === adminUserId);
+      const assignedUserProfile = assignedUser ? {
+        id: assignedUser.id,
+        full_name: assignedUser.full_name,
+        email: assignedUser.email,
+      } : null;
+
+      console.log('🎯 Optimistic assignment update:', {
+        ticketId,
+        adminUserId,
+        adminUsersCount: adminUsers.length,
+        assignedUser: assignedUser?.full_name || assignedUser?.email || 'Not found',
+        assignedUserProfile
+      });
+
       // Snapshot the previous values
-      const previousTickets = queryClient.getQueryData(ticketKeys.lists());
+      const previousTickets = queryClient.getQueriesData({ queryKey: ticketKeys.all });
       const previousTicket = queryClient.getQueryData(ticketKeys.detail(ticketId));
 
-      // Optimistically update all ticket list queries with proper structure
-      queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, (oldData: any) => {
-        if (!oldData || !Array.isArray(oldData)) return oldData;
-        
-        return oldData.map((ticket: any) =>
-          ticket.id === ticketId
-            ? { 
-                ...ticket, 
-                assigned_to: adminUserId,
-                // Update ticket_data for unified support system compatibility
-                ticket_data: ticket.ticket_data ? {
-                  ...ticket.ticket_data,
+      // Optimistically update ALL ticket queries (including paginated ones)
+      queryClient.setQueriesData({ queryKey: ticketKeys.all }, (oldData: any) => {
+        // Handle both direct ticket arrays and paginated response structure
+        if (Array.isArray(oldData)) {
+          // Direct ticket array (legacy queries)
+          return oldData.map((ticket: any) =>
+            ticket.id === ticketId
+              ? { 
+                  ...ticket, 
                   assigned_to: adminUserId,
-                  metadata: {
-                    ...ticket.ticket_data.metadata,
-                    last_assignment_change: new Date().toISOString()
+                  assigned_to_profile: adminUserId ? assignedUserProfile : null,
+                  ticket_data: ticket.ticket_data ? {
+                    ...ticket.ticket_data,
+                    assigned_to: adminUserId,
+                    metadata: {
+                      ...ticket.ticket_data.metadata,
+                      last_assignment_change: new Date().toISOString()
+                    }
+                  } : undefined,
+                  updated_at: new Date().toISOString()
+                }
+              : ticket
+          );
+        } else if (oldData && oldData.tickets && Array.isArray(oldData.tickets)) {
+          // Paginated response structure
+          return {
+            ...oldData,
+            tickets: oldData.tickets.map((ticket: any) =>
+              ticket.id === ticketId
+                ? { 
+                    ...ticket, 
+                    assigned_to: adminUserId,
+                    assigned_to_profile: adminUserId ? assignedUserProfile : null,
+                    ticket_data: ticket.ticket_data ? {
+                      ...ticket.ticket_data,
+                      assigned_to: adminUserId,
+                      metadata: {
+                        ...ticket.ticket_data.metadata,
+                        last_assignment_change: new Date().toISOString()
+                      }
+                    } : undefined,
+                    updated_at: new Date().toISOString()
                   }
-                } : undefined,
-                updated_at: new Date().toISOString()
-              }
-            : ticket
-        );
+                : ticket
+            )
+          };
+        }
+        return oldData; // Return unchanged if structure doesn't match
       });
 
       // Optimistically update individual ticket
@@ -436,6 +498,7 @@ export const useAssignTicket = () => {
         return {
           ...oldData,
           assigned_to: adminUserId,
+          assigned_to_profile: adminUserId ? assignedUserProfile : null,
           updated_at: new Date().toISOString()
         };
       });
@@ -465,9 +528,11 @@ export const useAssignTicket = () => {
       }
     },
     onError: (error: any, variables, context) => {
-      // Rollback optimistic update with proper cache key handling
-      if (context?.previousTickets) {
-        queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, context.previousTickets);
+      // Rollback optimistic update - restore all previous query data
+      if (context?.previousTickets && Array.isArray(context.previousTickets)) {
+        context.previousTickets.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
       if (context?.previousTicket) {
         queryClient.setQueryData(ticketKeys.detail(variables.ticketId), context.previousTicket);

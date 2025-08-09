@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { CompactStatsBar } from '@/components/admin/CompactStatsBar';
 import { InlineFilters } from '@/components/admin/InlineFilters';
 import { SLAStatusIndicator } from '@/components/admin/SLADashboardWidget';
 import { CompactSLAMetrics } from '@/components/admin/CompactSLAMetrics';
+import { TicketPaginationControls } from '@/components/admin/TicketPaginationControls';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { TicketIcon, Clock, CheckCircle, AlertTriangle, Grid3X3, List, Kanban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  useAdminTickets,
+  useAdminTicketsPaginated,
   useTicketStats,
   useUpdateTicketStatus,
   useUpdateTicket,
@@ -1012,15 +1014,51 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
 type ViewMode = 'table' | 'card' | 'kanban';
 
 export const AdminTicketDashboard = () => {
-  const [searchInput, setSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
-  const [quoteFilter, setQuoteFilter] = useState<'all' | 'with_quote' | 'without_quote'>('all');
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialize state from URL parameters
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>(
+    (searchParams.get('status') as TicketStatus) || 'all'
+  );
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>(
+    (searchParams.get('priority') as TicketPriority) || 'all'
+  );
+  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>(
+    (searchParams.get('category') as TicketCategory) || 'all'
+  );
+  const [quoteFilter, setQuoteFilter] = useState<'all' | 'with_quote' | 'without_quote'>(
+    (searchParams.get('quote') as 'all' | 'with_quote' | 'without_quote') || 'all'
+  );
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(searchParams.get('ticket'));
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    (searchParams.get('view') as ViewMode) || 'table'
+  );
+  
+  // Pagination state from URL
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 25);
 
   const { users: adminUsers = [] } = useUserRoles();
+
+  // Function to update URL parameters
+  const updateURL = (updates: Record<string, string | number | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || value === 'all' || value === 1 || value === 25) {
+        // Remove default values from URL to keep it clean
+        if (key === 'page' && value === 1) newParams.delete(key);
+        else if (key === 'pageSize' && value === 25) newParams.delete(key);
+        else if (value === 'all' || value === '' || value === null) newParams.delete(key);
+        else newParams.set(key, value.toString());
+      } else {
+        newParams.set(key, value.toString());
+      }
+    });
+    
+    setSearchParams(newParams, { replace: true });
+  };
 
   // Simple filters conversion
   const filters: TicketFilters = useMemo(() => {
@@ -1031,21 +1069,31 @@ export const AdminTicketDashboard = () => {
     return converted;
   }, [statusFilter, priorityFilter, categoryFilter]);
 
-  const { data: tickets = [], isLoading } = useAdminTickets(filters);
+  // Extend filters with quote filter for backend processing
+  const backendFilters: TicketFilters = useMemo(() => {
+    const baseFilters = { ...filters };
+    
+    // Note: quote_id filtering will be handled client-side as it's more complex
+    // Backend filters only include the direct database filterable fields
+    
+    return baseFilters;
+  }, [filters]);
+
+  const { data: paginatedData, isLoading } = useAdminTicketsPaginated(backendFilters, undefined, currentPage, pageSize);
   const { data: stats } = useTicketStats();
 
-  // Filter tickets by search input and quote filter
+  // Client-side filtering for complex filters (search, quote filter)
   const filteredTickets = useMemo(() => {
-    let filtered = tickets;
+    let filtered = paginatedData?.tickets || [];
     
-    // Apply quote filter first
+    // Apply quote filter
     if (quoteFilter === 'with_quote') {
       filtered = filtered.filter(ticket => ticket.quote);
     } else if (quoteFilter === 'without_quote') {
       filtered = filtered.filter(ticket => !ticket.quote);
     }
     
-    // Then apply search filter
+    // Apply search filter
     if (searchInput) {
       const searchLower = searchInput.toLowerCase();
       filtered = filtered.filter(
@@ -1062,14 +1110,79 @@ export const AdminTicketDashboard = () => {
     }
     
     return filtered;
-  }, [tickets, searchInput, quoteFilter]);
+  }, [paginatedData?.tickets, searchInput, quoteFilter]);
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedTicketId(null); // Clear selection when changing pages
+    updateURL({ page, ticket: null });
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+    setSelectedTicketId(null); // Clear selection
+    updateURL({ pageSize: newPageSize, page: 1, ticket: null });
+  };
+
+  // Reset pagination when filters change
+  const handleFilterChange = (filterType: string, value: any) => {
+    setCurrentPage(1); // Reset to first page when filters change
+    setSelectedTicketId(null); // Clear selection
+    
+    const updates: Record<string, string | number | null> = { page: 1, ticket: null };
+    
+    switch (filterType) {
+      case 'status':
+        setStatusFilter(value);
+        updates.status = value;
+        break;
+      case 'priority':
+        setPriorityFilter(value);
+        updates.priority = value;
+        break;
+      case 'category':
+        setCategoryFilter(value);
+        updates.category = value;
+        break;
+      case 'quote':
+        setQuoteFilter(value);
+        updates.quote = value;
+        break;
+      case 'search':
+        setSearchInput(value);
+        updates.search = value;
+        break;
+    }
+    
+    updateURL(updates);
+  };
 
   const handleTicketClick = (ticketId: string) => {
     setSelectedTicketId(ticketId);
+    updateURL({ ticket: ticketId });
   };
 
   const handleBackToList = () => {
     setSelectedTicketId(null);
+    updateURL({ ticket: null });
+  };
+
+  // Handle view mode changes
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    updateURL({ view: mode });
+  };
+
+  // Get current pagination data
+  const pagination = paginatedData?.pagination || {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
   };
 
   return (
@@ -1085,7 +1198,7 @@ export const AdminTicketDashboard = () => {
             {/* View Mode Toggle */}
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
               <button
-                onClick={() => setViewMode('table')}
+                onClick={() => handleViewModeChange('table')}
                 className={`p-2 transition-colors ${
                   viewMode === 'table' 
                     ? 'bg-blue-500 text-white' 
@@ -1096,7 +1209,7 @@ export const AdminTicketDashboard = () => {
                 <List className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setViewMode('card')}
+                onClick={() => handleViewModeChange('card')}
                 className={`p-2 transition-colors ${
                   viewMode === 'card' 
                     ? 'bg-blue-500 text-white' 
@@ -1107,7 +1220,7 @@ export const AdminTicketDashboard = () => {
                 <Grid3X3 className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setViewMode('kanban')}
+                onClick={() => handleViewModeChange('kanban')}
                 className={`p-2 transition-colors ${
                   viewMode === 'kanban' 
                     ? 'bg-blue-500 text-white' 
@@ -1130,18 +1243,18 @@ export const AdminTicketDashboard = () => {
       {/* Inline Filters Toolbar */}
       <InlineFilters
         searchInput={searchInput}
-        onSearchChange={setSearchInput}
+        onSearchChange={(value) => handleFilterChange('search', value)}
         statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
+        onStatusChange={(value) => handleFilterChange('status', value)}
         priorityFilter={priorityFilter}
-        onPriorityChange={setPriorityFilter}
+        onPriorityChange={(value) => handleFilterChange('priority', value)}
         categoryFilter={categoryFilter}
-        onCategoryChange={setCategoryFilter}
+        onCategoryChange={(value) => handleFilterChange('category', value)}
         quoteFilter={quoteFilter}
-        onQuoteChange={setQuoteFilter}
-        totalTickets={tickets.length}
+        onQuoteChange={(value) => handleFilterChange('quote', value)}
+        totalTickets={pagination.total}
         filteredCount={filteredTickets.length}
-        tickets={tickets}
+        tickets={paginatedData?.tickets || []}
       />
 
       {/* Enhanced Three-Panel Layout with Dynamic Sizing */}
@@ -1165,11 +1278,11 @@ export const AdminTicketDashboard = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No tickets found</h3>
               <p className="text-gray-500 max-w-sm mx-auto">
-                {tickets.length === 0
+                {pagination.total === 0
                   ? 'All caught up! No support tickets need your attention right now.'
                   : 'Try adjusting your search criteria or filters to find what you\'re looking for.'}
               </p>
-              {tickets.length === 0 && (
+              {pagination.total === 0 && (
                 <div className="mt-6">
                   <div className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
                     🎉 Great job keeping up with customer support!
@@ -1233,6 +1346,21 @@ export const AdminTicketDashboard = () => {
                     adminUsers={adminUsers}
                   />
                 </div>
+              )}
+
+              {/* Pagination Controls - Only show for table and card view */}
+              {(viewMode === 'table' || viewMode === 'card') && pagination.total > 0 && (
+                <TicketPaginationControls
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  pageSize={pagination.pageSize}
+                  total={pagination.total}
+                  hasNext={pagination.hasNext}
+                  hasPrev={pagination.hasPrev}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                  isLoading={isLoading}
+                />
               )}
             </>
           )}

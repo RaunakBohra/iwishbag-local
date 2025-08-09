@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useSearchParams } from 'react-router-dom';
+import { useQuotesPaginated } from '@/hooks/useQuotes';
 import { CompactQuoteListItem } from '@/components/admin/CompactQuoteListItem';
 import { CompactQuoteMetrics } from '@/components/admin/CompactQuoteMetrics';
 import { BatchProcessingModal } from '@/components/admin/BatchProcessingModal';
+import { QuotePaginationControls } from '@/components/admin/QuotePaginationControls';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,78 +16,52 @@ import { useBatchProcessing } from '@/hooks/useBatchProcessing';
 
 const QuotesListPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  const [searchTerm, setSearchTerm] = useState('');
+  // Initialize state from URL parameters
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [reviewSectionExpanded, setReviewSectionExpanded] = useState(true);
   const [showBatchModal, setShowBatchModal] = useState(false);
+  
+  // Pagination state from URL
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 25);
   
   // Batch processing hook
   const batchProcessing = useBatchProcessing();
 
-  // Fetch all quotes without any status filtering
-  const { data: quotes = [], isLoading, refetch } = useQuery({
-    queryKey: ['admin-quotes-list', searchTerm],
-    queryFn: async () => {
-      let query = supabase
-        .from('quotes_v2')
-        .select(`
-          *
-        `)
-        .order('created_at', { ascending: false })
-        .limit(200); // Increased limit to show more quotes
-
-      // Apply search filter only - V2 uses different fields
-      if (searchTerm) {
-        query = query.or(`id.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+  // Function to update URL parameters
+  const updateURL = (updates: Record<string, string | number | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || (key === 'page' && value === 1) || (key === 'pageSize' && value === 25)) {
+        // Remove default values from URL to keep it clean
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value.toString());
       }
+    });
+    
+    setSearchParams(newParams, { replace: true });
+  };
 
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      // Map V2 quotes to UnifiedQuote format for compatibility
-      const mappedQuotes = (data || []).map(quote => {
-        // Calculate expiry status
-        const getExpiryStatus = (expiresAt: string | null) => {
-          if (!expiresAt) return null;
-          
-          const now = new Date();
-          const expiry = new Date(expiresAt);
-          const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (daysLeft < 0) {
-            return { status: 'expired', text: 'Expired', variant: 'destructive' };
-          } else if (daysLeft <= 1) {
-            return { status: 'expiring', text: 'Expires today', variant: 'destructive' };
-          } else if (daysLeft <= 3) {
-            return { status: 'expiring-soon', text: `${daysLeft} days left`, variant: 'secondary' };
-          } else {
-            return { status: 'valid', text: `${daysLeft} days left`, variant: 'outline' };
-          }
-        };
+  // Build filters for the paginated query
+  const filters = {
+    search: searchTerm || undefined,
+  };
 
-        return {
-          ...quote,
-          final_total_origincurrency: quote.total_quote_origincurrency || 0,
-          costprice_total_quote_origincurrency: quote.items?.reduce((sum: number, item: any) => 
-            sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
-          customer_data: {
-            info: {
-              name: quote.customer_name,
-              email: quote.customer_email,
-              phone: quote.customer_phone,
-            }
-          },
-          // Add expiry info for display
-          expiry_status: getExpiryStatus(quote.expires_at),
-          has_share_token: !!quote.share_token,
-          email_sent: quote.email_sent || false,
-        };
-      });
-      
-      return mappedQuotes;
-    },
-    staleTime: 30000, // 30 seconds
-  });
+  // Fetch paginated quotes
+  const { data: paginatedData, isLoading, refetch } = useQuotesPaginated(filters, currentPage, pageSize);
+  const quotes = paginatedData?.data || [];
+  const pagination = paginatedData?.pagination || {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  };
 
   // Calculate metrics and organize quotes by priority
   const safeQuotes = quotes || [];
@@ -142,7 +117,7 @@ const QuotesListPage: React.FC = () => {
   };
   
   const metrics = {
-    total: safeQuotes.length,
+    total: pagination.total, // Use total from pagination, not current page data
     under_review: safeQuotes.filter(q => q.status === 'under_review').length,
     pending: safeQuotes.filter(q => q.status === 'pending').length,
     sent: safeQuotes.filter(q => q.status === 'sent').length,
@@ -150,6 +125,25 @@ const QuotesListPage: React.FC = () => {
     paid: safeQuotes.filter(q => q.status === 'paid').length,
     completed: safeQuotes.filter(q => q.status === 'completed').length,
     totalValue: safeQuotes.reduce((sum, q) => sum + (q.final_total_origincurrency || 0), 0),
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateURL({ page });
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+    updateURL({ pageSize: newPageSize, page: 1 });
+  };
+
+  // Search handler
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+    updateURL({ search: value, page: 1 });
   };
 
   // Count quotes that need batch processing
@@ -207,7 +201,7 @@ const QuotesListPage: React.FC = () => {
                   <Input
                     placeholder="Search by tracking ID or email..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10"
                   />
                 </div>
@@ -249,7 +243,7 @@ const QuotesListPage: React.FC = () => {
             Loading quotes...
           </CardContent>
         </Card>
-      ) : safeQuotes.length === 0 ? (
+      ) : pagination.total === 0 ? (
         <Card className="w-full">
           <CardContent className="p-8 text-center text-muted-foreground">
             No quotes found
@@ -340,7 +334,7 @@ const QuotesListPage: React.FC = () => {
                   <p className="text-sm text-gray-600">Complete list of quotes sorted by priority</p>
                 </div>
                 <Badge variant="outline" className="text-lg px-3 py-1">
-                  {safeQuotes.length} Total
+                  {pagination.total} Total
                 </Badge>
               </div>
             </CardHeader>
@@ -355,6 +349,21 @@ const QuotesListPage: React.FC = () => {
                 ))}
               </div>
             </CardContent>
+            
+            {/* Pagination Controls */}
+            {pagination.total > 0 && (
+              <QuotePaginationControls
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                pageSize={pagination.pageSize}
+                total={pagination.total}
+                hasNext={pagination.hasNext}
+                hasPrev={pagination.hasPrev}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                isLoading={isLoading}
+              />
+            )}
           </Card>
         </div>
       )}

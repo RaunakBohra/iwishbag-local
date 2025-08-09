@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useCustomerOrdersPaginated } from '@/hooks/useOrders';
+import { CustomerPaginationControls } from '@/components/ui/CustomerPaginationControls';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { Database } from '@/types/database';
 import {
   Package,
   Search,
@@ -20,64 +19,75 @@ import {
   CheckCircle,
   Truck
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-type CustomerOrder = Database['public']['Tables']['orders']['Row'] & {
-  order_items?: Database['public']['Tables']['order_items']['Row'][];
-  order_shipments?: Database['public']['Tables']['order_shipments']['Row'][];
-};
 
 const CustomerOrderList = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Fetch customer's orders
-  const { data: orders, isLoading, error } = useQuery({
-    queryKey: ['customer-orders', user?.id, searchTerm, statusFilter],
-    queryFn: async () => {
-      if (!user) return [];
+  // Initialize state from URL parameters
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 20);
 
-      let query = supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            product_name,
-            quantity,
-            current_price,
-            item_status
-          ),
-          order_shipments (
-            id,
-            shipment_number,
-            current_status,
-            estimated_weight_kg
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+  // Function to update URL parameters
+  const updateURL = (updates: Record<string, string | number | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || value === 'all' || (key === 'page' && value === 1) || (key === 'pageSize' && value === 20)) {
+        // Remove default values from URL to keep it clean
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value.toString());
       }
+    });
+    
+    setSearchParams(newParams, { replace: true });
+  };
 
-      // Apply search
-      if (searchTerm) {
-        query = query.or(`order_number.ilike.%${searchTerm}%`);
-      }
+  // Build filters for the paginated query
+  const filters = {
+    search: searchTerm || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  };
 
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      return data as CustomerOrder[];
-    },
-    enabled: !!user,
-    staleTime: 30000, // 30 seconds
-  });
+  // Fetch paginated orders
+  const { data: paginatedData, isLoading, error } = useCustomerOrdersPaginated(filters, currentPage, pageSize);
+  const orders = paginatedData?.data || [];
+  const pagination = paginatedData?.pagination || {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateURL({ page });
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    updateURL({ pageSize: newPageSize, page: 1 });
+  };
+
+  // Search and filter handlers
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+    updateURL({ search: value, page: 1 });
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+    updateURL({ status: value, page: 1 });
+  };
 
   // Get status badge variant
   const getStatusBadgeVariant = (status: string) => {
@@ -158,13 +168,13 @@ const CustomerOrderList = () => {
                 <Input
                   placeholder="Search orders by number..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
             <div className="sm:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -189,7 +199,7 @@ const CustomerOrderList = () => {
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-gray-400" />
           <p className="text-gray-500">Loading your orders...</p>
         </div>
-      ) : !orders || orders.length === 0 ? (
+      ) : orders.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -320,6 +330,22 @@ const CustomerOrderList = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Pagination Controls */}
+      {pagination.total > 0 && (
+        <CustomerPaginationControls
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          pageSize={pagination.pageSize}
+          total={pagination.total}
+          hasNext={pagination.hasNext}
+          hasPrev={pagination.hasPrev}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          isLoading={isLoading}
+          itemType="orders"
+        />
       )}
     </div>
   );

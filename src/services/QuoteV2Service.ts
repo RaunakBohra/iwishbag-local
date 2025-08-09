@@ -23,6 +23,278 @@ export class QuoteV2Service {
   // Core CRUD Operations
   // ============================================================================
 
+  /**
+   * Get paginated quotes for admin dashboard with filtering and sorting
+   */
+  async getQuotesPaginated(filters?: {
+    search?: string;
+    status?: string | string[];
+    origin_country?: string;
+    destination_country?: string;
+    date_range?: { start: string; end: string };
+  }, page: number = 1, pageSize: number = 25): Promise<{
+    data: QuoteV2[];
+    pagination: {
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      const offset = (page - 1) * pageSize;
+      
+      console.log('📋 Fetching paginated quotes:', { filters, page, pageSize });
+
+      // Build base query with count
+      let query = supabase
+        .from('quotes_v2')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      // Apply filters
+      if (filters) {
+        // Search filter
+        if (filters.search && filters.search.trim()) {
+          const searchTerm = filters.search.trim();
+          query = query.or(`id.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,quote_number.ilike.%${searchTerm}%`);
+        }
+
+        // Status filter
+        if (filters.status) {
+          if (Array.isArray(filters.status)) {
+            query = query.in('status', filters.status);
+          } else {
+            query = query.eq('status', filters.status);
+          }
+        }
+
+        // Country filters
+        if (filters.origin_country) {
+          query = query.eq('origin_country', filters.origin_country);
+        }
+
+        if (filters.destination_country) {
+          query = query.eq('destination_country', filters.destination_country);
+        }
+
+        // Date range filter
+        if (filters.date_range) {
+          query = query
+            .gte('created_at', filters.date_range.start)
+            .lte('created_at', filters.date_range.end);
+        }
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching paginated quotes:', error);
+        throw error;
+      }
+
+      const total = count || 0;
+      const totalPages = Math.ceil(total / pageSize);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      // Map V2 quotes to include enhanced display data
+      const enhancedQuotes = (data || []).map(quote => this.enhanceQuoteForDisplay(quote));
+
+      const result = {
+        data: enhancedQuotes,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages,
+          hasNext,
+          hasPrev,
+        },
+      };
+
+      console.log(`✅ Fetched ${enhancedQuotes.length} quotes (page ${page}/${totalPages}, total: ${total})`);
+      return result;
+    } catch (error) {
+      console.error('❌ Exception in getQuotesPaginated:', error);
+      return {
+        data: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
+  }
+
+  /**
+   * Enhance quote with display data (expiry status, etc.)
+   */
+  private enhanceQuoteForDisplay(quote: any) {
+    // Calculate expiry status
+    const getExpiryStatus = (expiresAt: string | null) => {
+      if (!expiresAt) return null;
+      
+      const now = new Date();
+      const expiry = new Date(expiresAt);
+      const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysLeft < 0) {
+        return { status: 'expired', text: 'Expired', variant: 'destructive' };
+      } else if (daysLeft <= 1) {
+        return { status: 'expiring', text: 'Expires today', variant: 'destructive' };
+      } else if (daysLeft <= 3) {
+        return { status: 'expiring-soon', text: `${daysLeft} days left`, variant: 'secondary' };
+      } else {
+        return { status: 'valid', text: `${daysLeft} days left`, variant: 'outline' };
+      }
+    };
+
+    return {
+      ...quote,
+      final_total_origincurrency: quote.total_quote_origincurrency || 0,
+      costprice_total_quote_origincurrency: quote.items?.reduce((sum: number, item: any) => 
+        sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
+      customer_data: {
+        info: {
+          name: quote.customer_name,
+          email: quote.customer_email,
+          phone: quote.customer_phone,
+        }
+      },
+      // Add expiry info for display
+      expiry_status: getExpiryStatus(quote.expires_at),
+      has_share_token: !!quote.share_token,
+      email_sent: quote.email_sent || false,
+    };
+  }
+
+  /**
+   * Get paginated quotes for customer dashboard (user-facing)
+   */
+  async getCustomerQuotesPaginated(filters?: {
+    search?: string;
+    status?: string | string[];
+  }, page: number = 1, pageSize: number = 20): Promise<{
+    data: QuoteV2[];
+    pagination: {
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      const offset = (page - 1) * pageSize;
+      
+      console.log('📋 Fetching customer paginated quotes:', { filters, page, pageSize });
+
+      // Build base query with count - RLS will automatically filter to user's quotes
+      let query = supabase
+        .from('quotes_v2')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      // Apply filters
+      if (filters) {
+        // Search filter - customer can search by quote number and customer name
+        if (filters.search && filters.search.trim()) {
+          const searchTerm = filters.search.trim();
+          query = query.or(`quote_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,destination_country.ilike.%${searchTerm}%`);
+        }
+
+        // Status filter
+        if (filters.status && filters.status !== 'all') {
+          if (Array.isArray(filters.status)) {
+            query = query.in('status', filters.status);
+          } else {
+            query = query.eq('status', filters.status);
+          }
+        }
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching customer paginated quotes:', error);
+        throw error;
+      }
+
+      const total = count || 0;
+      const totalPages = Math.ceil(total / pageSize);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      // Map V2 quotes to include enhanced display data
+      const enhancedQuotes = (data || []).map(quote => this.enhanceQuoteForDisplay(quote));
+
+      const result = {
+        data: enhancedQuotes,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages,
+          hasNext,
+          hasPrev,
+        },
+      };
+
+      console.log(`✅ Fetched ${enhancedQuotes.length} customer quotes (page ${page}/${totalPages}, total: ${total})`);
+      return result;
+    } catch (error) {
+      console.error('❌ Exception in getCustomerQuotesPaginated:', error);
+      return {
+        data: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
+  }
+
+  /**
+   * Get quote by ID
+   */
+  async getQuoteById(quoteId: string): Promise<QuoteV2 | null> {
+    try {
+      console.log('🔍 Fetching quote by ID:', quoteId);
+
+      const { data, error } = await supabase
+        .from('quotes_v2')
+        .select('*')
+        .eq('id', quoteId)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching quote:', error);
+        return null;
+      }
+
+      const enhancedQuote = this.enhanceQuoteForDisplay(data);
+      console.log('✅ Quote fetched successfully:', quoteId);
+      return enhancedQuote as QuoteV2;
+    } catch (error) {
+      console.error('❌ Exception in getQuoteById:', error);
+      return null;
+    }
+  }
+
   async createQuote(input: CreateQuoteV2Input): Promise<QuoteV2> {
     try {
       // For testing, create a simplified quote

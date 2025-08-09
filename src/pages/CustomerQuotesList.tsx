@@ -1,5 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCustomerQuotesPaginated } from '@/hooks/useQuotes';
+import { CustomerPaginationControls } from '@/components/ui/CustomerPaginationControls';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +14,6 @@ import {
   Plus,
   ArrowRight
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -46,33 +47,71 @@ const CurrencyDisplay = memo<{ amount: number; quote: any; fallback?: string }>(
 export default function CustomerQuotesList() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [quotes, setQuotes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => {
-    if (user) {
-      fetchQuotes();
-    }
-  }, [user]);
+  // Initialize state from URL parameters
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 20);
 
-  const fetchQuotes = async () => {
-    try {
-      // Fetch quotes for the current user
-      // The RLS policies will automatically filter by customer_id = auth.uid() OR customer_email = auth.email
-      const { data, error } = await supabase
-        .from('quotes_v2')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+  // Function to update URL parameters
+  const updateURL = (updates: Record<string, string | number | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || value === 'all' || (key === 'page' && value === 1) || (key === 'pageSize' && value === 20)) {
+        // Remove default values from URL to keep it clean
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value.toString());
+      }
+    });
+    
+    setSearchParams(newParams, { replace: true });
+  };
 
-      if (error) throw error;
-      setQuotes(data || []);
-    } catch (error) {
-      console.error('Error fetching quotes:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Build filters for the paginated query
+  const filters = {
+    search: searchTerm || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  };
+
+  // Fetch paginated quotes
+  const { data: paginatedData, isLoading: loading, refetch } = useCustomerQuotesPaginated(filters, currentPage, pageSize);
+  const quotes = paginatedData?.data || [];
+  const pagination = paginatedData?.pagination || {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateURL({ page });
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    updateURL({ pageSize: newPageSize, page: 1 });
+  };
+
+  // Search and filter handlers
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+    updateURL({ search: value, page: 1 });
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+    updateURL({ status: value, page: 1 });
   };
 
   const getStatusBadge = (status: string) => {
@@ -94,11 +133,7 @@ export default function CustomerQuotesList() {
     );
   };
 
-  const filteredQuotes = quotes.filter(quote => 
-    quote.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    quote.quote_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    quote.items?.[0]?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Quotes are already filtered by the backend via the paginated query
 
   if (loading) {
     return (
@@ -117,17 +152,35 @@ export default function CustomerQuotesList() {
           <p className="text-muted-foreground">View and manage your international shipping quotes</p>
         </div>
 
-        {/* Search and Actions */}
+        {/* Search, Filter and Actions */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search quotes by product name or quote number..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10"
             />
           </div>
+          
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Status:</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="all">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          
           <Button onClick={() => navigate('/quote')}>
             <Plus className="w-4 h-4 mr-2" />
             New Quote
@@ -136,7 +189,7 @@ export default function CustomerQuotesList() {
 
         {/* Quotes Grid */}
         <div className="grid gap-6">
-          {filteredQuotes.length === 0 ? (
+          {quotes.length === 0 ? (
             <Card>
               <CardContent className="py-16 text-center">
                 <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -153,7 +206,7 @@ export default function CustomerQuotesList() {
               </CardContent>
             </Card>
           ) : (
-            filteredQuotes.map((quote) => (
+            quotes.map((quote) => (
               <Card key={quote.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -263,11 +316,20 @@ export default function CustomerQuotesList() {
           )}
         </div>
 
-        {/* Load More - if needed */}
-        {filteredQuotes.length >= 50 && (
-          <div className="text-center mt-8">
-            <Button variant="outline">Load More Quotes</Button>
-          </div>
+        {/* Pagination Controls */}
+        {pagination.total > 0 && (
+          <CustomerPaginationControls
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            hasNext={pagination.hasNext}
+            hasPrev={pagination.hasPrev}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            isLoading={loading}
+            itemType="quotes"
+          />
         )}
       </div>
     </div>

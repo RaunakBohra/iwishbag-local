@@ -351,7 +351,7 @@ class TicketService {
   }
 
   /**
-   * Get all tickets for admin with filtering and sorting
+   * Get all tickets for admin with filtering and sorting (legacy method - use getAdminTicketsPaginated for better performance)
    */
   async getAdminTickets(
     filters?: TicketFilters,
@@ -454,6 +454,29 @@ class TicketService {
             }
           }
           
+          // Fetch assigned user profile if ticket is assigned
+          const assignedUserId = baseTicket.assigned_to;
+          if (assignedUserId) {
+            try {
+              const { data: assignedProfile } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .eq('id', assignedUserId)
+                .single();
+              
+              if (assignedProfile) {
+                baseTicket.assigned_to_profile = {
+                  id: assignedProfile.id,
+                  full_name: assignedProfile.full_name,
+                  email: assignedProfile.email,
+                };
+                console.log(`✅ Fetched assigned user profile for ticket ${record.id}:`, assignedProfile.full_name || assignedProfile.email);
+              }
+            } catch (error) {
+              console.warn('Failed to fetch assigned user profile for ticket:', record.id);
+            }
+          }
+          
           return baseTicket;
         })
       );
@@ -477,6 +500,186 @@ class TicketService {
     } catch (error) {
       console.error('❌ Exception in getAdminTickets:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get paginated admin tickets with metadata for optimal performance
+   */
+  async getAdminTicketsPaginated(
+    filters?: TicketFilters,
+    sort?: TicketSortOptions,
+    page: number = 1,
+    pageSize: number = 25,
+  ): Promise<{
+    tickets: TicketWithDetails[];
+    pagination: {
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    try {
+      console.log('👨‍💼 Fetching paginated admin tickets:', { filters, sort, page, pageSize });
+
+      // Use unified support engine to get paginated tickets
+      const result = await unifiedSupportEngine.getTicketsWithPagination(filters || {}, undefined, page, pageSize);
+
+      if (!result.data || result.data.length === 0) {
+        console.log('✅ No paginated admin tickets found');
+        return {
+          tickets: [],
+          pagination: result.pagination,
+        };
+      }
+
+      // Transform to legacy format with user profiles and quotes
+      const tickets = await Promise.all(
+        result.data.map(async (record) => {
+          const baseTicket = this.transformToLegacyTicketWithDetails(record);
+          
+          // Fetch user profile separately with phone from secure function
+          if (record.user_id) {
+            try {
+              // Get profile data
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, country, preferred_display_currency, created_at')
+                .eq('id', record.user_id)
+                .single();
+                
+              // Get phone using secure database function
+              const { data: phoneData } = await supabase
+                .rpc('get_user_phone', { user_uuid: record.user_id });
+              
+              if (profileError) {
+                console.warn('Profile query error for paginated ticket:', record.id, profileError);
+              }
+              
+              if (profile) {
+                // Combine profile data with phone from secure function
+                baseTicket.user_profile = {
+                  ...profile,
+                  phone: phoneData || null
+                };
+              } else {
+                console.warn('❌ No profile found for user_id in paginated ticket:', record.user_id, 'ticket:', record.id);
+              }
+            } catch (error) {
+              console.error('❌ Exception fetching user profile for paginated ticket:', record.id, error);
+            }
+          } else {
+            // Handle system-generated tickets without users gracefully
+            console.log('ℹ️ System ticket without user_id (paginated):', record.id, 'subject:', record.ticket_data?.subject || 'Unknown');
+            baseTicket.user_profile = null;
+          }
+          
+          // Fetch quote separately if it exists
+          if (record.quote_id) {
+            try {
+              const { data: quote } = await supabase
+                .from('quotes_v2')
+                .select(`
+                  id,
+                  quote_number,
+                  destination_country,
+                  origin_country,
+                  status,
+                  final_total_origincurrency,
+                  items,
+                  customer_email,
+                  customer_name,
+                  created_at
+                `)
+                .eq('id', record.quote_id)
+                .single();
+              
+              if (quote) {
+                baseTicket.quote = {
+                  id: quote.id,
+                  display_id: quote.quote_number,
+                  destination_country: quote.destination_country,
+                  origin_country: quote.origin_country,
+                  status: quote.status,
+                  final_total_origincurrency: quote.final_total_origincurrency,
+                  iwish_tracking_id: null,
+                  tracking_status: null,
+                  estimated_delivery_date: null,
+                  created_at: quote.created_at,
+                  items: quote.items,
+                  customer_data: {
+                    email: quote.customer_email,
+                    name: quote.customer_name
+                  }
+                };
+              }
+            } catch (error) {
+              console.warn('Failed to fetch quote for paginated ticket:', record.id);
+            }
+          }
+          
+          // Fetch assigned user profile if ticket is assigned
+          const assignedUserId = baseTicket.assigned_to;
+          if (assignedUserId) {
+            try {
+              const { data: assignedProfile } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .eq('id', assignedUserId)
+                .single();
+              
+              if (assignedProfile) {
+                baseTicket.assigned_to_profile = {
+                  id: assignedProfile.id,
+                  full_name: assignedProfile.full_name,
+                  email: assignedProfile.email,
+                };
+                console.log(`✅ Fetched assigned user profile for ticket ${record.id}:`, assignedProfile.full_name || assignedProfile.email);
+              }
+            } catch (error) {
+              console.warn('Failed to fetch assigned user profile for ticket:', record.id);
+            }
+          }
+          
+          return baseTicket;
+        })
+      );
+
+      // Apply sorting if specified (simple implementation)
+      if (sort) {
+        tickets.sort((a, b) => {
+          const aValue = a[sort.field as keyof TicketWithDetails] as any;
+          const bValue = b[sort.field as keyof TicketWithDetails] as any;
+
+          if (sort.direction === 'asc') {
+            return aValue > bValue ? 1 : -1;
+          } else {
+            return aValue < bValue ? 1 : -1;
+          }
+        });
+      }
+
+      console.log(`✅ Fetched ${tickets.length} paginated admin tickets (page ${page}/${result.pagination.totalPages})`);
+      return {
+        tickets,
+        pagination: result.pagination,
+      };
+    } catch (error) {
+      console.error('❌ Exception in getAdminTicketsPaginated:', error);
+      return {
+        tickets: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
     }
   }
 
@@ -576,6 +779,29 @@ class TicketService {
           }
         } catch (error) {
           console.warn('Failed to fetch quote for ticket detail:', ticketId);
+        }
+      }
+
+      // Fetch assigned user profile if ticket is assigned
+      const assignedUserId = ticket.assigned_to;
+      if (assignedUserId) {
+        try {
+          const { data: assignedProfile } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .eq('id', assignedUserId)
+            .single();
+          
+          if (assignedProfile) {
+            ticket.assigned_to_profile = {
+              id: assignedProfile.id,
+              full_name: assignedProfile.full_name,
+              email: assignedProfile.email,
+            };
+            console.log(`✅ Fetched assigned user profile for ticket detail ${ticketId}:`, assignedProfile.full_name || assignedProfile.email);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch assigned user profile for ticket detail:', ticketId);
         }
       }
 
