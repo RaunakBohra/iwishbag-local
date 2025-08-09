@@ -18,6 +18,10 @@ import { usePaymentMonitoring } from '@/hooks/usePaymentMonitoring';
 import { PaymentErrorCode } from '@/services/PaymentMonitoringService';
 import { logInfo, logError, LogCategory } from '@/services/LoggingService';
 
+// Throttle logging to prevent spam
+const logThrottle = new Map<string, number>();
+const THROTTLE_MS = 30000; // 30 seconds - increased to prevent excessive logging
+
 // Payment method display configurations
 const PAYMENT_METHOD_DISPLAYS: Record<PaymentGateway, PaymentMethodDisplay> = {
   stripe: {
@@ -1047,12 +1051,19 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           countrySettings?.default_gateway &&
           availableMethods.includes(countrySettings.default_gateway)
         ) {
-          console.log(
-            '✅ Using country-specific default gateway:',
-            countrySettings.default_gateway,
-            'for',
-            targetCountry,
-          );
+          const logKey = `payment_gateway_${targetCountry}_${countrySettings.default_gateway}`;
+          const now = Date.now();
+          const lastLog = logThrottle.get(logKey) || 0;
+          
+          if (now - lastLog > THROTTLE_MS) {
+            console.log(
+              '✅ Using country-specific default gateway:',
+              countrySettings.default_gateway,
+              'for',
+              targetCountry,
+            );
+            logThrottle.set(logKey, now);
+          }
           return countrySettings.default_gateway;
         }
 

@@ -100,21 +100,33 @@ class AddonServicesServiceClass {
         service.is_active
       );
 
-      // 3. Get pricing for all applicable services with timeout
-      const pricingPromise = regionalPricingService.calculatePricing({
-        service_keys: applicableServices.map(s => s.service_key),
-        country_code: eligibility.country_code,
-        order_value: eligibility.order_value,
-        currency_code,
-        use_cache: true
-      });
-      
-      const pricingResult = await Promise.race([
-        pricingPromise,
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout calculating pricing')), 5000)
-        )
-      ]);
+      // 3. Get pricing for all applicable services with timeout - skip if no services
+      let pricingResult;
+      if (applicableServices.length === 0) {
+        logger.debug('[AddonServices] No applicable services found, skipping pricing calculation');
+        pricingResult = {
+          success: true,
+          calculations: [],
+          total_addon_cost: 0,
+          currency_code,
+          country_code: eligibility.country_code
+        };
+      } else {
+        const pricingPromise = regionalPricingService.calculatePricing({
+          service_keys: applicableServices.map(s => s.service_key),
+          country_code: eligibility.country_code,
+          order_value: eligibility.order_value,
+          currency_code,
+          use_cache: true
+        });
+        
+        pricingResult = await Promise.race([
+          pricingPromise,
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout calculating pricing')), 5000)
+          )
+        ]);
+      }
 
       if (!pricingResult.success) {
         throw new Error(pricingResult.error || 'Pricing calculation failed');

@@ -88,6 +88,7 @@ export interface CountryPricingInfo {
 class RegionalPricingServiceClass {
   private static instance: RegionalPricingServiceClass;
   private cache = new Map<string, { data: any; expires: number }>();
+  private logThrottle = new Map<string, number>();
   private readonly CACHE_DURATION = 60 * 60 * 1000; // 1 hour
   private globalConfig: {
     default_rate: number;
@@ -266,6 +267,27 @@ class RegionalPricingServiceClass {
    * Calculate pricing for multiple services and a specific country
    */
   async calculatePricing(request: PricingRequest): Promise<PricingResponse> {
+    // Early return for empty service lists to avoid unnecessary processing
+    if (!request.service_keys || request.service_keys.length === 0) {
+      // Throttled logging for empty service calls to prevent spam
+      const logKey = `empty_services_${request.country_code}`;
+      const now = Date.now();
+      const lastLog = this.logThrottle.get(logKey) || 0;
+      if (now - lastLog > 30000) { // Log at most every 30 seconds
+        logger.debug('[RegionalPricing] No services to calculate, returning empty response');
+        this.logThrottle.set(logKey, now);
+      }
+      
+      return {
+        success: true,
+        calculations: [],
+        total_addon_cost: 0,
+        currency_code: request.currency_code || 'USD',
+        country_code: request.country_code?.toUpperCase() || 'US',
+        cache_hit_rate: 100
+      };
+    }
+
     const startTime = Date.now();
     const operationId = `pricing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     let cacheHits = 0;
@@ -530,15 +552,16 @@ class RegionalPricingServiceClass {
       return null;
     }
 
+    const currentDate = new Date().toISOString();
     const { data, error } = await supabase
       .from('country_pricing_overrides')
       .select('*')
       .eq('service_id', service_id)
       .eq('country_code', country_code)
       .eq('is_active', true)
-      .lte('effective_from', new Date().toISOString())
-      .or('effective_until.is.null,effective_until.gt.' + new Date().toISOString())
-      .single();
+      .lte('effective_from', currentDate)
+      .or(`effective_until.is.null,effective_until.gt.${currentDate}`)
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
       logger.error('Error fetching country override:', error);
@@ -564,7 +587,7 @@ class RegionalPricingServiceClass {
       .eq('is_active', true)
       .order('priority', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       logger.error('Error fetching regional pricing:', error);
@@ -615,7 +638,7 @@ class RegionalPricingServiceClass {
       .eq('service_id', service_id)
       .eq('continent', countryInfo.continent)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       logger.error('Error fetching continental pricing:', error);

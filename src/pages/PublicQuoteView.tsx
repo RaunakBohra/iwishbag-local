@@ -295,6 +295,19 @@ export default function PublicQuoteView() {
                       <span>Weight: {item.weight}kg</span>
                       <span>Price: {formatCurrency(item.unit_price_origin || item.costprice_origin, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
                     </div>
+                    {item.customer_notes && (
+                      <div className="flex items-start gap-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                          </svg>
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium text-blue-800">Your note:</span>
+                          <p className="text-blue-700 mt-1">{item.customer_notes}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -372,7 +385,6 @@ export default function PublicQuoteView() {
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
                   total_quote_origincurrency: quote.total_quote_origincurrency,
-                  total_quote_origincurrency: quote.total_quote_origincurrency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,
@@ -394,7 +406,6 @@ export default function PublicQuoteView() {
                   customer_phone: quote.customer_phone,
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
-                  total_quote_origincurrency: quote.total_quote_origincurrency,
                   total_quote_origincurrency: quote.total_quote_origincurrency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,

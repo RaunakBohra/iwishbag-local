@@ -197,7 +197,6 @@ export class CheckoutService {
         // Shipping costs
         const shippingCost = (
           (quoteCalculation.discounted_shipping_cost || quoteCalculation.shipping_cost || 0) +
-          (quoteCalculation.insurance_amount || 0) +
           (quoteCalculation.discounted_delivery || quoteCalculation.domestic_delivery || 0)
         ) * conversionRate;
         console.log(`[CHECKOUT SERVICE] Item ${i + 1} - Shipping cost: ${shippingCost} ${userCurrency}`);

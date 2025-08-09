@@ -170,7 +170,6 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
     local_tax_amount: 0,
     payment_gateway_fee: 0,
     total_savings: 0,
-    total_quote_origincurrency: 0,
     total_quote_origincurrency: 0
   };
   

@@ -31,6 +31,7 @@ export interface CountrySettings {
 
 class CurrencyService {
   private static instance: CurrencyService;
+  private logThrottle = new Map<string, number>();
   
   // Multi-tier caching system
   private memoryCache: Map<string, { data: any; expires: number }> = new Map();
@@ -107,7 +108,13 @@ class CurrencyService {
     // Tier 1: Memory cache (instant access)
     const memoryCached = this.memoryCache.get(key);
     if (memoryCached && Date.now() < memoryCached.expires) {
-      console.log(`[CurrencyService] Memory cache hit: ${key}`);
+      // Throttle cache hit logs to prevent spam
+      const now = Date.now();
+      const lastLog = this.logThrottle.get(key) || 0;
+      if (now - lastLog > 60000) { // Log at most every 60 seconds
+        console.log(`[CurrencyService] Memory cache hit: ${key}`);
+        this.logThrottle.set(key, now);
+      }
       return memoryCached.data;
     }
 

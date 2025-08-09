@@ -57,6 +57,14 @@ export const CompactQuoteListItem: React.FC<CompactQuoteListItemProps> = ({
           </div>
           <p className="text-sm text-gray-600">
             {quote.items?.length || 0} items • {quote.status || 'Unknown status'}
+            {quote.items?.some((item: any) => item.customer_notes) && (
+              <Badge variant="outline" className="text-xs ml-2">
+                <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Has Notes
+              </Badge>
+            )}
           </p>
           {(quote as any).expiry_status && (
             <div className="mt-2">

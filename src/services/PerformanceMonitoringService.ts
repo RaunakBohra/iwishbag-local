@@ -62,6 +62,7 @@ class PerformanceMonitoringServiceClass {
   private metrics: PerformanceMetric[] = [];
   private alerts: PerformanceAlert[] = [];
   private activeRequests = new Set<string>();
+  private logThrottle = new Map<string, number>();
   
   private readonly MAX_METRICS_STORED = 10000; // Keep last 10k metrics
   private readonly CLEANUP_INTERVAL = 60000; // Clean up every minute
@@ -147,14 +148,22 @@ class PerformanceMonitoringServiceClass {
     this.metrics.push(metric);
     this.checkAlertConditions(metric);
     
-    // Log performance data
-    logger.info(`[PerformanceMonitor] ${operation}`, {
-      duration: `${duration}ms`,
-      success,
-      cacheHit,
-      countryCode,
-      serviceKey
-    });
+    // Log performance data (throttled to avoid spam)
+    const logKey = `${operation}_${countryCode || 'unknown'}`;
+    const now = Date.now();
+    const lastLog = this.logThrottle.get(logKey) || 0;
+    const throttleMs = 30000; // Only log same operation+country combo every 30 seconds
+    
+    if (now - lastLog > throttleMs) {
+      logger.info(`[PerformanceMonitor] ${operation}`, {
+        duration: `${duration}ms`,
+        success,
+        cacheHit,
+        countryCode,
+        serviceKey
+      });
+      this.logThrottle.set(logKey, now);
+    }
   }
 
   /**

@@ -21,8 +21,6 @@ import {
   MobileTrustSignals, 
   MobileProgress
 } from './ShopifyMobileOptimizations';
-import { MobileQuoteOptions } from './MobileQuoteOptions';
-import { CustomerBreakdown } from './CustomerBreakdown';
 import { EnhancedAddonServicesSelector } from '@/components/quotes-v2/EnhancedAddonServicesSelector';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
@@ -663,17 +661,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           displayCurrency={displayCurrency}
         />
         
-        <div className="md:hidden">
-          <MobileQuoteOptions
-            quote={quote}
-            breakdown={breakdown}
-            quoteOptions={quoteOptions}
-            onOptionsChange={setQuoteOptions}
-            formatCurrency={formatCurrency}
-            onQuoteUpdate={refreshQuote}
-            displayCurrency={displayCurrency}
-          />
-        </div>
         
         <MobileBreakdown 
           quote={quote}
@@ -855,6 +842,14 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             Total: {formatCurrency(item.costprice_origin * item.quantity, getOriginCurrency(quote.origin_country))}
                           </span>
                         </div>
+                        {item.customer_notes && (
+                          <div className="flex items-start gap-2 mt-2 p-2 bg-blue-50 rounded-md">
+                            <OptimizedIcon name="MessageCircle" className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-xs text-blue-700">
+                              <span className="font-medium">Your note:</span> {item.customer_notes}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1018,13 +1013,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               )}
             </Card>
 
-            {/* Pricing Breakdown */}
-            <CustomerBreakdown 
-              quote={quote}
-              formatCurrency={formatCurrency}
-              displayCurrency={displayCurrency}
-              onTotalCalculated={handleTotalCalculated}
-            />
 
 
             {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes */}

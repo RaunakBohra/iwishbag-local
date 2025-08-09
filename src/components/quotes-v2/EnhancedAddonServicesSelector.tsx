@@ -245,11 +245,11 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
       previousSelections.current = new Map(selections);
       previousTotalCost.current = totalAddonCost;
     }
-  }, [selections, totalAddonCost]);
+  }, [selections, totalAddonCost, onSelectionChange]);
 
-  // Auto-select recommended services on load
+  // Initialize selections from recommendations (only once on mount)
   useEffect(() => {
-    if (addonData && addonData.recommendations.length > 0) {
+    if (addonData && addonData.recommendations.length > 0 && selections.size === 0) {
       const newSelections = new Map<string, AddonServiceSelection>();
       
       addonData.recommendations.forEach(rec => {
@@ -267,7 +267,7 @@ export const EnhancedAddonServicesSelector: React.FC<EnhancedAddonServicesSelect
 
       setSelections(newSelections);
     }
-  }, [addonData]);
+  }, [addonData]); // Removed selections dependency to prevent re-initialization
 
   // Handle service selection toggle
   const handleServiceToggle = useCallback((serviceKey: string, isSelected: boolean) => {

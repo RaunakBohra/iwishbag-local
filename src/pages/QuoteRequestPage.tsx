@@ -19,7 +19,7 @@ import { useCountryUnit } from '@/hooks/useCountryUnits';
 import { useUrlAutoDetection } from '@/hooks/useUrlAnalysis';
 import { useProductScraping } from '@/hooks/useProductScraping';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
-import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
+import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
 
 // Product item component to fix hooks rule violation
 interface ProductItemProps {
@@ -168,7 +168,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
               </FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="https://amazon.com/..., https://zara.com/..., https://lego.com/..." 
+                  placeholder="https://amazon.com/product-name/dp/B01234567" 
                   {...field} 
                   className={productScraping.isScraped ? 'border-green-200 bg-green-50/30' : ''}
                 />
@@ -185,14 +185,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
           name={`items.${index}.product_name`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Product Name *
-                {productScraping.isScraped && productScraping.autoFillData?.productName && (
-                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                    Auto-filled
-                  </span>
-                )}
-              </FormLabel>
+              <FormLabel>Product Name</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
@@ -212,14 +205,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
           name={`items.${index}.origin_country`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Origin Country *
-                {urlAnalysis.shouldAutoSetCountry && urlAnalysis.suggestedCountry === field.value && (
-                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                    Auto-detected
-                  </span>
-                )}
-              </FormLabel>
+              <FormLabel>Origin Country *</FormLabel>
               <Select onValueChange={field.onChange} value={field.value} disabled={loadingCountries}>
                 <FormControl>
                   <SelectTrigger>
@@ -273,14 +259,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
           name={`items.${index}.weight_kg`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Weight ({weightUnit})
-                {productScraping.isScraped && productScraping.autoFillData?.weight && (
-                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                    Auto-filled
-                  </span>
-                )}
-              </FormLabel>
+              <FormLabel>Weight ({weightUnit})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -301,14 +280,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
           name={`items.${index}.price_origin`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Price ({currency})
-                {productScraping.isScraped && productScraping.autoFillData?.price && (
-                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                    Auto-filled
-                  </span>
-                )}
-              </FormLabel>
+              <FormLabel>Price ({currency})</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -331,14 +303,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
         name={`items.${index}.notes`}
         render={({ field }) => (
           <FormItem className="mt-4">
-            <FormLabel>
-              Additional Notes
-              {urlAnalysis.category && (
-                <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                  {urlAnalysis.category}
-                </span>
-              )}
-            </FormLabel>
+            <FormLabel>Additional Notes</FormLabel>
             <FormControl>
               <Textarea 
                 placeholder={urlAnalysis.notesPlaceholder}
@@ -364,13 +329,13 @@ const createQuoteRequestSchema = (isLoggedIn: boolean) => z.object({
   customer_name: isLoggedIn ? z.string().optional() : z.string().min(2, 'Name must be at least 2 characters'),
   customer_email: isLoggedIn ? z.string().optional() : z.string().email('Please enter a valid email address'),
   customer_phone: z.string().optional(),
-  destination_country: z.string().min(1, 'Please select a destination country'),
+  destination_country: isLoggedIn ? z.string().optional() : z.string().min(1, 'Please select a delivery country'),
   delivery_address_id: isLoggedIn ? z.string().min(1, 'Please select a delivery address') : z.string().optional(),
   quote_type: z.enum(['single', 'separate'], {
     required_error: 'Please select quote type',
   }),
   items: z.array(z.object({
-    product_name: z.string().min(1, 'Product name is required'),
+    product_name: z.string().optional(),
     product_url: z.string().url().optional().or(z.literal('')),
     origin_country: z.string().min(1, 'Please select origin country'),
     quantity: z.number().min(1, 'Quantity must be at least 1'),
@@ -388,6 +353,10 @@ export default function QuoteRequestPage() {
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
   const [submittedQuoteNumber, setSubmittedQuoteNumber] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  
+  // Fetch user addresses for logged-in users
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
   
   // Country data
   const { data: purchaseCountries = [], isLoading: loadingCountries } = usePurchaseCountries();
@@ -428,6 +397,42 @@ export default function QuoteRequestPage() {
     name: 'items',
   });
 
+  // Fetch user addresses - moved after form initialization
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!user) return;
+      
+      setAddressesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('delivery_addresses')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        if (error) throw new Error(error.message);
+        setAddresses(data || []);
+        
+        // Auto-select default address
+        if (data && data.length > 0 && !selectedAddress) {
+          const defaultAddress = data.find(addr => addr.is_default) || data[0];
+          setSelectedAddress(defaultAddress);
+          form.setValue('delivery_address_id', defaultAddress.id);
+          if (defaultAddress.destination_country) {
+            form.setValue('destination_country', defaultAddress.destination_country, { shouldValidate: true });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch addresses:', error);
+      } finally {
+        setAddressesLoading(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [user]);
+
   const addNewItem = () => {
     addItem({
       product_name: '',
@@ -450,12 +455,18 @@ export default function QuoteRequestPage() {
     setIsSubmitting(true);
 
     try {
+      // For logged-in users, get destination_country from selected address
+      // For guest users, use the form selection
+      const destinationCountry = user 
+        ? (selectedAddress?.destination_country || data.destination_country || 'US')
+        : (data.destination_country || 'US');
+
       const baseQuoteData = {
         customer_email: user?.email || data.customer_email || '',
         customer_name: user?.user_metadata?.name || data.customer_name || '',
         customer_phone: user?.phone || data.customer_phone || null,
         origin_country: data.quote_type === 'single' ? data.items[0]?.origin_country || 'US' : 'US',
-        destination_country: data.destination_country,
+        destination_country: destinationCountry,
         delivery_address_id: data.delivery_address_id || null,
         status: 'draft',
         created_by: user?.id || null,
@@ -492,7 +503,6 @@ export default function QuoteRequestPage() {
           ...baseQuoteData,
           items: mappedItems,
           total_quote_origincurrency: totalAmount,
-          total_quote_origincurrency: totalAmount,
           customer_currency: customerCurrency,
         };
 
@@ -525,7 +535,6 @@ export default function QuoteRequestPage() {
             ...baseQuoteData,
             origin_country: item.origin_country, // Use item's origin country for separate quotes
             items: [mappedItem],
-            total_quote_origincurrency: itemTotal,
             total_quote_origincurrency: itemTotal,
             customer_currency: customerCurrency, // Use the same customerCurrency calculated above
           };
@@ -743,7 +752,7 @@ export default function QuoteRequestPage() {
                       name="destination_country"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Ship to Country *</FormLabel>
+                          <FormLabel>Delivery Country *</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingShippingCountries}>
                             <FormControl>
                               <SelectTrigger>
@@ -773,49 +782,6 @@ export default function QuoteRequestPage() {
               </Card>
             )}
 
-            {/* Ship to Country for logged-in users */}
-            {user && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Package className="h-5 w-5" />
-                    <span>Shipping Destination</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FormField
-                    control={form.control}
-                    name="destination_country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ship to Country *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingShippingCountries}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={loadingShippingCountries ? "Loading countries..." : "Select country"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {loadingShippingCountries ? (
-                              <SelectItem value="loading" disabled>Loading countries...</SelectItem>
-                            ) : sortedShippingCountries.length > 0 ? (
-                              sortedShippingCountries.map((country) => (
-                                <SelectItem key={country.code} value={country.code}>
-                                  {formatCountryDisplay(country, false)}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-countries" disabled>No countries available</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            )}
 
             {/* Products */}
             <Card>
@@ -895,18 +861,17 @@ export default function QuoteRequestPage() {
                       <FormItem>
                         <FormLabel>Select delivery address *</FormLabel>
                         <FormControl>
-                          <CompactAddressSelector
-                            selectedAddressId={field.value}
-                            onSelectAddress={(address) => {
+                          <CompactAddressDisplay
+                            selectedAddress={selectedAddress}
+                            onAddressChange={(address) => {
                               field.onChange(address.id);
                               setSelectedAddress(address);
                               // Auto-update destination country based on selected address
                               if (address.destination_country) {
-                                form.setValue('destination_country', address.destination_country);
+                                form.setValue('destination_country', address.destination_country, { shouldValidate: true });
                               }
                             }}
-                            showAddButton={true}
-                            className="mt-2"
+                            isLoading={addressesLoading}
                           />
                         </FormControl>
                         <FormMessage />

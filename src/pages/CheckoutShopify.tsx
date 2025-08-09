@@ -48,7 +48,7 @@ interface OrderSummary {
 const CheckoutShopify: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, clearCart } = useCart();
+  const { items, clearCart, isLoading } = useCart();
   const { displayCurrency } = useCartCurrency();
   
   // State management
@@ -94,12 +94,12 @@ const CheckoutShopify: React.FC = React.memo(() => {
     fetchAddresses();
   }, [user]);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (but only after loading is complete)
   useEffect(() => {
-    if (items.length === 0) {
+    if (!isLoading && items.length === 0) {
       navigate('/cart', { replace: true });
     }
-  }, [items.length, navigate]);
+  }, [items.length, navigate, isLoading]);
 
   // Form validation
   const isAddressValid = selectedAddress !== null;
@@ -265,6 +265,8 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 isProcessingOrder={processingOrder}
                 showPlaceOrderButton={true}
                 canPlaceOrder={canPlaceOrder}
+                selectedAddonServices={selectedAddonServices}
+                onAddonServicesChange={setSelectedAddonServices}
               />
               
               {/* Validation Messages - Mobile */}
@@ -289,6 +291,8 @@ const CheckoutShopify: React.FC = React.memo(() => {
               showPlaceOrderButton={true}
               canPlaceOrder={canPlaceOrder}
               className="hidden lg:block"
+              selectedAddonServices={selectedAddonServices}
+              onAddonServicesChange={setSelectedAddonServices}
             />
             
             {/* Validation Messages - Desktop */}

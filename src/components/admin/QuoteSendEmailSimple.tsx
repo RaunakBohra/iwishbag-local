@@ -65,13 +65,13 @@ export function QuoteSendEmailSimple({
           id: quoteData.id,
           email: quoteData.customer_email,
           customer_name: quoteData.customer_name,
-          total_amount: quoteData.total_quote_origincurrency || quoteData.total_quote_origincurrency,
+          total_amount: quoteData.total_quote_origincurrency,
           currency: quoteData.customer_currency,
           status: quoteData.status,
           share_token: quoteData.share_token,
           expires_at: quoteData.expires_at,
           // Also include the alternative field name for compatibility
-          totalAmount: quoteData.total_quote_origincurrency || quoteData.total_quote_origincurrency,
+          totalAmount: quoteData.total_quote_origincurrency,
           customerName: quoteData.customer_name,
           quoteId: quoteData.id
         };

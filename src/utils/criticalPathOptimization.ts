@@ -103,12 +103,14 @@ class CriticalPathOptimizer {
         crossOrigin: 'anonymous',
       },
       
-      // Logo and key images
-      {
-        type: 'image',
-        url: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
-        priority: 'high',
-      },
+      // Logo and key images - Only preload if actually used on page
+      // Note: This is commented out to prevent unused preload warnings
+      // Uncomment only if logo is critical for LCP on specific pages
+      // {
+      //   type: 'image',
+      //   url: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
+      //   priority: 'high',
+      // },
       
       // Core React chunk
       {
@@ -190,13 +192,32 @@ class CriticalPathOptimizer {
 
   private preloadResource(resource: CriticalResource): void {
     if (typeof document === 'undefined') return;
+    if (!resource.url || resource.url.includes('[hash]')) return; // Skip invalid URLs
 
     const existingLink = document.querySelector(`link[href="${resource.url}"]`);
     if (existingLink) return;
 
     const link = document.createElement('link');
-    link.rel = resource.type === 'css' ? 'preload' : 'modulepreload';
-    link.as = resource.type === 'css' ? 'style' : 'script';
+    link.rel = 'preload';
+    
+    // Set appropriate 'as' attribute based on resource type
+    switch (resource.type) {
+      case 'css':
+        link.as = 'style';
+        break;
+      case 'js':
+        link.as = 'script';
+        break;
+      case 'image':
+        link.as = 'image';
+        break;
+      case 'font':
+        link.as = 'font';
+        break;
+      default:
+        link.as = 'fetch';
+    }
+    
     link.href = resource.url;
 
     if (resource.crossOrigin) {
@@ -276,8 +297,15 @@ class CriticalPathOptimizer {
   }
 
   private getChunkUrl(chunkName: string): string {
-    // This would be populated with actual chunk URLs from your build
-    return `/assets/${chunkName}-[hash].js`;
+    // In development, Vite doesn't generate hashed chunks
+    if (import.meta.env.DEV) {
+      // Skip chunk preloading in development mode
+      return '';
+    }
+    
+    // In production, this would be populated with actual chunk URLs from your build
+    // For now, return empty to prevent 404 errors until proper build integration
+    return '';
   }
 
   private markChunkAsDeferred(chunkName: string): void {
@@ -452,6 +480,12 @@ export const criticalPathOptimizer = new CriticalPathOptimizer();
 // Auto-optimize on page load
 if (typeof window !== 'undefined') {
   const initializeOptimization = () => {
+    // Skip optimization in development mode to prevent 404 errors
+    if (import.meta.env.DEV) {
+      console.log('Critical path optimization disabled in development mode');
+      return;
+    }
+    
     const currentRoute = window.location.pathname;
     
     // Optimize current route immediately

@@ -671,7 +671,7 @@ export const QuoteItemsSection: React.FC<QuoteItemsSectionProps> = ({
 
                 {/* Notes Section */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Internal Notes</Label>
+                  <Label className="text-sm font-medium text-gray-700">Customer Notes</Label>
                   <textarea
                     value={item.notes || ''}
                     onChange={(e) => updateItem(item.id, 'notes', e.target.value)}

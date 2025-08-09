@@ -21,7 +21,7 @@ import {
   Zap
 } from 'lucide-react';
 import { OptimizedIcon } from '@/components/ui/OptimizedIcon';
-import { MobileQuoteOptions } from './MobileQuoteOptions';
+// import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency } from '@/utils/originCurrency';
 
@@ -216,6 +216,12 @@ export const MobileProductSummary: React.FC<MobileProductSummaryProps> = ({
                     <span>•</span>
                     <span>{formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))}</span>
                   </div>
+                  {item.customer_notes && (
+                    <div className="mt-2 p-2 bg-blue-100 rounded text-xs">
+                      <span className="font-medium text-blue-800">Note:</span>{' '}
+                      <span className="text-blue-700">{item.customer_notes}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

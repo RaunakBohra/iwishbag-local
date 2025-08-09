@@ -25,7 +25,6 @@ import { Label } from '@/components/ui/label';
 import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { SimpleCartSyncIndicator } from '@/components/cart/SimpleCartSyncIndicator';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
-import { CompactPackageProtection } from '@/components/cart/CompactPackageProtection';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,6 @@ interface CartSummaryProps {
   onCheckout?: () => void;
   showShippingEstimate?: boolean;
   showTaxEstimate?: boolean;
-  showInsuranceOption?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -48,9 +46,6 @@ interface SummaryCalculations {
   estimatedShippingFormatted: string;
   estimatedTax: number;
   estimatedTaxFormatted: string;
-  insurance: number;
-  insuranceFormatted: string;
-  insuranceRate: number;
   discount: number;
   discountFormatted: string;
   total: number;
@@ -62,7 +57,6 @@ export const CartSummary = memo<CartSummaryProps>(({
   onCheckout,
   showShippingEstimate = false,
   showTaxEstimate = false,
-  showInsuranceOption = true,
   compact = false,
   className = ''
 }) => {
@@ -76,8 +70,6 @@ export const CartSummary = memo<CartSummaryProps>(({
   const [calculations, setCalculations] = useState<SummaryCalculations | null>(null);
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [includeInsurance, setIncludeInsurance] = useState(false);
-  const [insuranceLoading, setInsuranceLoading] = useState(false);
   
   // Coupon state management
   const [appliedCoupons, setAppliedCoupons] = useState<Array<{
@@ -90,58 +82,6 @@ export const CartSummary = memo<CartSummaryProps>(({
   }>>([]);
   const [totalDiscount, setTotalDiscount] = useState(0);
 
-  // Handle insurance toggle with database persistence
-  const handleInsuranceToggle = async (enabled: boolean) => {
-    if (!user?.id || items.length === 0) {
-      setIncludeInsurance(enabled);
-      return;
-    }
-
-    setInsuranceLoading(true);
-    try {
-      console.log(`[CART SUMMARY] Updating insurance for ${items.length} quotes:`, enabled);
-
-      // Update insurance for all cart items
-      const promises = items.map(async (item) => {
-        const { data, error } = await supabase.rpc('update_quote_insurance', {
-          p_quote_id: item.quote.id,
-          p_insurance_enabled: enabled,
-          p_customer_id: user.id
-        });
-
-        if (error) {
-          console.error(`Failed to update insurance for quote ${item.quote.id}:`, error);
-          throw error;
-        }
-
-        console.log(`[CART SUMMARY] Insurance updated for quote ${item.quote.id}:`, data);
-        return data;
-      });
-
-      await Promise.all(promises);
-      
-      setIncludeInsurance(enabled);
-      
-      toast({
-        title: enabled ? "Insurance Added" : "Insurance Removed",
-        description: enabled 
-          ? "Package protection has been added to all items in your cart"
-          : "Package protection has been removed from your cart",
-      });
-
-    } catch (error) {
-      console.error('[CART SUMMARY] Failed to update insurance:', error);
-      logger.error('Failed to update cart insurance:', error);
-      
-      toast({
-        title: "Update Failed",
-        description: "Failed to update insurance. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setInsuranceLoading(false);
-    }
-  };
 
   // Handle coupon application
   const handleDiscountApplied = useCallback((discount: {
@@ -232,45 +172,14 @@ export const CartSummary = memo<CartSummaryProps>(({
     const estimatedTax = 0;
     const estimatedTaxFormatted = currencyService.formatAmount(0, displayCurrency);
 
-    // Calculate insurance from quote data or use default rate
-    const insuranceRate = items.length > 0 ? getInsuranceRateFromQuotes() : 0.015; // Default 1.5%
-    const insurance = includeInsurance ? subtotal * insuranceRate : 0;
-    console.log(`[CART SUMMARY] Insurance (${insuranceRate * 100}%): ${insurance} ${displayCurrency} (included: ${includeInsurance})`);
-    
-    const insuranceFormatted = currencyService.formatAmount(insurance, displayCurrency);
-
-    // Helper function to get insurance rate from quote calculation data
-    function getInsuranceRateFromQuotes(): number {
-      try {
-        // Get insurance rate from the first quote's calculation data
-        const firstQuote = items[0]?.quote;
-        if (firstQuote?.calculation_data) {
-          const calcData = typeof firstQuote.calculation_data === 'string' 
-            ? JSON.parse(firstQuote.calculation_data)
-            : firstQuote.calculation_data;
-          
-          const insurancePercentage = calcData?.applied_rates?.insurance_percentage;
-          if (insurancePercentage && insurancePercentage > 0) {
-            console.log(`[CART SUMMARY] Using insurance rate from quote: ${insurancePercentage}%`);
-            return insurancePercentage / 100; // Convert percentage to decimal
-          }
-        }
-        
-        console.log('[CART SUMMARY] Using default insurance rate: 1.5%');
-        return 0.015; // Default 1.5%
-      } catch (error) {
-        console.log('[CART SUMMARY] Failed to parse insurance rate, using default:', error);
-        return 0.015; // Fallback
-      }
-    }
 
     // Use actual discount from applied coupons
     const discount = totalDiscount;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    // Total including insurance and discount
-    const total = subtotal + insurance - discount;
-    console.log(`[CART SUMMARY] Final total: ${subtotal} + ${insurance} - ${discount} = ${total} ${displayCurrency}`);
+    // Total including discount
+    const total = subtotal - discount;
+    console.log(`[CART SUMMARY] Final total: ${subtotal} - ${discount} = ${total} ${displayCurrency}`);
     
     const totalFormatted = currencyService.formatAmount(total, displayCurrency);
 
@@ -281,9 +190,6 @@ export const CartSummary = memo<CartSummaryProps>(({
       estimatedShippingFormatted,
       estimatedTax,
       estimatedTaxFormatted,
-      insurance,
-      insuranceFormatted,
-      insuranceRate,
       discount,
       discountFormatted,
       total,
@@ -293,7 +199,7 @@ export const CartSummary = memo<CartSummaryProps>(({
 
     console.log('[CART SUMMARY] Calculation complete:', result);
     return result;
-  }, [items, displayCurrency, getTotalValue, includeInsurance, totalDiscount]);
+  }, [items, displayCurrency, getTotalValue, totalDiscount]);
 
   // Recalculate when items or currency changes
   useEffect(() => {
@@ -333,61 +239,6 @@ export const CartSummary = memo<CartSummaryProps>(({
     };
   }, [calculateSummary, items.length]);
 
-  // Load initial insurance state from database when cart items change
-  useEffect(() => {
-    const loadInsuranceState = async () => {
-      if (!user?.id || items.length === 0) {
-        setIncludeInsurance(false);
-        return;
-      }
-
-      try {
-        // Check if any cart items have insurance enabled
-        const promises = items.map(async (item) => {
-          const { data, error } = await supabase
-            .from('quotes_v2')
-            .select('insurance_required')
-            .eq('id', item.quote.id)
-            .single();
-
-          if (error) {
-            console.warn(`Failed to check insurance for quote ${item.quote.id}:`, error);
-            return false;
-          }
-
-          return data?.insurance_required || false;
-        });
-
-        const insuranceStates = await Promise.all(promises);
-        
-        // Set insurance to true if any item has it enabled
-        const anyInsuranceEnabled = insuranceStates.some(Boolean);
-        
-        // Smart default: Auto-enable for high-value orders if not already set
-        if (!anyInsuranceEnabled && calculations) {
-          const shouldAutoEnable = 
-            calculations.subtotal >= 100 || // Orders over $100 equivalent
-            (items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country); // International orders
-          
-          if (shouldAutoEnable) {
-            console.log(`[CART SUMMARY] Auto-enabling insurance for high-value/international order: ${calculations.subtotal} ${displayCurrency}`);
-            setIncludeInsurance(true);
-            return;
-          }
-        }
-        
-        setIncludeInsurance(anyInsuranceEnabled);
-
-        console.log(`[CART SUMMARY] Initial insurance state loaded: ${anyInsuranceEnabled} (from ${insuranceStates.length} quotes)`);
-
-      } catch (error) {
-        console.error('[CART SUMMARY] Failed to load insurance state:', error);
-        logger.error('Failed to load cart insurance state:', error);
-      }
-    };
-
-    loadInsuranceState();
-  }, [items, user?.id, calculations, displayCurrency]);
 
   // Loading state
   if (isLoading || calculationLoading) {
@@ -477,31 +328,19 @@ export const CartSummary = memo<CartSummaryProps>(({
           <span className={cartDesignTokens.typography.price.secondary}>{subtotalFormatted}</span>
         </div>
 
-        {/* Compact Package Protection - Shopify/Amazon Style */}
-        {showInsuranceOption && calculations && (
-          <CompactPackageProtection
-            orderValue={calculations.subtotal}
-            currency={displayCurrency}
-            insuranceRate={calculations.insuranceRate}
-            isSelected={includeInsurance}
-            onToggle={handleInsuranceToggle}
-            isLoading={insuranceLoading}
-            isInternational={items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country}
-          />
-        )}
 
         {/* Coupon Input - Clean Design */}
         {calculations && (
           <div className="py-2 border-t border-gray-100">
             <CouponCodeInput
               customerId={user?.id}
-              quoteTotal={calculations.subtotal + calculations.insurance}
+              quoteTotal={calculations.subtotal}
               currency={displayCurrency}
               countryCode={items.length > 0 ? items[0].quote.destination_country : undefined}
               componentBreakdown={{
                 shipping_cost: calculations.estimatedShipping,
                 handling_fee: 0,
-                insurance_amount: calculations.insurance,
+                insurance_amount: 0,
               }}
               onDiscountApplied={handleDiscountApplied}
               onDiscountRemoved={handleDiscountRemoved}

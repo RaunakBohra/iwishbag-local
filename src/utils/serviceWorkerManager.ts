@@ -477,13 +477,6 @@ export const serviceWorkerManager = new ServiceWorkerManager({
   maxCacheSize: 50 * 1024 * 1024, // 50MB
 });
 
-// Auto-initialize if supported
-if (typeof window !== 'undefined' && import.meta.env.PROD) {
-  serviceWorkerManager.initialize().then((success) => {
-    if (success) {
-      console.log('🚀 Service Worker Manager ready');
-    }
-  });
-}
+// Note: Service Worker will be initialized from main.tsx to avoid double initialization
 
 export default serviceWorkerManager;

@@ -155,12 +155,12 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     setTotalDiscount(newTotalDiscount);
   }, [appliedCoupons]);
 
-  // Calculate summary totals
-  const calculateSummary = useMemo(() => async (): Promise<SummaryCalculations> => {
+  // Calculate base summary totals (without addons - calculated separately to avoid circular deps)
+  const calculateBaseSummary = useMemo(() => async (): Promise<SummaryCalculations> => {
     const subtotal = await getTotalValue(displayCurrency);
     const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
 
-    const addons = totalAddonCost;
+    const addons = 0; // Start with 0, will be updated separately
     const addonsFormatted = currencyService.formatAmount(addons, displayCurrency);
 
     const discount = totalDiscount;
@@ -180,7 +180,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       totalFormatted,
       currency: displayCurrency
     };
-  }, [items, displayCurrency, getTotalValue, totalDiscount, totalAddonCost]);
+  }, [items, displayCurrency, getTotalValue, totalDiscount]);
 
   // Recalculate when dependencies change
   useEffect(() => {
@@ -196,7 +196,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       setError(null);
 
       try {
-        const calc = await calculateSummary();
+        const calc = await calculateBaseSummary();
         if (isMounted) {
           setCalculations(calc);
         }
@@ -218,8 +218,24 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     return () => {
       isMounted = false;
     };
-  }, [calculateSummary, items.length, totalAddonCost]);
+  }, [calculateBaseSummary, items.length]);
 
+  // Update calculations when addon cost changes (without re-calculating base)
+  useEffect(() => {
+    if (calculations && totalAddonCost !== calculations.addons) {
+      const updatedCalculations = {
+        ...calculations,
+        addons: totalAddonCost,
+        addonsFormatted: currencyService.formatAmount(totalAddonCost, displayCurrency),
+        total: calculations.subtotal + totalAddonCost - calculations.discount,
+        totalFormatted: currencyService.formatAmount(
+          calculations.subtotal + totalAddonCost - calculations.discount,
+          displayCurrency
+        ),
+      };
+      setCalculations(updatedCalculations);
+    }
+  }, [totalAddonCost, calculations, displayCurrency]);
 
   // Auto-collapse on mobile
   useEffect(() => {

@@ -13,7 +13,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
     
     // Expose query client globally for smart invalidation
     if (typeof window !== 'undefined') {
-      (window as any).__REACT_QUERY_CLIENT__ = client;
+      window.__REACT_QUERY_CLIENT__ = client;
     }
     
     return client;

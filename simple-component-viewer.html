@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Component Viewer</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 20px;
+            background: #f8fafc;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        
+        .component-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: box-shadow 0.2s;
+        }
+        
+        .component-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .component-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .component-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .component-path {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 5px 0;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-critical { background: #fee2e2; color: #dc2626; }
+        .status-active { background: #dcfce7; color: #16a34a; }
+        .status-unused { background: #f3f4f6; color: #6b7280; }
+        .status-demo { background: #ddd6fe; color: #7c3aed; }
+        .status-test { background: #fed7d7; color: #e53e3e; }
+        
+        .import-count {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .visual-preview {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 15px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .sample-button {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .sample-button.outline {
+            background: transparent;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+        
+        .sample-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            max-width: 250px;
+        }
+        
+        .sample-input {
+            width: 200px;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .sample-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 2px;
+        }
+        
+        .checkbox {
+            margin-right: 10px;
+        }
+        
+        .actions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .keep-btn {
+            background: #10b981;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .delete-script {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin-top: 20px;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧹 Component Viewer - Visual Previews</h1>
+        <p>See exactly what each component looks like and decide what to keep/delete</p>
+    </div>
+
+    <div id="selectedCount" style="background: #fee2e2; padding: 10px; border-radius: 6px; margin-bottom: 20px; text-align: center;">
+        <strong>0 components selected for deletion</strong>
+    </div>
+
+    <div class="component-grid">
+        <!-- Components will be loaded here -->
+    </div>
+
+    <div id="deleteScript" class="delete-script" style="display: none;">
+        <!-- Delete script will appear here -->
+    </div>
+
+    <script>
+        // Sample components with visual previews
+        const components = [
+            {
+                name: 'button',
+                path: 'src/components/ui/button.tsx',
+                status: 'CRITICAL',
+                imports: 95,
+                visual: `<div>
+                    <button class="sample-button">Primary Button</button>
+                    <button class="sample-button outline">Outline Button</button>
+                    <button class="sample-button" style="background: #dc2626;">Danger</button>
+                </div>`,
+                description: 'Critical UI component - DO NOT DELETE!'
+            },
+            {
+                name: 'card',
+                path: 'src/components/ui/card.tsx', 
+                status: 'CRITICAL',
+                imports: 287,
+                visual: `<div class="sample-card">
+                    <h3 style="margin: 0 0 10px 0; font-size: 1rem;">Card Title</h3>
+                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 0.9rem;">Card content goes here.</p>
+                    <button class="sample-button" style="padding: 6px 12px; font-size: 0.85rem;">Action</button>
+                </div>`,
+                description: 'Card container - heavily used (287 imports)'
+            },
+            {
+                name: 'input',
+                path: 'src/components/ui/input.tsx',
+                status: 'CRITICAL', 
+                imports: 78,
+                visual: `<div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Sample Input</label>
+                    <input class="sample-input" placeholder="Type here..." value="Sample text">
+                </div>`,
+                description: 'Input field component - essential for forms'
+            },
+            {
+                name: 'badge',
+                path: 'src/components/ui/badge.tsx',
+                status: 'ACTIVE',
+                imports: 24,
+                visual: `<div>
+                    <span class="sample-badge">Default</span>
+                    <span class="sample-badge" style="background: #fef3c7; color: #92400e;">Warning</span>
+                    <span class="sample-badge" style="background: #fee2e2; color: #dc2626;">Error</span>
+                </div>`,
+                description: 'Badge component for status indicators'
+            },
+            {
+                name: 'FileUploadZone',
+                path: 'src/components/ui/FileUploadZone.tsx',
+                status: 'UNUSED',
+                imports: 0,
+                visual: `<div style="border: 2px dashed #cbd5e1; padding: 30px; text-align: center; border-radius: 6px; background: #f8fafc;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📁</div>
+                    <div style="color: #64748b;">Drag & drop files here</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 5px;">or click to select</div>
+                    <div style="margin-top: 10px; background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.8rem;">
+                        ❌ UNUSED - Safe to delete
+                    </div>
+                </div>`,
+                description: 'File upload with drag & drop - currently unused (0 imports)'
+            },
+            {
+                name: 'pagination',
+                path: 'src/components/ui/pagination.tsx',
+                status: 'UNUSED',
+                imports: 0,
+                visual: `<div style="display: flex; align-items: center; gap: 5px; color: #64748b;">
+                    <button style="padding: 6px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 4px;">← Prev</button>
+                    <button style="padding: 6px 10px; border: 1px solid #e2e8f0; background: #3b82f6; color: white; border-radius: 4px;">1</button>
+                    <button style="padding: 6px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 4px;">2</button>
+                    <button style="padding: 6px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 4px;">3</button>
+                    <button style="padding: 6px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 4px;">Next →</button>
+                    <div style="margin-top: 10px; background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                        ❌ UNUSED - Safe to delete
+                    </div>
+                </div>`,
+                description: 'Pagination component - currently unused'
+            },
+            {
+                name: 'QuoteV2Demo',
+                path: 'src/components/demo/QuoteV2Demo.tsx',
+                status: 'DEMO',
+                imports: 2,
+                visual: `<div style="padding: 20px; text-align: center; color: #6b7280; border: 2px dashed #d1d5db; border-radius: 6px;">
+                    <div style="font-size: 3rem;">🧪</div>
+                    <div style="font-weight: 600; margin-top: 10px;">Demo Component</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px; color: #7c3aed;">Used for testing/demos only</div>
+                    <div style="margin-top: 10px; background: #ddd6fe; color: #7c3aed; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.8rem;">
+                        🧪 DEMO - Safe to delete
+                    </div>
+                </div>`,
+                description: 'Demo component for testing - safe to delete'
+            },
+            {
+                name: 'StatusBadge.stories',
+                path: 'src/components/dashboard/StatusBadge.stories.tsx',
+                status: 'TEST',
+                imports: 0,
+                visual: `<div style="padding: 20px; text-align: center; color: #6b7280; border: 2px dashed #fca5a5; border-radius: 6px; background: #fef2f2;">
+                    <div style="font-size: 3rem;">📝</div>
+                    <div style="font-weight: 600; margin-top: 10px;">Storybook Story</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px; color: #dc2626;">Test file for component documentation</div>
+                    <div style="margin-top: 10px; background: #fed7d7; color: #e53e3e; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.8rem;">
+                        📝 TEST FILE - Safe to delete
+                    </div>
+                </div>`,
+                description: 'Storybook story file - safe to delete if not using Storybook'
+            }
+        ];
+
+        let selectedComponents = [];
+
+        function renderComponents() {
+            const grid = document.querySelector('.component-grid');
+            
+            components.forEach((comp, index) => {
+                const card = document.createElement('div');
+                card.className = 'component-card';
+                
+                card.innerHTML = `
+                    <div class="component-header">
+                        <div>
+                            <div class="component-name">${comp.name}</div>
+                            <div class="component-path">${comp.path}</div>
+                        </div>
+                        <div>
+                            <span class="status-badge status-${comp.status.toLowerCase()}">${comp.status}</span>
+                            <span class="import-count">${comp.imports} imports</span>
+                        </div>
+                    </div>
+                    
+                    <div class="visual-preview">
+                        ${comp.visual}
+                    </div>
+                    
+                    <p style="color: #64748b; font-size: 0.9rem; margin: 10px 0;">${comp.description}</p>
+                    
+                    <div class="actions">
+                        <label>
+                            <input type="checkbox" class="checkbox" onchange="toggleSelection('${comp.path}', this.checked)">
+                            Select for deletion
+                        </label>
+                        ${comp.status === 'UNUSED' || comp.status === 'DEMO' || comp.status === 'TEST' ? 
+                            '<span style="color: #10b981; font-size: 0.85rem; margin-left: 10px;">✅ Safe to delete</span>' : 
+                            '<span style="color: #f59e0b; font-size: 0.85rem; margin-left: 10px;">⚠️ Review before deleting</span>'
+                        }
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleSelection(path, checked) {
+            if (checked) {
+                if (!selectedComponents.includes(path)) {
+                    selectedComponents.push(path);
+                }
+            } else {
+                selectedComponents = selectedComponents.filter(p => p !== path);
+            }
+            updateSelectedCount();
+            updateDeleteScript();
+        }
+
+        function updateSelectedCount() {
+            const countEl = document.getElementById('selectedCount');
+            if (selectedComponents.length === 0) {
+                countEl.innerHTML = '<strong>0 components selected for deletion</strong>';
+                countEl.style.background = '#f3f4f6';
+            } else {
+                countEl.innerHTML = `<strong>${selectedComponents.length} components selected for deletion</strong> <button onclick="generateScript()" style="margin-left: 15px; background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">🗑️ Generate Delete Script</button>`;
+                countEl.style.background = '#fee2e2';
+            }
+        }
+
+        function updateDeleteScript() {
+            const scriptEl = document.getElementById('deleteScript');
+            if (selectedComponents.length === 0) {
+                scriptEl.style.display = 'none';
+            } else {
+                scriptEl.style.display = 'block';
+                scriptEl.textContent = `#!/bin/bash
+# Component Cleanup Script
+# Deleting ${selectedComponents.length} selected components
+
+echo "🗑️  Starting component cleanup..."
+
+${selectedComponents.map(path => `rm "${path}"`).join('\n')}
+
+echo "✅ Deleted ${selectedComponents.length} components"
+echo "🧪 Run your tests to make sure everything still works!"`;
+            }
+        }
+
+        function generateScript() {
+            updateDeleteScript();
+            document.getElementById('deleteScript').scrollIntoView({ behavior: 'smooth' });
+            
+            // Copy to clipboard
+            const script = document.getElementById('deleteScript').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('🎉 Delete script copied to clipboard!');
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            renderComponents();
+            updateSelectedCount();
+        });
+    </script>
+</body>
+</html>

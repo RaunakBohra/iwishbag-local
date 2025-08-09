@@ -56,6 +56,7 @@ export function createQueryClient(): QueryClient {
         refetchOnReconnect: 'always',
         refetchOnMount: (query) => {
           // Only refetch on mount if data is stale
+          if (!query || !query.state) return true;
           return (query.state.dataUpdatedAt || 0) < Date.now() - getOptimalStaleTime();
         },
         
@@ -84,7 +85,7 @@ export function createQueryClient(): QueryClient {
         // Enable background refetching for better UX
         refetchInterval: (data, query) => {
           // Auto-refresh critical data every 5 minutes when focused
-          if (document.hasFocus() && isCriticalQuery(query.queryKey)) {
+          if (query && document.hasFocus() && isCriticalQuery(query.queryKey)) {
             return 5 * 60 * 1000; // 5 minutes
           }
           return false;
@@ -116,7 +117,7 @@ export function createQueryClient(): QueryClient {
 
 // Smart invalidation logic
 function smartInvalidateQueries(mutationKey: any, data: any, variables: any): void {
-  const queryClient = window.__REACT_QUERY_CLIENT__ as QueryClient;
+  const queryClient = window.__REACT_QUERY_CLIENT__;
   if (!queryClient) return;
 
   const keyStr = Array.isArray(mutationKey) ? mutationKey[0] : mutationKey;

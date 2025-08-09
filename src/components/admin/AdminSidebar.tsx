@@ -28,6 +28,10 @@ import {
   Menu,
   X,
   DollarSign,
+  Bot,
+  AlertTriangle,
+  ShoppingBag,
+  CheckCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -89,6 +93,31 @@ const menuGroups = [
         title: 'All Quotes',
         url: '/admin/quotes',
         icon: FileText,
+      },
+      {
+        title: 'Order Management',
+        url: '/admin/orders',
+        icon: ShoppingBag,
+      },
+      {
+        title: 'Automation Control',
+        url: '/admin/automation',
+        icon: Bot,
+      },
+      {
+        title: 'Revision Management',
+        url: '/admin/revisions',
+        icon: CheckCircle,
+      },
+      {
+        title: 'Exception Handling',
+        url: '/admin/exceptions',
+        icon: AlertTriangle,
+      },
+      {
+        title: 'Quality Control',
+        url: '/admin/quality-control',
+        icon: Shield,
       },
       {
         title: 'Reminder Settings',

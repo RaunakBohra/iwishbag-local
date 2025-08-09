@@ -1574,7 +1574,6 @@ const QuoteCalculatorV2: React.FC = () => {
         ...baseQuoteData,
         calculation_data: calculationResult,
         total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-        total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
         status: 'calculated',
         calculated_at: new Date().toISOString(),
       } : {
@@ -1981,7 +1980,6 @@ const QuoteCalculatorV2: React.FC = () => {
                   status: currentQuoteStatus,
                   items: items,
                   total_quote_origincurrency: calculationResult?.calculation_steps?.total_quote_origincurrency || calculationResult?.total || 0,
-                  total_quote_origincurrency: calculationResult?.calculation_steps?.total_quote_origincurrency || calculationResult?.totalCustomerCurrency || 0,
                   customer_currency: customerCurrency,
                   origin_country: originCountry,
                   destination_country: destinationCountry,
@@ -3587,7 +3585,6 @@ const QuoteCalculatorV2: React.FC = () => {
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
                 total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp
@@ -3608,7 +3605,6 @@ const QuoteCalculatorV2: React.FC = () => {
                 destination_country: destinationCountry,
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
-                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
                 total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),

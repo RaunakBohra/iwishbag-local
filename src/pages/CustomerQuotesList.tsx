@@ -178,6 +178,16 @@ export default function CustomerQuotesList() {
                                   <p className="text-xs text-muted-foreground">
                                     Qty: {item.quantity} • {formatCurrency(item.costprice_origin, quote.customer_currency)}
                                   </p>
+                                  {item.customer_notes && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <svg className="w-3 h-3 text-blue-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                      </svg>
+                                      <p className="text-xs text-blue-600 truncate" title={item.customer_notes}>
+                                        Note: {item.customer_notes}
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}

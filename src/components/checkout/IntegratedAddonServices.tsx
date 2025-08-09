@@ -9,7 +9,7 @@
  * - Auto-selection of recommended services
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -44,7 +44,7 @@ interface AddonServiceSelection {
   recommendation_score?: number;
 }
 
-export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = ({
+const IntegratedAddonServicesBase: React.FC<IntegratedAddonServicesProps> = ({
   orderValue,
   currency,
   customerCountry,
@@ -52,12 +52,12 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
   className = '',
 }) => {
 
-  const [selections, setSelections] = useState<Map<string, AddonServiceSelection>>(new Map());
+  // Use useRef for persistent state that survives component unmounts
+  const selectionsRef = useRef<Map<string, AddonServiceSelection>>(new Map());
+  const [selections, setSelections] = useState<Map<string, AddonServiceSelection>>(selectionsRef.current);
   const [showAllServices, setShowAllServices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTooltips, setShowTooltips] = useState<Set<string>>(new Set());
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   
   // Enhanced country detection
   const { countryCode: detectedCountry, isLoading: countryLoading } = useCountryWithPricing();
@@ -123,8 +123,10 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     }
   ], [finalCountryCode]);
 
-  // Use actual data or fallback
-  const services = addonData?.recommendations || (error ? fallbackServices : []);
+  // Use actual data or fallback - memoized to prevent new object references
+  const services = useMemo(() => {
+    return addonData?.recommendations || (error ? fallbackServices : []);
+  }, [addonData?.recommendations, error, fallbackServices]);
 
   
   // Split services into top recommendations and others
@@ -132,41 +134,25 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
   const otherServices = services.filter(s => s.recommendation_score < 0.6 || 
     !topServices.find(top => top.service_key === s.service_key));
   
-  // Initialize selections only once - never reinitialize after user interaction
+  // Simple initialization - only run once when services first load
   useEffect(() => {
-    if (services.length > 0 && !isInitialized && !hasUserInteracted) {
+    if (services.length > 0 && selectionsRef.current.size === 0) {
       const newSelections = new Map<string, AddonServiceSelection>();
       
       services.forEach(service => {
-        const autoSelect = service.recommendation_score >= 0.8;
-        
         newSelections.set(service.service_key, {
           service_key: service.service_key,
-          is_selected: autoSelect,
+          is_selected: false, // All start unchecked
           calculated_amount: service.pricing.calculated_amount,
           recommendation_score: service.recommendation_score,
         });
       });
 
+      // Update both ref and state
+      selectionsRef.current = newSelections;
       setSelections(newSelections);
-      setIsInitialized(true);
-    } else if (services.length > 0 && isInitialized) {
-      // Just update pricing without changing selections
-      setSelections(prevSelections => {
-        const updatedSelections = new Map(prevSelections);
-        services.forEach(service => {
-          const existingSelection = updatedSelections.get(service.service_key);
-          if (existingSelection) {
-            updatedSelections.set(service.service_key, {
-              ...existingSelection,
-              calculated_amount: service.pricing.calculated_amount,
-            });
-          }
-        });
-        return updatedSelections;
-      });
     }
-  }, [services, isInitialized, hasUserInteracted]);
+  }, [services]);
 
   // Calculate total cost
   const totalAddonCost = useMemo(() => {
@@ -195,11 +181,8 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     }
   }, [selections, totalAddonCost, onSelectionChange]);
 
-  // Handle service toggle
+  // Handle service toggle - simple and straightforward
   const handleServiceToggle = useCallback((serviceKey: string, isSelected: boolean) => {
-    // Mark that user has interacted - this prevents any future re-initialization
-    setHasUserInteracted(true);
-    
     setSelections(prev => {
       const newSelections = new Map(prev);
       const current = newSelections.get(serviceKey);
@@ -209,19 +192,10 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
           ...current,
           is_selected: isSelected,
         });
-      } else {
-        // Create new selection if it doesn't exist
-        const service = services.find(s => s.service_key === serviceKey);
-        if (service) {
-          newSelections.set(serviceKey, {
-            service_key: serviceKey,
-            is_selected: isSelected,
-            calculated_amount: service.pricing.calculated_amount,
-            recommendation_score: service.recommendation_score,
-          });
-        }
       }
 
+      // Update the ref as well
+      selectionsRef.current = newSelections;
       return newSelections;
     });
 
@@ -255,6 +229,8 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     const isSelected = selection?.is_selected || false;
     const isHighlyRecommended = service.recommendation_score >= 0.8;
     const showTooltip = showTooltips.has(service.service_key);
+
+    // Clean render without debug logs
     
     
     return (
@@ -265,7 +241,9 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
             <Checkbox
               id={`addon-service-${service.service_key}`}
               checked={isSelected}
-              onCheckedChange={(checked) => handleServiceToggle(service.service_key, checked === true)}
+              onCheckedChange={(checked) => {
+                handleServiceToggle(service.service_key, checked === true);
+              }}
               className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
             
@@ -398,5 +376,19 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     </div>
   );
 };
+
+// Wrap in React.memo with custom comparison to prevent unnecessary re-renders
+export const IntegratedAddonServices = memo(IntegratedAddonServicesBase, (prevProps, nextProps) => {
+  // Custom comparison to prevent re-renders when props haven't meaningfully changed
+  return (
+    prevProps.orderValue === nextProps.orderValue &&
+    prevProps.currency === nextProps.currency &&
+    prevProps.customerCountry === nextProps.customerCountry &&
+    prevProps.className === nextProps.className &&
+    prevProps.onSelectionChange === nextProps.onSelectionChange
+  );
+});
+
+IntegratedAddonServices.displayName = 'IntegratedAddonServices';
 
 export default IntegratedAddonServices;

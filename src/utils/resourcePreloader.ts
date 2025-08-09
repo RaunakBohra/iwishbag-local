@@ -225,72 +225,76 @@ class ResourcePreloader {
    * Get route-specific resources to preload
    */
   private getRouteResources(route: string): Array<PreloadConfig & { href: string }> {
-    const routeResourceMap: Record<string, Array<PreloadConfig & { href: string }>> = {
-      '/': [
-        {
-          href: '/assets/fonts/inter-var.woff2',
-          as: 'font',
-          type: 'font/woff2',
-          crossOrigin: 'anonymous',
-          priority: 'high',
-        },
-        {
-          href: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
-          as: 'image',
-          priority: 'high',
-        },
-      ],
-      '/quote': [
-        {
-          href: '/assets/js/forms-vendor.js',
-          as: 'script',
-          priority: 'high',
-        },
-        {
-          href: '/assets/js/ecommerce.js',
-          as: 'script',
-          priority: 'medium',
-        },
-      ],
-      '/dashboard': [
-        {
-          href: '/assets/js/dashboard.js',
-          as: 'script',
-          priority: 'high',
-        },
-        {
-          href: '/assets/js/charts-vendor.js',
-          as: 'script',
-          priority: 'medium',
-        },
-      ],
-      '/admin': [
-        {
-          href: '/assets/js/admin-core.js',
-          as: 'script',
-          priority: 'high',
-        },
-        {
-          href: '/assets/js/admin-components.js',
-          as: 'script',
-          priority: 'medium',
-        },
-      ],
-      '/checkout': [
-        {
-          href: '/assets/js/payments.js',
-          as: 'script',
-          priority: 'high',
-        },
-        {
-          href: '/assets/js/security-vendor.js',
-          as: 'script',
-          priority: 'medium',
-        },
-      ],
+    // In development, we can't predict exact chunk names, so preload common resources
+    if (import.meta.env.DEV) {
+      const devResourceMap: Record<string, Array<PreloadConfig & { href: string }>> = {
+        '/': [
+          {
+            href: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
+            as: 'image',
+            priority: 'high',
+          },
+        ],
+      };
+      return devResourceMap[route] || [];
+    }
+
+    // In production, use dynamic chunk discovery
+    const routeChunkMap: Record<string, string[]> = {
+      '/': ['react-core-vendor', 'ui-core'],
+      '/quote': ['forms-vendor', 'ecommerce', 'components-forms'],
+      '/dashboard': ['dashboard', 'charts-vendor', 'components-common'],
+      '/admin': ['admin-core', 'admin-components', 'admin-tools'],
+      '/checkout': ['payments', 'security-vendor', 'forms-vendor'],
+      '/auth': ['auth', 'forms-vendor'],
     };
 
-    return routeResourceMap[route] || [];
+    const chunks = routeChunkMap[route] || [];
+    
+    return chunks.map((chunkName) => ({
+      href: this.getChunkUrl(chunkName),
+      as: 'script' as const,
+      priority: this.getChunkPriority(chunkName),
+    })).filter(resource => resource.href !== null) as Array<PreloadConfig & { href: string }>;
+  }
+
+  /**
+   * Get actual chunk URL (will be populated by build process or discovered dynamically)
+   */
+  private getChunkUrl(chunkName: string): string | null {
+    // In production, try to discover actual chunk URLs from link tags or module preloads
+    if (typeof document !== 'undefined') {
+      // Look for existing preload/modulepreload links that match the chunk name
+      const existingLink = document.querySelector(`link[href*="${chunkName}"]`) as HTMLLinkElement;
+      if (existingLink) {
+        return existingLink.href;
+      }
+
+      // Look for script tags that might contain the chunk
+      const scripts = Array.from(document.querySelectorAll('script[src*="assets"]'));
+      const matchingScript = scripts.find(script => 
+        (script as HTMLScriptElement).src.includes(chunkName)
+      ) as HTMLScriptElement;
+      
+      if (matchingScript) {
+        return matchingScript.src;
+      }
+    }
+
+    // Fallback to expected pattern (may not exist)
+    return `/assets/${chunkName}-[hash].js`;
+  }
+
+  /**
+   * Determine chunk priority based on name
+   */
+  private getChunkPriority(chunkName: string): 'high' | 'medium' | 'low' {
+    const highPriorityChunks = ['react-core-vendor', 'ui-core', 'forms-vendor'];
+    const mediumPriorityChunks = ['ecommerce', 'dashboard', 'auth', 'payments'];
+    
+    if (highPriorityChunks.includes(chunkName)) return 'high';
+    if (mediumPriorityChunks.includes(chunkName)) return 'medium';
+    return 'low';
   }
 
   /**
@@ -481,14 +485,30 @@ export const resourcePreloader = new ResourcePreloader();
 if (typeof window !== 'undefined') {
   // Preload critical resources immediately
   document.addEventListener('DOMContentLoaded', () => {
-    resourcePreloader.preloadCritical([
-      {
-        href: '/assets/fonts/inter-var.woff2',
-        as: 'font',
-        type: 'font/woff2',
-        crossOrigin: true,
-      },
-    ]);
+    // Only preload resources that we know exist
+    const criticalResources: Array<{
+      href: string;
+      as: 'script' | 'style' | 'image' | 'font';
+      type?: string;
+      crossOrigin?: boolean;
+    }> = [];
+
+    // Temporarily disabled logo preloading to prevent unused preload warnings
+    // The logo loads fast enough without preloading since it's served from Cloudinary CDN
+    // const currentPath = window.location.pathname;
+    // const logoRoutes = ['/', '/quote', '/dashboard'];
+    // 
+    // if (logoRoutes.includes(currentPath)) {
+    //   criticalResources.push({
+    //     href: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
+    //     as: 'image',
+    //   });
+    // }
+
+    // Only preload if we have resources to preload
+    if (criticalResources.length > 0) {
+      resourcePreloader.preloadCritical(criticalResources);
+    }
     
     // Setup lazy image preloading
     resourcePreloader.setupLazyImagePreloading();
