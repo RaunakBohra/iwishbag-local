@@ -51,7 +51,9 @@ export const useAdminTickets = (filters?: TicketFilters, sort?: TicketSortOption
   return useQuery({
     queryKey: ticketKeys.list({ ...filters, sort }),
     queryFn: () => ticketService.getAdminTickets(filters, sort),
-    staleTime: 2 * 60 * 1000, // 2 minutes for admin view
+    staleTime: 30 * 1000, // 30 seconds for admin view - faster updates
+    refetchInterval: 60 * 1000, // Auto-refetch every minute
+    refetchOnWindowFocus: true, // Refresh when window regains focus
   });
 };
 
@@ -63,7 +65,9 @@ export const useTicketDetail = (ticketId: string | undefined) => {
     queryKey: ticketKeys.detail(ticketId || ''),
     queryFn: () => ticketService.getTicketById(ticketId!),
     enabled: !!ticketId,
-    staleTime: 1 * 60 * 1000, // 1 minute for detail view
+    staleTime: 20 * 1000, // 20 seconds for detail view - very fresh data
+    refetchInterval: 30 * 1000, // Auto-refetch every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when window regains focus
   });
 };
 
@@ -86,7 +90,9 @@ export const useTicketStats = () => {
   return useQuery({
     queryKey: ticketKeys.stats(),
     queryFn: () => ticketService.getTicketStats(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds for stats - keep dashboard fresh
+    refetchInterval: 45 * 1000, // Auto-refetch every 45 seconds
+    refetchOnWindowFocus: true, // Refresh when window regains focus
   });
 };
 
@@ -222,13 +228,60 @@ export const useUpdateTicketStatus = () => {
   return useMutation({
     mutationFn: ({ ticketId, status }: { ticketId: string; status: TicketStatus }) =>
       ticketService.updateTicketStatus(ticketId, status),
+    
+    // Optimistic update
+    onMutate: async ({ ticketId, status }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ticketKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: ticketKeys.detail(ticketId) });
+
+      // Snapshot the previous values
+      const previousTickets = queryClient.getQueryData(ticketKeys.lists());
+      const previousTicket = queryClient.getQueryData(ticketKeys.detail(ticketId));
+
+      // Optimistically update all ticket list queries with proper cache key matching
+      queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        
+        return oldData.map((ticket: any) =>
+          ticket.id === ticketId
+            ? { 
+                ...ticket, 
+                status,
+                // Update ticket_data.status for unified support system compatibility
+                ticket_data: ticket.ticket_data ? {
+                  ...ticket.ticket_data,
+                  status,
+                  metadata: {
+                    ...ticket.ticket_data.metadata,
+                    last_status_change: new Date().toISOString()
+                  }
+                } : undefined,
+                updated_at: new Date().toISOString()
+              }
+            : ticket
+        );
+      });
+
+      // Optimistically update individual ticket
+      queryClient.setQueryData(ticketKeys.detail(ticketId), (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          status,
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      // Return context with snapshot values
+      return { previousTickets, previousTicket };
+    },
+
     onSuccess: (success, { ticketId, status }) => {
       if (success) {
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
-        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: ticketKeys.stats() });
-
+        // ✅ Let optimistic update persist - no immediate invalidation to prevent race condition
+        // Data will be refreshed on next scheduled refetch (60s) or window focus
+        
         const statusLabels = {
           open: 'Open',
           in_progress: 'In Progress',
@@ -241,6 +294,10 @@ export const useUpdateTicketStatus = () => {
           description: `Ticket status changed to ${statusLabels[status]}.`,
         });
       } else {
+        // Only invalidate on failure to trigger fresh data fetch
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+        
         toast({
           title: 'Error',
           description: 'Failed to update ticket status. Please try again.',
@@ -248,11 +305,19 @@ export const useUpdateTicketStatus = () => {
         });
       }
     },
-    onError: (error: any) => {
-      console.error('Error updating ticket status:', error);
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update with proper cache key handling
+      if (context?.previousTickets) {
+        queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, context.previousTickets);
+      }
+      if (context?.previousTicket) {
+        queryClient.setQueryData(ticketKeys.detail(variables.ticketId), context.previousTicket);
+      }
+
+      console.error('❌ Error updating ticket status (rolling back):', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update ticket status. Please try again.',
+        title: 'Status Update Failed',
+        description: 'Failed to update ticket status. Changes have been reverted.',
         variant: 'destructive',
       });
     },
@@ -269,17 +334,68 @@ export const useAssignTicket = () => {
   return useMutation({
     mutationFn: ({ ticketId, adminUserId }: { ticketId: string; adminUserId: string | null }) =>
       ticketService.assignTicket(ticketId, adminUserId),
+    
+    // Optimistic update for assignment
+    onMutate: async ({ ticketId, adminUserId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ticketKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: ticketKeys.detail(ticketId) });
+
+      // Snapshot the previous values
+      const previousTickets = queryClient.getQueryData(ticketKeys.lists());
+      const previousTicket = queryClient.getQueryData(ticketKeys.detail(ticketId));
+
+      // Optimistically update all ticket list queries with proper structure
+      queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        
+        return oldData.map((ticket: any) =>
+          ticket.id === ticketId
+            ? { 
+                ...ticket, 
+                assigned_to: adminUserId,
+                // Update ticket_data for unified support system compatibility
+                ticket_data: ticket.ticket_data ? {
+                  ...ticket.ticket_data,
+                  assigned_to: adminUserId,
+                  metadata: {
+                    ...ticket.ticket_data.metadata,
+                    last_assignment_change: new Date().toISOString()
+                  }
+                } : undefined,
+                updated_at: new Date().toISOString()
+              }
+            : ticket
+        );
+      });
+
+      // Optimistically update individual ticket
+      queryClient.setQueryData(ticketKeys.detail(ticketId), (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          assigned_to: adminUserId,
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      return { previousTickets, previousTicket };
+    },
+
     onSuccess: (success, { ticketId, adminUserId }) => {
       if (success) {
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
-        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+        // ✅ Let optimistic update persist - no immediate invalidation to prevent race condition
+        // Data will be refreshed on next scheduled refetch (60s) or window focus
 
         toast({
           title: 'Ticket Assigned',
           description: adminUserId ? 'Ticket has been assigned.' : 'Ticket assignment removed.',
         });
       } else {
+        // Only invalidate on failure to trigger fresh data fetch
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+        
         toast({
           title: 'Error',
           description: 'Failed to assign ticket. Please try again.',
@@ -287,11 +403,19 @@ export const useAssignTicket = () => {
         });
       }
     },
-    onError: (error: any) => {
-      console.error('Error assigning ticket:', error);
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update with proper cache key handling
+      if (context?.previousTickets) {
+        queryClient.setQueriesData({ queryKey: ticketKeys.lists() }, context.previousTickets);
+      }
+      if (context?.previousTicket) {
+        queryClient.setQueryData(ticketKeys.detail(variables.ticketId), context.previousTicket);
+      }
+
+      console.error('❌ Error assigning ticket (rolling back):', error);
       toast({
-        title: 'Error',
-        description: 'Failed to assign ticket. Please try again.',
+        title: 'Assignment Failed',
+        description: 'Failed to assign ticket. Changes have been reverted.',
         variant: 'destructive',
       });
     },

@@ -593,21 +593,66 @@ class TicketService {
     try {
       console.log('🔄 Updating ticket status:', ticketId, status);
 
-      // Use unified support engine to update ticket status
-      const success = await unifiedSupportEngine.updateTicketStatus(
-        ticketId,
-        status,
-        'Status updated via legacy TicketService',
-      );
+      // Try unified engine first
+      try {
+        const success = await unifiedSupportEngine.updateTicketStatus(
+          ticketId,
+          status,
+          'Status updated via admin interface',
+        );
 
-      if (success) {
-        console.log('✅ Ticket status updated successfully via unified engine');
-        this.clearCache();
-      } else {
-        console.error('❌ Failed to update ticket status via unified engine');
+        if (success) {
+          console.log('✅ Ticket status updated successfully via unified engine');
+          this.clearCache();
+          return true;
+        }
+      } catch (unifiedError) {
+        console.warn('⚠️ Unified engine update failed, falling back to direct update:', unifiedError);
       }
 
-      return success;
+      // Fallback: Direct database update
+      console.log('🔄 Falling back to direct database update');
+      
+      // Get current ticket data
+      const { data: currentTicket, error: fetchError } = await supabase
+        .from('support_system')
+        .select('ticket_data')
+        .eq('id', ticketId)
+        .eq('system_type', 'ticket')
+        .single();
+
+      if (fetchError || !currentTicket) {
+        console.error('❌ Failed to fetch current ticket:', fetchError);
+        return false;
+      }
+
+      // Update the status in the ticket_data
+      const updatedTicketData = {
+        ...currentTicket.ticket_data,
+        status: status,
+        metadata: {
+          ...currentTicket.ticket_data.metadata,
+          last_status_change: new Date().toISOString(),
+        },
+      };
+
+      // Update the record
+      const { error: updateError } = await supabase
+        .from('support_system')
+        .update({
+          ticket_data: updatedTicketData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ticketId);
+
+      if (updateError) {
+        console.error('❌ Error in direct ticket status update:', updateError);
+        return false;
+      }
+
+      console.log('✅ Ticket status updated successfully via direct update');
+      this.clearCache();
+      return true;
     } catch (error) {
       console.error('❌ Exception in updateTicketStatus:', error);
       return false;
@@ -621,21 +666,66 @@ class TicketService {
     try {
       console.log('👤 Assigning ticket:', ticketId, 'to:', adminUserId);
 
-      // Use unified support engine to assign ticket
-      const success = await unifiedSupportEngine.assignTicket(
-        ticketId,
-        adminUserId || '',
-        'Ticket assigned via legacy TicketService',
-      );
+      // Try unified engine first
+      try {
+        const success = await unifiedSupportEngine.assignTicket(
+          ticketId,
+          adminUserId || '',
+          'Ticket assigned via admin interface',
+        );
 
-      if (success) {
-        console.log('✅ Ticket assigned successfully via unified engine');
-        this.clearCache();
-      } else {
-        console.error('❌ Failed to assign ticket via unified engine');
+        if (success) {
+          console.log('✅ Ticket assigned successfully via unified engine');
+          this.clearCache();
+          return true;
+        }
+      } catch (unifiedError) {
+        console.warn('⚠️ Unified engine assignment failed, falling back to direct update:', unifiedError);
       }
 
-      return success;
+      // Fallback: Direct database update
+      console.log('🔄 Falling back to direct assignment update');
+      
+      // Get current ticket data
+      const { data: currentTicket, error: fetchError } = await supabase
+        .from('support_system')
+        .select('ticket_data')
+        .eq('id', ticketId)
+        .eq('system_type', 'ticket')
+        .single();
+
+      if (fetchError || !currentTicket) {
+        console.error('❌ Failed to fetch current ticket for assignment:', fetchError);
+        return false;
+      }
+
+      // Update the assigned_to in the ticket_data
+      const updatedTicketData = {
+        ...currentTicket.ticket_data,
+        assigned_to: adminUserId,
+        metadata: {
+          ...currentTicket.ticket_data.metadata,
+          last_assignment_change: new Date().toISOString(),
+        },
+      };
+
+      // Update the record
+      const { error: updateError } = await supabase
+        .from('support_system')
+        .update({
+          ticket_data: updatedTicketData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ticketId);
+
+      if (updateError) {
+        console.error('❌ Error in direct ticket assignment update:', updateError);
+        return false;
+      }
+
+      console.log('✅ Ticket assigned successfully via direct update');
+      this.clearCache();
+      return true;
     } catch (error) {
       console.error('❌ Exception in assignTicket:', error);
       return false;

@@ -383,7 +383,7 @@ export const ReplyTemplatesManager = ({
                 }
                 placeholder="e.g., Update on Your Order #{{order_id}}"
               />
-              <p className="text-xs text-gray-500 mt-1">Use {{ variable }} for dynamic content</p>
+              <p className="text-xs text-gray-500 mt-1">Use {`{{ variable }}`} for dynamic content</p>
             </div>
 
             <div>
