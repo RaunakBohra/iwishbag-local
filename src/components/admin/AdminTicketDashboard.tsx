@@ -3,7 +3,7 @@ import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { CompactStatsBar } from '@/components/admin/CompactStatsBar';
 import { InlineFilters } from '@/components/admin/InlineFilters';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { TicketIcon, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { TicketIcon, Clock, CheckCircle, AlertTriangle, Grid3X3, List, Kanban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +27,7 @@ import {
   useTicketStats,
   useUpdateTicketStatus,
   useAssignTicket,
+  useTicketDetail,
 } from '@/hooks/useTickets';
 import {
   TICKET_STATUS_LABELS,
@@ -331,6 +332,228 @@ const TicketRow = ({
   );
 };
 
+// Card View Component
+const TicketCardView = ({
+  tickets,
+  onTicketClick,
+  selectedTicketId,
+  adminUsers,
+}: {
+  tickets: TicketWithDetails[];
+  onTicketClick: (ticketId: string) => void;
+  selectedTicketId: string | null;
+  adminUsers: any[];
+}) => {
+  const updateStatusMutation = useUpdateTicketStatus();
+  const assignTicketMutation = useAssignTicket();
+  const { toast } = useToast();
+
+  const handleStatusChange = (ticket: TicketWithDetails, status: TicketStatus) => {
+    const allowedTransitions = unifiedSupportEngine.getAllowedTransitions(ticket.status as TicketStatus);
+    
+    if (!allowedTransitions.includes(status)) {
+      toast({
+        title: 'Invalid Status Transition',
+        description: `Cannot change from "${ticket.status}" to "${status}". Allowed transitions: ${allowedTransitions.join(', ')}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    updateStatusMutation.mutate({ ticketId: ticket.id, status });
+  };
+
+  const priorityBorderColors = {
+    urgent: 'border-l-red-500 bg-red-50/30',
+    high: 'border-l-orange-500 bg-orange-50/30', 
+    medium: 'border-l-blue-500 bg-blue-50/30',
+    low: 'border-l-gray-400 bg-gray-50/30',
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+      {tickets.map((ticket) => (
+        <div
+          key={ticket.id}
+          onClick={() => onTicketClick(ticket.id)}
+          className={`bg-white rounded-lg border-l-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-4 ${
+            priorityBorderColors[ticket.priority as keyof typeof priorityBorderColors] || priorityBorderColors.medium
+          } ${
+            selectedTicketId === ticket.id ? 'ring-2 ring-blue-500/20 shadow-lg' : ''
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <PriorityIndicator priority={ticket.priority} />
+              <Badge variant="outline" className="text-xs">
+                {TICKET_PRIORITY_LABELS[ticket.priority]}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1">
+              <StatusIcon status={ticket.status} className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium text-gray-600">
+                {ADMIN_TICKET_STATUS_LABELS[ticket.status]}
+              </span>
+            </div>
+          </div>
+
+          {/* Customer Info */}
+          <div className="flex items-center gap-2 mb-3">
+            <CustomerAvatar customer={ticket.user_profile} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{ticket.user_profile?.email}</p>
+            </div>
+          </div>
+
+          {/* Subject & Description */}
+          <div className="mb-3">
+            <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{ticket.subject}</h3>
+            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{ticket.description}</p>
+          </div>
+
+          {/* Category & Quote Info */}
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+            <span>{TICKET_CATEGORY_LABELS[ticket.category]}</span>
+            {ticket.quote && (
+              <span className="text-blue-600 font-medium">Has Order</span>
+            )}
+          </div>
+
+          {/* Status Dropdown */}
+          <div onClick={(e) => e.stopPropagation()} className="mb-2">
+            <Select
+              value={ticket.status}
+              onValueChange={(status) => handleStatusChange(ticket, status as TicketStatus)}
+              disabled={updateStatusMutation.isPending}
+            >
+              <SelectTrigger className="w-full h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {unifiedSupportEngine.getValidStatusOptionsForDropdown(ticket.status as TicketStatus, true).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex items-center gap-2">
+                      <StatusIcon status={option.value} className="h-3 w-3" />
+                      <span className={option.isSuggested ? 'text-green-600 font-medium' : ''}>
+                        {option.label}
+                        {option.isSuggested && ' ✨'}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>{formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <span>Due in 2h</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Kanban View Component
+const KanbanView = ({
+  tickets,
+  onTicketClick,
+  selectedTicketId,
+  adminUsers,
+}: {
+  tickets: TicketWithDetails[];
+  onTicketClick: (ticketId: string) => void;
+  selectedTicketId: string | null;
+  adminUsers: any[];
+}) => {
+  const statusColumns = [
+    { status: 'open', label: 'Open', color: 'bg-blue-50 border-blue-200' },
+    { status: 'in_progress', label: 'In Progress', color: 'bg-yellow-50 border-yellow-200' },
+    { status: 'pending', label: 'Pending', color: 'bg-orange-50 border-orange-200' },
+    { status: 'resolved', label: 'Resolved', color: 'bg-green-50 border-green-200' },
+    { status: 'closed', label: 'Closed', color: 'bg-gray-50 border-gray-200' },
+  ];
+
+  return (
+    <div className="flex gap-4 p-4 overflow-x-auto min-h-0">
+      {statusColumns.map((column) => {
+        const columnTickets = tickets.filter(ticket => ticket.status === column.status);
+        
+        return (
+          <div key={column.status} className={`flex-shrink-0 w-80 rounded-lg border-2 ${column.color}`}>
+            {/* Column Header */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <StatusIcon status={column.status} />
+                  <h3 className="font-semibold text-gray-900">{column.label}</h3>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {columnTickets.length}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Column Content */}
+            <div className="p-2 space-y-2 max-h-96 overflow-y-auto">
+              {columnTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  onClick={() => onTicketClick(ticket.id)}
+                  className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all cursor-pointer border ${
+                    selectedTicketId === ticket.id ? 'ring-2 ring-blue-500/20 border-blue-300' : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <PriorityIndicator priority={ticket.priority} />
+                    <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                      {ticket.priority}
+                    </Badge>
+                  </div>
+
+                  <h4 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">
+                    {ticket.subject}
+                  </h4>
+                  
+                  <div className="flex items-center gap-2 mb-2">
+                    <CustomerAvatar customer={ticket.user_profile} size="sm" />
+                    <span className="text-xs text-gray-600 truncate">
+                      {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}</span>
+                    {ticket.quote && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full" title="Has related order" />
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {columnTickets.length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <StatusIcon status={column.status} className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No {column.label.toLowerCase()} tickets</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // Customer Intelligence Panel Component
 const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
   const { data: ticket } = useTicketDetail(ticketId);
@@ -504,6 +727,8 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
   );
 };
 
+type ViewMode = 'table' | 'card' | 'kanban';
+
 export const AdminTicketDashboard = () => {
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
@@ -511,6 +736,7 @@ export const AdminTicketDashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
   const [quoteFilter, setQuoteFilter] = useState<'all' | 'with_quote' | 'without_quote'>('all');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   const { users: adminUsers = [] } = useUserRoles();
 
@@ -573,14 +799,53 @@ export const AdminTicketDashboard = () => {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Support Tickets</h1>
             <p className="text-gray-600 text-sm mt-1">Manage customer support requests and inquiries</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Response Time</p>
-              <p className="text-sm font-semibold text-green-600">2.3h avg</p>
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'table' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Table View"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('card')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'card' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Card View"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'kanban' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Kanban Board"
+              >
+                <Kanban className="h-4 w-4" />
+              </button>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Satisfaction</p>
-              <p className="text-sm font-semibold text-blue-600">4.8/5.0</p>
+
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Response Time</p>
+                <p className="text-sm font-semibold text-green-600">2.3h avg</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Satisfaction</p>
+                <p className="text-sm font-semibold text-blue-600">4.8/5.0</p>
+              </div>
             </div>
           </div>
         </div>
@@ -609,7 +874,7 @@ export const AdminTicketDashboard = () => {
       <div className="flex-1 flex min-h-0">
         {/* Left Panel: Tickets List with Responsive Sizing */}
         <div className={`${
-          selectedTicketId 
+          selectedTicketId && viewMode !== 'kanban'
             ? 'w-full md:w-2/5 xl:w-1/3 border-r border-gray-200' 
             : 'w-full'
         } bg-white overflow-auto shadow-sm transition-all duration-300 ease-in-out`}>
@@ -639,39 +904,68 @@ export const AdminTicketDashboard = () => {
               )}
             </div>
           ) : (
-            <div className="border-b border-gray-200">
-              <Table>
-                <TableHeader className="bg-gray-50/80 backdrop-blur-sm sticky top-0 z-10">
-                  <TableRow className="border-b border-gray-200">
-                    <TableHead className="font-semibold text-gray-700 py-4">Subject & Description</TableHead>
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Customer</TableHead>}
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Category</TableHead>}
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Priority</TableHead>}
-                    <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Assigned To</TableHead>}
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Response Time</TableHead>}
-                    {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Related Order</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket) => (
-                    <TicketRow
-                      key={ticket.id}
-                      ticket={ticket}
-                      onTicketClick={handleTicketClick}
-                      adminUsers={adminUsers}
-                      isCompact={selectedTicketId !== null}
-                      isSelected={selectedTicketId === ticket.id}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              {/* Table View */}
+              {viewMode === 'table' && (
+                <div className="border-b border-gray-200">
+                  <Table>
+                    <TableHeader className="bg-gray-50/80 backdrop-blur-sm sticky top-0 z-10">
+                      <TableRow className="border-b border-gray-200">
+                        <TableHead className="font-semibold text-gray-700 py-4">Subject & Description</TableHead>
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Customer</TableHead>}
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Category</TableHead>}
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Priority</TableHead>}
+                        <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Assigned To</TableHead>}
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Response Time</TableHead>}
+                        {!selectedTicketId && <TableHead className="font-semibold text-gray-700">Related Order</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTickets.map((ticket) => (
+                        <TicketRow
+                          key={ticket.id}
+                          ticket={ticket}
+                          onTicketClick={handleTicketClick}
+                          adminUsers={adminUsers}
+                          isCompact={selectedTicketId !== null}
+                          isSelected={selectedTicketId === ticket.id}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Card View */}
+              {viewMode === 'card' && (
+                <div className="overflow-auto">
+                  <TicketCardView
+                    tickets={filteredTickets}
+                    onTicketClick={handleTicketClick}
+                    selectedTicketId={selectedTicketId}
+                    adminUsers={adminUsers}
+                  />
+                </div>
+              )}
+
+              {/* Kanban View */}
+              {viewMode === 'kanban' && (
+                <div className="overflow-auto">
+                  <KanbanView
+                    tickets={filteredTickets}
+                    onTicketClick={handleTicketClick}
+                    selectedTicketId={selectedTicketId}
+                    adminUsers={adminUsers}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* Right Panel: Enhanced Ticket Detail View with Customer Intelligence */}
-        {selectedTicketId && (
+        {selectedTicketId && viewMode !== 'kanban' && (
           <div className="hidden md:flex md:w-3/5 xl:w-2/3 bg-gray-50 min-h-0">
             <div className="flex-1 flex">
               {/* Main Detail Panel */}
@@ -692,13 +986,26 @@ export const AdminTicketDashboard = () => {
         )}
         
         {/* Mobile: Full Screen Ticket Detail */}
-        {selectedTicketId && (
+        {selectedTicketId && viewMode !== 'kanban' && (
           <div className="md:hidden fixed inset-0 z-50 bg-white">
             <TicketDetailView 
               ticketId={selectedTicketId} 
               onBack={handleBackToList}
               inSplitView={false}
             />
+          </div>
+        )}
+
+        {/* Kanban: Modal Ticket Detail */}
+        {selectedTicketId && viewMode === 'kanban' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+              <TicketDetailView 
+                ticketId={selectedTicketId} 
+                onBack={handleBackToList}
+                inSplitView={false}
+              />
+            </div>
           </div>
         )}
       </div>
