@@ -149,23 +149,23 @@ const TicketRow = ({
     low: 'border-l-slate-400',
   };
 
-  // Enhanced background colors for unread tickets and status
+  // Enhanced background colors for table rows - STRONG visible status colors
   const getTicketRowBackground = (ticket: any) => {
-    // Unread tickets get priority-based colors
+    // Unread tickets get BOLD priority-based colors (highest priority)
     if (ticket.has_unread_replies) {
-      return ticket.priority === 'urgent' ? 'bg-red-50/80' :
-             ticket.priority === 'high' ? 'bg-orange-50/80' :
-             'bg-blue-50/80';
+      return ticket.priority === 'urgent' ? 'bg-red-100 border-red-200 hover:bg-red-200/60' :
+             ticket.priority === 'high' ? 'bg-orange-100 border-orange-200 hover:bg-orange-200/60' :
+             'bg-blue-100 border-blue-200 hover:bg-blue-200/60';
     }
     
-    // Status-based subtle background colors for all tickets
+    // Status-based STRONG background colors - clearly visible in table
     switch (ticket.status) {
-      case 'open': return 'bg-blue-50/30';
-      case 'in_progress': return 'bg-purple-50/30';
-      case 'pending': return 'bg-yellow-50/30';  
-      case 'resolved': return 'bg-green-50/30';
-      case 'closed': return 'bg-gray-50/30';
-      default: return 'bg-white';
+      case 'open': return 'bg-blue-50 hover:bg-blue-100/80 border-blue-100';
+      case 'in_progress': return 'bg-purple-50 hover:bg-purple-100/80 border-purple-100';
+      case 'pending': return 'bg-yellow-50 hover:bg-yellow-100/80 border-yellow-100';  
+      case 'resolved': return 'bg-green-50 hover:bg-green-100/80 border-green-100';
+      case 'closed': return 'bg-gray-50 hover:bg-gray-100/80 border-gray-100';
+      default: return 'bg-white hover:bg-gray-50 border-gray-100';
     }
   };
 
@@ -174,7 +174,7 @@ const TicketRow = ({
       className={`cursor-pointer hover:shadow-sm transition-all duration-200 border-l-4 ${
         priorityBorderColors[ticket.priority as keyof typeof priorityBorderColors] || priorityBorderColors.medium
       } ${getTicketRowBackground(ticket)} ${
-        isSelected ? 'shadow-md ring-2 ring-blue-500/20' : 'hover:bg-opacity-60'
+        isSelected ? 'shadow-md ring-2 ring-blue-500/20 bg-blue-50/40' : ''
       }`} 
       onClick={() => onTicketClick(ticket.id)}
     >
