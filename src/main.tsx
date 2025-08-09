@@ -81,8 +81,7 @@ import('./utils/criticalPathOptimization')
     logger.warn('Critical path optimizer failed to load:', error);
   });
 
-// Initialize service worker for advanced caching and offline support
-// Only initialize in production or when explicitly testing
+// Initialize service worker and resource preloader
 if (import.meta.env.PROD || import.meta.env.VITE_ENABLE_SW === 'true') {
   import('./utils/serviceWorkerManager')
     .then(({ serviceWorkerManager }) => {

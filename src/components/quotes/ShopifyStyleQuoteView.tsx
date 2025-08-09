@@ -646,29 +646,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   // Determine visibility tier for progressive disclosure
   const visibilityTier = getQuoteVisibilityTier(quote.status, viewMode);
   
-  // Check if customer should have access to this quote at all
-  if (viewMode === 'customer' && visibilityTier === 'admin-only') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="max-w-md mx-4">
-          <CardContent className="pt-6 text-center">
-            <OptimizedIcon name="Clock" className="w-12 h-12 mx-auto text-blue-500 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Quote Being Prepared</h2>
-            <p className="text-muted-foreground mb-4">
-              Our team is working on your quote and will notify you once it's ready for review.
-            </p>
-            <div className="text-sm text-muted-foreground mb-6">
-              <p>Expected timeline: 1-2 business days</p>
-              <p className="mt-2">You'll receive an email notification when your quote is ready.</p>
-            </div>
-            <Button onClick={() => navigate('/dashboard/quotes')} className="w-full">
-              Back to Quotes
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Note: We no longer completely hide admin-only quotes from customers
+  // Instead, we show the products they requested but hide pricing/actions
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -688,7 +667,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            {visibilityTier === 'limited' ? (
+            {visibilityTier === 'admin-only' ? (
+              <h1 className="text-3xl font-bold">Quote In Progress</h1>
+            ) : visibilityTier === 'limited' ? (
               <h1 className="text-3xl font-bold">Quote Received</h1>
             ) : (
               <h1 className="text-3xl font-bold">Your Quote is Ready</h1>
@@ -696,13 +677,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             <QuoteStatusBadge status={quote.status} />
           </div>
           <p className="text-muted-foreground">
-            {visibilityTier === 'limited' 
-              ? 'We\'ve sent you a quote! Our team is currently reviewing the final details and pricing. You\'ll be notified once it\'s ready for your approval.'
-              : quote.status === 'approved' 
-                ? 'Your quote has been approved! Add it to cart to continue.'
-                : quote.status === 'rejected' 
-                  ? 'This quote was rejected. You can approve it or ask questions below.'
-                  : 'Review your quote and take an action below'
+            {visibilityTier === 'admin-only'
+              ? 'Here are the items you requested a quote for. Our team is working on pricing and will notify you once it\'s ready for review.'
+              : visibilityTier === 'limited' 
+                ? 'We\'ve sent you a quote! Our team is currently reviewing the final details and pricing. You\'ll be notified once it\'s ready for your approval.'
+                : quote.status === 'approved' 
+                  ? 'Your quote has been approved! Add it to cart to continue.'
+                  : quote.status === 'rejected' 
+                    ? 'This quote was rejected. You can approve it or ask questions below.'
+                    : 'Review your quote and take an action below'
             }
           </p>
         </div>
@@ -713,8 +696,27 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </div>
         <MobileProgress currentStep={currentStep} />
 
+        {/* Status Banner for admin-only quotes */}
+        {visibilityTier === 'admin-only' && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">
+                    Quote Being Prepared
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Our team is calculating pricing and shipping costs. You'll receive an email notification when it's ready.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Expiry Warning - Only show for non-approved quotes */}
-        {daysLeft && daysLeft <= 7 && quote.status !== 'approved' && (
+        {daysLeft && daysLeft <= 7 && quote.status !== 'approved' && visibilityTier === 'full' && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
@@ -740,7 +742,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           displayCurrency={displayCurrency}
         />
         
-        {/* Mobile Breakdown - Only show for full access */}
+        {/* Mobile Breakdown - Only show for full access (has pricing) */}
         {shouldShowPricing(visibilityTier) && (
         <MobileBreakdown 
           quote={quote}
@@ -1041,7 +1043,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <div className="flex items-center gap-3">
-                        <Zap className="w-5 h-5 text-orange-600" />
+                        <OptimizedIcon name="Zap" className="w-5 h-5 text-orange-600" />
                         <div>
                           <div className="font-medium">Express Shipping</div>
                           <div className="text-sm text-muted-foreground">3-7 business days</div>
@@ -1185,10 +1187,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium text-blue-900">Quote In Progress</span>
+                        <span className="font-medium text-blue-900">
+                          {visibilityTier === 'admin-only' ? 'Calculating Your Quote' : 'Quote In Progress'}
+                        </span>
                       </div>
                       <p className="text-sm text-blue-800">
-                        Our team is finalizing your pricing and will notify you once it's ready for review.
+                        {visibilityTier === 'admin-only' 
+                          ? 'Our team is calculating pricing for the items you requested. You\'ll get an email notification when it\'s ready.'
+                          : 'Our team is finalizing your pricing and will notify you once it\'s ready for review.'
+                        }
                       </p>
                     </div>
                   )}
@@ -1236,34 +1243,34 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         )}
                       </Button>
                     ) : (
-                      // For pending/rejected quotes: Show Approve button
+                      // For sent/rejected/expired quotes: Show Approve button
                       <Button 
                         className="w-full h-12 text-base font-medium"
                         onClick={handleApprove}
                       >
                         <CheckCircle className="w-5 h-5 mr-2" />
-                        Approve Quote
+                        {quote.status === 'rejected' ? 'Re-approve Quote' : 'Approve Quote'}
                       </Button>
                     )}
 
                     {/* Secondary Actions */}
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Reject button - only show for pending quotes, not for rejected quotes */}
-                      {quote.status === 'pending' && (
+                      {/* Reject button - show for sent, rejected, and expired quotes */}
+                      {(quote.status === 'sent' || quote.status === 'rejected' || quote.status === 'expired') && (
                         <Button 
                           variant="destructive" 
                           className="h-12"
                           onClick={() => setRejectModalOpen(true)}
                         >
                           <X className="w-4 h-4 mr-2" />
-                          Reject Quote
+                          {quote.status === 'rejected' ? 'Update Rejection' : 'Reject Quote'}
                         </Button>
                       )}
                       
                       {/* Ask Question button - always visible, full width when reject not shown */}
                       <Button 
                         variant="outline" 
-                        className={quote.status === 'pending' ? 'h-12' : 'col-span-2 h-12'}
+                        className={(quote.status === 'sent' || quote.status === 'rejected' || quote.status === 'expired') ? 'h-12' : 'col-span-2 h-12'}
                         onClick={() => setQuestionModalOpen(true)}
                       >
                         <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
@@ -1274,17 +1281,35 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className={`text-center p-4 rounded-lg border ${
+                      visibilityTier === 'admin-only' 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'bg-amber-50 border-amber-200'
+                    }`}>
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <OptimizedIcon name="Bell" className="w-5 h-5 text-amber-600" />
-                        <span className="font-medium text-amber-900">We'll Notify You</span>
+                        <OptimizedIcon 
+                          name={visibilityTier === 'admin-only' ? 'Clock' : 'Bell'} 
+                          className={`w-5 h-5 ${
+                            visibilityTier === 'admin-only' ? 'text-blue-600' : 'text-amber-600'
+                          }`} 
+                        />
+                        <span className={`font-medium ${
+                          visibilityTier === 'admin-only' ? 'text-blue-900' : 'text-amber-900'
+                        }`}>
+                          {visibilityTier === 'admin-only' ? 'Calculating Pricing' : 'We\'ll Notify You'}
+                        </span>
                       </div>
-                      <p className="text-sm text-amber-800">
-                        You'll receive an email notification once your quote is ready for approval.
+                      <p className={`text-sm ${
+                        visibilityTier === 'admin-only' ? 'text-blue-800' : 'text-amber-800'
+                      }`}>
+                        {visibilityTier === 'admin-only' 
+                          ? 'We\'re working on pricing for your requested items. You\'ll get an email when ready.'
+                          : 'You\'ll receive an email notification once your quote is ready for approval.'
+                        }
                       </p>
                     </div>
                     
-                    {/* Limited action - only allow questions */}
+                    {/* Allow questions for any non-full-access quote */}
                     <Button 
                       variant="outline" 
                       className="w-full h-12"

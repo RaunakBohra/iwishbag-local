@@ -13,15 +13,24 @@ const path = require('path');
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const INDEX_HTML = path.join(DIST_DIR, 'index.html');
 
-// Chunks that should NOT be preloaded
+// Chunks that should NOT be preloaded (aggressive removal for sub-3s FCP)
 const HEAVY_CHUNKS_TO_REMOVE = [
   'excel-vendor',
-  'pdf-vendor',
-  'admin-core', 
+  'pdf-vendor', 
   'charts-vendor',
   'image-processing-vendor',
   'animations-vendor',
-  'monitoring-vendor'
+  'monitoring-vendor',
+  'admin-core',
+  'admin-pages',
+  'admin-components',
+  'admin-vendor',
+  'radix-vendor',
+  'ui-vendor', 
+  'forms-vendor',
+  'state-vendor',
+  'api-vendor',
+  'utils-vendor'
 ];
 
 function optimizePreloads() {

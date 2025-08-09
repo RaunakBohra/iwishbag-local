@@ -27,27 +27,6 @@ export default defineConfig(({ mode }) => ({
     assetsDir: 'assets',
     rollupOptions: {
       output: {
-        // Conservative chunk splitting - focus on separating heavy libraries only
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            
-            // Heavy libraries that should load on-demand only
-            if (id.includes('excel')) return 'excel-vendor';
-            if (id.includes('jspdf')) return 'pdf-vendor';
-            if (id.includes('recharts')) return 'charts-vendor';
-            
-            // Admin functionality 
-            if (id.includes('admin')) return 'admin-vendor';
-            
-            // All other node_modules stay together for stability
-            return 'vendor';
-          }
-          
-          // Application code - minimal splitting
-          if (id.includes('/pages/admin/')) return 'admin-pages';
-          
-          // Everything else stays in main bundle
-        },
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
           const extType = assetInfo.name?.split('.').at(-1);
@@ -64,6 +43,8 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     minify: 'esbuild',
     target: 'es2015',
+    // Enable CSS code splitting
+    cssCodeSplit: true,
   },
   esbuild: {
     drop: mode === 'production' ? ['console', 'debugger'] : [],
