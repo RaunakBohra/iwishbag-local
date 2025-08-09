@@ -23,6 +23,13 @@
  * 
  * NEW LOADING USAGE:
  * import { StandardLoading, PageLoading, DataLoading } from '@/components/patterns';
+ * 
+ * NEW ORDER MANAGEMENT:
+ * import { 
+ *   OrderStatusBadge, 
+ *   OrderProgressTimeline,
+ *   MultiWarehouseOrderSummary 
+ * } from '@/components/patterns';
  */
 
 // Export all modal patterns
@@ -91,6 +98,21 @@ export const PatternExamples = {
     },
   },
 };
+
+// Enhanced Order Management Components
+export {
+  OrderStatusBadge,
+  OrderProgressTimeline,
+  MultiWarehouseOrderSummary,
+  SmartRevisionAlert,
+  AutomationStatusIndicator,
+  CustomerOrderList,
+  type OrderItem,
+  type Order,
+  type OrderShipment,
+  type ItemRevision,
+  type AutomationTask,
+} from '../orders';
 
 // Form examples function to avoid circular imports
 export const getFormExamples = () => {

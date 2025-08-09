@@ -3,32 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  MoreVertical,
-  Package,
-  DollarSign,
-  Scale,
-  FileText,
-  X,
-  Calculator,
-  Globe,
-  Check,
-  Brain,
-  Database,
-  Bot,
-  Settings,
-  Receipt,
-  ExternalLink,
-  Hash,
-  Trash2,
-  Copy as CopyIcon,
-  Star,
-  Download,
-  Link,
-  Edit
-} from 'lucide-react';
+import { OptimizedIcon, ChevronDown, Package, DollarSign, X, Globe, Check, Trash2 } from '@/components/ui/OptimizedIcon';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -412,14 +387,14 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                 className="p-0.5 hover:bg-gray-100 rounded transition-colors mr-1"
                                 title="Clear HSN"
                               >
-                                <Trash2 className="h-3 w-3 text-gray-400" />
+                                <OptimizedIcon name="Trash2" className="h-3 w-3 text-gray-400" />
                               </button>
                             )}
                             <button
                               onClick={() => setEditingField(null)}
                               className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                             >
-                              <X className="h-3 w-3 text-gray-400" />
+                              <OptimizedIcon name="X" className="h-3 w-3 text-gray-400" />
                             </button>
                           </div>
                         </div>
@@ -498,7 +473,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               if (method === 'manual' && editingManualTaxRate === item.id) {
                                 return (
                                   <div key={method} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200">
-                                    <Hash className="h-3 w-3 text-amber-600" />
+                                    <OptimizedIcon name="Hash" className="h-3 w-3 text-amber-600" />
                                     <span className="text-[11px] text-amber-700 font-medium">Manual:</span>
                                     <Input
                                       type="number"
@@ -632,7 +607,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               </button>
                             )}
                             
-                            <X className="h-3 w-3 text-gray-400" />
+                            <OptimizedIcon name="X" className="h-3 w-3 text-gray-400" />
                             
                             {/* Width */}
                             {editingDimension?.itemId === item.id && editingDimension?.field === 'width' ? (
@@ -674,7 +649,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               </button>
                             )}
                             
-                            <X className="h-3 w-3 text-gray-400" />
+                            <OptimizedIcon name="X" className="h-3 w-3 text-gray-400" />
                             
                             {/* Height */}
                             {editingDimension?.itemId === item.id && editingDimension?.field === 'height' ? (

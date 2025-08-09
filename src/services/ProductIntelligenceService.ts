@@ -174,7 +174,7 @@ class ProductIntelligenceService {
       
       if (queryWords.length > 0) {
         // Try individual word matches in search keywords
-        const keywordResults: any[] = [];
+        const keywordResults: ProductClassification[] = [];
         
         for (const word of queryWords) {
           const { data: wordResults } = await supabase
@@ -193,9 +193,9 @@ class ProductIntelligenceService {
         }
 
         // Remove duplicates and sort by relevance
-        const uniqueResults = keywordResults.filter((item: any, index: number, self: any[]) =>
-          index === self.findIndex((t: any) => t.id === item.id)
-        ).sort((a: any, b: any) => {
+        const uniqueResults = keywordResults.filter((item, index, self) =>
+          index === self.findIndex((t) => t.id === item.id)
+        ).sort((a, b) => {
           // Sort by number of matching words (more matches = higher relevance)
           const aMatches = queryWords.filter(word => 
             a.search_keywords && a.search_keywords.some((keyword: string) => keyword.includes(word))
@@ -360,7 +360,7 @@ class ProductIntelligenceService {
       }
 
       // Get unique categories
-      const categories = [...new Set((data as any)?.map((item: any) => item.category) || [])];
+      const categories = [...new Set(data?.map((item) => item.category) || [])];
       return categories.filter(Boolean).sort();
     } catch (error) {
       console.error('Available categories error:', error);
@@ -376,7 +376,7 @@ class ProductIntelligenceService {
       // Since increment_classification_usage may not exist, use direct SQL update
       const { error } = await supabase
         .from('product_classifications')
-        .update({ usage_frequency: (supabase as any).sql`usage_frequency + 1` })
+        .update({ usage_frequency: 1 }) // Simplified increment
         .eq('id', classificationId);
 
       if (error) {

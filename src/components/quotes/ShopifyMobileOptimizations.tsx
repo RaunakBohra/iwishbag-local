@@ -13,7 +13,6 @@ import {
   Truck, 
   Shield, 
   CreditCard,
-  MessageCircle,
   ChevronUp,
   ChevronDown,
   Settings,
@@ -21,6 +20,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
+import { OptimizedIcon } from '@/components/ui/OptimizedIcon';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency } from '@/utils/originCurrency';
@@ -91,7 +91,7 @@ export const MobileStickyBar: React.FC<MobileStickyBarProps> = ({
               onClick={onRequestChanges}
               className="h-10"
             >
-              <MessageCircle className="w-4 h-4 mr-1" />
+              <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-1" />
               Ask
             </Button>
           </div>

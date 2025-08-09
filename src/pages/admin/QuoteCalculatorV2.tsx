@@ -33,43 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, 
-  Trash2, 
-  Calculator, 
-  Save, 
-  Eye, 
-  Package,
-  DollarSign,
-  Globe,
-  Info,
-  AlertCircle,
-  Copy,
-  ExternalLink,
-  Clock,
-  Check,
-  X,
-  ChevronDown,
-  ArrowRight,
-  FileText,
-  Download,
-  Tag,
-  Ruler,
-  Sparkles,
-  Brain,
-  ChevronUp,
-  MapPin,
-  Phone,
-  User,
-  Mail,
-  CheckCircle,
-  EyeOff,
-  Settings,
-  Scale,
-  Truck,
-  CreditCard,
-  Shield
-} from 'lucide-react';
+import { OptimizedIcon } from '@/components/ui/OptimizedIcon';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useCountryUnit } from '@/hooks/useCountryUnits';
@@ -1936,7 +1900,7 @@ const QuoteCalculatorV2: React.FC = () => {
             <div className="flex items-center gap-2">
               {emailSent && (
                 <Badge variant="outline" className="text-green-600">
-                  <Eye className="mr-1 h-3 w-3" />
+                  <OptimizedIcon name="Eye" className="mr-1 h-3 w-3" />
                   Email Sent
                 </Badge>
               )}
@@ -1944,7 +1908,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 const expiryStatus = getExpiryStatus();
                 return expiryStatus ? (
                   <Badge variant="outline" className={expiryStatus.color}>
-                    <Clock className="mr-1 h-3 w-3" />
+                    <OptimizedIcon name="Clock" className="mr-1 h-3 w-3" />
                     {expiryStatus.text}
                   </Badge>
                 ) : null;
@@ -1977,7 +1941,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   onClick={handleNextStatusClick}
                   className="h-8 px-3 gap-1"
                 >
-                  <ArrowRight className="h-3 w-3" />
+                  <OptimizedIcon name="ArrowRight" className="h-3 w-3" />
                   {getNextStatusLabel(currentQuoteStatus)}
                 </Button>
               )}
@@ -1990,7 +1954,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     variant="outline"
                     className="h-8 px-3 gap-1"
                   >
-                    <FileText className="h-3 w-3" />
+                    <OptimizedIcon name="FileText" className="h-3 w-3" />
                     Docs
                   </Button>
                 </DialogTrigger>
@@ -2052,7 +2016,7 @@ const QuoteCalculatorV2: React.FC = () => {
           ) : (
             // Show mode badge when no quote exists
             <Badge variant="secondary" className="text-lg px-4 py-2">
-              <Calculator className="w-4 h-4 mr-2" />
+              <OptimizedIcon name="Calculator" className="w-4 h-4 mr-2" />
               New Calculator
             </Badge>
           )}
@@ -2068,7 +2032,7 @@ const QuoteCalculatorV2: React.FC = () => {
               {/* Name */}
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <User className="h-3 w-3 text-blue-600" />
+                  <OptimizedIcon name="User" className="h-3 w-3 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Name</div>
@@ -2081,7 +2045,7 @@ const QuoteCalculatorV2: React.FC = () => {
               {/* Email */}
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Mail className="h-3 w-3 text-blue-600" />
+                  <OptimizedIcon name="Mail" className="h-3 w-3 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Email</div>
@@ -2094,7 +2058,7 @@ const QuoteCalculatorV2: React.FC = () => {
               {/* Phone */}
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Phone className="h-3 w-3 text-purple-600" />
+                  <OptimizedIcon name="Phone" className="h-3 w-3 text-purple-600" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">Phone</div>
@@ -2108,10 +2072,10 @@ const QuoteCalculatorV2: React.FC = () => {
               {deliveryAddress ? (
                 <div className="flex items-center gap-1">
                   <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center relative">
-                    <MapPin className="h-3 w-3 text-teal-600" />
+                    <OptimizedIcon name="MapPin" className="h-3 w-3 text-teal-600" />
                     {deliveryAddress.is_default && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                        <CheckCircle className="h-2 w-2 text-white" />
+                        <OptimizedIcon name="CheckCircle" className="h-2 w-2 text-white" />
                       </div>
                     )}
                   </div>
@@ -2140,16 +2104,16 @@ const QuoteCalculatorV2: React.FC = () => {
                     title={showAddressDetails ? "Hide address details" : "Show address details"}
                   >
                     {showAddressDetails ? (
-                      <EyeOff className="h-2.5 w-2.5 text-gray-600" />
+                      <OptimizedIcon name="EyeOff" className="h-2.5 w-2.5 text-gray-600" />
                     ) : (
-                      <Eye className="h-2.5 w-2.5 text-gray-600" />
+                      <OptimizedIcon name="Eye" className="h-2.5 w-2.5 text-gray-600" />
                     )}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                    <MapPin className="h-3 w-3 text-gray-400" />
+                    <OptimizedIcon name="MapPin" className="h-3 w-3 text-gray-400" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Address</div>
@@ -2198,7 +2162,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Origin Column */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-blue-600" />
+                    <OptimizedIcon name="MapPin" className="h-3 w-3 text-blue-600" />
                     Origin
                   </Label>
                   <div className="space-y-2">
@@ -2241,7 +2205,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Destination Column */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-blue-600" />
+                    <OptimizedIcon name="MapPin" className="h-3 w-3 text-blue-600" />
                     Destination
                     {userOverrodeDestination && (
                       <span className="text-xs text-blue-600 font-medium ml-1">Manual</span>
@@ -2466,7 +2430,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Shipping Column */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-1">
-                    <Truck className="h-3 w-3 text-blue-600" />
+                    <OptimizedIcon name="Truck" className="h-3 w-3 text-blue-600" />
                     International Shipping
                     {calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod && (
                       <span className="text-xs text-blue-600 ml-1">(Auto)</span>
@@ -2522,7 +2486,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="h-4 w-4 rounded bg-blue-200 flex items-center justify-center">
-                          <Truck className="h-3 w-3 text-blue-700" />
+                          <OptimizedIcon name="Truck" className="h-3 w-3 text-blue-700" />
                         </div>
                         <Label className="text-sm font-medium text-blue-800">India Service Type</Label>
                       </div>
@@ -2539,9 +2503,9 @@ const QuoteCalculatorV2: React.FC = () => {
                             <SelectItem key={service.value} value={service.value}>
                               <div className="flex items-center gap-2">
                                 <div className="h-4 w-4 rounded bg-gray-100 flex items-center justify-center">
-                                  {service.value === 'standard' && <Package className="h-3 w-3 text-gray-600" />}
-                                  {service.value === 'express' && <Clock className="h-3 w-3 text-blue-600" />}
-                                  {service.value === 'same_day' && <CheckCircle className="h-3 w-3 text-blue-600" />}
+                                  {service.value === 'standard' && <OptimizedIcon name="Package" className="h-3 w-3 text-gray-600" />}
+                                  {service.value === 'express' && <OptimizedIcon name="Clock" className="h-3 w-3 text-blue-600" />}
+                                  {service.value === 'same_day' && <OptimizedIcon name="CheckCircle" className="h-3 w-3 text-blue-600" />}
                                 </div>
                                 <span>{service.label}</span>
                               </div>
@@ -2557,7 +2521,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 {/* Payment Column */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-1">
-                    <CreditCard className="h-3 w-3 text-blue-600" />
+                    <OptimizedIcon name="CreditCard" className="h-3 w-3 text-blue-600" />
                     Payment
                   </Label>
                   <div className="space-y-2">
@@ -2582,7 +2546,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     {/* Insurance Toggle */}
                     <div className="flex items-center justify-between px-3 h-10 rounded-lg bg-gray-50/50">
                       <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        <Shield className="h-3 w-3 text-blue-600" />
+                        <OptimizedIcon name="Shield" className="h-3 w-3 text-blue-600" />
                         Insurance
                       </Label>
                       <Switch
@@ -2603,12 +2567,12 @@ const QuoteCalculatorV2: React.FC = () => {
                   <div className="flex items-center">
                     {/^[1-9][0-9]{5}$/.test(destinationPincode) ? (
                       <span className="text-blue-600 flex items-center">
-                        <Check className="h-3 w-3 mr-1" />
+                        <OptimizedIcon name="Check" className="h-3 w-3 mr-1" />
                         Pincode valid - Delhivery rates active
                       </span>
                     ) : (
                       <span className="text-orange-600 flex items-center">
-                        <AlertCircle className="h-3 w-3 mr-1" />
+                        <OptimizedIcon name="AlertCircle" className="h-3 w-3 mr-1" />
                         {destinationPincode.length < 6 
                           ? `Enter ${6 - destinationPincode.length} more digits` 
                           : 'Invalid pincode - fallback rates'
@@ -2619,13 +2583,13 @@ const QuoteCalculatorV2: React.FC = () => {
                 )}
                 {destinationCountry === 'NP' && loadingNCMRates && (
                   <span className="text-blue-600 flex items-center">
-                    <Clock className="h-3 w-3 mr-1 animate-spin" />
+                    <OptimizedIcon name="Clock" className="h-3 w-3 mr-1 animate-spin" />
                     Loading NCM rates...
                   </span>
                 )}
                 {destinationCountry === 'NP' && ncmRates?.rates && (
                   <span className="text-blue-600 flex items-center">
-                    <Check className="h-3 w-3 mr-1" />
+                    <OptimizedIcon name="Check" className="h-3 w-3 mr-1" />
                     NCM rates loaded • {ncmRates.markup_applied}% markup
                   </span>
                 )}
@@ -2710,7 +2674,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       className="text-sm h-8 px-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
                       disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
                     >
-                      <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
+                      <OptimizedIcon name="Sparkles" className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
                       {smartFeatureLoading[`enhance-${item.id}`] ? 'Enhancing...' : 'AI'}
                     </Button>
                     {items.length > 1 && (
@@ -2720,7 +2684,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         onClick={() => removeItem(item.id)}
                         className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <OptimizedIcon name="Trash2" className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
@@ -2753,7 +2717,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             }}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
-                            <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <OptimizedIcon name="ExternalLink" className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                           {imageIndex === 0 && (
                             <Badge 
@@ -3076,7 +3040,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
                           title="Get AI weight estimate"
                         >
-                          <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                          <OptimizedIcon name="Brain" className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
                         </Button>
                         <Button
                           type="button"
@@ -3086,7 +3050,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           className="h-8 w-8 p-0 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-blue-100"
                           title="Set Dimensions"
                         >
-                          <Ruler className="w-3 h-3" />
+                          <OptimizedIcon name="Ruler" className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
@@ -3150,7 +3114,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div className="mt-4 p-4 rounded-lg border border-blue-100 bg-blue-50/30">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Scale className="w-3 h-3 text-blue-600" />
+                          <OptimizedIcon name="Scale" className="w-3 h-3 text-blue-600" />
                         </div>
                         <h6 className="text-sm font-semibold text-blue-900">Shipping Weight Calculation</h6>
                       </div>
@@ -3207,7 +3171,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-gray-500" />
+                      <OptimizedIcon name="Settings" className="w-4 h-4 text-gray-500" />
                       <span className="text-sm font-medium text-gray-700">Advanced Options</span>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <span>Discounts</span>
@@ -3217,7 +3181,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         <span>Settings</span>
                       </div>
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform group-hover:text-gray-700 ${
+                    <OptimizedIcon name="ChevronDown" className={`w-4 h-4 text-gray-500 transition-transform group-hover:text-gray-700 ${
                       advancedOptionsExpanded[item.id] ? 'rotate-180' : ''
                     }`} />
                   </button>
@@ -3227,7 +3191,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       {/* Discount Section */}
                       <div className="p-4 rounded-lg border border-yellow-200 bg-yellow-50/30">
                         <h6 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center gap-2">
-                          <Tag className="w-4 h-4" />
+                          <OptimizedIcon name="Tag" className="w-4 h-4" />
                           Item Discount
                         </h6>
                         <div className="flex items-center gap-4">
@@ -3308,7 +3272,7 @@ const QuoteCalculatorV2: React.FC = () => {
           <Card className="border-dashed border-2 border-gray-300 hover:border-blue-400 transition-colors">
             <CardContent className="flex items-center justify-center p-8">
               <Button onClick={addItem} variant="outline" className="w-full max-w-md">
-                <Plus className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Plus" className="w-4 h-4 mr-2" />
                 Add Another Item
               </Button>
             </CardContent>
@@ -3322,13 +3286,13 @@ const QuoteCalculatorV2: React.FC = () => {
             >
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
+                  <OptimizedIcon name="Calculator" className="h-5 w-5" />
                   Smart Discount System
                 </div>
                 {isDiscountSectionCollapsed ? (
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                  <OptimizedIcon name="ChevronDown" className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                  <OptimizedIcon name="ChevronUp" className="h-4 w-4 text-gray-500" />
                 )}
               </CardTitle>
               <CardDescription>
@@ -3453,13 +3417,13 @@ const QuoteCalculatorV2: React.FC = () => {
                 {discountCodes.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium flex items-center gap-2">
-                      <Check className="h-4 w-4 text-blue-600" />
+                      <OptimizedIcon name="Check" className="h-4 w-4 text-blue-600" />
                       Applied Discount Codes
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {discountCodes.map((code) => (
                         <Badge key={code} variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800">
-                          <Tag className="w-3 h-3" />
+                          <OptimizedIcon name="Tag" className="w-3 h-3" />
                           {code}
                           <button
                             onClick={() => {
@@ -3473,7 +3437,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             }}
                             className="ml-1 rounded-full hover:bg-blue-200 p-0.5 transition-colors"
                           >
-                            <X className="w-3 h-3" />
+                            <OptimizedIcon name="X" className="w-3 h-3" />
                           </button>
                         </Badge>
                       ))}
@@ -3539,7 +3503,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 className="w-full"
                 disabled={calculating || !items.some(item => item.unit_price_origin > 0)}
               >
-                <Calculator className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Calculator" className="w-4 h-4 mr-2" />
                 {calculating ? 'Calculating...' : 'Calculate Quote'}
               </Button>
               
@@ -3550,7 +3514,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     variant="outline"
                     className="w-full"
                   >
-                    <Eye className="w-4 h-4 mr-2" />
+                    <OptimizedIcon name="Eye" className="w-4 h-4 mr-2" />
                     {showPreview ? 'Hide' : 'Show'} Breakdown
                   </Button>
                   
@@ -3560,7 +3524,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     className="w-full"
                     disabled={loading}
                   >
-                    <Save className="w-4 h-4 mr-2" />
+                    <OptimizedIcon name="Save" className="w-4 h-4 mr-2" />
                     {loading ? 'Saving...' : (isEditMode ? 'Update Quote' : 'Save Quote')}
                   </Button>
                   
@@ -3572,7 +3536,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       variant="secondary"
                       className="w-full"
                     >
-                      <Eye className="w-4 h-4 mr-2" />
+                      <OptimizedIcon name="Eye" className="w-4 h-4 mr-2" />
                       Send Quote Email
                     </Button>
                   )}
@@ -3586,7 +3550,7 @@ const QuoteCalculatorV2: React.FC = () => {
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-6">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <OptimizedIcon name="AlertCircle" className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-red-800 mb-1">
                       Shipping Route Missing
@@ -3600,7 +3564,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       size="sm"
                       className="text-red-700 border-red-300 hover:bg-red-100"
                     >
-                      <Settings className="w-4 h-4 mr-2" />
+                      <OptimizedIcon name="Settings" className="w-4 h-4 mr-2" />
                       Configure Shipping Route
                     </Button>
                   </div>

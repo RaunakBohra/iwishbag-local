@@ -11,11 +11,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ShoppingCart, 
-  ArrowLeft, 
-  Trash2
-} from 'lucide-react';
+import { OptimizedIcon, Trash2 } from '@/components/ui/OptimizedIcon';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,12 +125,12 @@ const Cart: React.FC = React.memo(() => {
             onClick={() => navigate(-1)}
             className={`${cartDesignTokens.layout.flex.itemRow} ${cartDesignTokens.colors.text.secondary} hover:${cartDesignTokens.colors.text.primary} px-0`}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <OptimizedIcon name="ArrowLeft" className="w-4 h-4 mr-2" />
             Back
           </Button>
           
           <div className={cartDesignTokens.layout.flex.itemRow}>
-            <ShoppingCart className="w-6 h-6 text-blue-600 mr-3" />
+            <OptimizedIcon name="ShoppingCart" className="w-6 h-6 text-blue-600 mr-3" />
             <div className="flex-1">
               <h1 className={cartDesignTokens.typography.title.large}>
                 Shopping Cart
@@ -168,7 +164,7 @@ const Cart: React.FC = React.memo(() => {
         ) : items.length === 0 && recentlyDeleted.length === 0 ? (
           // Empty State - only when no items AND no recently deleted
           <div className="text-center py-16">
-            <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+            <OptimizedIcon name="ShoppingCart" className="w-24 h-24 text-gray-300 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-gray-400 mb-4">Your cart is empty</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
               Add some quotes to your cart to get started. You can find quotes in your dashboard 

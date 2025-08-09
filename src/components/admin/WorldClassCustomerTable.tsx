@@ -32,39 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  User,
-  Users,
-  MapPin,
-  Calendar,
-  Star,
-  DollarSign,
-  ShoppingCart,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Mail,
-  Phone,
-  Activity,
-  ExternalLink,
-  Settings,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Search,
-  Filter,
-  Download,
-  UserPlus,
-  Trash2,
-  MessageSquare,
-  Tag,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Shield,
-  AlertCircle,
-  FileText,
-} from 'lucide-react';
+import { OptimizedIcon, User, MapPin, DollarSign, Search, Trash2, Clock, Shield, AlertCircle } from '@/components/ui/OptimizedIcon';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Customer, CustomerAnalytics } from './CustomerTable';
@@ -458,11 +426,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    if (sortField !== field) return <OptimizedIcon name="ArrowUpDown" className="w-4 h-4 text-gray-400" />;
     return sortDirection === 'asc' ? (
-      <ArrowUp className="w-4 h-4 text-blue-600" />
+      <OptimizedIcon name="ArrowUp" className="w-4 h-4 text-blue-600" />
     ) : (
-      <ArrowDown className="w-4 h-4 text-blue-600" />
+      <OptimizedIcon name="ArrowDown" className="w-4 h-4 text-blue-600" />
     );
   };
 
@@ -511,11 +479,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={onExport}>
-              <Download className="w-4 h-4 mr-2" />
+              <OptimizedIcon name="Download" className="w-4 h-4 mr-2" />
               Export
             </Button>
             <Button variant="outline" size="sm" onClick={() => onAddCustomer?.()}>
-              <UserPlus className="w-4 h-4 mr-2" />
+              <OptimizedIcon name="UserPlus" className="w-4 h-4 mr-2" />
               Add Customer
             </Button>
           </div>
@@ -546,7 +514,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkEmail?.(selectedCustomers)}
               >
-                <Mail className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Mail" className="w-4 h-4 mr-2" />
                 Email
               </Button>
               <Button
@@ -555,7 +523,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkTag?.(selectedCustomers)}
               >
-                <Tag className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Tag" className="w-4 h-4 mr-2" />
                 Tag
               </Button>
               <Button
@@ -564,7 +532,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkExport?.(selectedCustomers)}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Download" className="w-4 h-4 mr-2" />
                 Export Selected
               </Button>
               <Button
@@ -573,7 +541,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 className="text-green-700 border-green-300"
                 onClick={() => onBulkCodToggle?.(selectedCustomers, true)}
               >
-                <Shield className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Shield" className="w-4 h-4 mr-2" />
                 Enable COD
               </Button>
               <Button
@@ -582,7 +550,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 className="text-red-700 border-red-300"
                 onClick={() => onBulkCodToggle?.(selectedCustomers, false)}
               >
-                <Shield className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="Shield" className="w-4 h-4 mr-2" />
                 Disable COD
               </Button>
               <Button
@@ -737,7 +705,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                         >
                           {getAdminCustomerDisplayData(customer).name}
                           {customer.internal_notes && (
-                            <FileText className="w-3 h-3 text-gray-400" title={`Notes: ${customer.internal_notes}`} />
+                            <OptimizedIcon name="FileText" className="w-3 h-3 text-gray-400" title={`Notes: ${customer.internal_notes}`} />
                           )}
                         </div>
                         <div className="text-sm text-gray-600">
@@ -753,7 +721,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-1 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
+                      <OptimizedIcon name="MapPin" className="w-4 h-4" />
                       <span>
                         {customer.country 
                           ? getCountryDisplayName(customer.country, countries)
@@ -800,7 +768,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-1">
-                      <ShoppingCart className="w-4 h-4 text-gray-400" />
+                      <OptimizedIcon name="ShoppingCart" className="w-4 h-4 text-gray-400" />
                       <span className="font-medium text-gray-900">
                         {analytics?.orderCount || 0}
                       </span>
@@ -809,7 +777,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-1">
-                      <DollarSign className="w-4 h-4 text-gray-400" />
+                      <OptimizedIcon name="DollarSign" className="w-4 h-4 text-gray-400" />
                       <span className="font-medium text-gray-900">
                         {formatCurrency(analytics?.totalSpent || 0)}
                       </span>
@@ -842,7 +810,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
-                          <MoreHorizontal className="w-4 h-4" />
+                          <OptimizedIcon name="MoreHorizontal" className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
@@ -850,14 +818,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           onClick={() => navigate(`/admin/customers/${customer.id}`)}
                           className="cursor-pointer"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="Eye" className="w-4 h-4 mr-2" />
                           View Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onEditCustomer?.(customer.id)}
                           className="cursor-pointer"
                         >
-                          <Edit className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
                           Edit Customer
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -869,7 +837,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           }}
                           className="cursor-pointer"
                         >
-                          <Edit className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
                           Edit Notes
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -877,14 +845,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           disabled={!customer.email}
                           className="cursor-pointer"
                         >
-                          <Mail className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="Mail" className="w-4 h-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onViewMessages?.(customer.id)}
                           className="cursor-pointer"
                         >
-                          <MessageSquare className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
                           View Messages
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -892,7 +860,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           onClick={() => onViewOrders?.(customer.id)}
                           className="cursor-pointer"
                         >
-                          <ExternalLink className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="ExternalLink" className="w-4 h-4 mr-2" />
                           View Orders
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -909,7 +877,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       {sortedAndFilteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="h-6 w-6 text-gray-400" />
+            <OptimizedIcon name="Users" className="h-6 w-6 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
           <p className="text-gray-600 mb-6">
@@ -930,7 +898,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
             </Button>
           ) : (
             <Button onClick={() => onAddCustomer?.()}>
-              <UserPlus className="w-4 h-4 mr-2" />
+              <OptimizedIcon name="UserPlus" className="w-4 h-4 mr-2" />
               Add First Customer
             </Button>
           )}

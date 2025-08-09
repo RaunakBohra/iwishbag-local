@@ -12,7 +12,7 @@
 
 import React, { memo, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, ExternalLink, AlertCircle, Loader2, Package, MapPin } from 'lucide-react';
+import { OptimizedIcon, Trash2, AlertCircle, Loader2, Package, MapPin } from '@/components/ui/OptimizedIcon';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -245,7 +245,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
                       className={`${cartDesignTokens.colors.interactive.primary} ${cartDesignTokens.layout.flex.itemRow} ${animations.transition.colors}`}
                     >
                       {itemDetails.displayName}
-                      <ExternalLink className="w-4 h-4" />
+                      <OptimizedIcon name="ExternalLink" className="w-4 h-4" />
                     </a>
                   ) : (
                     itemDetails.displayName

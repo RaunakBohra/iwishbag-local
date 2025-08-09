@@ -11,15 +11,7 @@
  */
 
 import React, { useState, memo, useMemo, useEffect, useCallback } from 'react';
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Package, 
-  Percent, 
-  Shield,
-  ShoppingBag,
-  Loader2
-} from 'lucide-react';
+import { OptimizedIcon, ChevronDown, ChevronUp, Package, Shield, Loader2 } from '@/components/ui/OptimizedIcon';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -392,7 +384,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     return (
       <Card className={`${className} ${cartDesignTokens.components.card.elevated}`}>
         <CardContent className="py-8 text-center">
-          <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <OptimizedIcon name="ShoppingBag" className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-500 mb-2">No items in order</h3>
           <p className="text-gray-400 text-sm">
             Add some quotes to see your order summary
@@ -408,7 +400,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       <Card className={`${className} ${cartDesignTokens.components.card.elevated}`}>
         <CardContent className="py-6">
           <Alert>
-            <Package className="h-4 w-4" />
+            <OptimizedIcon name="Package" className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </CardContent>
@@ -442,9 +434,9 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
             className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             {showItemDetails ? (
-              <ChevronUp className="w-4 h-4" />
+              <OptimizedIcon name="ChevronUp" className="w-4 h-4" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <OptimizedIcon name="ChevronDown" className="w-4 h-4" />
             )}
           </button>
         </div>

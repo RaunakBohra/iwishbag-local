@@ -5,6 +5,7 @@ import './index.css';
 import './styles/amazon-address-form.css';
 import { validateEnv } from './config/env';
 import { logger } from '@/utils/logger';
+import { assetPreloader } from '@/utils/assetPreloader';
 
 // Initialize Sentry for error and performance monitoring
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -47,5 +48,9 @@ if (!validateEnv()) {
 if (import.meta.env.MODE === 'development') {
   import('./utils/countryTestUtils');
 }
+
+// Initialize asset preloading system
+assetPreloader.preloadCriticalAssets();
+logger.info('Asset preloader initialized');
 
 createRoot(document.getElementById('root')!).render(<App />);

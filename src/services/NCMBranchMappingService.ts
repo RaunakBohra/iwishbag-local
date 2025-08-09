@@ -367,7 +367,14 @@ export { NCMBranchMappingService };
 export type { AddressInput, BranchMapping };
 
 // Make debug methods available globally in development
+declare global {
+  interface Window {
+    debugNCMBranches: () => void;
+    clearNCMCache: () => void;
+  }
+}
+
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  (window as any).debugNCMBranches = () => ncmBranchMappingService.debugBranchStatus();
-  (window as any).clearNCMCache = () => ncmBranchMappingService.clearCache();
+  window.debugNCMBranches = () => ncmBranchMappingService.debugBranchStatus();
+  window.clearNCMCache = () => ncmBranchMappingService.clearCache();
 }

@@ -3,33 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  CheckCircle, 
-  Package, 
-  Truck, 
-  Shield, 
-  Clock, 
-  MessageCircle,
-  ChevronRight,
-  ChevronDown,
-  Star,
-  ArrowLeft,
-  Lock,
-  CreditCard,
-  Zap,
-  X,
-  RefreshCw,
-  AlertTriangle,
-  Scale
-} from 'lucide-react';
+import { OptimizedIcon, CheckCircle, Package, Truck, Clock, ChevronDown, X } from '@/components/ui/OptimizedIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +23,6 @@ import {
 } from './ShopifyMobileOptimizations';
 import { MobileQuoteOptions } from './MobileQuoteOptions';
 import { CustomerBreakdown } from './CustomerBreakdown';
-import { WeightPolicySection } from './WeightPolicySection';
 import { EnhancedAddonServicesSelector } from '@/components/quote/EnhancedAddonServicesSelector';
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
@@ -79,7 +57,7 @@ const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
               }`}
             >
               {step.step <= currentStep ? (
-                <CheckCircle className="w-4 h-4" />
+                <OptimizedIcon name="CheckCircle" className="w-4 h-4" />
               ) : (
                 step.step
               )}
@@ -279,7 +257,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
-  const [weightPolicyAccepted, setWeightPolicyAccepted] = useState(false);
   const [shippingOptionsExpanded, setShippingOptionsExpanded] = useState(false);
   
   // Addon services state
@@ -587,7 +564,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="max-w-md mx-4">
           <CardContent className="pt-6 text-center">
-            <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <OptimizedIcon name="Package" className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Quote Not Found</h2>
             <p className="text-muted-foreground mb-6">
               The quote you're looking for doesn't exist or has expired.
@@ -616,7 +593,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             className="mb-6 p-0 h-auto font-normal text-muted-foreground hover:text-foreground"
             onClick={() => navigate('/dashboard/quotes')}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <OptimizedIcon name="ArrowLeft" className="w-4 h-4 mr-2" />
             Back to Quotes
           </Button>
         )}
@@ -645,7 +622,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-orange-600" />
+                <OptimizedIcon name="Clock" className="w-5 h-5 text-orange-600" />
                 <div>
                   <p className="font-medium text-orange-900">
                     {daysLeft <= 1 ? 'Quote expires today!' : `Quote expires in ${daysLeft} days`}
@@ -717,7 +694,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Package className="w-6 h-6 text-gray-400" />
+                              <OptimizedIcon name="Package" className="w-6 h-6 text-gray-400" />
                             </div>
                           )}
                         </div>
@@ -786,7 +763,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="pt-3 border-t border-gray-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-muted-foreground">
-                        <Truck className="w-4 h-4 mr-2" />
+                        <OptimizedIcon name="Truck" className="w-4 h-4 mr-2" />
                         <span className="text-sm font-medium">Estimated delivery</span>
                       </div>
                       <span className="font-semibold text-blue-700">
@@ -876,10 +853,10 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Truck className="w-5 h-5 text-blue-600" />
+                    <OptimizedIcon name="Truck" className="w-5 h-5 text-blue-600" />
                     <CardTitle className="text-lg">Choose Your Shipping Speed</CardTitle>
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
+                  <OptimizedIcon name="ChevronDown" className={`w-5 h-5 text-gray-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
                 </div>
                 <p className="text-sm text-muted-foreground text-left">
                   Select your preferred shipping option. Faster shipping costs more but gets your items quicker.
@@ -1030,45 +1007,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               onTotalCalculated={handleTotalCalculated}
             />
 
-            {/* Simple Weight Policy Notice - Only show for pending/rejected quotes */}
-            {(quote.status === 'pending' || quote.status === 'rejected') && (
-              <Card className="border-blue-200 bg-blue-50 mb-6">
-                <CardContent className="pt-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Scale className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-blue-900 mb-2">Important: Weight & Shipping Information</h4>
-                      <p className="text-sm text-blue-800 mb-3">
-                        International shipping weights often increase 15-50% due to protective packaging and retail boxes. 
-                        By approving this quote, you agree to our 
-                        <a 
-                          href="/terms-conditions#weight-policy" 
-                          target="_blank"
-                          className="text-blue-600 hover:text-blue-800 underline ml-1 mr-1"
-                        >
-                          Weight & Pricing Policy
-                        </a>
-                        regarding potential additional costs at actual carrier rates.
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={weightPolicyAccepted}
-                            onCheckedChange={setWeightPolicyAccepted}
-                            className="mt-0.5"
-                          />
-                          <span className="text-sm text-blue-900">
-                            I understand weights may vary and agree to the policy terms
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes */}
             {(quote.status === 'pending' || quote.status === 'rejected') && quote.total_quote_origincurrency && (
@@ -1182,20 +1120,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       <Button 
                         className="w-full h-12 text-base font-medium"
                         onClick={handleApprove}
-                        disabled={!weightPolicyAccepted}
-                        variant={weightPolicyAccepted ? "default" : "secondary"}
                       >
-                        {weightPolicyAccepted ? (
-                          <>
-                            <CheckCircle className="w-5 h-5 mr-2" />
-                            Approve Quote
-                          </>
-                        ) : (
-                          <>
-                            <AlertTriangle className="w-5 h-5 mr-2" />
-                            Accept Weight Policy First
-                          </>
-                        )}
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Approve Quote
                       </Button>
                     )}
 
@@ -1219,7 +1146,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         className={quote.status === 'pending' ? 'h-12' : 'col-span-2 h-12'}
                         onClick={() => setQuestionModalOpen(true)}
                       >
-                        <MessageCircle className="w-4 h-4 mr-2" />
+                        <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
                         Ask Question
                       </Button>
                     </div>
@@ -1231,8 +1158,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   {/* Trust Signals */}
                   <div className="text-center text-xs text-muted-foreground">
                     <div className="flex items-center justify-center gap-2 text-xs">
-                      <a href="/terms-conditions#weight-policy" className="text-blue-600 hover:underline">Weight Policy</a>
-                      <span>•</span>
                       <a href="/terms-conditions#shipping" className="text-blue-600 hover:underline">Shipping Terms</a>
                       <span>•</span>
                       <a href="/help" className="text-blue-600 hover:underline">FAQ</a>
@@ -1404,7 +1329,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 disabled={!questionType || !questionText.trim()}
                 className="flex-1"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
                 Submit Request
               </Button>
             </div>

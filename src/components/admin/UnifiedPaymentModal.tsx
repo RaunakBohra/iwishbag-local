@@ -25,30 +25,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  DollarSign,
-  Plus,
-  CheckCircle,
-  AlertCircle,
-  CreditCard,
-  Banknote,
-  Receipt,
-  History,
-  TrendingUp,
-  RefreshCw,
-  Eye,
-  X,
-  Calendar,
-  User,
-  FileText,
-  Loader2,
-  Download,
-  Smartphone,
-  Hash,
-  Info,
-  Copy,
-  ExternalLink,
-} from 'lucide-react';
+import { OptimizedIcon, DollarSign, Plus, CheckCircle, AlertCircle, X, User, Loader2 } from '@/components/ui/OptimizedIcon';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { getCurrencySymbol, getDestinationCountryFromQuote } from '@/lib/currencyUtils';
 import { currencyService } from '@/services/CurrencyService';
@@ -830,28 +807,28 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
   }, [paymentSummary, quote.payment_method, paymentProofs]);
 
   const getPaymentMethodIcon = (method: string | null | undefined) => {
-    if (!method) return <DollarSign className="w-5 h-5" />;
+    if (!method) return <OptimizedIcon name="DollarSign" className="w-5 h-5" />;
 
     switch (method.toLowerCase()) {
       case 'bank_transfer':
       case 'wire_transfer':
-        return <Banknote className="w-5 h-5 text-teal-500" />;
+        return <OptimizedIcon name="Banknote" className="w-5 h-5 text-teal-500" />;
       case 'payu':
       case 'stripe':
       case 'credit_card':
-        return <CreditCard className="w-5 h-5 text-green-500" />;
+        return <OptimizedIcon name="CreditCard" className="w-5 h-5 text-green-500" />;
       case 'cash':
-        return <DollarSign className="w-5 h-5 text-gray-500" />;
+        return <OptimizedIcon name="DollarSign" className="w-5 h-5 text-gray-500" />;
       case 'upi':
       case 'esewa':
-        return <Smartphone className="w-5 h-5 text-orange-500" />;
+        return <OptimizedIcon name="Smartphone" className="w-5 h-5 text-orange-500" />;
       case 'check':
       case 'cheque':
-        return <FileText className="w-5 h-5 text-orange-500" />;
+        return <OptimizedIcon name="FileText" className="w-5 h-5 text-orange-500" />;
       case 'credit_note':
-        return <Receipt className="w-5 h-5 text-yellow-500" />;
+        return <OptimizedIcon name="Receipt" className="w-5 h-5 text-yellow-500" />;
       default:
-        return <DollarSign className="w-5 h-5 text-gray-500" />;
+        return <OptimizedIcon name="DollarSign" className="w-5 h-5 text-gray-500" />;
     }
   };
 
@@ -921,31 +898,31 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
             >
               {availableTabs.includes('overview') && (
                 <TabsTrigger value="overview">
-                  <TrendingUp className="w-4 h-4 mr-2" />
+                  <OptimizedIcon name="TrendingUp" className="w-4 h-4 mr-2" />
                   Overview
                 </TabsTrigger>
               )}
               {availableTabs.includes('record') && (
                 <TabsTrigger value="record">
-                  <Plus className="w-4 h-4 mr-2" />
+                  <OptimizedIcon name="Plus" className="w-4 h-4 mr-2" />
                   Record
                 </TabsTrigger>
               )}
               {availableTabs.includes('verify') && (
                 <TabsTrigger value="verify">
-                  <CheckCircle className="w-4 h-4 mr-2" />
+                  <OptimizedIcon name="CheckCircle" className="w-4 h-4 mr-2" />
                   Verify
                 </TabsTrigger>
               )}
               {availableTabs.includes('history') && (
                 <TabsTrigger value="history">
-                  <History className="w-4 h-4 mr-2" />
+                  <OptimizedIcon name="History" className="w-4 h-4 mr-2" />
                   History
                 </TabsTrigger>
               )}
               {availableTabs.includes('refund') && (
                 <TabsTrigger value="refund">
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <OptimizedIcon name="RefreshCw" className="w-4 h-4 mr-2" />
                   Refund
                 </TabsTrigger>
               )}
@@ -1076,7 +1053,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </div>
                         {paymentSummary.hasMultipleCurrencies && (
                           <Alert variant="default" className="mt-2">
-                            <Info className="h-4 w-4" />
+                            <OptimizedIcon name="Info" className="h-4 w-4" />
                             <AlertDescription className="text-xs">
                               Multiple currencies detected. Refunds must be processed in the
                               original payment currency.
@@ -1138,7 +1115,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="flex gap-2">
                       {paymentSummary.status !== 'paid' && (
                         <Button size="sm" onClick={() => setActiveTab('record')}>
-                          <Plus className="w-4 h-4 mr-1" />
+                          <OptimizedIcon name="Plus" className="w-4 h-4 mr-1" />
                           Record Payment
                         </Button>
                       )}
@@ -1262,7 +1239,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         </Select>
                         {paymentCurrency !== currency && (
                           <Alert variant="destructive" className="mt-2">
-                            <AlertCircle className="h-4 w-4" />
+                            <OptimizedIcon name="AlertCircle" className="h-4 w-4" />
                             <AlertDescription className="text-xs">
                               <strong>Warning:</strong> Payment currency ({paymentCurrency}) differs
                               from quote currency ({currency}). Ensure this is correct to avoid
@@ -1286,7 +1263,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="space-y-2">
                       <Label htmlFor="amount">Amount ({getCurrencySymbol(paymentCurrency)})</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <OptimizedIcon name="DollarSign" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="amount"
                           type="text"
@@ -1304,7 +1281,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       {parseFloat(paymentAmount) > paymentSummary.remaining &&
                         paymentSummary.remaining > 0 && (
                           <Alert className="mt-2">
-                            <AlertCircle className="h-4 w-4" />
+                            <OptimizedIcon name="AlertCircle" className="h-4 w-4" />
                             <AlertDescription>
                               This payment exceeds the remaining balance. The order will be marked
                               as overpaid.
@@ -1331,12 +1308,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     >
                       {isRecording ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <OptimizedIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
                           Recording...
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="CheckCircle" className="w-4 h-4 mr-2" />
                           Record Payment
                         </>
                       )}
@@ -1353,7 +1330,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                   {/* Gateway-specific info */}
                   {quote.payment_method && (
                     <Alert className="mb-4">
-                      <AlertCircle className="h-4 w-4" />
+                      <OptimizedIcon name="AlertCircle" className="h-4 w-4" />
                       <AlertDescription className="text-sm">
                         {quote.payment_method === 'bank_transfer' &&
                           'Review bank transfer receipts uploaded by the customer. Verify the transaction details match the order amount.'}
@@ -1506,7 +1483,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
                               {/* Payment Balance Calculation */}
                               <Alert className="border-teal-200 bg-teal-50">
-                                <Info className="h-4 w-4" />
+                                <OptimizedIcon name="Info" className="h-4 w-4" />
                                 <AlertDescription>
                                   <div className="space-y-1 text-sm">
                                     <div className="flex justify-between">
@@ -1562,7 +1539,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                     Verified Amount ({currencySymbol})
                                   </Label>
                                   <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <OptimizedIcon name="DollarSign" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
                                       id="verify-amount"
                                       type="text"
@@ -1623,7 +1600,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
                               {/* Keyboard shortcuts reminder */}
                               <Alert className="border-gray-200">
-                                <Info className="h-4 w-4" />
+                                <OptimizedIcon name="Info" className="h-4 w-4" />
                                 <AlertDescription className="text-xs">
                                   <kbd className="font-mono bg-gray-100 px-1 rounded mr-2">
                                     Ctrl+Enter
@@ -1646,12 +1623,12 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 >
                                   {isVerifying ? (
                                     <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      <OptimizedIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
                                       Verifying...
                                     </>
                                   ) : (
                                     <>
-                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      <OptimizedIcon name="CheckCircle" className="w-4 h-4 mr-2" />
                                       Verify & Record Payment
                                     </>
                                   )}
@@ -1665,7 +1642,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                                 >
                                   {isRejecting ? (
                                     <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      <OptimizedIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
                                       Rejecting...
                                     </>
                                   ) : (
@@ -1702,9 +1679,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         disabled={isDueProcessing}
                       >
                         {isDueProcessing ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <OptimizedIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
-                          <RefreshCw className="w-4 h-4 mr-2" />
+                          <OptimizedIcon name="RefreshCw" className="w-4 h-4 mr-2" />
                         )}
                         Refresh
                       </Button>
@@ -2077,7 +2054,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                   {paymentSummary.totalPaid > 0 ? (
                     <div className="space-y-4">
                       <Alert>
-                        <AlertCircle className="h-4 w-4" />
+                        <OptimizedIcon name="AlertCircle" className="h-4 w-4" />
                         <AlertDescription>
                           Total paid amount:{' '}
                           {currencyService.formatAmount(paymentSummary.totalPaid, currency)}
@@ -2094,7 +2071,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       </Alert>
 
                       <Button onClick={() => setShowRefundModal(true)} className="w-full">
-                        <RefreshCw className="w-4 h-4 mr-2" />
+                        <OptimizedIcon name="RefreshCw" className="w-4 h-4 mr-2" />
                         Open Refund Manager
                       </Button>
                     </div>

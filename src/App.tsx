@@ -27,8 +27,7 @@ const Cart = React.lazy(() => import('@/pages/Cart'));
 const Checkout = React.lazy(() => import('@/pages/CheckoutShopify'));
 const CartTest = React.lazy(() => import('@/pages/CartTest'));
 // const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes')); // REMOVED: V1 customer quotes page
-const Orders = React.lazy(() => import('@/pages/dashboard/Orders'));
-const OrderDetail = React.lazy(() => import('@/pages/dashboard/OrderDetail'));
+// Orders and OrderDetail components removed - will be replaced with enhanced order management system
 const Profile = React.lazy(() => import('@/pages/Profile'));
 const About = React.lazy(() => import('@/pages/About'));
 const Blog = React.lazy(() => import('@/pages/Blog'));
@@ -44,6 +43,7 @@ const CostEstimatorPage = React.lazy(() => import('@/pages/CostEstimator'));
 const TestPayment = React.lazy(() => import('@/pages/TestPayment'));
 const EsewaTest = React.lazy(() => import('@/pages/EsewaTest'));
 const CustomerOrderDetailPage = React.lazy(() => import('@/pages/CustomerOrderDetailPage'));
+const CustomerOrderList = React.lazy(() => import('@/components/orders/CustomerOrderList'));
 const OrderConfirmationPage = React.lazy(() => import('@/pages/OrderConfirmationPage'));
 const PaymentSuccess = React.lazy(() => import('@/pages/PaymentSuccess'));
 const PaymentFailure = React.lazy(() => import('@/pages/PaymentFailure'));
@@ -80,6 +80,10 @@ const RegionalPricingAdminPage = React.lazy(() => import('@/pages/admin/Regional
 const SystemPerformance = React.lazy(() => import('@/pages/admin/SystemPerformance'));
 const EnhancedCustomerManagementPage = React.lazy(() => import('@/components/admin/SimpleCustomerManagement'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
+
+// Enhanced Order Management System
+const OrderManagementPage = React.lazy(() => import('@/pages/admin/OrderManagementPage'));
+const OrderDetailPage = React.lazy(() => import('@/pages/admin/OrderDetailPage'));
 const CountrySettings = React.lazy(() => import('@/components/admin/CountrySettings'));
 const BankAccountSettings = React.lazy(() => import('@/components/admin/BankAccountSettings'));
 const SystemSettings = React.lazy(() => import('@/components/admin/SystemSettings'));
@@ -176,12 +180,20 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
-          { path: 'orders', element: <Navigate to="/admin/quotes" replace /> },
+          // Enhanced Order Management System
+          {
+            path: 'orders',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <OrderManagementPage />
+              </ErrorBoundary>
+            ),
+          },
           {
             path: 'orders/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <AdminDashboard />
+                <OrderDetailPage />
               </ErrorBoundary>
             ),
           },
@@ -556,13 +568,14 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
+          // Enhanced Customer Order Management System
           {
             path: 'dashboard/orders',
-            element: <Orders />,
-          },
-          {
-            path: 'dashboard/orders/:id',
-            element: <OrderDetail />,
+            element: (
+              <ErrorBoundary fallback={QuoteFormErrorFallback}>
+                <CustomerOrderList />
+              </ErrorBoundary>
+            ),
           },
           {
             path: 'support',
@@ -578,6 +591,14 @@ const router = createBrowserRouter([
           },
           {
             path: 'order/:id',
+            element: <CustomerOrderDetailPage />,
+          },
+          {
+            path: 'orders',
+            element: <CustomerOrderList />,
+          },
+          {
+            path: 'orders/:id',
             element: <CustomerOrderDetailPage />,
           },
           {

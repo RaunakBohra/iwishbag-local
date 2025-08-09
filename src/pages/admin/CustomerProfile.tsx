@@ -14,40 +14,7 @@ import { CustomerMessageModal } from '@/components/admin/modals/CustomerMessageM
 import { EditCustomerModal } from '@/components/admin/modals/EditCustomerModal';
 import { Customer } from '@/components/admin/CustomerTable';
 import { format } from 'date-fns';
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Star,
-  DollarSign,
-  ShoppingCart,
-  Activity,
-  MessageSquare,
-  Edit,
-  MoreHorizontal,
-  Eye,
-  Package,
-  Truck,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  CheckCircle,
-  ExternalLink,
-  Download,
-  Tag,
-  Bell,
-  Settings,
-  History,
-  CreditCard,
-  Globe,
-  UserCheck,
-  FileText,
-  BarChart3,
-} from 'lucide-react';
+import { OptimizedIcon, User, Mail, Phone, MapPin, DollarSign, Clock, AlertCircle, CheckCircle } from '@/components/ui/OptimizedIcon';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -333,13 +300,13 @@ export const CustomerProfile: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <OptimizedIcon name="AlertCircle" className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Customer Not Found</h2>
           <p className="text-gray-600 mb-4">
             The customer profile you're looking for doesn't exist.
           </p>
           <Button onClick={() => navigate('/admin/customers')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <OptimizedIcon name="ArrowLeft" className="h-4 w-4 mr-2" />
             Back to Customers
           </Button>
         </div>
@@ -444,7 +411,7 @@ export const CustomerProfile: React.FC = () => {
               onClick={() => navigate('/admin/customers')}
               className="border-gray-300"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <OptimizedIcon name="ArrowLeft" className="h-4 w-4 mr-2" />
               Back to Customers
             </Button>
             <div>
@@ -464,25 +431,25 @@ export const CustomerProfile: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
+                <OptimizedIcon name="MoreHorizontal" className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={handleEditCustomer}>
-                <Edit className="h-4 w-4 mr-2" />
+                <OptimizedIcon name="Edit" className="h-4 w-4 mr-2" />
                 Edit Customer
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSendEmail}>
-                <Mail className="h-4 w-4 mr-2" />
+                <OptimizedIcon name="Mail" className="h-4 w-4 mr-2" />
                 Send Email
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleCreateTicket}>
-                <MessageSquare className="h-4 w-4 mr-2" />
+                <OptimizedIcon name="MessageCircle" className="h-4 w-4 mr-2" />
                 Create Ticket
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleExportData}>
-                <Download className="h-4 w-4 mr-2" />
+                <OptimizedIcon name="Download" className="h-4 w-4 mr-2" />
                 Export Data
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -498,7 +465,7 @@ export const CustomerProfile: React.FC = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <OptimizedIcon name="DollarSign" className="h-4 w-4 text-green-600" />
                     <BodySmall className="text-gray-600">Total Spent</BodySmall>
                   </div>
                   <H3 className="text-gray-900 mt-1">${analytics.totalSpent.toFixed(0)}</H3>
@@ -511,7 +478,7 @@ export const CustomerProfile: React.FC = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <ShoppingCart className="h-4 w-4 text-blue-600" />
+                    <OptimizedIcon name="ShoppingCart" className="h-4 w-4 text-blue-600" />
                     <BodySmall className="text-gray-600">Orders</BodySmall>
                   </div>
                   <H3 className="text-gray-900 mt-1">{analytics.orderCount}</H3>
@@ -524,7 +491,7 @@ export const CustomerProfile: React.FC = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                    <OptimizedIcon name="BarChart" className="h-4 w-4 text-purple-600" />
                     <BodySmall className="text-gray-600">Avg Order</BodySmall>
                   </div>
                   <H3 className="text-gray-900 mt-1">${analytics.avgOrderValue.toFixed(0)}</H3>
@@ -537,17 +504,17 @@ export const CustomerProfile: React.FC = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Activity className="h-4 w-4 text-orange-600" />
+                    <OptimizedIcon name="Activity" className="h-4 w-4 text-orange-600" />
                     <BodySmall className="text-gray-600">Health Score</BodySmall>
                   </div>
                   <div className="flex items-center space-x-2 mt-1">
                     <H3 className="text-gray-900">{healthScore}%</H3>
                     {healthScore >= 80 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <OptimizedIcon name="TrendingUp" className="h-4 w-4 text-green-600" />
                     ) : healthScore >= 60 ? (
-                      <Activity className="h-4 w-4 text-blue-600" />
+                      <OptimizedIcon name="Activity" className="h-4 w-4 text-blue-600" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <OptimizedIcon name="TrendingDown" className="h-4 w-4 text-red-600" />
                     )}
                   </div>
                   <div className="mt-2">
@@ -577,7 +544,7 @@ export const CustomerProfile: React.FC = () => {
                       <div className="flex items-center justify-between mb-4">
                         <H3 className="text-gray-900">Recent Orders</H3>
                         <Button variant="outline" size="sm" onClick={() => setActiveTab('orders')}>
-                          <Eye className="h-4 w-4 mr-2" />
+                          <OptimizedIcon name="Eye" className="h-4 w-4 mr-2" />
                           View All
                         </Button>
                       </div>
@@ -589,7 +556,7 @@ export const CustomerProfile: React.FC = () => {
                           >
                             <div className="flex items-center space-x-3">
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Package className="h-4 w-4 text-blue-600" />
+                                <OptimizedIcon name="Package" className="h-4 w-4 text-blue-600" />
                               </div>
                               <div>
                                 <Body className="font-medium text-gray-900">
@@ -623,7 +590,7 @@ export const CustomerProfile: React.FC = () => {
                         >
                           <div className="flex items-center space-x-4">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Package className="h-5 w-5 text-blue-600" />
+                              <OptimizedIcon name="Package" className="h-5 w-5 text-blue-600" />
                             </div>
                             <div>
                               <Body className="font-medium text-gray-900">
@@ -650,7 +617,7 @@ export const CustomerProfile: React.FC = () => {
                             <div>
                               <Button variant="ghost" size="sm" asChild>
                                 <a href={`/admin/orders/${order.id}`} target="_blank">
-                                  <ExternalLink className="h-4 w-4" />
+                                  <OptimizedIcon name="ExternalLink" className="h-4 w-4" />
                                 </a>
                               </Button>
                             </div>
@@ -662,7 +629,7 @@ export const CustomerProfile: React.FC = () => {
 
                   <TabsContent value="activity" className="space-y-4">
                     <div className="text-center py-12 text-gray-500">
-                      <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <OptimizedIcon name="History" className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <Body>Activity timeline coming soon</Body>
                       <BodySmall>Track customer interactions, emails, and system events</BodySmall>
                     </div>
@@ -749,7 +716,7 @@ export const CustomerProfile: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
+                  <OptimizedIcon name="User" className="h-5 w-5" />
                   <span>Contact Information</span>
                 </CardTitle>
               </CardHeader>
@@ -779,20 +746,20 @@ export const CustomerProfile: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-400" />
+                    <OptimizedIcon name="Mail" className="h-4 w-4 text-gray-400" />
                     <BodySmall className="text-gray-900">{customer.email}</BodySmall>
                   </div>
 
                   {customer.phone && (
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
+                      <OptimizedIcon name="Phone" className="h-4 w-4 text-gray-400" />
                       <BodySmall className="text-gray-900">{customer.phone}</BodySmall>
                     </div>
                   )}
 
                   {primaryAddress && (
                     <div className="flex items-start space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                      <OptimizedIcon name="MapPin" className="h-4 w-4 text-gray-400 mt-0.5" />
                       <div>
                         <BodySmall className="text-gray-900">
                           {primaryAddress.city}, {primaryAddress.destination_country}
@@ -805,7 +772,7 @@ export const CustomerProfile: React.FC = () => {
                   )}
 
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <OptimizedIcon name="Calendar" className="h-4 w-4 text-gray-400" />
                     <BodySmall className="text-gray-900">
                       Joined {format(new Date(customer.created_at), 'MMM d, yyyy')}
                     </BodySmall>
@@ -818,7 +785,7 @@ export const CustomerProfile: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5" />
+                  <OptimizedIcon name="Settings" className="h-5 w-5" />
                   <span>Account Settings</span>
                 </CardTitle>
               </CardHeader>
@@ -833,7 +800,7 @@ export const CustomerProfile: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <BodySmall className="text-gray-600">Email Verified</BodySmall>
                   <Badge variant="outline" className="bg-green-100 text-green-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
+                    <OptimizedIcon name="CheckCircle" className="h-3 w-3 mr-1" />
                     Verified
                   </Badge>
                 </div>
@@ -861,7 +828,7 @@ export const CustomerProfile: React.FC = () => {
                   size="sm"
                   onClick={handleSendMessage}
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
+                  <OptimizedIcon name="MessageCircle" className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>
                 <Button
@@ -870,7 +837,7 @@ export const CustomerProfile: React.FC = () => {
                   size="sm"
                   onClick={handleSendEmail}
                 >
-                  <Mail className="h-4 w-4 mr-2" />
+                  <OptimizedIcon name="Mail" className="h-4 w-4 mr-2" />
                   Send Email
                 </Button>
                 <Button
@@ -879,7 +846,7 @@ export const CustomerProfile: React.FC = () => {
                   size="sm"
                   onClick={handleCreateTicket}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  <OptimizedIcon name="FileText" className="h-4 w-4 mr-2" />
                   Create Ticket
                 </Button>
                 <Button
@@ -888,7 +855,7 @@ export const CustomerProfile: React.FC = () => {
                   size="sm"
                   onClick={handleAddTag}
                 >
-                  <Tag className="h-4 w-4 mr-2" />
+                  <OptimizedIcon name="Tag" className="h-4 w-4 mr-2" />
                   Add Tag
                 </Button>
               </CardContent>

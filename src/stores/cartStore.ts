@@ -198,9 +198,8 @@ export const useCartStore = create<SimpleCartStore>()(
           set(prev => ({ ...prev, session: updatedSession }));
         }
 
-        console.log('[CART STORE] Cart saved to localStorage');
+        logger.debug('Cart saved to localStorage');
       } catch (error) {
-        console.error('[CART STORE] Failed to save to localStorage:', error);
         logger.error('Failed to save cart to localStorage', error);
       }
     },
@@ -212,7 +211,7 @@ export const useCartStore = create<SimpleCartStore>()(
         const storedSession = localStorage.getItem(CART_STORAGE_KEYS.CART_SESSION);
         
         if (!storedItems) {
-          console.log('[CART STORE] No stored cart items found');
+          logger.debug('No stored cart items found');
           return false;
         }
 
@@ -228,7 +227,7 @@ export const useCartStore = create<SimpleCartStore>()(
               lastActivityAt: new Date(parsedSession.lastActivityAt)
             };
           } catch (error) {
-            console.warn('[CART STORE] Failed to parse session, creating new one');
+            logger.warn('Failed to parse session, creating new one');
             session = get().createSession();
           }
         } else {
@@ -255,14 +254,14 @@ export const useCartStore = create<SimpleCartStore>()(
           recoveredFromSession: true
         }));
 
-        console.log('[CART STORE] Successfully restored cart from localStorage:', {
+        logger.debug('Successfully restored cart from localStorage:', {
           itemCount: validatedItems.length,
           sessionId: session.id
         });
 
         return true;
       } catch (error) {
-        console.error('[CART STORE] Failed to restore from localStorage:', error);
+        logger.error('Failed to restore from localStorage:', error);
         logger.error('Failed to restore cart from localStorage', error);
         return false;
       }
@@ -271,18 +270,18 @@ export const useCartStore = create<SimpleCartStore>()(
     // Initialize
     initialize: async () => {
       const state = get();
-      console.log('[CART STORE] Initialize called', { 
+      logger.debug('Initialize called', { 
         isInitialized: state.isInitialized,
         isOnline: navigator.onLine 
       });
       
       if (state.isInitialized) {
-        console.log('[CART STORE] Already initialized, skipping');
+        logger.debug('Already initialized, skipping');
         return;
       }
 
       try {
-        console.log('[CART STORE] Starting enhanced initialization...');
+        logger.debug('Starting enhanced initialization...');
         set(prev => ({ ...prev, isLoading: true, isOnline: navigator.onLine }));
 
         // 1. Restore or create session
@@ -297,20 +296,20 @@ export const useCartStore = create<SimpleCartStore>()(
               createdAt: new Date(parsedSession.createdAt),
               lastActivityAt: new Date(parsedSession.lastActivityAt)
             };
-            console.log('[CART STORE] Restored existing session:', session.id);
+            logger.debug('Restored existing session:', session.id);
           } catch (error) {
-            console.warn('[CART STORE] Failed to restore session, creating new one');
+            logger.warn('Failed to restore session, creating new one');
             session = get().createSession();
           }
         } else {
           session = get().createSession();
-          console.log('[CART STORE] Created new session:', session.id);
+          logger.debug('Created new session:', session.id);
         }
 
         // 2. Get current user and update session
-        console.log('[CART STORE] Getting current user...');
+        logger.debug('Getting current user...');
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('[CART STORE] User result:', { userId: user?.id, email: user?.email });
+        logger.debug('User result:', { userId: user?.id, email: user?.email });
         
         if (user) {
           session = {
@@ -330,16 +329,16 @@ export const useCartStore = create<SimpleCartStore>()(
 
         // 3. Always sync with server if user is authenticated and online
         if (user && navigator.onLine) {
-          console.log('[CART STORE] Loading cart from database (ignoring localStorage to ensure fresh state)...');
+          logger.debug('Loading cart from database (ignoring localStorage to ensure fresh state)...');
           await get().syncWithServer();
         } else {
           // 4. Try to restore from localStorage only if user is offline/guest
           const restored = await get().restoreFromLocalStorage();
           
           if (restored) {
-            console.log('[CART STORE] Successfully recovered cart from localStorage (offline mode)');
+            logger.debug('Successfully recovered cart from localStorage (offline mode)');
           } else {
-            console.log('[CART STORE] Starting with empty cart');
+            logger.debug('Starting with empty cart');
           }
           
           set(prev => ({ 
@@ -354,7 +353,7 @@ export const useCartStore = create<SimpleCartStore>()(
           isLoading: false 
         }));
 
-        console.log('[CART STORE] Enhanced initialization completed successfully');
+        logger.debug('Enhanced initialization completed successfully');
         logger.info('Enhanced cart store initialized', { 
           userId: user?.id, 
           sessionId: session.id,
@@ -364,12 +363,12 @@ export const useCartStore = create<SimpleCartStore>()(
 
         // 5. Setup online/offline listeners
         const handleOnline = () => {
-          console.log('[CART STORE] Network online - updating sync status');
+          logger.debug('Network online - updating sync status');
           set(prev => ({ ...prev, isOnline: true, syncStatus: prev.currentUserId ? 'synced' : 'guest' }));
         };
 
         const handleOffline = () => {
-          console.log('[CART STORE] Network offline - switching to offline mode');
+          logger.debug('Network offline - switching to offline mode');
           set(prev => ({ ...prev, isOnline: false, syncStatus: 'offline' }));
         };
 
@@ -377,7 +376,7 @@ export const useCartStore = create<SimpleCartStore>()(
         window.addEventListener('offline', handleOffline);
 
       } catch (error) {
-        console.error('[CART STORE] Enhanced initialization failed:', error);
+        logger.error('Enhanced initialization failed:', error);
         logger.error('Failed to initialize enhanced cart store', error);
         set(prev => ({ 
           ...prev, 
@@ -400,11 +399,11 @@ export const useCartStore = create<SimpleCartStore>()(
 
     undoDeleteItem: async (quoteId: string) => {
       const state = get();
-      console.log(`[CART STORE] undoDeleteItem called for: ${quoteId}`);
+      logger.debug(`undoDeleteItem called for: ${quoteId}`);
       
       const recentlyDeletedItem = state.recentlyDeleted.find(deleted => deleted.item.id === quoteId);
       if (!recentlyDeletedItem) {
-        console.log('[CART STORE] Item not found in recently deleted');
+        logger.debug('Item not found in recently deleted');
         return;
       }
 
@@ -442,7 +441,7 @@ export const useCartStore = create<SimpleCartStore>()(
           .eq('id', quoteId);
 
         if (error) {
-          console.error('[CART STORE] Database restore failed, reverting:', error);
+          logger.error('Database restore failed, reverting:', error);
           // Revert the restore
           set(prev => ({
             ...prev,
@@ -452,7 +451,7 @@ export const useCartStore = create<SimpleCartStore>()(
           throw new Error(`Failed to restore item: ${error.message}`);
         }
 
-        console.log('[CART STORE] Item successfully restored to cart');
+        logger.debug('Item successfully restored to cart');
         logger.info('Item restored from recently deleted', { 
           quoteId, 
           position: recentlyDeletedItem.position 
@@ -462,7 +461,7 @@ export const useCartStore = create<SimpleCartStore>()(
         get().saveToLocalStorage();
 
       } catch (error) {
-        console.error('[CART STORE] Undo delete item failed:', error);
+        logger.error('Undo delete item failed:', error);
         logger.error('Failed to undo delete item', { quoteId, error });
         throw error;
       }
@@ -530,16 +529,16 @@ export const useCartStore = create<SimpleCartStore>()(
     // Undo operation
     undo: async () => {
       const state = get();
-      console.log('[CART STORE] Undo operation triggered');
+      logger.debug('Undo operation triggered');
       
       if (!state.canUndo()) {
-        console.log('[CART STORE] Cannot undo - no history available');
+        logger.debug('Cannot undo - no history available');
         return;
       }
 
       try {
         const previousSnapshot = state.history[state.historyIndex - 1];
-        console.log(`[CART STORE] Undoing to snapshot: ${previousSnapshot.operation}`);
+        logger.debug(`Undoing to snapshot: ${previousSnapshot.operation}`);
         
         // Update state to previous snapshot
         set(prev => ({
@@ -566,7 +565,7 @@ export const useCartStore = create<SimpleCartStore>()(
             .in('id', removedItems);
             
           if (removeError) {
-            console.error('[CART STORE] Failed to sync removed items during undo:', removeError);
+            logger.error('Failed to sync removed items during undo:', removeError);
           }
         }
 
@@ -577,11 +576,11 @@ export const useCartStore = create<SimpleCartStore>()(
             .in('id', addedItems);
             
           if (addError) {
-            console.error('[CART STORE] Failed to sync added items during undo:', addError);
+            logger.error('Failed to sync added items during undo:', addError);
           }
         }
 
-        console.log('[CART STORE] Undo completed successfully');
+        logger.debug('Undo completed successfully');
         logger.info('Cart undo operation completed', {
           previousOperation: previousSnapshot.operation,
           itemsRemoved: removedItems.length,
@@ -592,7 +591,7 @@ export const useCartStore = create<SimpleCartStore>()(
         get().saveToLocalStorage();
         
       } catch (error) {
-        console.error('[CART STORE] Undo operation failed:', error);
+        logger.error('Undo operation failed:', error);
         logger.error('Cart undo operation failed', error);
         throw error;
       }
@@ -601,16 +600,16 @@ export const useCartStore = create<SimpleCartStore>()(
     // Redo operation
     redo: async () => {
       const state = get();
-      console.log('[CART STORE] Redo operation triggered');
+      logger.debug('Redo operation triggered');
       
       if (!state.canRedo()) {
-        console.log('[CART STORE] Cannot redo - no future history available');
+        logger.debug('Cannot redo - no future history available');
         return;
       }
 
       try {
         const nextSnapshot = state.history[state.historyIndex + 1];
-        console.log(`[CART STORE] Redoing to snapshot: ${nextSnapshot.operation}`);
+        logger.debug(`Redoing to snapshot: ${nextSnapshot.operation}`);
         
         // Update state to next snapshot
         set(prev => ({
@@ -637,7 +636,7 @@ export const useCartStore = create<SimpleCartStore>()(
             .in('id', removedItems);
             
           if (removeError) {
-            console.error('[CART STORE] Failed to sync removed items during redo:', removeError);
+            logger.error('Failed to sync removed items during redo:', removeError);
           }
         }
 
@@ -648,11 +647,11 @@ export const useCartStore = create<SimpleCartStore>()(
             .in('id', addedItems);
             
           if (addError) {
-            console.error('[CART STORE] Failed to sync added items during redo:', addError);
+            logger.error('Failed to sync added items during redo:', addError);
           }
         }
 
-        console.log('[CART STORE] Redo completed successfully');
+        logger.debug('Redo completed successfully');
         logger.info('Cart redo operation completed', {
           nextOperation: nextSnapshot.operation,
           itemsRemoved: removedItems.length,
@@ -663,7 +662,7 @@ export const useCartStore = create<SimpleCartStore>()(
         get().saveToLocalStorage();
         
       } catch (error) {
-        console.error('[CART STORE] Redo operation failed:', error);
+        logger.error('Redo operation failed:', error);
         logger.error('Cart redo operation failed', error);
         throw error;
       }
@@ -671,7 +670,7 @@ export const useCartStore = create<SimpleCartStore>()(
 
     // Clear history
     clearHistory: () => {
-      console.log('[CART STORE] Clearing undo/redo history');
+      logger.debug('Clearing undo/redo history');
       set(prev => ({
         ...prev,
         history: [],
@@ -693,7 +692,7 @@ export const useCartStore = create<SimpleCartStore>()(
     // Add item with localStorage auto-save
     addItem: async (quote: Quote) => {
       const state = get();
-      console.log('[CART STORE] addItem called:', { 
+      logger.debug('addItem called:', { 
         quoteId: quote.id, 
         displayId: quote.display_id,
         currentUserId: state.currentUserId,
@@ -702,20 +701,20 @@ export const useCartStore = create<SimpleCartStore>()(
 
       // Allow guest cart functionality
       // if (!state.currentUserId) {
-      //   console.error('[CART STORE] User not authenticated');
+      //   logger.error('User not authenticated');
       //   throw new Error('User not authenticated');
       // }
 
       // Check if already in cart
       if (state.items.some(item => item.id === quote.id)) {
-        console.log('[CART STORE] Item already in cart, skipping');
+        logger.debug('Item already in cart, skipping');
         logger.warn('Item already in cart', { quoteId: quote.id });
         return;
       }
 
       try {
         // PHASE 3 FIX: Comprehensive pre-operation validation
-        console.log('[CART STORE] Running pre-operation validation...');
+        logger.debug('Running pre-operation validation...');
         const { validateBeforeCartOperation, validateQuoteForCart, getCurrencyErrorMessage } = 
           await import('@/utils/cartCurrencyValidation');
 
@@ -723,7 +722,7 @@ export const useCartStore = create<SimpleCartStore>()(
         const preValidation = await validateBeforeCartOperation('add', state.items, quote);
         
         if (!preValidation.canProceed) {
-          console.error('[CART STORE] Pre-operation validation failed:', preValidation.issues);
+          logger.error('Pre-operation validation failed:', preValidation.issues);
           
           // Get user-friendly error message
           const quoteValidation = await validateQuoteForCart(quote);
@@ -733,7 +732,7 @@ export const useCartStore = create<SimpleCartStore>()(
         }
 
         if (preValidation.issues.length > 0) {
-          console.warn('[CART STORE] Pre-operation validation warnings:', preValidation.issues);
+          logger.warn('Pre-operation validation warnings:', preValidation.issues);
           logger.warn('Cart add operation has warnings', {
             quoteId: quote.id,
             issues: preValidation.issues,
@@ -742,7 +741,7 @@ export const useCartStore = create<SimpleCartStore>()(
         }
 
         // SIMPLIFIED: Basic validation only  
-        console.log('[CART STORE] Adding item to cart with origin currency...', {
+        logger.debug('Adding item to cart with origin currency...', {
           total_quote_origincurrency: quote.total_quote_origincurrency,
           final_total_origincurrency: quote.final_total_origincurrency,
           origin_country: quote.origin_country
@@ -766,7 +765,7 @@ export const useCartStore = create<SimpleCartStore>()(
           }
         };
 
-        console.log('[CART STORE] Created new item with origin currency:', {
+        logger.debug('Created new item with origin currency:', {
           metadata: newItem.metadata,
           originCurrency
         });
@@ -785,14 +784,14 @@ export const useCartStore = create<SimpleCartStore>()(
         get().saveToLocalStorage();
 
         // Update database
-        console.log('[CART STORE] Updating database...');
+        logger.debug('Updating database...');
         const { error } = await supabase
           .from('quotes_v2')
           .update({ in_cart: true })
           .eq('id', quote.id);
 
         if (error) {
-          console.error('[CART STORE] Database update failed, reverting optimistic update:', error);
+          logger.error('Database update failed, reverting optimistic update:', error);
           // Revert optimistic update AND remove from history
           set(prev => {
             const revertedItems = prev.items.filter(item => item.id !== quote.id);
@@ -810,7 +809,7 @@ export const useCartStore = create<SimpleCartStore>()(
           throw new Error(`Failed to add item to cart: ${error.message}`);
         }
 
-        console.log('[CART STORE] Item added successfully to database');
+        logger.debug('Item added successfully to database');
         logger.info('Item added to cart with origin currency', { 
           quoteId: quote.id,
           originCurrency,
@@ -818,7 +817,7 @@ export const useCartStore = create<SimpleCartStore>()(
         });
 
       } catch (error) {
-        console.error('[CART STORE] Failed to add item to cart:', error);
+        logger.error('Failed to add item to cart:', error);
         logger.error('Failed to add item to cart', { quoteId: quote.id, error });
         throw error;
       }
@@ -827,7 +826,7 @@ export const useCartStore = create<SimpleCartStore>()(
     // Remove item with enhanced error handling
     removeItem: async (quoteId: string) => {
       const state = get();
-      console.log('[CART STORE] removeItem called:', { quoteId, hasUser: !!state.currentUserId });
+      logger.debug('removeItem called:', { quoteId, hasUser: !!state.currentUserId });
       
       if (!state.currentUserId) {
         logger.warn('Cannot remove item - user not authenticated', { quoteId });
@@ -839,7 +838,7 @@ export const useCartStore = create<SimpleCartStore>()(
       const item = originalItems[itemIndex];
       
       if (!item || itemIndex === -1) {
-        console.log('[CART STORE] Item not found in cart, skipping removal');
+        logger.debug('Item not found in cart, skipping removal');
         return;
       }
 
@@ -884,14 +883,14 @@ export const useCartStore = create<SimpleCartStore>()(
         get().saveToLocalStorage();
 
         // Update database
-        console.log('[CART STORE] Updating database to remove item...');
+        logger.debug('Updating database to remove item...');
         const { error } = await supabase
           .from('quotes_v2')
           .update({ in_cart: false })
           .eq('id', quoteId);
 
         if (error) {
-          console.error('[CART STORE] Database update failed, reverting removal:', error);
+          logger.error('Database update failed, reverting removal:', error);
           // Revert optimistic update AND remove from history
           set(prev => {
             // Remove the snapshot we just added since operation failed
@@ -909,11 +908,11 @@ export const useCartStore = create<SimpleCartStore>()(
           throw new Error(`Failed to remove item from cart: ${error.message}`);
         }
 
-        console.log('[CART STORE] Item removed successfully from database');
+        logger.debug('Item removed successfully from database');
         logger.info('Item removed from cart successfully', { quoteId, position: itemIndex });
 
       } catch (error) {
-        console.error('[CART STORE] Remove item operation failed:', error);
+        logger.error('Remove item operation failed:', error);
         logger.error('Failed to remove item from cart', { quoteId, error });
         throw error;
       }
@@ -922,7 +921,7 @@ export const useCartStore = create<SimpleCartStore>()(
     // Clear cart with enhanced error handling
     clearCart: async () => {
       const state = get();
-      console.log('[CART STORE] clearCart called:', { hasUser: !!state.currentUserId, itemCount: state.items.length });
+      logger.debug('clearCart called:', { hasUser: !!state.currentUserId, itemCount: state.items.length });
       
       if (!state.currentUserId) {
         logger.warn('Cannot clear cart - user not authenticated');
@@ -930,7 +929,7 @@ export const useCartStore = create<SimpleCartStore>()(
       }
       
       if (state.items.length === 0) {
-        console.log('[CART STORE] Cart already empty, skipping clear operation');
+        logger.debug('Cart already empty, skipping clear operation');
         return;
       }
 
@@ -950,20 +949,20 @@ export const useCartStore = create<SimpleCartStore>()(
         // Optimistic update
         set(prev => ({ ...prev, items: [] }));
 
-        console.log('[CART STORE] Optimistic clear completed, cart now empty');
+        logger.debug('Optimistic clear completed, cart now empty');
         
         // Auto-save to localStorage
         get().saveToLocalStorage();
 
         // Update database
-        console.log('[CART STORE] Updating database to clear all items...');
+        logger.debug('Updating database to clear all items...');
         const { error } = await supabase
           .from('quotes_v2')
           .update({ in_cart: false })
           .in('id', itemIds);
 
         if (error) {
-          console.error('[CART STORE] Database update failed, reverting clear operation:', error);
+          logger.error('Database update failed, reverting clear operation:', error);
           // Revert optimistic update AND remove from history
           set(prev => {
             // Remove the snapshot we just added since operation failed
@@ -980,11 +979,11 @@ export const useCartStore = create<SimpleCartStore>()(
           throw new Error(`Failed to clear cart: ${error.message}`);
         }
 
-        console.log('[CART STORE] Cart cleared successfully from database');
+        logger.debug('Cart cleared successfully from database');
         logger.info('Cart cleared successfully', { itemCount: originalItems.length });
 
       } catch (error) {
-        console.error('[CART STORE] Clear cart operation failed:', error);
+        logger.error('Clear cart operation failed:', error);
         logger.error('Failed to clear cart', error);
         throw error;
       }
@@ -993,45 +992,45 @@ export const useCartStore = create<SimpleCartStore>()(
     // Sync with server
     syncWithServer: async () => {
       const state = get();
-      console.log('[CART STORE] syncWithServer called:', {
+      logger.debug('syncWithServer called:', {
         currentUserId: state.currentUserId,
         syncStatus: state.syncStatus,
         currentItemCount: state.items.length
       });
 
       if (!state.currentUserId || state.syncStatus === 'syncing') {
-        console.log('[CART STORE] Sync skipped - no user or already syncing');
+        logger.debug('Sync skipped - no user or already syncing');
         return;
       }
 
       try {
         // PHASE 3 FIX: Pre-operation validation for sync
-        console.log('[CART STORE] Running pre-sync validation...');
+        logger.debug('Running pre-sync validation...');
         const { validateBeforeCartOperation } = await import('@/utils/cartCurrencyValidation');
 
         const preValidation = await validateBeforeCartOperation('sync', state.items);
         
         if (preValidation.issues.length > 0) {
-          console.warn('[CART STORE] Pre-sync validation warnings:', preValidation.issues);
+          logger.warn('Pre-sync validation warnings:', preValidation.issues);
           logger.warn('Cart sync operation has warnings', {
             issues: preValidation.issues,
             recommendations: preValidation.recommendations
           });
         }
 
-        console.log('[CART STORE] Starting server sync...');
+        logger.debug('Starting server sync...');
         set(prev => ({ ...prev, syncStatus: 'syncing' }));
 
         // Get current user to check both customer_id and customer_email (like RLS policies)
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          console.log('[CART STORE] No authenticated user found for sync');
+          logger.debug('No authenticated user found for sync');
           set(prev => ({ ...prev, items: [], syncStatus: 'guest' }));
           return;
         }
 
-        console.log('[CART STORE] Syncing cart for user:', { 
+        logger.debug('Syncing cart for user:', { 
           userId: user.id, 
           email: user.email,
           storedUserId: state.currentUserId 
@@ -1044,7 +1043,7 @@ export const useCartStore = create<SimpleCartStore>()(
           .eq('in_cart', true)
           .or(`customer_id.eq.${user.id},customer_email.eq.${user.email}`);
 
-        console.log('[CART STORE] Sync query result:', {
+        logger.debug('Sync query result:', {
           success: !error,
           error: error?.message,
           quotesFound: quotes?.length || 0
@@ -1098,8 +1097,8 @@ export const useCartStore = create<SimpleCartStore>()(
           });
         }
         
-        console.log('[CART STORE] Sync completed successfully');
-        console.log('[CART STORE] Final cart state:', {
+        logger.debug('Sync completed successfully');
+        logger.debug('Final cart state:', {
           itemCount: cartItems.length,
           items: cartItems.map(item => ({
             id: item.id,
@@ -1112,16 +1111,16 @@ export const useCartStore = create<SimpleCartStore>()(
 
         // PHASE 3 FIX: Post-sync integrity check
         try {
-          console.log('[CART STORE] Running post-sync integrity check...');
+          logger.debug('Running post-sync integrity check...');
           await get().runIntegrityCheck();
         } catch (integrityError) {
           // Don't fail the sync operation if integrity check fails
-          console.warn('[CART STORE] Post-sync integrity check failed (non-critical):', integrityError);
+          logger.warn('Post-sync integrity check failed (non-critical):', integrityError);
           logger.warn('Post-sync integrity check failed', { error: integrityError });
         }
 
       } catch (error) {
-        console.error('[CART STORE] Sync failed:', error);
+        logger.error('Sync failed:', error);
         logger.error('Failed to sync cart', error);
         set(prev => ({ ...prev, syncStatus: 'error' }));
         throw error;
@@ -1213,7 +1212,7 @@ export const useCartStore = create<SimpleCartStore>()(
 
     // PHASE 3: Cart validation utilities
     validateCartIntegrity: async () => {
-      console.log('[CART STORE] Running cart integrity validation...');
+      logger.debug('Running cart integrity validation...');
       
       try {
         const { validateCartIntegrity } = await import('@/utils/cartCurrencyValidation');
@@ -1221,7 +1220,7 @@ export const useCartStore = create<SimpleCartStore>()(
         
         const result = validateCartIntegrity(items);
         
-        console.log('[CART STORE] Cart integrity result:', {
+        logger.debug('Cart integrity result:', {
           hasInconsistencies: result.hasInconsistencies,
           problematicItemCount: result.problematicItems.length,
           currencyCount: Object.keys(result.currencySummary).length
@@ -1237,14 +1236,14 @@ export const useCartStore = create<SimpleCartStore>()(
 
         return result;
       } catch (error) {
-        console.error('[CART STORE] Cart integrity validation failed:', error);
+        logger.error('Cart integrity validation failed:', error);
         logger.error('Failed to validate cart integrity', error);
         throw error;
       }
     },
 
     runIntegrityCheck: async () => {
-      console.log('[CART STORE] Running comprehensive integrity check...');
+      logger.debug('Running comprehensive integrity check...');
       
       try {
         const integrity = await get().validateCartIntegrity();
@@ -1253,7 +1252,7 @@ export const useCartStore = create<SimpleCartStore>()(
         // Get suggested fixes
         const fixes = await suggestCartFixes(get().items);
         
-        console.log('[CART STORE] Integrity check complete:', {
+        logger.debug('Integrity check complete:', {
           hasInconsistencies: integrity.hasInconsistencies,
           canAutoFix: fixes.canAutoFix,
           suggestedActions: fixes.suggestedActions.length
@@ -1261,7 +1260,7 @@ export const useCartStore = create<SimpleCartStore>()(
 
         // Log recommendations
         if (integrity.hasInconsistencies || !fixes.canAutoFix) {
-          console.warn('[CART STORE] Cart needs attention:', {
+          logger.warn('Cart needs attention:', {
             integrity: integrity.recommendedActions,
             fixes: fixes.suggestedActions
           });
@@ -1273,12 +1272,12 @@ export const useCartStore = create<SimpleCartStore>()(
             recommendations: [...integrity.recommendedActions, ...fixes.suggestedActions]
           });
         } else {
-          console.log('[CART STORE] ✅ Cart integrity check passed');
+          logger.debug('✅ Cart integrity check passed');
           logger.info('Cart integrity check passed - no issues found');
         }
 
       } catch (error) {
-        console.error('[CART STORE] Integrity check failed:', error);
+        logger.error('Integrity check failed:', error);
         logger.error('Failed to run cart integrity check', error);
         throw error;
       }
@@ -1311,12 +1310,12 @@ export const useCartStore = create<SimpleCartStore>()(
     },
 
     forceSync: async () => {
-      console.log('🔄 FORCING CART SYNC...');
+      logger.debug('Forcing cart sync...');
       try {
         await get().syncWithServer();
-        console.log('✅ FORCED SYNC COMPLETED');
+        logger.debug('Forced sync completed');
       } catch (error) {
-        console.error('❌ FORCED SYNC FAILED:', error);
+        logger.error('Forced sync failed', error);
       }
     }
   }))

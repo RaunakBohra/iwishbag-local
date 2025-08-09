@@ -28,34 +28,87 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor dependencies
+          // Vendor dependencies - Strategic Splitting for 2.68MB reduction
           if (id.includes('node_modules')) {
-            // Large chart libraries
-            if (id.includes('recharts')) {
-              return 'charts';
+            
+            // 🎯 HIGH IMPACT SPLITS - Target largest dependencies first
+            
+            // Charts & Visualization (Large libraries ~400KB)
+            if (id.includes('recharts') || id.includes('framer-motion')) {
+              return 'charts-vendor';
             }
-            // Core React ecosystem
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-vendor';
+            
+            // Core React Ecosystem (~400KB) 
+            if (id.includes('react') && !id.includes('react-hook-form') && !id.includes('react-day-picker')) {
+              return 'react-core-vendor';
             }
-            // UI components
-            if (id.includes('@radix-ui') || id.includes('lucide-react')) {
-              return 'ui-vendor';
+            if (id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-core-vendor';
             }
-            // Query and state management
+            
+            // Form & Input Libraries (~300KB)
+            if (id.includes('react-hook-form') || id.includes('react-day-picker') || 
+                id.includes('input-otp') || id.includes('react-international-phone') ||
+                id.includes('react-dropzone')) {
+              return 'forms-vendor';
+            }
+            
+            // UI Component Libraries (~500KB) 
+            if (id.includes('@radix-ui')) {
+              return 'radix-ui-vendor';
+            }
+            if (id.includes('lucide-react') || id.includes('cmdk') || id.includes('vaul')) {
+              return 'ui-icons-vendor';
+            }
+            
+            // Data & State Management (~200KB)
             if (id.includes('@tanstack/react-query') || id.includes('zustand')) {
               return 'state-vendor';
             }
-            // Supabase and auth
-            if (id.includes('@supabase') || id.includes('jose') || id.includes('crypto')) {
+            
+            // Supabase & Database (~300KB)
+            if (id.includes('@supabase') || id.includes('jose') || id.includes('pg')) {
               return 'supabase-vendor';
             }
-            // Date utilities
-            if (id.includes('date-fns')) {
-              return 'date-vendor';
+            
+            // Payment Processing (~200KB)
+            if (id.includes('@stripe') || id.includes('stripe')) {
+              return 'payments-vendor';
             }
-            // Other vendor packages
-            return 'vendor';
+            
+            // Utility Libraries (~300KB)
+            if (id.includes('lodash') || id.includes('date-fns') || id.includes('uuid') || 
+                id.includes('clsx') || id.includes('class-variance-authority') ||
+                id.includes('tailwind-merge')) {
+              return 'utils-vendor';
+            }
+            
+            // File Processing & PDF (~250KB)
+            if (id.includes('jspdf') || id.includes('exceljs') || id.includes('papaparse') ||
+                id.includes('browser-image-compression') || id.includes('qrcode')) {
+              return 'files-vendor';
+            }
+            
+            // Security & Crypto (~150KB)
+            if (id.includes('bcryptjs') || id.includes('otplib') || id.includes('dompurify') ||
+                id.includes('crypto') || id.includes('libphonenumber-js')) {
+              return 'security-vendor';
+            }
+            
+            // Email & Communication (~100KB)
+            if (id.includes('resend') || id.includes('mailparser') || 
+                id.includes('react-hot-toast') || id.includes('sonner')) {
+              return 'communication-vendor';
+            }
+            
+            // Development & Monitoring (~150KB)
+            if (id.includes('@sentry') || id.includes('react-helmet-async') ||
+                id.includes('@tanstack/react-query-devtools')) {
+              return 'monitoring-vendor';
+            }
+            
+            // Remaining smaller vendor packages
+            return 'vendor-misc';
           }
           
           // Application code splitting
@@ -80,11 +133,30 @@ export default defineConfig(({ mode }) => ({
             return 'quotes';
           }
         },
+        // Optimize chunk names for better caching
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId
+            ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '')
+            : 'chunk';
+          
+          // Add hash for cache busting while keeping readable names
+          return `assets/[name]-[hash].js`;
+        },
+        assetFileNames: (assetInfo) => {
+          const extType = assetInfo.name?.split('.').at(-1);
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico|webp|avif/i.test(extType ?? '')) {
+            return `assets/img/[name]-[hash][extname]`;
+          }
+          if (/css/i.test(extType ?? '')) {
+            return `assets/css/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        },
       },
     },
     sourcemap: true, // Enable sourcemaps for Sentry
     minify: 'esbuild',
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500, // Stricter limit after splitting - should be under 500KB per chunk
     target: 'es2015', // Better browser support and smaller bundles
   },
   esbuild: {

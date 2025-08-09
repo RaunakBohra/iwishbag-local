@@ -63,6 +63,7 @@ import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 import React from 'react';
 
 // Smart grouped menu structure - reduced from 23 to 6 main categories
@@ -312,10 +313,14 @@ export const AdminSidebar = () => {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm overflow-hidden bg-white">
-                  <img 
+                  <OptimizedImage 
                     src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
                     alt="iWishBag Logo" 
+                    width={32}
+                    height={32}
                     className="w-8 h-8 object-contain"
+                    priority
+                    placeholder="empty"
                   />
                 </div>
                 <div>
@@ -330,10 +335,14 @@ export const AdminSidebar = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm mb-3 overflow-hidden bg-white">
-                    <img 
+                    <OptimizedImage 
                       src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
                       alt="iWishBag Logo" 
+                      width={32}
+                      height={32}
                       className="w-8 h-8 object-contain"
+                      priority
+                      placeholder="empty"
                     />
                   </div>
                 </TooltipTrigger>

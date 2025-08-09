@@ -38,7 +38,13 @@ import {
   Globe,
   Truck,
   Search,
-  Eye
+  Eye,
+  // Added from analysis - frequently used
+  ArrowRight,
+  ChevronUp,
+  User,
+  Phone,
+  Shield
 } from 'lucide-react';
 
 // Type definition for icon component
@@ -65,21 +71,26 @@ const COMMON_ICONS: Record<string, IconComponent> = {
   Globe,
   Truck,
   Search,
-  Eye
+  Eye,
+  // Added from analysis - frequently used
+  ArrowRight,
+  ChevronUp,
+  User,
+  Phone,
+  Shield
 };
 
 // Lazy-loaded icons for less common ones (saves initial bundle size)
 const LAZY_ICONS: Record<string, () => Promise<{ default: IconComponent }>> = {
-  // Navigation & UI
+  // Navigation & UI  
   ArrowLeft: () => import('lucide-react').then(mod => ({ default: mod.ArrowLeft })),
-  ArrowRight: () => import('lucide-react').then(mod => ({ default: mod.ArrowRight })),
-  ChevronUp: () => import('lucide-react').then(mod => ({ default: mod.ChevronUp })),
   ChevronLeft: () => import('lucide-react').then(mod => ({ default: mod.ChevronLeft })),
   ChevronRight: () => import('lucide-react').then(mod => ({ default: mod.ChevronRight })),
   MoreHorizontal: () => import('lucide-react').then(mod => ({ default: mod.MoreHorizontal })),
   
   // Actions
   Edit: () => import('lucide-react').then(mod => ({ default: mod.Edit })),
+  ExternalLink: () => import('lucide-react').then(mod => ({ default: mod.ExternalLink })),
   Save: () => import('lucide-react').then(mod => ({ default: mod.Save })),
   Copy: () => import('lucide-react').then(mod => ({ default: mod.Copy })),
   Download: () => import('lucide-react').then(mod => ({ default: mod.Download })),
@@ -87,18 +98,27 @@ const LAZY_ICONS: Record<string, () => Promise<{ default: IconComponent }>> = {
   Share: () => import('lucide-react').then(mod => ({ default: mod.Share })),
   Share2: () => import('lucide-react').then(mod => ({ default: mod.Share2 })),
   
+  // New icons from QuoteCalculatorV2 analysis
+  Calculator: () => import('lucide-react').then(mod => ({ default: mod.Calculator })),
+  FileText: () => import('lucide-react').then(mod => ({ default: mod.FileText })),
+  Tag: () => import('lucide-react').then(mod => ({ default: mod.Tag })),
+  Ruler: () => import('lucide-react').then(mod => ({ default: mod.Ruler })),
+  Sparkles: () => import('lucide-react').then(mod => ({ default: mod.Sparkles })),
+  Brain: () => import('lucide-react').then(mod => ({ default: mod.Brain })),
+  EyeOff: () => import('lucide-react').then(mod => ({ default: mod.EyeOff })),
+  Settings: () => import('lucide-react').then(mod => ({ default: mod.Settings })),
+  Scale: () => import('lucide-react').then(mod => ({ default: mod.Scale })),
+  
   // Payment & Commerce
   CreditCard: () => import('lucide-react').then(mod => ({ default: mod.CreditCard })),
   ShoppingCart: () => import('lucide-react').then(mod => ({ default: mod.ShoppingCart })),
   ShoppingBag: () => import('lucide-react').then(mod => ({ default: mod.ShoppingBag })),
   
   // Communication
-  Phone: () => import('lucide-react').then(mod => ({ default: mod.Phone })),
   MessageCircle: () => import('lucide-react').then(mod => ({ default: mod.MessageCircle })),
   Bell: () => import('lucide-react').then(mod => ({ default: mod.Bell })),
   
   // Files & Media
-  FileText: () => import('lucide-react').then(mod => ({ default: mod.FileText })),
   Image: () => import('lucide-react').then(mod => ({ default: mod.Image })),
   Camera: () => import('lucide-react').then(mod => ({ default: mod.Camera })),
   
@@ -106,11 +126,9 @@ const LAZY_ICONS: Record<string, () => Promise<{ default: IconComponent }>> = {
   CheckCircle2: () => import('lucide-react').then(mod => ({ default: mod.CheckCircle2 })),
   XCircle: () => import('lucide-react').then(mod => ({ default: mod.XCircle })),
   Zap: () => import('lucide-react').then(mod => ({ default: mod.Zap })),
-  Shield: () => import('lucide-react').then(mod => ({ default: mod.Shield })),
   Lock: () => import('lucide-react').then(mod => ({ default: mod.Lock })),
   
   // Tools & Settings
-  Settings: () => import('lucide-react').then(mod => ({ default: mod.Settings })),
   Filter: () => import('lucide-react').then(mod => ({ default: mod.Filter })),
   SortAsc: () => import('lucide-react').then(mod => ({ default: mod.SortAsc })),
   SortDesc: () => import('lucide-react').then(mod => ({ default: mod.SortDesc })),
@@ -122,13 +140,53 @@ const LAZY_ICONS: Record<string, () => Promise<{ default: IconComponent }>> = {
   PieChart: () => import('lucide-react').then(mod => ({ default: mod.PieChart })),
   
   // User & Account
-  User: () => import('lucide-react').then(mod => ({ default: mod.User })),
   Users: () => import('lucide-react').then(mod => ({ default: mod.Users })),
   UserPlus: () => import('lucide-react').then(mod => ({ default: mod.UserPlus })),
   
   // Location & Geography
   Map: () => import('lucide-react').then(mod => ({ default: mod.Map })),
   Navigation: () => import('lucide-react').then(mod => ({ default: mod.Navigation })),
+  
+  // CustomerProfile specific icons
+  Calendar: () => import('lucide-react').then(mod => ({ default: mod.Calendar })),
+  Star: () => import('lucide-react').then(mod => ({ default: mod.Star })),
+  Activity: () => import('lucide-react').then(mod => ({ default: mod.Activity })),
+  History: () => import('lucide-react').then(mod => ({ default: mod.History })),
+  UserCheck: () => import('lucide-react').then(mod => ({ default: mod.UserCheck })),
+  BarChart3: () => import('lucide-react').then(mod => ({ default: mod.BarChart3 })),
+  
+  // WorldClassCustomerTable specific icons
+  ArrowUpDown: () => import('lucide-react').then(mod => ({ default: mod.ArrowUpDown })),
+  ArrowUp: () => import('lucide-react').then(mod => ({ default: mod.ArrowUp })),
+  ArrowDown: () => import('lucide-react').then(mod => ({ default: mod.ArrowDown })),
+  
+  // UnifiedPaymentModal specific icons
+  Banknote: () => import('lucide-react').then(mod => ({ default: mod.Banknote })),
+  Receipt: () => import('lucide-react').then(mod => ({ default: mod.Receipt })),
+  Smartphone: () => import('lucide-react').then(mod => ({ default: mod.Smartphone })),
+  Hash: () => import('lucide-react').then(mod => ({ default: mod.Hash })),
+  
+  // Cart and Checkout specific icons
+  Weight: () => import('lucide-react').then(mod => ({ default: mod.Weight })),
+  HelpCircle: () => import('lucide-react').then(mod => ({ default: mod.HelpCircle })),
+  Percent: () => import('lucide-react').then(mod => ({ default: mod.Percent })),
+  
+  // AdminSidebar specific icons
+  Landmark: () => import('lucide-react').then(mod => ({ default: mod.Landmark })),
+  LayoutDashboard: () => import('lucide-react').then(mod => ({ default: mod.LayoutDashboard })),
+  Route: () => import('lucide-react').then(mod => ({ default: mod.Route })),
+  Ticket: () => import('lucide-react').then(mod => ({ default: mod.Ticket })),
+  RotateCcw: () => import('lucide-react').then(mod => ({ default: mod.RotateCcw })),
+  LogOut: () => import('lucide-react').then(mod => ({ default: mod.LogOut })),
+  Menu: () => import('lucide-react').then(mod => ({ default: mod.Menu })),
+  
+  // Help.tsx and other pages specific icons
+  MoreVertical: () => import('lucide-react').then(mod => ({ default: mod.MoreVertical })),
+  Paperclip: () => import('lucide-react').then(mod => ({ default: mod.Paperclip })),
+  Smile: () => import('lucide-react').then(mod => ({ default: mod.Smile })),
+  Flag: () => import('lucide-react').then(mod => ({ default: mod.Flag })),
+  Archive: () => import('lucide-react').then(mod => ({ default: mod.Archive })),
+  Warehouse: () => import('lucide-react').then(mod => ({ default: mod.Warehouse })),
   
   // Add more as needed...
 };
@@ -195,7 +253,12 @@ export {
   Globe,
   Truck,
   Search,
-  Eye
+  Eye,
+  ArrowRight,
+  ChevronUp,
+  User,
+  Phone,
+  Shield
 };
 
 // Utility function to get icon dynamically

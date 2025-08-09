@@ -192,10 +192,17 @@ export async function fixSpecificQuoteIssues(quoteId = '14fd95c9-825a-4ab3-8e08-
   }
 }
 
-// Make available globally
+// Make available globally for debugging
+declare global {
+  interface Window {
+    debugSpecificQuote: typeof debugSpecificQuote;
+    fixSpecificQuote: typeof fixSpecificQuoteIssues;
+  }
+}
+
 if (typeof window !== 'undefined') {
-  (window as any).debugSpecificQuote = debugSpecificQuote;
-  (window as any).fixSpecificQuote = fixSpecificQuoteIssues;
+  window.debugSpecificQuote = debugSpecificQuote;
+  window.fixSpecificQuote = fixSpecificQuoteIssues;
   
   console.log('🔍 Quote debugging tools available:');
   console.log('  debugSpecificQuote() - Debug the problematic quote');

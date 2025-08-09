@@ -13,16 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft,
-  AlertCircle,
-  Loader2,
-  CreditCard,
-  Lock,
-  ShoppingBag,
-  MapPin,
-  User,
-} from 'lucide-react';
+import { OptimizedIcon, AlertCircle, Loader2, User, MapPin } from '@/components/ui/OptimizedIcon';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -176,12 +167,12 @@ const CheckoutShopify: React.FC = React.memo(() => {
                 onClick={() => navigate('/cart')}
                 className="flex items-center gap-2"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <OptimizedIcon name="ArrowLeft" className="w-4 h-4" />
                 Back to Cart
               </Button>
               
               <div className="flex items-center gap-3">
-                <ShoppingBag className="w-6 h-6 text-teal-600" />
+                <OptimizedIcon name="ShoppingBag" className="w-6 h-6 text-teal-600" />
                 <div>
                   <h1 className="text-2xl font-bold">Checkout</h1>
                   <p className="text-sm text-gray-500">
@@ -193,7 +184,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
 
             {/* Security Badge */}
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Lock className="w-4 h-4" />
+              <OptimizedIcon name="Lock" className="w-4 h-4" />
               <span>Secure Checkout</span>
             </div>
           </div>
@@ -203,7 +194,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
+            <OptimizedIcon name="AlertCircle" className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -216,7 +207,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
+                  <OptimizedIcon name="MapPin" className="w-5 h-5" />
                   Delivery Address
                 </CardTitle>
               </CardHeader>
@@ -233,7 +224,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
+                  <OptimizedIcon name="CreditCard" className="w-5 h-5" />
                   Payment Method
                 </CardTitle>
               </CardHeader>
@@ -252,7 +243,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
+                  <OptimizedIcon name="User" className="w-5 h-5" />
                   Order Notes (Optional)
                 </CardTitle>
               </CardHeader>
