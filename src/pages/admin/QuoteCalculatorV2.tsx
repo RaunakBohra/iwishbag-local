@@ -1892,6 +1892,52 @@ const QuoteCalculatorV2: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
           )}
           
+          {/* Prominent Rejection Reason Display */}
+          {currentQuoteStatus === 'rejected' && adminNotes && (
+            <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <OptimizedIcon name="AlertCircle" className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 text-lg mb-2">
+                    Quote Rejected by Customer
+                  </h3>
+                  <div className="text-red-800 text-sm">
+                    {(() => {
+                      const rejectionMatch = adminNotes.match(/Rejection Reason:\s*([^\n]+)/);
+                      const detailsMatch = adminNotes.match(/Details:\s*([^\n]+)/);
+                      const dateMatch = adminNotes.match(/Rejected at:\s*([^\n]+)/);
+                      
+                      return (
+                        <div className="space-y-2">
+                          {rejectionMatch && (
+                            <div>
+                              <span className="font-medium">Reason: </span>
+                              <span className="bg-red-100 px-2 py-1 rounded text-red-900 font-medium">
+                                {rejectionMatch[1].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </span>
+                            </div>
+                          )}
+                          {detailsMatch && detailsMatch[1].trim() && (
+                            <div>
+                              <span className="font-medium">Details: </span>
+                              <span className="italic">{detailsMatch[1]}</span>
+                            </div>
+                          )}
+                          {dateMatch && (
+                            <div>
+                              <span className="font-medium">Rejected on: </span>
+                              <span>{new Date(dateMatch[1]).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
         </div>
         <div className="flex items-center gap-4">
           {/* Informational badges */}
