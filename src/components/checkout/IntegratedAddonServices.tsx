@@ -51,10 +51,13 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
   onSelectionChange,
   className = '',
 }) => {
+
   const [selections, setSelections] = useState<Map<string, AddonServiceSelection>>(new Map());
   const [showAllServices, setShowAllServices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTooltips, setShowTooltips] = useState<Set<string>>(new Set());
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Enhanced country detection
   const { countryCode: detectedCountry, isLoading: countryLoading } = useCountryWithPricing();
@@ -75,12 +78,12 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
   // Query enablement conditions
   const queryEnabled = validOrderValue > 0 && !countryLoading && !!finalCountryCode;
   
-  // Load addon service recommendations with fast timeout
+  // Load addon service recommendations with optimized caching
   const { data: addonData, isLoading, refetch } = useQuery({
     queryKey: ['integrated-addon-services', finalCountryCode, validOrderValue],
     queryFn: async () => {
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout')), 5000);
+        setTimeout(() => reject(new Error('Timeout')), 8000);
       });
       
       const servicePromise = addonServicesService.getRecommendedServices({
@@ -101,9 +104,12 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     },
     enabled: queryEnabled,
     retry: 1,
-    retryDelay: 1000,
-    staleTime: 3 * 60 * 1000,
+    retryDelay: 2000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Fallback services for errors
@@ -119,19 +125,21 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
 
   // Use actual data or fallback
   const services = addonData?.recommendations || (error ? fallbackServices : []);
+
   
   // Split services into top recommendations and others
   const topServices = services.filter(s => s.recommendation_score >= 0.6).slice(0, 2);
   const otherServices = services.filter(s => s.recommendation_score < 0.6 || 
     !topServices.find(top => top.service_key === s.service_key));
   
-  // Auto-select highly recommended services on load
+  // Initialize selections only once - never reinitialize after user interaction
   useEffect(() => {
-    if (services.length > 0 && selections.size === 0) {
+    if (services.length > 0 && !isInitialized && !hasUserInteracted) {
       const newSelections = new Map<string, AddonServiceSelection>();
       
       services.forEach(service => {
         const autoSelect = service.recommendation_score >= 0.8;
+        
         newSelections.set(service.service_key, {
           service_key: service.service_key,
           is_selected: autoSelect,
@@ -141,8 +149,24 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
       });
 
       setSelections(newSelections);
+      setIsInitialized(true);
+    } else if (services.length > 0 && isInitialized) {
+      // Just update pricing without changing selections
+      setSelections(prevSelections => {
+        const updatedSelections = new Map(prevSelections);
+        services.forEach(service => {
+          const existingSelection = updatedSelections.get(service.service_key);
+          if (existingSelection) {
+            updatedSelections.set(service.service_key, {
+              ...existingSelection,
+              calculated_amount: service.pricing.calculated_amount,
+            });
+          }
+        });
+        return updatedSelections;
+      });
     }
-  }, [services, selections.size]);
+  }, [services, isInitialized, hasUserInteracted]);
 
   // Calculate total cost
   const totalAddonCost = useMemo(() => {
@@ -173,6 +197,9 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
 
   // Handle service toggle
   const handleServiceToggle = useCallback((serviceKey: string, isSelected: boolean) => {
+    // Mark that user has interacted - this prevents any future re-initialization
+    setHasUserInteracted(true);
+    
     setSelections(prev => {
       const newSelections = new Map(prev);
       const current = newSelections.get(serviceKey);
@@ -182,6 +209,17 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
           ...current,
           is_selected: isSelected,
         });
+      } else {
+        // Create new selection if it doesn't exist
+        const service = services.find(s => s.service_key === serviceKey);
+        if (service) {
+          newSelections.set(serviceKey, {
+            service_key: serviceKey,
+            is_selected: isSelected,
+            calculated_amount: service.pricing.calculated_amount,
+            recommendation_score: service.recommendation_score,
+          });
+        }
       }
 
       return newSelections;
@@ -217,6 +255,7 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
     const isSelected = selection?.is_selected || false;
     const isHighlyRecommended = service.recommendation_score >= 0.8;
     const showTooltip = showTooltips.has(service.service_key);
+    
     
     return (
       <div key={service.service_key} className="relative py-2">
@@ -304,6 +343,7 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
   if (services.length === 0) {
     return null;
   }
+
 
   return (
     <div className={className}>

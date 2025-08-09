@@ -30,7 +30,6 @@ import { cartDesignTokens } from '@/styles/cart-design-system';
 
 // Import existing components we'll integrate
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
-import { CompactPackageProtection } from '@/components/cart/CompactPackageProtection';
 import { IntegratedAddonServices } from '@/components/checkout/IntegratedAddonServices';
 
 interface UnifiedOrderSummaryProps {
@@ -39,14 +38,23 @@ interface UnifiedOrderSummaryProps {
   showPlaceOrderButton?: boolean;
   canPlaceOrder?: boolean;
   className?: string;
+  selectedAddonServices?: Array<{
+    service_key: string;
+    is_selected: boolean;
+    calculated_amount: number;
+    recommendation_score?: number;
+  }>;
+  onAddonServicesChange?: (selections: Array<{
+    service_key: string;
+    is_selected: boolean;
+    calculated_amount: number;
+    recommendation_score?: number;
+  }>) => void;
 }
 
 interface SummaryCalculations {
   subtotal: number;
   subtotalFormatted: string;
-  insurance: number;
-  insuranceFormatted: string;
-  insuranceRate: number;
   addons: number;
   addonsFormatted: string;
   discount: number;
@@ -61,7 +69,9 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
   isProcessingOrder = false,
   showPlaceOrderButton = false,
   canPlaceOrder = true,
-  className = ''
+  className = '',
+  selectedAddonServices = [],
+  onAddonServicesChange
 }) => {
   const { items, getTotalValue, isLoading } = useCart();
   const { displayCurrency } = useCartCurrency();
@@ -72,17 +82,13 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
   const [calculations, setCalculations] = useState<SummaryCalculations | null>(null);
   const [calculationLoading, setCalculationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [includeInsurance, setIncludeInsurance] = useState(false);
-  const [insuranceLoading, setInsuranceLoading] = useState(false);
 
-  // Addon services state management
-  const [selectedAddonServices, setSelectedAddonServices] = useState<Array<{
-    service_key: string;
-    is_selected: boolean;
-    calculated_amount: number;
-    recommendation_score?: number;
-  }>>([]);
-  const [totalAddonCost, setTotalAddonCost] = useState(0);
+  // Calculate total addon cost from external state
+  const totalAddonCost = useMemo(() => {
+    return selectedAddonServices
+      .filter(s => s.is_selected)
+      .reduce((sum, s) => sum + s.calculated_amount, 0);
+  }, [selectedAddonServices]);
 
   // Coupon state management
   const [appliedCoupons, setAppliedCoupons] = useState<Array<{
@@ -95,47 +101,6 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
   }>>([]);
   const [totalDiscount, setTotalDiscount] = useState(0);
 
-  // Handle insurance toggle
-  const handleInsuranceToggle = async (enabled: boolean) => {
-    if (!user?.id || items.length === 0) {
-      setIncludeInsurance(enabled);
-      return;
-    }
-
-    setInsuranceLoading(true);
-    try {
-      const promises = items.map(async (item) => {
-        const { data, error } = await supabase.rpc('update_quote_insurance', {
-          p_quote_id: item.quote.id,
-          p_insurance_enabled: enabled,
-          p_customer_id: user.id
-        });
-
-        if (error) throw error;
-        return data;
-      });
-
-      await Promise.all(promises);
-      setIncludeInsurance(enabled);
-      
-      toast({
-        title: enabled ? "Insurance Added" : "Insurance Removed",
-        description: enabled 
-          ? "Package protection added to all items"
-          : "Package protection removed from cart",
-      });
-
-    } catch (error) {
-      logger.error('Failed to update cart insurance:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update insurance. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setInsuranceLoading(false);
-    }
-  };
 
   // Handle addon services changes
   const handleAddonServicesChange = useCallback((selections: Array<{
@@ -144,9 +109,10 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     calculated_amount: number;
     recommendation_score?: number;
   }>, totalCost: number) => {
-    setSelectedAddonServices(selections);
-    setTotalAddonCost(totalCost);
-  }, []);
+    if (onAddonServicesChange) {
+      onAddonServicesChange(selections);
+    }
+  }, [onAddonServicesChange]);
 
   // Handle coupon application
   const handleDiscountApplied = useCallback((discount: {
@@ -194,45 +160,18 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     const subtotal = await getTotalValue(displayCurrency);
     const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
 
-    // Get insurance rate from quote data
-    const getInsuranceRateFromQuotes = (): number => {
-      try {
-        const firstQuote = items[0]?.quote;
-        if (firstQuote?.calculation_data) {
-          const calcData = typeof firstQuote.calculation_data === 'string' 
-            ? JSON.parse(firstQuote.calculation_data)
-            : firstQuote.calculation_data;
-          
-          const insurancePercentage = calcData?.applied_rates?.insurance_percentage;
-          if (insurancePercentage && insurancePercentage > 0) {
-            return insurancePercentage / 100;
-          }
-        }
-        return 0.015; // Default 1.5%
-      } catch (error) {
-        return 0.015;
-      }
-    };
-
-    const insuranceRate = items.length > 0 ? getInsuranceRateFromQuotes() : 0.015;
-    const insurance = includeInsurance ? subtotal * insuranceRate : 0;
-    const insuranceFormatted = currencyService.formatAmount(insurance, displayCurrency);
-
     const addons = totalAddonCost;
     const addonsFormatted = currencyService.formatAmount(addons, displayCurrency);
 
     const discount = totalDiscount;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    const total = subtotal + insurance + addons - discount;
+    const total = subtotal + addons - discount;
     const totalFormatted = currencyService.formatAmount(total, displayCurrency);
 
     return {
       subtotal,
       subtotalFormatted,
-      insurance,
-      insuranceFormatted,
-      insuranceRate,
       addons,
       addonsFormatted,
       discount,
@@ -241,7 +180,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       totalFormatted,
       currency: displayCurrency
     };
-  }, [items, displayCurrency, getTotalValue, includeInsurance, totalDiscount, totalAddonCost]);
+  }, [items, displayCurrency, getTotalValue, totalDiscount, totalAddonCost]);
 
   // Recalculate when dependencies change
   useEffect(() => {
@@ -281,49 +220,6 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     };
   }, [calculateSummary, items.length, totalAddonCost]);
 
-  // Load initial insurance state
-  useEffect(() => {
-    const loadInsuranceState = async () => {
-      if (!user?.id || items.length === 0) {
-        setIncludeInsurance(false);
-        return;
-      }
-
-      try {
-        const promises = items.map(async (item) => {
-          const { data, error } = await supabase
-            .from('quotes_v2')
-            .select('insurance_required')
-            .eq('id', item.quote.id)
-            .single();
-
-          if (error) return false;
-          return data?.insurance_required || false;
-        });
-
-        const insuranceStates = await Promise.all(promises);
-        const anyInsuranceEnabled = insuranceStates.some(Boolean);
-        
-        // Auto-enable for high-value/international orders
-        if (!anyInsuranceEnabled && calculations) {
-          const shouldAutoEnable = 
-            calculations.subtotal >= 100 || 
-            (items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country);
-          
-          if (shouldAutoEnable) {
-            setIncludeInsurance(true);
-            return;
-          }
-        }
-        
-        setIncludeInsurance(anyInsuranceEnabled);
-      } catch (error) {
-        logger.error('Failed to load cart insurance state:', error);
-      }
-    };
-
-    loadInsuranceState();
-  }, [items, user?.id, calculations]);
 
   // Auto-collapse on mobile
   useEffect(() => {
@@ -515,18 +411,6 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
             <span className={cartDesignTokens.typography.price.secondary}>{subtotalFormatted}</span>
           </div>
 
-          {/* Package Protection */}
-          {calculations && (
-            <CompactPackageProtection
-              orderValue={calculations.subtotal}
-              currency={displayCurrency}
-              insuranceRate={calculations.insuranceRate}
-              isSelected={includeInsurance}
-              onToggle={handleInsuranceToggle}
-              isLoading={insuranceLoading}
-              isInternational={items.length > 0 && items[0].quote.destination_country !== items[0].quote.origin_country}
-            />
-          )}
 
           {/* Integrated Addon Services */}
           {calculations && (
@@ -544,13 +428,13 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
             <div className="py-2 border-t border-gray-100">
               <CouponCodeInput
                 customerId={user?.id}
-                quoteTotal={calculations.subtotal + calculations.insurance}
+                quoteTotal={calculations.subtotal}
                 currency={displayCurrency}
                 countryCode={items.length > 0 ? items[0].quote.destination_country : undefined}
                 componentBreakdown={{
                   shipping_cost: 0,
                   handling_fee: 0,
-                  insurance_amount: calculations.insurance,
+                  insurance_amount: 0,
                 }}
                 onDiscountApplied={handleDiscountApplied}
                 onDiscountRemoved={handleDiscountRemoved}
