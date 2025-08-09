@@ -261,6 +261,9 @@ export {
   Shield
 };
 
+// Export CreditCard for lazy loading
+export const CreditCard = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.CreditCard })));
+
 // Utility function to get icon dynamically
 export const getIcon = (name: string): IconComponent | null => {
   return COMMON_ICONS[name] || null;

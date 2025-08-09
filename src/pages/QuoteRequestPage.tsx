@@ -492,7 +492,7 @@ export default function QuoteRequestPage() {
           ...baseQuoteData,
           items: mappedItems,
           total_quote_origincurrency: totalAmount,
-          total_customer_display_currency: totalAmount,
+          total_quote_origincurrency: totalAmount,
           customer_currency: customerCurrency,
         };
 
@@ -526,7 +526,7 @@ export default function QuoteRequestPage() {
             origin_country: item.origin_country, // Use item's origin country for separate quotes
             items: [mappedItem],
             total_quote_origincurrency: itemTotal,
-            total_customer_display_currency: itemTotal,
+            total_quote_origincurrency: itemTotal,
             customer_currency: customerCurrency, // Use the same customerCurrency calculated above
           };
 

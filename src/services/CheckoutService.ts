@@ -13,7 +13,7 @@
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
-import { PaymentActionsService } from '@/services/payment-management/PaymentActionsService';
+import { PaymentActionsService } from '@/services/admin-payment/PaymentActionsService';
 import { trackingService } from '@/services/TrackingService';
 import { addonServicesService } from '@/services/AddonServicesService';
 import { EnhancedGeoLocationService } from '@/services/EnhancedGeoLocationService';

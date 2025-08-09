@@ -24,7 +24,7 @@ interface QuoteData {
   status: string;
   items: any[];
   total_quote_origincurrency: number;
-  total_customer_display_currency?: number;
+  total_quote_origincurrency?: number;
   customer_currency?: string;
   origin_country?: string;
   destination_country?: string;

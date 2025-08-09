@@ -1265,7 +1265,7 @@ const QuoteCalculatorV2: React.FC = () => {
     const steps = result.calculation_steps;
     console.log('[ProportionalRounding] Original result:', {
       total_origin_currency: steps.total_origin_currency,
-      total_customer_display_currency: steps.total_customer_display_currency,
+      total_quote_origincurrency: steps.total_quote_origincurrency,
       steps: Object.keys(steps)
     });
 
@@ -1317,9 +1317,9 @@ const QuoteCalculatorV2: React.FC = () => {
     updatedSteps.total_quote_origincurrency = roundingResult.total.amount; // Store rounded value for backward compatibility
     
     // If we have customer currency conversion, apply it to the rounded total
-    if (steps.total_customer_display_currency && steps.total_origin_currency) {
-      const conversionRate = steps.total_customer_display_currency / steps.total_origin_currency;
-      updatedSteps.total_customer_display_currency = roundingResult.total.amount * conversionRate;
+    if (steps.total_quote_origincurrency && steps.total_origin_currency) {
+      const conversionRate = steps.total_quote_origincurrency / steps.total_origin_currency;
+      updatedSteps.total_quote_origincurrency = roundingResult.total.amount * conversionRate;
     }
 
     // Add rounding metadata for audit purposes
@@ -1574,7 +1574,7 @@ const QuoteCalculatorV2: React.FC = () => {
         ...baseQuoteData,
         calculation_data: calculationResult,
         total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-        total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
+        total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
         status: 'calculated',
         calculated_at: new Date().toISOString(),
       } : {
@@ -1981,7 +1981,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   status: currentQuoteStatus,
                   items: items,
                   total_quote_origincurrency: calculationResult?.calculation_steps?.total_quote_origincurrency || calculationResult?.total || 0,
-                  total_customer_display_currency: calculationResult?.calculation_steps?.total_customer_display_currency || calculationResult?.totalCustomerCurrency || 0,
+                  total_quote_origincurrency: calculationResult?.calculation_steps?.total_quote_origincurrency || calculationResult?.totalCustomerCurrency || 0,
                   customer_currency: customerCurrency,
                   origin_country: originCountry,
                   destination_country: destinationCountry,
@@ -3587,7 +3587,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
                 total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-                total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
+                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp
@@ -3609,7 +3609,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 items: items.filter(item => item.unit_price_origin > 0),
                 calculation_data: calculationResult,
                 total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-                total_customer_display_currency: calculationResult.calculation_steps.total_customer_display_currency || 0,
+                total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp

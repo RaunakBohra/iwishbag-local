@@ -11,7 +11,7 @@ export { default as TaxCalculationService } from './TaxCalculationService';
 export { default as DiscountCalculationService } from './DiscountCalculationService';
 export { default as CurrencyCalculationService } from './CurrencyCalculationService';
 export { default as CustomsCalculationService } from './CustomsCalculationService';
-export { default as QuoteValidationService } from './QuoteValidationService';
+// QuoteValidationService removed - unused duplicate validation logic
 export { default as QuotePersistenceService } from './QuotePersistenceService';
 export { default as QuoteItemsService } from './QuoteItemsService';
 export { default as ItemValuationService } from './ItemValuationService';

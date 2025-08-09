@@ -54,7 +54,7 @@ assetPreloader.preloadCriticalAssets();
 logger.info('Asset preloader initialized');
 
 // Initialize advanced code splitting systems
-import('./utils/routeCodeSplitting').then(({ preloadCriticalRoutes }) => {
+import('./utils/routeCodeSplitting.tsx').then(({ preloadCriticalRoutes }) => {
   preloadCriticalRoutes();
 });
 

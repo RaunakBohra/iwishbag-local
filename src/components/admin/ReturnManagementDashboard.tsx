@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { refundProcessingService } from '@/services/payment-management/RefundProcessingService';
+import { refundProcessingService } from '@/services/admin-payment/RefundProcessingService';
 import { returnShippingService } from '@/services/ReturnShippingService';
 import { SupplierPickupDialog } from './SupplierPickupDialog';
 

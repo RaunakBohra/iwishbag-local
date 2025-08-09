@@ -205,7 +205,24 @@ export class QuotePersistenceService {
     try {
       const { data, error } = await supabase
         .from('quotes_v2')
-        .select('*')
+        .select(`
+          id, quote_number, customer_id, customer_email, customer_name, customer_phone,
+          origin_country, origin_state, destination_country, destination_state, destination_pincode,
+          destination_address, items, shipping_method, payment_gateway, customer_currency,
+          order_discount_type, order_discount_value, order_discount_code,
+          shipping_discount_type, shipping_discount_value, insurance_required, insurance_enabled,
+          admin_notes, customer_notes, status, calculation_data, calculation_result,
+          total_quote_origincurrency, share_token, expires_at, reminder_count, last_reminder_at,
+          created_at, updated_at, calculated_at, approved_at, created_by, approved_by,
+          validity_days, sent_at, viewed_at, email_sent, sms_sent, whatsapp_sent,
+          preferred_contact, version, parent_quote_id, revision_reason, changes_summary,
+          payment_terms, approval_required, max_discount_percentage, minimum_order_value,
+          converted_to_order_id, original_quote_id, external_reference, source,
+          ip_address, user_agent, utm_source, utm_medium, utm_campaign,
+          is_latest_version, approval_required_above, max_discount_allowed, api_version,
+          applied_discounts, selected_shipping_option_id, delivery_address_id,
+          options_last_updated_at, options_last_updated_by, in_cart
+        `)
         .eq('id', quoteId)
         .single();
 
@@ -240,7 +257,24 @@ export class QuotePersistenceService {
     try {
       const { data, error } = await supabase
         .from('quotes_v2')
-        .select('*')
+        .select(`
+          id, quote_number, customer_id, customer_email, customer_name, customer_phone,
+          origin_country, origin_state, destination_country, destination_state, destination_pincode,
+          destination_address, items, shipping_method, payment_gateway, customer_currency,
+          order_discount_type, order_discount_value, order_discount_code,
+          shipping_discount_type, shipping_discount_value, insurance_required, insurance_enabled,
+          admin_notes, customer_notes, status, calculation_data, calculation_result,
+          total_quote_origincurrency, share_token, expires_at, reminder_count, last_reminder_at,
+          created_at, updated_at, calculated_at, approved_at, created_by, approved_by,
+          validity_days, sent_at, viewed_at, email_sent, sms_sent, whatsapp_sent,
+          preferred_contact, version, parent_quote_id, revision_reason, changes_summary,
+          payment_terms, approval_required, max_discount_percentage, minimum_order_value,
+          converted_to_order_id, original_quote_id, external_reference, source,
+          ip_address, user_agent, utm_source, utm_medium, utm_campaign,
+          is_latest_version, approval_required_above, max_discount_allowed, api_version,
+          applied_discounts, selected_shipping_option_id, delivery_address_id,
+          options_last_updated_at, options_last_updated_by, in_cart
+        `)
         .eq('share_token', shareToken)
         .single();
 

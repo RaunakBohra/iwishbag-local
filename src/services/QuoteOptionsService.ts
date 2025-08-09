@@ -181,7 +181,7 @@ class QuoteOptionsService {
         // Map SimplifiedQuoteCalculator result to database fields
         total_origin_currency: calculatedTotal,  // Primary field components look for
         total_quote_origincurrency: calculatedTotal,
-        total_customer_display_currency: calculatedTotal,
+        total_quote_origincurrency: calculatedTotal,
         customer_currency: updatedQuoteInput.origin_currency,
         // Note: origin_currency is derived from origin_country, not stored separately
         updated_at: new Date().toISOString()
@@ -229,7 +229,7 @@ class QuoteOptionsService {
                   
                   // Use calculation_data origin total or fallback to other totals
                   const calculatedTotal = currentQuote.calculation_data?.calculation_steps?.total_origin_currency || 
-                                        currentQuote.total_customer_display_currency || 
+                                        currentQuote.total_quote_origincurrency || 
                                         currentQuote.total_quote_origincurrency || 0;
                   
                   const discountAmount = calculatedTotal * (discountPercentages[update.data.discount_code] || 0);
@@ -344,7 +344,7 @@ class QuoteOptionsService {
 
       if (validCodes.includes(code.toUpperCase())) {
         const percentage = discountPercentages[code.toUpperCase()];
-        const discountAmount = (quote.total_customer_display_currency || quote.total_quote_origincurrency || 0) * percentage;
+        const discountAmount = (quote.total_quote_origincurrency || 0) * percentage;
         
         // Get origin currency dynamically
         const originCurrency = quote.origin_currency || getOriginCurrency(quote.origin_country);
@@ -441,7 +441,7 @@ class QuoteOptionsService {
         cost: calcData.breakdown?.insurance || 0,
         cost_currency: originCurrency,
         coverage_amount: quote.calculation_data?.calculation_steps?.total_origin_currency || 
-                        quote.total_customer_display_currency || 
+                        quote.total_quote_origincurrency || 
                         quote.total_quote_origincurrency || 0,
         rate_percentage: routeCalc.insurance?.percentage || 1.5
       },
@@ -454,7 +454,7 @@ class QuoteOptionsService {
       totals: {
         base_total: calcData.breakdown?.items_total || quote.costprice_total_quote_origincurrency || 0,
         adjusted_total: quote.calculation_data?.calculation_steps?.total_origin_currency || 
-                       quote.total_customer_display_currency || 
+                       quote.total_quote_origincurrency || 
                        quote.total_quote_origincurrency || 0,
         currency: originCurrency,
         savings: calcData.total_savings || 0

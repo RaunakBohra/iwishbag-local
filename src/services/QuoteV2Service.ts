@@ -378,7 +378,7 @@ export class QuoteV2Service {
         quote_id: quoteId,
         status: 'payment_pending',
         total_amount: quote.calculation_data?.calculation_steps?.total_quote_origincurrency || 0,
-        customer_currency_amount: quote.calculation_data?.calculation_steps?.total_customer_display_currency || 0,
+        customer_currency_amount: quote.calculation_data?.calculation_steps?.total_quote_origincurrency || 0,
         customer_currency: quote.customer_currency || getDestinationCurrency(quote.destination_country),
         origin_country: quote.origin_country,
         destination_country: quote.destination_country,

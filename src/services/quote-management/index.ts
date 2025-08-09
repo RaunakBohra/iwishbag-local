@@ -6,7 +6,7 @@
 // Core quote services
 export { default as QuoteStateService } from './QuoteStateService';
 export { default as QuoteCalculationService } from './QuoteCalculationService';
-export { default as QuoteValidationService } from './QuoteValidationService';
+// QuoteValidationService removed - unused duplicate validation logic
 export { default as AdminWorkflowService } from './AdminWorkflowService';
 export { default as CustomerManagementService } from './CustomerManagementService';
 

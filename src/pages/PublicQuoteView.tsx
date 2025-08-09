@@ -334,7 +334,7 @@ export default function PublicQuoteView() {
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(quote.total_customer_display_currency || quote.total_quote_origincurrency, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
+                <span>{formatCurrency(quote.total_quote_origincurrency, quote.customer_currency || getDestinationCurrency(quote.destination_country))}</span>
               </div>
             </div>
 
@@ -372,7 +372,7 @@ export default function PublicQuoteView() {
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
                   total_quote_origincurrency: quote.total_quote_origincurrency,
-                  total_customer_display_currency: quote.total_customer_display_currency,
+                  total_quote_origincurrency: quote.total_quote_origincurrency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,
@@ -395,7 +395,7 @@ export default function PublicQuoteView() {
                   status: isExpired ? 'expired' : quote.status,
                   items: quote.items || [],
                   total_quote_origincurrency: quote.total_quote_origincurrency,
-                  total_customer_display_currency: quote.total_customer_display_currency,
+                  total_quote_origincurrency: quote.total_quote_origincurrency,
                   customer_currency: quote.customer_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,

@@ -171,7 +171,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
     payment_gateway_fee: 0,
     total_savings: 0,
     total_quote_origincurrency: 0,
-    total_customer_display_currency: 0
+    total_quote_origincurrency: 0
   };
   
   const steps = { ...defaultSteps, ...(calc.calculation_steps || {}) };

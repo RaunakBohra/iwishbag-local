@@ -16,8 +16,8 @@ interface RouteLoadingProps {
 }
 
 // Enhanced loading components for different route categories
-export const RouteLoadingComponent: React.FC<RouteLoadingProps> = ({ category }): JSX.Element => {
-  const getLoadingContent = () => {
+export const RouteLoadingComponent: React.FC<RouteLoadingProps> = ({ category }) => {
+  const getLoadingContent = (): JSX.Element => {
     switch (category) {
       case 'admin':
         return (

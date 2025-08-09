@@ -5003,7 +5003,7 @@ export type Database = {
           sms_sent: boolean | null
           source: string | null
           status: string
-          total_customer_display_currency: number | null
+          total_quote_origincurrency: number | null
           total_origin_currency: number | null
           total_quote_origincurrency: number | null
           updated_at: string | null
@@ -5078,7 +5078,7 @@ export type Database = {
           sms_sent?: boolean | null
           source?: string | null
           status?: string
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_origin_currency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
@@ -5153,7 +5153,7 @@ export type Database = {
           sms_sent?: boolean | null
           source?: string | null
           status?: string
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_origin_currency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
@@ -6391,7 +6391,7 @@ export type Database = {
           source: string | null
           status: string | null
           time_remaining: unknown | null
-          total_customer_display_currency: number | null
+          total_quote_origincurrency: number | null
           total_quote_origincurrency: number | null
           updated_at: string | null
           user_agent: string | null
@@ -6452,7 +6452,7 @@ export type Database = {
           source?: string | null
           status?: string | null
           time_remaining?: never
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
           user_agent?: string | null
@@ -6513,7 +6513,7 @@ export type Database = {
           source?: string | null
           status?: string | null
           time_remaining?: never
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
           user_agent?: string | null
@@ -6670,7 +6670,7 @@ export type Database = {
           origin_country: string | null
           selected_shipping_option_id: string | null
           status: string | null
-          total_customer_display_currency: number | null
+          total_quote_origincurrency: number | null
           total_quote_origincurrency: number | null
         }
         Insert: {
@@ -6688,7 +6688,7 @@ export type Database = {
           origin_country?: string | null
           selected_shipping_option_id?: string | null
           status?: string | null
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
         }
         Update: {
@@ -6706,7 +6706,7 @@ export type Database = {
           origin_country?: string | null
           selected_shipping_option_id?: string | null
           status?: string | null
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
         }
         Relationships: [
@@ -6731,7 +6731,7 @@ export type Database = {
           legacy_total_usd: number | null
           origin_country: string | null
           status: string | null
-          total_customer_display_currency: number | null
+          total_quote_origincurrency: number | null
           total_quote_origincurrency: number | null
           updated_at: string | null
         }
@@ -6746,7 +6746,7 @@ export type Database = {
           legacy_total_usd?: number | null
           origin_country?: string | null
           status?: string | null
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
         }
@@ -6761,7 +6761,7 @@ export type Database = {
           legacy_total_usd?: number | null
           origin_country?: string | null
           status?: string | null
-          total_customer_display_currency?: number | null
+          total_quote_origincurrency?: number | null
           total_quote_origincurrency?: number | null
           updated_at?: string | null
         }

@@ -70,7 +70,7 @@ export class QuoteV2MigrationService {
           
           // Pricing - quotes_v2 uses different column names
           total_quote_origincurrency: data.final_total_origincurrency || data.costprice_total_quote_origincurrency,
-          total_customer_display_currency: data.final_total_origincurrency || data.costprice_total_quote_origincurrency,
+          total_quote_origincurrency: data.final_total_origincurrency || data.costprice_total_quote_origincurrency,
           customer_currency: data.currency || 'USD',
           
           // V2 specific fields

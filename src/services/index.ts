@@ -15,7 +15,7 @@ export { default as SearchService } from './SearchService';
 export { default as AuditLogService } from './AuditLogService';
 
 // Service domain re-exports
-export * from './payment-management';
+export * from './admin-payment';
 export * from './payment-gateways';
 export * from './quote-management';
 export * from './quote-calculator';

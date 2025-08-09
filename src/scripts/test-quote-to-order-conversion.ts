@@ -7,7 +7,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { QuoteToOrderConversionService } from '../services/QuoteToOrderConversionService';
+import QuoteToOrderConversionService from '../services/QuoteToOrderConversionService';
 import type { Database } from '../types/database';
 
 // Initialize Supabase client
@@ -24,8 +24,8 @@ const supabase = createClient<Database>(
   }
 );
 
-// Initialize conversion service
-const conversionService = QuoteToOrderConversionService.getInstance(supabase);
+// Initialize conversion service - we'll create our own since the service uses internal client
+const conversionService = new QuoteToOrderConversionService();
 
 async function testQuoteToOrderConversion() {
   console.log('🚀 Testing Quote-to-Order Conversion Workflow\n');

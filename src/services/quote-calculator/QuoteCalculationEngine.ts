@@ -25,7 +25,7 @@ export interface QuoteCalculationData {
   // Basic totals
   items_subtotal: number;
   total_quote_origincurrency: number;
-  total_customer_display_currency: number;
+  total_quote_origincurrency: number;
   
   // Breakdown components
   shipping_cost: number;
@@ -214,7 +214,7 @@ export class QuoteCalculationEngine {
     const calculationData: QuoteCalculationData = {
       items_subtotal: itemsSubtotal,
       total_quote_origincurrency: totalUSD,
-      total_customer_display_currency: totalCustomerCurrency,
+      total_quote_origincurrency: totalCustomerCurrency,
       
       shipping_cost: shippingResult.cost,
       insurance_cost: insuranceCost,

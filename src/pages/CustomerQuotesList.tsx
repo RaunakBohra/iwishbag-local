@@ -205,7 +205,7 @@ export default function CustomerQuotesList() {
                               <span>Total:</span>
                               <span>
                                 {formatCurrency(
-                                  quote.total_customer_display_currency || quote.total_quote_origincurrency,
+                                  quote.total_quote_origincurrency,
                                   quote.customer_currency || getDestinationCurrency(quote.destination_country)
                                 )}
                               </span>

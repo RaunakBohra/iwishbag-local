@@ -483,7 +483,7 @@ class BatchQuoteProcessingService {
           const calculationUpdateData = {
             calculation_data: calculationResult.data,
             total_quote_origincurrency: calculationResult.data.calculation_steps?.total_quote_origincurrency || 0,
-            total_customer_display_currency: calculationResult.data.calculation_steps?.total_customer_display_currency || 0,
+            total_quote_origincurrency: calculationResult.data.calculation_steps?.total_quote_origincurrency || 0,
             customer_currency: calculationResult.data.calculation_steps?.customer_currency,
             status: 'calculated',
             calculated_at: new Date().toISOString(),
