@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { CompactStatsBar } from '@/components/admin/CompactStatsBar';
 import { InlineFilters } from '@/components/admin/InlineFilters';
+import { SLAStatusIndicator } from '@/components/admin/SLADashboardWidget';
+import { CompactSLAMetrics } from '@/components/admin/CompactSLAMetrics';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { TicketIcon, Clock, CheckCircle, AlertTriangle, Grid3X3, List, Kanban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -182,6 +184,7 @@ const TicketRow = ({
         <div className="flex items-start gap-3">
           <div className="flex items-center gap-2 mt-1">
             <PriorityIndicator priority={ticket.priority} />
+            <SLAStatusIndicator ticket={ticket} className="mr-1" />
             <CustomerAvatar customer={ticket.user_profile} size="sm" />
           </div>
           <div className="flex-1 min-w-0">
@@ -1116,16 +1119,7 @@ export const AdminTicketDashboard = () => {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs text-gray-500">Response Time</p>
-                <p className="text-sm font-semibold text-green-600">2.3h avg</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500">Satisfaction</p>
-                <p className="text-sm font-semibold text-blue-600">4.8/5.0</p>
-              </div>
-            </div>
+            <CompactSLAMetrics />
           </div>
         </div>
       </div>
@@ -1147,6 +1141,7 @@ export const AdminTicketDashboard = () => {
         onQuoteChange={setQuoteFilter}
         totalTickets={tickets.length}
         filteredCount={filteredTickets.length}
+        tickets={tickets}
       />
 
       {/* Enhanced Three-Panel Layout with Dynamic Sizing */}

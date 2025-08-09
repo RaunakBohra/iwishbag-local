@@ -85,22 +85,6 @@ export const CompactStatsBar = ({ stats, isLoading }: CompactStatsBarProps) => {
             )}
           </div>
         ))}
-        
-        {/* Additional Performance Metrics */}
-        <div className="flex items-center gap-6 ml-auto">
-          <div className="text-center">
-            <div className="text-lg font-semibold text-green-600">98.2%</div>
-            <div className="text-xs text-gray-500">SLA Met</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-semibold text-blue-600">2.3h</div>
-            <div className="text-xs text-gray-500">Avg Response</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-semibold text-purple-600">4.8★</div>
-            <div className="text-xs text-gray-500">Satisfaction</div>
-          </div>
-        </div>
       </div>
     </div>
   );

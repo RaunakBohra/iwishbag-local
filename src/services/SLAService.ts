@@ -1,10 +1,9 @@
 /**
  * SLA (Service Level Agreement) Time Tracking Service
- * Handles SLA calculations, deadline management, and breach detection
+ * Handles SLA calculations, deadline management, breach detection, and customer satisfaction
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { businessHoursService } from '@/config/businessHours';
 
 export interface SLAPolicy {
   id: string;
@@ -49,6 +48,44 @@ export interface TicketWithSLA {
     response_breach?: boolean;
     resolution_breach?: boolean;
   };
+}
+
+export interface CustomerSatisfactionSurvey {
+  id: string;
+  ticketId: string;
+  rating: number; // 1-5 (overall rating)
+  responseTimeRating: number; // 1-5
+  experienceRating: number; // 1-5
+  resolutionRating: number; // 1-5
+  wouldRecommend: boolean;
+  feedback?: string;
+  additionalComments?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSatisfactionSurveyData {
+  ticketId: string;
+  rating: number; // overall rating
+  responseTimeRating: number;
+  experienceRating: number;
+  resolutionRating: number;
+  wouldRecommend: boolean;
+  feedback?: string;
+  additionalComments?: string;
+}
+
+export interface SLADashboardMetrics {
+  totalTickets: number;
+  ticketsOnTrack: number;
+  ticketsApproachingDeadline: number;
+  ticketsOverdue: number;
+  avgFirstResponseMinutes: number | null;
+  avgResolutionMinutes: number | null;
+  responseSLAComplianceRate: number;
+  resolutionSLAComplianceRate: number;
+  customerSatisfactionAvg: number | null;
+  customerSatisfactionCount: number;
 }
 
 export class SLAService {
@@ -243,7 +280,42 @@ export class SLAService {
   }
 
   /**
-   * Get SLA summary statistics
+   * Get comprehensive SLA dashboard metrics (NEW)
+   */
+  async getDashboardMetrics(): Promise<SLADashboardMetrics | null> {
+    try {
+      const { data, error } = await supabase.rpc('get_sla_dashboard_metrics');
+
+      if (error) {
+        console.error('❌ Error getting SLA dashboard metrics:', error);
+        return this.getDefaultDashboardMetrics();
+      }
+
+      if (!data || data.length === 0) {
+        return this.getDefaultDashboardMetrics();
+      }
+
+      const result = data[0];
+      return {
+        totalTickets: result.total_tickets || 0,
+        ticketsOnTrack: result.tickets_on_track || 0,
+        ticketsApproachingDeadline: result.tickets_approaching_deadline || 0,
+        ticketsOverdue: result.tickets_overdue || 0,
+        avgFirstResponseMinutes: result.avg_first_response_minutes ? parseFloat(result.avg_first_response_minutes) : null,
+        avgResolutionMinutes: result.avg_resolution_minutes ? parseFloat(result.avg_resolution_minutes) : null,
+        responseSLAComplianceRate: result.response_sla_compliance_rate ? parseFloat(result.response_sla_compliance_rate) : 0,
+        resolutionSLAComplianceRate: result.resolution_sla_compliance_rate ? parseFloat(result.resolution_sla_compliance_rate) : 0,
+        customerSatisfactionAvg: result.customer_satisfaction_avg ? parseFloat(result.customer_satisfaction_avg) : null,
+        customerSatisfactionCount: result.customer_satisfaction_count || 0,
+      };
+    } catch (error) {
+      console.error('❌ Error in getDashboardMetrics:', error);
+      return this.getDefaultDashboardMetrics();
+    }
+  }
+
+  /**
+   * Get SLA summary statistics (LEGACY - kept for compatibility)
    */
   async getSLASummary(): Promise<{
     total_tickets: number;
@@ -324,6 +396,173 @@ export class SLAService {
       console.error('❌ Exception fetching breached tickets:', error);
       return [];
     }
+  }
+
+  /**
+   * Create a customer satisfaction survey
+   */
+  async createSatisfactionSurvey(surveyData: CreateSatisfactionSurveyData): Promise<CustomerSatisfactionSurvey | null> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.error('❌ No authenticated user for satisfaction survey');
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('customer_satisfaction_surveys')
+        .insert({
+          ticket_id: surveyData.ticketId,
+          rating: surveyData.rating,
+          response_time_rating: surveyData.responseTimeRating,
+          experience_rating: surveyData.experienceRating,
+          resolution_rating: surveyData.resolutionRating,
+          would_recommend: surveyData.wouldRecommend,
+          feedback: surveyData.feedback,
+          additional_comments: surveyData.additionalComments,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating satisfaction survey:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        ticketId: data.ticket_id,
+        rating: data.rating,
+        responseTimeRating: data.response_time_rating,
+        experienceRating: data.experience_rating,
+        resolutionRating: data.resolution_rating,
+        wouldRecommend: data.would_recommend,
+        feedback: data.feedback,
+        additionalComments: data.additional_comments,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error) {
+      console.error('❌ Error in createSatisfactionSurvey:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get satisfaction surveys for a ticket (admin view)
+   */
+  async getTicketSatisfactionSurveys(ticketId: string): Promise<CustomerSatisfactionSurvey[]> {
+    try {
+      const { data, error } = await supabase
+        .from('customer_satisfaction_surveys')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error getting satisfaction surveys:', error);
+        return [];
+      }
+
+      return data.map((survey: any) => ({
+        id: survey.id,
+        ticketId: survey.ticket_id,
+        rating: survey.rating,
+        responseTimeRating: survey.response_time_rating,
+        experienceRating: survey.experience_rating,
+        resolutionRating: survey.resolution_rating,
+        wouldRecommend: survey.would_recommend,
+        feedback: survey.feedback,
+        additionalComments: survey.additional_comments,
+        createdAt: survey.created_at,
+        updatedAt: survey.updated_at,
+      }));
+    } catch (error) {
+      console.error('❌ Error in getTicketSatisfactionSurveys:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark a ticket as read by admin
+   */
+  async markTicketAsRead(ticketId: string): Promise<boolean> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        console.error('❌ No authenticated user to mark ticket as read');
+        return false;
+      }
+
+      const { data, error } = await supabase.rpc('mark_ticket_as_read', {
+        p_ticket_id: ticketId,
+        p_admin_user_id: user.user.id
+      });
+
+      if (error) {
+        console.error('❌ Error marking ticket as read:', error);
+        return false;
+      }
+
+      return data === true;
+    } catch (error) {
+      console.error('❌ Error in markTicketAsRead:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Utility functions for formatting time
+   */
+  formatResponseTime(minutes: number | null): string {
+    if (minutes === null) return 'N/A';
+    
+    if (minutes < 60) {
+      return `${Math.round(minutes)}m`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      const remainingHours = Math.floor((minutes % 1440) / 60);
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    }
+  }
+
+  /**
+   * Get satisfaction rating color for UI
+   */
+  getSatisfactionRatingColor(rating: number): string {
+    if (rating >= 4) return 'text-green-600';
+    if (rating >= 3) return 'text-yellow-600';
+    if (rating >= 2) return 'text-orange-600';
+    return 'text-red-600';
+  }
+
+  /**
+   * Format satisfaction rating as stars
+   */
+  formatRatingStars(rating: number): string {
+    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  }
+
+  /**
+   * Get default dashboard metrics (fallback)
+   */
+  private getDefaultDashboardMetrics(): SLADashboardMetrics {
+    return {
+      totalTickets: 0,
+      ticketsOnTrack: 0,
+      ticketsApproachingDeadline: 0,
+      ticketsOverdue: 0,
+      avgFirstResponseMinutes: null,
+      avgResolutionMinutes: null,
+      responseSLAComplianceRate: 0,
+      resolutionSLAComplianceRate: 0,
+      customerSatisfactionAvg: null,
+      customerSatisfactionCount: 0,
+    };
   }
 
   /**

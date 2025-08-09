@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Filter, X, Star, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Filter, X, Star, Clock, AlertTriangle, CheckCircle, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,6 +32,8 @@ interface InlineFiltersProps {
   onQuoteChange?: (value: 'all' | 'with_quote' | 'without_quote') => void;
   totalTickets: number;
   filteredCount: number;
+  // Add tickets data for dynamic counts
+  tickets?: any[];
 }
 
 export const InlineFilters = ({
@@ -47,6 +49,7 @@ export const InlineFilters = ({
   onQuoteChange,
   totalTickets,
   filteredCount,
+  tickets = [],
 }: InlineFiltersProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -64,14 +67,48 @@ export const InlineFilters = ({
     if (onQuoteChange) onQuoteChange('all');
   };
 
-  // Quick Filter Presets
+  // Calculate dynamic counts from real ticket data
+  const ticketCounts = useMemo(() => {
+    const counts = {
+      urgent: tickets.filter(t => t.priority === 'urgent').length,
+      unread: tickets.filter(t => (t as any).has_unread_replies).length,
+      open: tickets.filter(t => t.status === 'open').length,
+      pending: tickets.filter(t => t.status === 'pending').length,
+      resolved: tickets.filter(t => t.status === 'resolved').length,
+      today: tickets.filter(t => {
+        const today = new Date();
+        const ticketDate = new Date(t.created_at);
+        return ticketDate.toDateString() === today.toDateString();
+      }).length,
+    };
+    return counts;
+  }, [tickets]);
+
+  // Dynamic Quick Filter Presets with real counts
   const quickFilters = [
+    {
+      id: 'unread',
+      label: 'Unread Replies',
+      icon: Bell,
+      color: ticketCounts.unread > 0 
+        ? 'text-blue-600 bg-blue-100 border-blue-300 hover:bg-blue-200 ring-2 ring-blue-200 animate-pulse' 
+        : 'text-gray-500 bg-gray-50 border-gray-200 hover:bg-gray-100',
+      count: ticketCounts.unread,
+      onClick: () => {
+        // Filter by unread customer replies - this would need backend support
+        onStatusChange('all');
+        onPriorityChange('all');
+        onCategoryChange('all');
+        // For now, show open tickets as a proxy for "needs attention"
+        onStatusChange('open');
+      },
+    },
     {
       id: 'urgent',
       label: 'Urgent',
       icon: AlertTriangle,
       color: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100',
-      count: 3,
+      count: ticketCounts.urgent,
       onClick: () => {
         onStatusChange('all');
         onPriorityChange('urgent');
@@ -79,24 +116,23 @@ export const InlineFilters = ({
       },
     },
     {
-      id: 'my-tickets',
-      label: 'My Tickets',
-      icon: Star,
+      id: 'open',
+      label: 'Open',
+      icon: Clock,
       color: 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100',
-      count: 7,
+      count: ticketCounts.open,
       onClick: () => {
-        // This would filter by current user assignment in a real implementation
-        onStatusChange('in_progress');
+        onStatusChange('open');
         onPriorityChange('all');
         onCategoryChange('all');
       },
     },
     {
-      id: 'overdue',
-      label: 'Overdue',
+      id: 'pending',
+      label: 'Pending',
       icon: Clock,
       color: 'text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100',
-      count: 2,
+      count: ticketCounts.pending,
       onClick: () => {
         onStatusChange('pending');
         onPriorityChange('all');
@@ -104,14 +140,13 @@ export const InlineFilters = ({
       },
     },
     {
-      id: 'today',
-      label: 'Today',
+      id: 'resolved',
+      label: 'Resolved',
       icon: CheckCircle,
       color: 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100',
-      count: 12,
+      count: ticketCounts.resolved,
       onClick: () => {
-        // Filter by today's tickets
-        onStatusChange('all');
+        onStatusChange('resolved');
         onPriorityChange('all');
         onCategoryChange('all');
       },
@@ -124,20 +159,24 @@ export const InlineFilters = ({
       <div className="px-6 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2 overflow-x-auto">
           <span className="text-sm font-medium text-gray-500 mr-2 whitespace-nowrap">Quick filters:</span>
-          {quickFilters.map((filter) => {
-            const Icon = filter.icon;
-            return (
-              <button
-                key={filter.id}
-                onClick={filter.onClick}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap ${filter.color}`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {filter.label}
-                <span className="text-xs opacity-75">({filter.count})</span>
-              </button>
-            );
-          })}
+          {quickFilters
+            .filter((filter) => filter.count > 0 || filter.id === 'unread') // Always show unread even if 0
+            .map((filter) => {
+              const Icon = filter.icon;
+              return (
+                <button
+                  key={filter.id}
+                  onClick={filter.onClick}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap ${filter.color}`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${filter.id === 'unread' && filter.count > 0 ? 'animate-pulse' : ''}`} />
+                  {filter.label}
+                  <span className={`text-xs opacity-75 ${filter.count > 0 ? 'font-semibold' : ''}`}>
+                    ({filter.count})
+                  </span>
+                </button>
+              );
+            })}
         </div>
       </div>
       
