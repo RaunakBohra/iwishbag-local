@@ -191,7 +191,8 @@
   },
   "overrides": {
     "tmp": "^0.2.4",
-    "inquirer": "^10.0.0"
+    "inquirer": "^10.0.0",
+    "sharp": "^0.33.0"
   },
   "description": "A comprehensive e-commerce platform with advanced features for managing global wishlists and orders.",
   "main": "check-db-direct.js",

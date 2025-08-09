@@ -169,8 +169,10 @@ const TicketRow = ({
               <p className={`font-semibold text-gray-900 hover:text-blue-600 truncate ${isCompact ? 'text-sm' : ''}`}>
                 {ticket.subject}
               </p>
-              {/* Unread indicator */}
-              <div className="w-2 h-2 bg-blue-500 rounded-full opacity-60" />
+              {/* Unread indicator - show if ticket has unread replies */}
+              {(ticket as any).has_unread_replies && (
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" title="Has unread replies" />
+              )}
             </div>
             <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{ticket.description}</p>
           </div>

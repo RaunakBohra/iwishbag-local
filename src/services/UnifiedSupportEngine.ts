@@ -468,7 +468,7 @@ class UnifiedSupportEngine {
           *
         `)
         .in('system_type', ['ticket', 'quote_discussion'])
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
       // Apply user filter
@@ -604,6 +604,38 @@ class UnifiedSupportEngine {
     } catch (error) {
       logger.error('❌ Exception in updateTicketStatus:', error);
       Sentry.captureException(error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark ticket as read by admin
+   */
+  async markTicketAsRead(ticketId: string): Promise<boolean> {
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        throw new Error('Authentication required');
+      }
+
+      const { error } = await supabase.rpc('mark_ticket_as_read', {
+        p_ticket_id: ticketId,
+        p_admin_user_id: user.id,
+      });
+
+      if (error) {
+        console.error('❌ Error marking ticket as read:', error);
+        return false;
+      }
+
+      console.log('✅ Ticket marked as read:', ticketId);
+      return true;
+    } catch (error) {
+      console.error('❌ Exception marking ticket as read:', error);
       return false;
     }
   }
