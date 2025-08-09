@@ -16,7 +16,6 @@ import { OptimizedIcon, Trash2 } from '@/components/ui/OptimizedIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cartDesignTokens } from '@/styles/cart-design-system';
 
@@ -28,7 +27,6 @@ import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useRecentlyDeleted } from '@/stores/cartStore';
 import { logger } from '@/utils/logger';
 
-type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
 
 const Cart: React.FC = React.memo(() => {
@@ -37,33 +35,14 @@ const Cart: React.FC = React.memo(() => {
   const { items, clearCart, isLoading, syncStatus, historyCount } = useCart();
   const { recentlyDeleted } = useRecentlyDeleted();
 
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [clearingCart, setClearingCart] = useState(false);
-
-  // Sort items (no complex filtering needed for customers)
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
-        case 'oldest':
-          return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
-        case 'price_high':
-          return b.quote.final_total_origincurrency - a.quote.final_total_origincurrency;
-        case 'price_low':
-          return a.quote.final_total_origincurrency - b.quote.final_total_origincurrency;
-        default:
-          return 0;
-      }
-    });
-  }, [items, sortBy]);
 
   // Create a combined list of items and deleted placeholders in correct positions
   const displayItems = useMemo(() => {
     const result: Array<{ type: 'item' | 'deleted'; data: any; originalPosition?: number }> = [];
     
     // Add all current items
-    sortedItems.forEach((item, index) => {
+    items.forEach((item, index) => {
       result.push({ type: 'item', data: item });
     });
     
@@ -80,7 +59,7 @@ const Cart: React.FC = React.memo(() => {
       });
     
     return result;
-  }, [sortedItems, recentlyDeleted]);
+  }, [items, recentlyDeleted]);
 
 
   // Handle clear cart
@@ -184,43 +163,6 @@ const Cart: React.FC = React.memo(() => {
           <div className={cartDesignTokens.layout.grid.cartMain}>
             {/* Cart Items */}
             <div className={cartDesignTokens.layout.grid.cartItems}>
-              {/* Cart Controls - Sort Options */}
-              {(items.length > 1 || (items.length === 0 && recentlyDeleted.length > 0)) && (
-                <Card className="mb-4">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-sm text-gray-600">
-                        {items.length > 0 ? (
-                          `${items.length} ${items.length === 1 ? 'item' : 'items'} in your cart`
-                        ) : (
-                          'No items in cart'
-                        )}
-                      </span>
-                      
-                      <div className="flex items-center gap-4">
-                        
-                        {/* Sort options */}
-                        {items.length > 1 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">Sort by:</span>
-                            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                              <SelectTrigger className="w-36">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="newest">Recently added</SelectItem>
-                                <SelectItem value="oldest">Oldest first</SelectItem>
-                                <SelectItem value="price_high">Price: High to low</SelectItem>
-                                <SelectItem value="price_low">Price: Low to high</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
 
               {/* Cart Items and Deleted Item Placeholders */}

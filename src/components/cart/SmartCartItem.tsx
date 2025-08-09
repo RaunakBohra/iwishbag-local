@@ -235,20 +235,22 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <h3 className={`${cartDesignTokens.typography.title.small} mb-1`}>
+              <div className="flex-1 min-w-0">
+                <h3 className={`${cartDesignTokens.typography.title.small} mb-1 min-w-0`}>
                   {itemDetails.productUrl ? (
                     <a 
                       href={itemDetails.productUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`${cartDesignTokens.colors.interactive.primary} ${cartDesignTokens.layout.flex.itemRow} ${animations.transition.colors}`}
+                      className="text-black hover:text-gray-700 truncate block"
+                      title={itemDetails.displayName}
                     >
                       {itemDetails.displayName}
-                      <OptimizedIcon name="ExternalLink" className="w-4 h-4" />
                     </a>
                   ) : (
-                    itemDetails.displayName
+                    <span className="truncate block" title={itemDetails.displayName}>
+                      {itemDetails.displayName}
+                    </span>
                   )}
                 </h3>
 
