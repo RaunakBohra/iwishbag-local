@@ -149,10 +149,10 @@ class UnifiedSupportEngine {
   // Status transition validation rules
   private readonly STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
     open: ['in_progress', 'pending', 'resolved'],
-    in_progress: ['pending', 'resolved', 'open'],
+    in_progress: ['pending', 'resolved', 'open', 'closed'], // Allow direct closure for admin efficiency
     pending: ['in_progress', 'open', 'closed'],
     resolved: ['closed', 'open'], // Allow reopening if needed
-    closed: [], // Terminal state
+    closed: ['open'], // Allow reopening closed tickets for admin flexibility
   };
 
   private constructor() {
