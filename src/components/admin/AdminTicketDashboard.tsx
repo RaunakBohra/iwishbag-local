@@ -178,7 +178,7 @@ const TicketRow = ({
               </p>
               <p className="text-sm text-gray-500">{ticket.user_profile?.email}</p>
               {ticket.user_profile?.phone && (
-                <p className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</p>
+                <p className="text-xs text-gray-400">{ticket.user_profile.phone}</p>
               )}
             </div>
           </div>
@@ -411,7 +411,7 @@ const TicketCardView = ({
               </p>
               <p className="text-xs text-gray-500 truncate">{ticket.user_profile?.email}</p>
               {ticket.user_profile?.phone && (
-                <p className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</p>
+                <p className="text-xs text-gray-400">{ticket.user_profile.phone}</p>
               )}
             </div>
           </div>
@@ -538,7 +538,7 @@ const KanbanView = ({
                         {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
                       </div>
                       {ticket.user_profile?.phone && (
-                        <div className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</div>
+                        <div className="text-xs text-gray-400">{ticket.user_profile.phone}</div>
                       )}
                     </div>
                   </div>
@@ -612,13 +612,13 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
             <div className="space-y-1 mt-1">
               {customer?.email && (
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 text-gray-400">📧</div>
+                  <span className="text-xs text-gray-400 w-8">Email:</span>
                   <p className="text-xs text-gray-500 truncate">{customer.email}</p>
                 </div>
               )}
               {customer?.phone && (
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 text-gray-400">📱</div>
+                  <span className="text-xs text-gray-400 w-8">Phone:</span>
                   <p className="text-xs text-gray-500">{customer.phone}</p>
                 </div>
               )}
@@ -632,8 +632,8 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
               )}
               {customer?.preferred_display_currency && (
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 text-gray-400">💰</div>
-                  <span className="text-xs text-gray-500">Prefers {customer.preferred_display_currency}</span>
+                  <span className="text-xs text-gray-400 w-8">Currency:</span>
+                  <span className="text-xs text-gray-500">{customer.preferred_display_currency}</span>
                 </div>
               )}
             </div>

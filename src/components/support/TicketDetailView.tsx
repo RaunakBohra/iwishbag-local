@@ -126,10 +126,7 @@ export const TicketDetailView = ({ ticketId, onBack, inSplitView = false }: Tick
     }
   });
 
-  // Auto-scroll to bottom when new replies are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [replies.length]);
+  // Auto-scroll removed - was causing irritating scrolling behavior
 
   // Check if current user can view this ticket
   const canView = ticket && (ticket.user_id === user?.id || !!user); // All authenticated users can view (simplified access)
