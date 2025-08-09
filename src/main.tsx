@@ -49,8 +49,23 @@ if (import.meta.env.MODE === 'development') {
   import('./utils/countryTestUtils');
 }
 
-// Initialize asset preloading system
+// Initialize performance optimization systems
 assetPreloader.preloadCriticalAssets();
 logger.info('Asset preloader initialized');
+
+// Initialize advanced code splitting systems
+import('./utils/routeCodeSplitting').then(({ preloadCriticalRoutes }) => {
+  preloadCriticalRoutes();
+});
+
+import('./utils/intelligentChunkLoading').then(({ intelligentChunkLoader }) => {
+  // System auto-initializes
+  logger.info('Intelligent chunk loader initialized');
+});
+
+import('./utils/criticalPathOptimization').then(({ criticalPathOptimizer }) => {
+  // System auto-initializes
+  logger.info('Critical path optimizer initialized');
+});
 
 createRoot(document.getElementById('root')!).render(<App />);

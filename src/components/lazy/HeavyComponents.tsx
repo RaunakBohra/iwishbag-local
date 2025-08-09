@@ -49,22 +49,22 @@ export const LazyEnhancedAddonServicesSelector = createComponentLazyRoute(
 
 // ==================== CUSTOMER HEAVY COMPONENTS ====================
 
-// Shopify Style Quote View - Heavy interactive component
-export const LazyShopifyStyleQuoteView = createComponentLazyRoute(
-  () => import('@/components/quotes/ShopifyStyleQuoteView'),
-  'shopify-quote-view'
+// Public Quote View - Heavy interactive component
+export const LazyPublicQuoteView = createComponentLazyRoute(
+  () => import('@/pages/PublicQuoteView'),
+  'public-quote-view'
 );
 
-// Professional Breakdown - Heavy calculation display
-export const LazyProfessionalBreakdown = createComponentLazyRoute(
-  () => import('@/components/quotes/ProfessionalBreakdown'),
-  'professional-breakdown'
+// Quote Breakdown V2 - Heavy calculation display
+export const LazyQuoteBreakdownV2 = createComponentLazyRoute(
+  () => import('@/components/quotes-v2/QuoteBreakdownV2'),
+  'quote-breakdown-v2'
 );
 
-// Customer Breakdown - Customer-facing calculation display
-export const LazyCustomerBreakdown = createComponentLazyRoute(
-  () => import('@/components/quotes/CustomerBreakdown'),
-  'customer-breakdown'
+// Breakdown Section - Customer-facing calculation display
+export const LazyBreakdownSection = createComponentLazyRoute(
+  () => import('@/components/quotes-v2/BreakdownSection'),
+  'breakdown-section'
 );
 
 // Smart Cart Item - Heavy cart management
@@ -171,9 +171,9 @@ export default {
   LazyUnifiedPaymentModal,
   LazyRegionalPricingManager,
   LazyEnhancedAddonServicesSelector,
-  LazyShopifyStyleQuoteView,
-  LazyProfessionalBreakdown,
-  LazyCustomerBreakdown,
+  LazyPublicQuoteView,
+  LazyQuoteBreakdownV2,
+  LazyBreakdownSection,
   LazySmartCartItem,
   ProgressiveWrapper,
   LazyOnScroll,

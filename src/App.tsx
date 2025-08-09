@@ -127,6 +127,7 @@ const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integra
 const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
 const RouteShippingDesigns = React.lazy(() => import('@/pages/demo/RouteShippingDesigns'));
+const PublicQuoteViewForShare = React.lazy(() => import('@/pages/PublicQuoteView'));
 const ShopifyStyleQuoteView = React.lazy(() => import('@/components/quotes/ShopifyStyleQuoteView'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
@@ -455,7 +456,7 @@ const router = createBrowserRouter([
         path: 's/:shareToken',
         element: (
           <ErrorBoundary fallback={QuoteFormErrorFallback}>
-            <ShopifyStyleQuoteView viewMode="shared" />
+            <PublicQuoteViewForShare />
           </ErrorBoundary>
         ),
       },

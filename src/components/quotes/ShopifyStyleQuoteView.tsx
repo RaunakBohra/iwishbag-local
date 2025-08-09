@@ -1210,7 +1210,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 Cancel
               </Button>
               <Button onClick={handleApprove} className="flex-1">
-                <CreditCard className="w-4 h-4 mr-2" />
+                <OptimizedIcon name="CreditCard" className="w-4 h-4 mr-2" />
                 Add to Cart
               </Button>
             </div>

@@ -111,26 +111,101 @@ export default defineConfig(({ mode }) => ({
             return 'vendor-misc';
           }
           
-          // Application code splitting
-          // Admin pages
-          if (id.includes('/admin/') || id.includes('admin')) {
-            return 'admin';
+          // ✨ ENHANCED APPLICATION CODE SPLITTING
+          
+          // Route-based splitting with intelligent grouping
+          
+          // 🔐 Admin System - Heavy administrative functionality
+          if (id.includes('/admin/') || id.includes('/pages/admin/') || 
+              id.includes('AdminLayout') || id.includes('AdminDashboard') ||
+              id.includes('QuotesListPage') || id.includes('OrderManagementPage') ||
+              id.includes('SimpleCustomerManagement')) {
+            return 'admin-core';
           }
-          // Demo pages
-          if (id.includes('/demo/')) {
-            return 'demo';
+          
+          // 🛠️ Admin Tools & Settings - Secondary admin features  
+          if (id.includes('admin') && (
+              id.includes('Settings') || id.includes('Management') ||
+              id.includes('Configuration') || id.includes('Regional') ||
+              id.includes('Intelligence') || id.includes('Performance')
+          )) {
+            return 'admin-tools';
           }
-          // Dashboard pages
-          if (id.includes('/dashboard/')) {
+          
+          // 📊 Dashboard & Customer Area - User-facing dashboard
+          if (id.includes('/dashboard/') || id.includes('Dashboard') ||
+              id.includes('CustomerQuotesList') || id.includes('CustomerOrderList') ||
+              id.includes('MyTickets') || id.includes('MessageCenter')) {
             return 'dashboard';
           }
-          // Payment related
-          if (id.includes('payment') || id.includes('Payment')) {
+          
+          // 🛒 E-commerce Core - Shopping functionality
+          if (id.includes('Quote') && !id.includes('admin') ||
+              id.includes('Cart') || id.includes('Checkout') ||
+              id.includes('CostEstimator') || id.includes('ShopifyStyle')) {
+            return 'ecommerce';
+          }
+          
+          // 💳 Payment System - Payment processing
+          if (id.includes('payment') || id.includes('Payment') ||
+              id.includes('Paypal') || id.includes('Esewa') ||
+              id.includes('OrderConfirmation')) {
             return 'payments';
           }
-          // Quote related
-          if (id.includes('quote') || id.includes('Quote')) {
-            return 'quotes';
+          
+          // 🔐 Authentication - Auth flows
+          if (id.includes('/auth/') || id.includes('Auth') ||
+              id.includes('Login') || id.includes('Register') ||
+              id.includes('ResetPassword') || id.includes('OAuth')) {
+            return 'auth';
+          }
+          
+          // 📄 Content Pages - Static/marketing content
+          if (id.includes('About') || id.includes('Blog') ||
+              id.includes('Help') || id.includes('Privacy') ||
+              id.includes('Terms') || id.includes('Returns')) {
+            return 'content';
+          }
+          
+          // 🔬 Demo & Testing - Development components
+          if (id.includes('/demo/') || id.includes('Demo') ||
+              id.includes('Test') && !id.includes('admin')) {
+            return 'demo';
+          }
+          
+          // 🎨 UI Components - Shared UI components (split by complexity)
+          if (id.includes('/components/ui/') || 
+              id.includes('/components/shared/')) {
+            if (id.includes('OptimizedImage') || id.includes('ProgressiveImage') ||
+                id.includes('AdvancedSuspense') || id.includes('ErrorBoundary')) {
+              return 'ui-advanced';
+            }
+            return 'ui-core';
+          }
+          
+          // ⚡ Services & Utils - Business logic
+          if (id.includes('/services/') || id.includes('/utils/')) {
+            if (id.includes('RouteCodeSplitting') || id.includes('ImageOptimization') ||
+                id.includes('AssetPreloader') || id.includes('PerformanceTracker')) {
+              return 'utils-performance';
+            }
+            return 'utils-core';
+          }
+          
+          // 🔌 Hooks - Custom React hooks
+          if (id.includes('/hooks/')) {
+            return 'hooks';
+          }
+          
+          // 📱 Components by Category
+          if (id.includes('/components/')) {
+            if (id.includes('forms') || id.includes('Form')) {
+              return 'components-forms';
+            }
+            if (id.includes('admin') && !id.includes('Simple')) {
+              return 'admin-components';
+            }
+            return 'components-common';
           }
         },
         // Optimize chunk names for better caching
