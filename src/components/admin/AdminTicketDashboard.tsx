@@ -28,6 +28,7 @@ import {
   useUpdateTicketStatus,
   useAssignTicket,
   useTicketDetail,
+  useUserTickets,
 } from '@/hooks/useTickets';
 import {
   TICKET_STATUS_LABELS,
@@ -557,6 +558,7 @@ const KanbanView = ({
 // Customer Intelligence Panel Component
 const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
   const { data: ticket } = useTicketDetail(ticketId);
+  const { data: userTickets = [] } = useUserTickets(ticket?.user_profile?.id);
   
   if (!ticket) {
     return (
@@ -571,6 +573,14 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
   }
 
   const customer = ticket.user_profile;
+  const totalTickets = userTickets.length;
+  const resolvedTickets = userTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+  const avgResponseTime = "2.1h"; // Could be calculated from ticket data
+  
+  // Calculate customer tags based on real data
+  const isFirstTime = totalTickets <= 1;
+  const isHighValue = ticket.quote && ticket.quote.final_total_origincurrency && ticket.quote.final_total_origincurrency > 1000;
+  const isResponsive = userTickets.some(t => t.replies && t.replies.length > 1);
   
   return (
     <div className="h-full overflow-y-auto">
@@ -588,27 +598,48 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
             <h4 className="font-medium text-gray-900 truncate">
               {customer?.full_name || 'Anonymous Customer'}
             </h4>
-            <p className="text-sm text-gray-500 truncate">{customer?.email}</p>
-            {customer?.country && (
-              <div className="flex items-center gap-1 mt-1">
-                <div className="w-3 h-3 bg-blue-100 rounded-full flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+            <div className="space-y-1 mt-1">
+              {customer?.email && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 text-gray-400">📧</div>
+                  <p className="text-xs text-gray-500 truncate">{customer.email}</p>
                 </div>
-                <span className="text-xs text-gray-500">{customer.country}</span>
-              </div>
-            )}
+              )}
+              {customer?.phone && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 text-gray-400">📱</div>
+                  <p className="text-xs text-gray-500">{customer.phone}</p>
+                </div>
+              )}
+              {customer?.country && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-100 rounded-full flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  </div>
+                  <span className="text-xs text-gray-500">{customer.country}</span>
+                </div>
+              )}
+              {customer?.preferred_display_currency && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 text-gray-400">💰</div>
+                  <span className="text-xs text-gray-500">Prefers {customer.preferred_display_currency}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <div className="text-lg font-semibold text-gray-900">3</div>
+            <div className="text-lg font-semibold text-gray-900">{totalTickets}</div>
             <div className="text-xs text-gray-500">Total Tickets</div>
           </div>
           <div className="bg-green-50 rounded-lg p-3 text-center">
-            <div className="text-lg font-semibold text-green-600">2.1h</div>
-            <div className="text-xs text-gray-500">Avg Response</div>
+            <div className="text-lg font-semibold text-green-600">
+              {totalTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}%` : '0%'}
+            </div>
+            <div className="text-xs text-gray-500">Resolution Rate</div>
           </div>
         </div>
 
@@ -624,19 +655,38 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Tracking:</span>
-                <span className="font-mono text-gray-900">
-                  {ticket.quote.iwish_tracking_id || 'N/A'}
-                </span>
+                <a
+                  href={`/admin/quotes/${ticket.quote.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-sm"
+                >
+                  {ticket.quote.iwish_tracking_id || `Quote ${ticket.quote.id.slice(0, 8)}...`}
+                </a>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Destination:</span>
                 <span className="text-gray-900">{ticket.quote.destination_country}</span>
               </div>
+              {ticket.quote.origin_country && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Origin:</span>
+                  <span className="text-gray-900">{ticket.quote.origin_country}</span>
+                </div>
+              )}
               {ticket.quote.final_total_origincurrency && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Value:</span>
                   <span className="font-semibold text-gray-900">
                     ${ticket.quote.final_total_origincurrency.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {ticket.quote.created_at && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Ordered:</span>
+                  <span className="text-gray-900">
+                    {formatDistanceToNow(new Date(ticket.quote.created_at), { addSuffix: true })}
                   </span>
                 </div>
               )}
@@ -648,41 +698,96 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
         <div className="border border-gray-200 rounded-lg p-3">
           <h5 className="text-sm font-medium text-gray-900 mb-2">Sentiment Analysis</h5>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">Neutral</span>
+            <div className={`w-2 h-2 rounded-full ${
+              ticket.priority === 'urgent' ? 'bg-red-500' : 
+              ticket.priority === 'high' ? 'bg-orange-500' :
+              ticket.priority === 'low' ? 'bg-green-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-sm text-gray-600">
+              {ticket.priority === 'urgent' ? 'Frustrated' : 
+               ticket.priority === 'high' ? 'Concerned' :
+               ticket.priority === 'low' ? 'Satisfied' : 'Neutral'}
+            </span>
           </div>
           <div className="text-xs text-gray-500">
-            Customer tone appears professional and solution-focused.
+            {ticket.priority === 'urgent' ? 'Customer appears frustrated and needs immediate attention.' :
+             ticket.priority === 'high' ? 'Customer is concerned but remains professional.' :
+             ticket.priority === 'low' ? 'Customer appears satisfied with polite tone.' :
+             'Customer tone appears professional and solution-focused.'}
           </div>
         </div>
 
         {/* Recent Activity */}
         <div className="border border-gray-200 rounded-lg p-3">
           <h5 className="text-sm font-medium text-gray-900 mb-2">Recent Activity</h5>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-32 overflow-y-auto">
+            {/* Current ticket */}
             <div className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2"></div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-600">Created ticket about shipping delay</p>
+                <p className="text-xs text-gray-600">Created ticket: {ticket.subject}</p>
                 <p className="text-xs text-gray-400">
                   {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-600">Placed order #IWB20251234</p>
-                <p className="text-xs text-gray-400">2 days ago</p>
+            
+            {/* Related quote activity */}
+            {ticket.quote && (
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-600">
+                    Placed order {ticket.quote.iwish_tracking_id || `#${ticket.quote.id.slice(0, 8)}...`}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {ticket.quote.created_at ? formatDistanceToNow(new Date(ticket.quote.created_at), { addSuffix: true }) : 'Recently'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-600">Account created</p>
-                <p className="text-xs text-gray-400">1 week ago</p>
+            )}
+
+            {/* Other recent tickets */}
+            {userTickets
+              .filter(t => t.id !== ticket.id)
+              .slice(0, 2)
+              .map((recentTicket) => (
+                <div key={recentTicket.id} className="flex items-start gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full mt-2 ${
+                    recentTicket.status === 'resolved' || recentTicket.status === 'closed' 
+                      ? 'bg-green-400' 
+                      : 'bg-orange-400'
+                  }`}></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-600">
+                      {recentTicket.status === 'resolved' || recentTicket.status === 'closed' 
+                        ? 'Resolved ticket:' 
+                        : 'Created ticket:'
+                      } {recentTicket.subject}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {recentTicket.created_at ? formatDistanceToNow(new Date(recentTicket.created_at), { addSuffix: true }) : 'Recently'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            
+            {/* Account creation */}
+            {customer?.created_at && (
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-600">Account created</p>
+                  <p className="text-xs text-gray-400">
+                    {customer.created_at ? formatDistanceToNow(new Date(customer.created_at), { addSuffix: true }) : 'Recently'}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {userTickets.length === 0 && !ticket.quote && (
+              <p className="text-xs text-gray-400 text-center py-2">No recent activity</p>
+            )}
           </div>
         </div>
 
@@ -690,15 +795,40 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
         <div className="border border-gray-200 rounded-lg p-3">
           <h5 className="text-sm font-medium text-gray-900 mb-2">Customer Tags</h5>
           <div className="flex flex-wrap gap-1">
-            <Badge variant="outline" className="text-xs px-2 py-0.5">
-              First-time customer
-            </Badge>
-            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700">
-              High-value
-            </Badge>
-            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700">
-              Responsive
-            </Badge>
+            {isFirstTime && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5">
+                First-time customer
+              </Badge>
+            )}
+            {isHighValue && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700">
+                High-value
+              </Badge>
+            )}
+            {isResponsive && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700">
+                Responsive
+              </Badge>
+            )}
+            {resolvedTickets > 0 && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700">
+                Returning customer
+              </Badge>
+            )}
+            {ticket.priority === 'urgent' && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-red-50 text-red-700">
+                Priority case
+              </Badge>
+            )}
+            {ticket.quote && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700">
+                Has active order
+              </Badge>
+            )}
+            {/* Show placeholder if no tags */}
+            {!isFirstTime && !isHighValue && !isResponsive && resolvedTickets === 0 && ticket.priority !== 'urgent' && !ticket.quote && (
+              <span className="text-xs text-gray-400">No tags assigned</span>
+            )}
           </div>
         </div>
 
@@ -715,7 +845,12 @@ const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
               Escalate to Manager
             </Button>
             {ticket.quote && (
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-xs"
+                onClick={() => window.open(`/admin/quotes/${ticket.quote.id}`, '_blank')}
+              >
                 <TicketIcon className="h-3 w-3 mr-1" />
                 View Full Order
               </Button>
