@@ -1667,8 +1667,12 @@ async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: s
   
   console.log(`🔍 [${requestId}] Polling for results with ID: ${resultId}`);
   
-  // Simplified polling - use optimized intervals for DCA
-  const config = getPollingConfig('default');
+  // Enhanced polling with better timeout handling
+  const config = {
+    maxAttempts: 10,  // Reduced from 20 to 10
+    interval: 10000,  // Increased from 15000 to 10000 (10 seconds)
+    totalTimeout: '100 seconds'
+  };
   let attempts = 0;
   
   while (attempts < config.maxAttempts) {
@@ -1721,8 +1725,20 @@ function mapFlipkartDataToProductData(rawData: any, url: string, requestId: stri
     // Extract first price from potentially duplicated string like "₹23,999₹23,999₹260₹284"
     const priceMatches = rawData.current_price.match(/₹[\d,]+/g);
     if (priceMatches && priceMatches.length > 0) {
-      clean_current_price = priceMatches[0];
-      current_price_number = parseFloat(clean_current_price.replace(/₹|,/g, '')) || 0;
+      // Get unique prices and sort by value to get the most likely current price
+      const uniquePrices = [...new Set(priceMatches)];
+      const sortedPrices = uniquePrices
+        .map(price => ({
+          text: price,
+          value: parseFloat(price.replace(/₹|,/g, '')) || 0
+        }))
+        .sort((a, b) => b.value - a.value); // Sort descending to get highest first
+      
+      // Use the highest price as current price (most likely to be accurate)
+      clean_current_price = sortedPrices[0]?.text || priceMatches[0];
+      current_price_number = sortedPrices[0]?.value || parseFloat(priceMatches[0].replace(/₹|,/g, '')) || 0;
+      
+      console.log(`💰 [${requestId}] Price extraction: found ${priceMatches.length} prices, using ${clean_current_price}`);
     }
   }
   
@@ -1730,8 +1746,20 @@ function mapFlipkartDataToProductData(rawData: any, url: string, requestId: stri
     // Extract first price from potentially duplicated string
     const priceMatches = rawData.original_price.match(/₹[\d,]+/g);
     if (priceMatches && priceMatches.length > 0) {
-      clean_original_price = priceMatches[0];
-      original_price_number = parseFloat(clean_original_price.replace(/₹|,/g, '')) || 0;
+      // Get unique prices and sort by value to get the most likely original price
+      const uniquePrices = [...new Set(priceMatches)];
+      const sortedPrices = uniquePrices
+        .map(price => ({
+          text: price,
+          value: parseFloat(price.replace(/₹|,/g, '')) || 0
+        }))
+        .sort((a, b) => b.value - a.value); // Sort descending to get highest first
+      
+      // Use the highest price as original price (should be higher than current)
+      clean_original_price = sortedPrices[0]?.text || priceMatches[0];
+      original_price_number = sortedPrices[0]?.value || parseFloat(priceMatches[0].replace(/₹|,/g, '')) || 0;
+      
+      console.log(`💰 [${requestId}] Original price extraction: found ${priceMatches.length} prices, using ${clean_original_price}`);
     }
   }
   

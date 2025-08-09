@@ -28,6 +28,25 @@ export interface AssignmentData {
   priority: number; // Higher number = higher priority
 }
 
+export interface AutoAssignmentRule {
+  id: string;
+  name: string;
+  assignment_method: 'round_robin' | 'least_assigned' | 'random';
+  criteria: {
+    priority?: string[];
+    category?: string[];
+    keywords?: string[];
+    business_hours_only?: boolean;
+  };
+  eligible_user_ids: string[];
+  is_active: boolean;
+  priority: number;
+  assignment_count: number;
+  last_assigned_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SupportAgent {
   id: string;
   name: string;
@@ -770,6 +789,257 @@ export class AutoAssignmentService {
     }
   }
 
+  // ============================================================================
+  // Public API Methods for UI
+  // ============================================================================
+
+  /**
+   * Get all assignment rules
+   */
+  async getAssignmentRules(): Promise<AutoAssignmentRule[]> {
+    try {
+      const { data, error } = await supabase
+        .from('support_assignment_rules')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((rule: any) => ({
+        id: rule.id,
+        name: rule.name,
+        assignment_method: rule.assignment_method,
+        criteria: rule.criteria || {},
+        eligible_user_ids: rule.eligible_user_ids || [],
+        is_active: rule.is_active,
+        priority: rule.priority || 1,
+        assignment_count: rule.assignment_count || 0,
+        last_assigned_user_id: rule.last_assigned_user_id,
+        created_at: rule.created_at,
+        updated_at: rule.updated_at,
+      }));
+    } catch (error) {
+      logger.error('Failed to get assignment rules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get active assignment rules only
+   */
+  async getActiveRules(): Promise<AutoAssignmentRule[]> {
+    const allRules = await this.getAssignmentRules();
+    return allRules.filter(rule => rule.is_active);
+  }
+
+  /**
+   * Create new assignment rule
+   */
+  async createAssignmentRule(rule: Omit<AutoAssignmentRule, 'id' | 'created_at' | 'updated_at' | 'assignment_count' | 'last_assigned_user_id'>): Promise<AutoAssignmentRule | null> {
+    try {
+      const { data, error } = await supabase
+        .from('support_assignment_rules')
+        .insert({
+          name: rule.name,
+          assignment_method: rule.assignment_method,
+          criteria: rule.criteria,
+          eligible_user_ids: rule.eligible_user_ids,
+          is_active: rule.is_active,
+          priority: rule.priority || 1,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      logger.info('✅ Created assignment rule:', rule.name);
+      this.clearCache('rules');
+
+      return {
+        id: data.id,
+        name: data.name,
+        assignment_method: data.assignment_method,
+        criteria: data.criteria || {},
+        eligible_user_ids: data.eligible_user_ids || [],
+        is_active: data.is_active,
+        priority: data.priority || 1,
+        assignment_count: 0,
+        last_assigned_user_id: null,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    } catch (error) {
+      logger.error('Failed to create assignment rule:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update assignment rule
+   */
+  async updateAssignmentRule(id: string, updates: Partial<AutoAssignmentRule>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('support_assignment_rules')
+        .update({
+          name: updates.name,
+          assignment_method: updates.assignment_method,
+          criteria: updates.criteria,
+          eligible_user_ids: updates.eligible_user_ids,
+          is_active: updates.is_active,
+          priority: updates.priority,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      logger.info('✅ Updated assignment rule:', id);
+      this.clearCache('rules');
+      return true;
+    } catch (error) {
+      logger.error('Failed to update assignment rule:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete assignment rule
+   */
+  async deleteAssignmentRule(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('support_assignment_rules')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      logger.info('✅ Deleted assignment rule:', id);
+      this.clearCache('rules');
+      return true;
+    } catch (error) {
+      logger.error('Failed to delete assignment rule:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Toggle assignment rule active status
+   */
+  async toggleAssignmentRule(id: string, isActive: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('support_assignment_rules')
+        .update({ is_active: isActive })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      logger.info('✅ Toggled assignment rule:', id, isActive);
+      this.clearCache('rules');
+      return true;
+    } catch (error) {
+      logger.error('Failed to toggle assignment rule:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get eligible users for assignment (admin/moderator users)
+   */
+  async getEligibleUsers(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_admin_users_for_assignment');
+
+      if (error) throw error;
+
+      return (data || []).map((user: any) => ({
+        id: user.user_id,
+        name: user.full_name || user.email,
+        email: user.email,
+        role: user.role,
+      }));
+    } catch (error) {
+      logger.error('Failed to get eligible users:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get assignment statistics
+   */
+  async getAssignmentStats(): Promise<any> {
+    try {
+      const rules = await this.getAssignmentRules();
+      const activeRules = rules.filter(r => r.is_active);
+      const totalAssignments = rules.reduce((sum, r) => sum + (r.assignment_count || 0), 0);
+
+      // Get recent assignments from the last 30 days
+      const { data: recentData, error } = await supabase
+        .from('support_system')
+        .select('ticket_data')
+        .eq('system_type', 'ticket')
+        .not('ticket_data->assigned_to', 'is', null)
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+      if (error) throw error;
+
+      return {
+        totalRules: rules.length,
+        activeRules: activeRules.length,
+        totalAssignments,
+        recentAssignments: recentData?.length || 0,
+        avgAssignmentsPerRule: activeRules.length > 0 ? totalAssignments / activeRules.length : 0,
+      };
+    } catch (error) {
+      logger.error('Failed to get assignment stats:', error);
+      return {
+        totalRules: 0,
+        activeRules: 0,
+        totalAssignments: 0,
+        recentAssignments: 0,
+        avgAssignmentsPerRule: 0,
+      };
+    }
+  }
+
+  // ============================================================================
+  // Utility Methods
+  // ============================================================================
+
+  /**
+   * Get assignment method label for display
+   */
+  getAssignmentMethodLabel(method: string): string {
+    switch (method) {
+      case 'round_robin':
+        return 'Round Robin';
+      case 'least_assigned':
+        return 'Least Assigned';
+      case 'random':
+        return 'Random';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  /**
+   * Test if a rule matches a ticket
+   */
+  testAssignmentRule(rule: AutoAssignmentRule, ticket: { priority: string; category: string }): boolean {
+    // Check priority match
+    if (rule.criteria.priority && rule.criteria.priority.length > 0) {
+      if (!rule.criteria.priority.includes(ticket.priority)) return false;
+    }
+
+    // Check category match
+    if (rule.criteria.category && rule.criteria.category.length > 0) {
+      if (!rule.criteria.category.includes(ticket.category)) return false;
+    }
+
+    return true;
+  }
+
   /**
    * Cache management
    */
@@ -811,10 +1081,7 @@ export class AutoAssignmentService {
   }
 }
 
-// Export type alias for better API
-export type AutoAssignmentRule = AssignmentData;
-
-// Create and export a singleton instance
+// Export singleton instance
 export const autoAssignmentService = new AutoAssignmentService();
 
 export default AutoAssignmentService;

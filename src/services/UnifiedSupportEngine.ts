@@ -6,6 +6,7 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { notificationService, NotificationService } from './NotificationService';
+import { autoAssignmentService } from './support-engine/AutoAssignmentService';
 import { logger } from '@/utils/logger';
 import * as Sentry from '@sentry/react';
 
@@ -1098,67 +1099,20 @@ class UnifiedSupportEngine {
   private async checkAutoAssignment(ticket: SupportRecord): Promise<void> {
     try {
       if (!ticket.ticket_data) return;
-
       console.log('🤖 Checking auto-assignment for ticket:', ticket.id);
-
-      // Get active assignment rules
-      const { data: rules, error } = await supabase
-        .from('support_system')
-        .select('*')
-        .eq('system_type', 'rule')
-        .eq('is_active', true);
-
-      if (error) {
-        logger.error('❌ Error fetching assignment rules:', error);
-        return;
-      }
-
-      // Find matching rule
-      const matchingRule = rules?.find((rule) => {
-        if (!rule.assignment_data) return false;
-
-        const conditions = rule.assignment_data.conditions;
-        const ticketData = ticket.ticket_data!;
-
-        // Check category match
-        if (conditions.category && conditions.category.length > 0) {
-          if (!conditions.category.includes(ticketData.category)) return false;
-        }
-
-        // Check priority match
-        if (conditions.priority && conditions.priority.length > 0) {
-          if (!conditions.priority.includes(ticketData.priority)) return false;
-        }
-
-        // Check keywords match
-        if (conditions.keywords && conditions.keywords.length > 0) {
-          const description = ticketData.description.toLowerCase();
-          const hasKeyword = conditions.keywords.some((keyword) =>
-            description.includes(keyword.toLowerCase()),
-          );
-          if (!hasKeyword) return false;
-        }
-
-        // Check business hours (simplified - would need more complex logic)
-        if (conditions.business_hours_only) {
-          const now = new Date();
-          const hour = now.getHours();
-          if (hour < 9 || hour > 17) return false; // Basic 9-5 check
-        }
-
-        return true;
-      });
-
-      if (matchingRule && matchingRule.assignment_data) {
-        const assigneeId = matchingRule.assignment_data.assignment.assignee_id;
-
-        if (assigneeId) {
-          await this.assignTicket(
-            ticket.id,
-            assigneeId,
-            `Auto-assigned by rule: ${matchingRule.assignment_data.rule_name}`,
-          );
-        }
+      
+      // Use the new AutoAssignmentService
+      const result = await autoAssignmentService.assignTicket(ticket);
+      
+      if (result.success) {
+        logger.info(`✅ Auto-assignment successful:`, {
+          ticketId: ticket.id,
+          assigneeId: result.assignee_id,
+          assigneeName: result.assignee_name,
+          rule: result.rule_used
+        });
+      } else {
+        console.log('ℹ️ No auto-assignment rule matched or assignment failed:', result.reason);
       }
     } catch (error) {
       logger.error('❌ Error in auto-assignment:', error);

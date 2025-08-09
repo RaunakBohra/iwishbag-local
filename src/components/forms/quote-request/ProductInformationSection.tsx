@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Control, useWatch } from 'react-hook-form';
+import { Control, useWatch, UseFormSetValue } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -16,12 +16,14 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
+import { AliExpressProductAutoFill } from './AliExpressProductAutoFill';
 
 interface ProductInformationSectionProps {
   control: Control<any>;
+  setValue: UseFormSetValue<any>;
 }
 
-export function ProductInformationSection({ control }: ProductInformationSectionProps) {
+export function ProductInformationSection({ control, setValue }: ProductInformationSectionProps) {
   const [urlValidation, setUrlValidation] = useState<{
     isValid: boolean;
     domain?: string;
@@ -49,7 +51,7 @@ export function ProductInformationSection({ control }: ProductInformationSection
       const knownSites = [
         'amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.ca', 'amazon.com.au',
         'ebay.com', 'ebay.co.uk', 'ebay.de',
-        'alibaba.com', 'aliexpress.com',
+        'alibaba.com', 'aliexpress.com', 'aliexpress.us',
         'walmart.com', 'target.com',
         'bestbuy.com', 'newegg.com',
         'etsy.com', 'shopify.com',
@@ -141,6 +143,14 @@ export function ProductInformationSection({ control }: ProductInformationSection
             </FormItem>
           )}
         />
+
+        {/* AliExpress Auto-fill Component */}
+        {productUrl && (
+          <AliExpressProductAutoFill
+            productUrl={productUrl}
+            setValue={setValue}
+          />
+        )}
 
         {/* Product Name and Origin Country Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

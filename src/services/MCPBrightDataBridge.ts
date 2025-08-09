@@ -148,14 +148,23 @@ class MCPBrightDataBridge {
       };
       console.log(`📤 Request body:`, JSON.stringify(requestBody, null, 2));
       
-      console.log(`📡 Making initial HTTP request...`);
+      console.log(`📡 Making initial HTTP request with 3-minute timeout...`);
+      
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+      
       const response = await fetch(cloudflareWorkerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
+      
+      // Clear timeout if request completes
+      clearTimeout(timeoutId);
       
       const duration = Date.now() - startTime;
       console.log(`📶 Response status: ${response.status} ${response.statusText}`);
@@ -183,9 +192,16 @@ class MCPBrightDataBridge {
       return responseData;
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error(`💥 MCP call failed after ${duration}ms:`, error);
       
-      // No fallback data - honest failure approach
+      // Handle timeout specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`⏰ MCP call timed out after ${duration}ms (3 minute limit)`);
+        console.error(`❌ BrightData scraping timed out for ${toolName}`);
+        console.groupEnd();
+        throw new Error(`Scraping timeout: The ${toolName} scraper is taking too long (>3 minutes). This could be due to BrightData API delays or complex page rendering.`);
+      }
+      
+      console.error(`💥 MCP call failed after ${duration}ms:`, error);
       console.error(`❌ Real data extraction failed for ${toolName}`);
       console.groupEnd();
       

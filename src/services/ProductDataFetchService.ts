@@ -109,6 +109,11 @@ const PRODUCT_PATTERNS = {
     idPattern: /\/([a-zA-Z0-9-]+)\/(\d+)\/buy/,
     titleSelector: '.pdp-product-name',
     priceSelector: '.pdp-price',
+  },
+  aliexpress: {
+    idPattern: /item\/(\d+)\.html/,
+    titleSelector: 'h1[data-pl="product-title"]',
+    priceSelector: '.price-default--current--F8OlYIo',
   }
 };
 
@@ -219,6 +224,16 @@ class ProductDataFetchService {
       return { site: 'nike', productId: 'nike-shoes' }; // Mock for now
     }
 
+    // AliExpress
+    if (urlLower.includes('aliexpress.')) {
+      const match = url.match(/item\/(\d+)\.html/);
+      if (match) {
+        return { site: 'aliexpress', productId: match[1] };
+      }
+      // Fallback for AliExpress URLs without clear product ID pattern
+      return { site: 'aliexpress', productId: 'aliexpress-product' };
+    }
+
     return null;
   }
 
@@ -285,6 +300,22 @@ class ProductDataFetchService {
           };
         } else {
           throw new Error(result.error || 'Amazon scraping failed');
+        }
+      }
+
+      // For AliExpress, use AliExpressScrapingService
+      if (siteInfo.site === 'aliexpress') {
+        const { aliExpressScrapingService } = await import('./AliExpressScrapingService');
+        const result = await aliExpressScrapingService.scrapeProduct(url);
+        
+        if (result.success && result.data) {
+          return {
+            success: true,
+            data: this.normalizeProductData(aliExpressScrapingService.convertToProductData(result.data)),
+            source: 'scraper'
+          };
+        } else {
+          throw new Error(result.error || 'AliExpress scraping failed');
         }
       }
 

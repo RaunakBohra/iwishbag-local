@@ -78,8 +78,16 @@ const StatCard = ({
 export const AutoAssignmentManager = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const { data: rules = [], isLoading } = useAssignmentRules();
+  const { data: rules = [], isLoading, error } = useAssignmentRules();
   const { data: stats } = useAssignmentStats();
+  
+  console.log('🎛️ AutoAssignmentManager state:', { 
+    rulesCount: rules?.length || 0,
+    rules,
+    isLoading,
+    error,
+    createDialogOpen 
+  });
   const toggleRuleMutation = useToggleAssignmentRule();
   const deleteRuleMutation = useDeleteAssignmentRule();
   const { getAssignmentMethodIcon, getAssignmentMethodLabel, formatCriteria } =

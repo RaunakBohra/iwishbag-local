@@ -151,7 +151,7 @@ export const AdminRoutes = {
   ),
 
   AutoAssignment: createAdminLazyRoute(
-    () => import('@/pages/admin/AutoAssignmentPage'),
+    () => import('@/pages/admin/AutoAssignment'),
     'auto-assignment'
   ),
 

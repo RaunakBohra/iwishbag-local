@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { autoAssignmentService, type AutoAssignmentRule } from '@/services/support-engine/AutoAssignmentService';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 /**
  * Hook to get all assignment rules
@@ -12,7 +12,17 @@ import { useToast } from '@/hooks/use-toast';
 export const useAssignmentRules = () => {
   return useQuery({
     queryKey: ['assignment-rules'],
-    queryFn: () => autoAssignmentService.getAssignmentRules(),
+    queryFn: async () => {
+      console.log('🔍 Fetching assignment rules...');
+      try {
+        const rules = await autoAssignmentService.getAssignmentRules();
+        console.log('📋 Assignment rules fetched:', rules.length, rules);
+        return rules;
+      } catch (error) {
+        console.error('❌ Error fetching assignment rules:', error);
+        throw error;
+      }
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
@@ -178,7 +188,7 @@ export const useToggleAssignmentRule = () => {
 
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      autoAssignmentService.toggleRule(id, isActive),
+      autoAssignmentService.toggleAssignmentRule(id, isActive),
     onSuccess: (success, variables) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
