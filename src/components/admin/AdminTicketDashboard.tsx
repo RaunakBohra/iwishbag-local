@@ -177,6 +177,9 @@ const TicketRow = ({
                 {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
               </p>
               <p className="text-sm text-gray-500">{ticket.user_profile?.email}</p>
+              {ticket.user_profile?.phone && (
+                <p className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</p>
+              )}
             </div>
           </div>
         </TableCell>
@@ -407,6 +410,9 @@ const TicketCardView = ({
                 {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
               </p>
               <p className="text-xs text-gray-500 truncate">{ticket.user_profile?.email}</p>
+              {ticket.user_profile?.phone && (
+                <p className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</p>
+              )}
             </div>
           </div>
 
@@ -527,9 +533,14 @@ const KanbanView = ({
                   
                   <div className="flex items-center gap-2 mb-2">
                     <CustomerAvatar customer={ticket.user_profile} size="sm" />
-                    <span className="text-xs text-gray-600 truncate">
-                      {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-gray-600 truncate">
+                        {ticket.user_profile?.full_name || ticket.user_profile?.email || 'Anonymous'}
+                      </div>
+                      {ticket.user_profile?.phone && (
+                        <div className="text-xs text-gray-400">📱 {ticket.user_profile.phone}</div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-gray-500">
