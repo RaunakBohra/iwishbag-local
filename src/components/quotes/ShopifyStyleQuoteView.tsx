@@ -1255,22 +1255,22 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                     {/* Secondary Actions */}
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Reject button - show for sent, rejected, and expired quotes */}
-                      {(quote.status === 'sent' || quote.status === 'rejected' || quote.status === 'expired') && (
+                      {/* Reject button - show only for sent and expired quotes, hide for rejected quotes */}
+                      {(quote.status === 'sent' || quote.status === 'expired') && (
                         <Button 
                           variant="destructive" 
                           className="h-12"
                           onClick={() => setRejectModalOpen(true)}
                         >
                           <X className="w-4 h-4 mr-2" />
-                          {quote.status === 'rejected' ? 'Update Rejection' : 'Reject Quote'}
+                          Reject Quote
                         </Button>
                       )}
                       
                       {/* Ask Question button - always visible, full width when reject not shown */}
                       <Button 
                         variant="outline" 
-                        className={(quote.status === 'sent' || quote.status === 'rejected' || quote.status === 'expired') ? 'h-12' : 'col-span-2 h-12'}
+                        className={(quote.status === 'sent' || quote.status === 'expired') ? 'h-12' : 'col-span-2 h-12'}
                         onClick={() => setQuestionModalOpen(true)}
                       >
                         <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
