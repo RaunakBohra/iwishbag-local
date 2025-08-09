@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,31 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getDestinationCurrency } from '@/utils/originCurrency';
+import { useCurrency } from '@/hooks/unified';
+
+// Currency display component with proper conversion
+const CurrencyDisplay = memo<{ amount: number; quote: any; fallback?: string }>(({ amount, quote, fallback }) => {
+  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
+  const [displayAmount, setDisplayAmount] = useState(fallback || '...');
+
+  useEffect(() => {
+    const updateAmount = async () => {
+      try {
+        const sourceCurrency = getSourceCurrency(quote);
+        const formatted = await formatAmountWithConversion(amount, sourceCurrency);
+        setDisplayAmount(formatted);
+      } catch (error) {
+        console.error('Currency conversion failed:', error);
+        const targetCurrency = quote.customer_currency || getDestinationCurrency(quote.destination_country);
+        setDisplayAmount(formatCurrency(amount, targetCurrency));
+      }
+    };
+
+    updateAmount();
+  }, [amount, quote, formatAmountWithConversion, getSourceCurrency]);
+
+  return <span>{displayAmount}</span>;
+});
 
 export default function CustomerQuotesList() {
   const navigate = useNavigate();
@@ -176,7 +201,7 @@ export default function CustomerQuotesList() {
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-sm truncate">{item.name}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    Qty: {item.quantity} • {formatCurrency(item.costprice_origin, quote.customer_currency)}
+                                    Qty: {item.quantity} • <CurrencyDisplay amount={item.costprice_origin} quote={quote} />
                                   </p>
                                   {item.customer_notes && (
                                     <div className="flex items-center gap-1 mt-1">
@@ -214,10 +239,7 @@ export default function CustomerQuotesList() {
                             <div className="flex justify-between text-lg font-semibold">
                               <span>Total:</span>
                               <span>
-                                {formatCurrency(
-                                  quote.total_quote_origincurrency,
-                                  quote.customer_currency || getDestinationCurrency(quote.destination_country)
-                                )}
+                                <CurrencyDisplay amount={quote.total_quote_origincurrency} quote={quote} />
                               </span>
                             </div>
                           </div>

@@ -12,7 +12,7 @@
  * - Real-time validation
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,30 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/currencyConversion';
+import { useCurrency } from '@/hooks/unified';
+
+// Currency display component with proper conversion
+const CurrencyDisplay = memo<{ amount: number; quote: any; fallback?: string }>(({ amount, quote, fallback }) => {
+  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
+  const [displayAmount, setDisplayAmount] = useState(fallback || '...');
+
+  useEffect(() => {
+    const updateAmount = async () => {
+      try {
+        const sourceCurrency = getSourceCurrency(quote);
+        const formatted = await formatAmountWithConversion(amount, sourceCurrency);
+        setDisplayAmount(formatted);
+      } catch (error) {
+        console.error('Currency conversion failed:', error);
+        setDisplayAmount(formatCurrency(amount, quote.currency));
+      }
+    };
+
+    updateAmount();
+  }, [amount, quote, formatAmountWithConversion, getSourceCurrency]);
+
+  return <span>{displayAmount}</span>;
+});
 
 interface QuoteDetails {
   id: string;
@@ -411,7 +435,7 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Total Amount</Label>
                 <p className="font-semibold">
-                  {formatCurrency(quote.final_total_origincurrency, quote.currency)}
+                  <CurrencyDisplay amount={quote.final_total_origincurrency} quote={quote} />
                 </p>
               </div>
               <div>
