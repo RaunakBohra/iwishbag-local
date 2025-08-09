@@ -39,7 +39,7 @@ const TermsConditions = React.lazy(() => import('@/pages/TermsConditions'));
 const Returns = React.lazy(() => import('@/pages/Returns'));
 const Help = React.lazy(() => import('@/pages/Help'));
 const NotFound = React.lazy(() => import('@/pages/NotFound'));
-const MessageCenterPage = React.lazy(() => import('@/pages/MessageCenterPage'));
+// const MessageCenterPage = React.lazy(() => import('@/pages/MessageCenterPage')); // Removed: Redirected to support system
 const CostEstimatorPage = React.lazy(() => import('@/pages/CostEstimator'));
 const TestPayment = React.lazy(() => import('@/pages/TestPayment'));
 const EsewaTest = React.lazy(() => import('@/pages/EsewaTest'));
@@ -65,7 +65,7 @@ const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-fai
 const TrackingPage = React.lazy(() =>
   import('@/pages/TrackingPage').then((m) => ({ default: m.TrackingPage })),
 );
-const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTicketsSecure'));
+const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTicketsOptimized'));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
@@ -89,6 +89,8 @@ const AutomationManagementPage = React.lazy(() => import('@/pages/admin/Automati
 const RevisionManagementPage = React.lazy(() => import('@/pages/admin/RevisionManagementPage'));
 const ExceptionManagementPage = React.lazy(() => import('@/pages/admin/ExceptionManagementPage'));
 const QualityControlPage = React.lazy(() => import('@/pages/admin/QualityControlPage'));
+const WarehouseManagementPage = React.lazy(() => import('@/pages/admin/WarehouseManagementPage'));
+const TrackingManagementPage = React.lazy(() => import('@/pages/admin/TrackingManagementPage'));
 const CountrySettings = React.lazy(() => import('@/components/admin/CountrySettings'));
 const BankAccountSettings = React.lazy(() => import('@/components/admin/BankAccountSettings'));
 const SystemSettings = React.lazy(() => import('@/components/admin/SystemSettings'));
@@ -120,6 +122,7 @@ const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement
 const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
 const AbuseMonitoringDashboard = React.lazy(() => import('@/components/admin/AbuseMonitoringDashboard').then((m) => ({ default: m.AbuseMonitoringDashboard })));
 const CustomerQuotesList = React.lazy(() => import('@/pages/CustomerQuotesList'));
+const CustomerRevisionApprovalPage = React.lazy(() => import('@/pages/CustomerRevisionApprovalPage'));
 
 // Demo components - temporarily disabled for build issues
 // const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
@@ -232,6 +235,22 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <QualityControlPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'warehouse',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <WarehouseManagementPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'tracking',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <TrackingManagementPage />
               </ErrorBoundary>
             ),
           },
@@ -607,6 +626,14 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
+          {
+            path: 'revision/:revisionId',
+            element: (
+              <ErrorBoundary fallback={QuoteFormErrorFallback}>
+                <CustomerRevisionApprovalPage />
+              </ErrorBoundary>
+            ),
+          },
           // Enhanced Customer Order Management System
           {
             path: 'dashboard/orders',
@@ -642,7 +669,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'messages',
-            element: <MessageCenterPage />,
+            element: <Navigate to="/support/my-tickets" replace />,
           },
           {
             path: 'profile',

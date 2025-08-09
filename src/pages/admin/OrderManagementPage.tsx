@@ -38,6 +38,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { Link } from 'react-router-dom';
 
 type Order = Database['public']['Tables']['orders']['Row'] & {
   profiles?: Database['public']['Tables']['profiles']['Row'];
@@ -466,19 +467,47 @@ const OrderManagementPage = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/admin/orders/${order.id}`} className="flex items-center">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({ 
+                                    title: 'Edit Order', 
+                                    description: 'Order editing interface will be available soon.', 
+                                    variant: 'default' 
+                                  });
+                                }}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Order
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({ 
+                                    title: 'Order Items', 
+                                    description: `${order.total_items} items (${order.active_items} active)`, 
+                                    variant: 'default' 
+                                  });
+                                }}>
                                   <Package className="h-4 w-4 mr-2" />
-                                  View Items
+                                  View Items ({order.total_items})
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  if (order.order_shipments?.length) {
+                                    toast({ 
+                                      title: 'Shipment Tracking', 
+                                      description: `${order.order_shipments.length} shipments found`, 
+                                      variant: 'default' 
+                                    });
+                                  } else {
+                                    toast({ 
+                                      title: 'No Shipments', 
+                                      description: 'No shipments created for this order yet.', 
+                                      variant: 'default' 
+                                    });
+                                  }
+                                }}>
                                   <Truck className="h-4 w-4 mr-2" />
                                   Track Shipment
                                 </DropdownMenuItem>

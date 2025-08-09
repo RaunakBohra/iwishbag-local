@@ -3,15 +3,7 @@
 
 import { supabase } from '@/lib/supabase';
 import type { CreateCustomerTicketData } from '@/types/ticket';
-import type { SecureUserTicket } from '@/hooks/useUserTicketsSecure';
-
-interface SecureUserTicketReply {
-  id: string;
-  message: string;
-  created_at: string;
-  is_admin_reply: boolean;
-  admin_user_name?: string; // Only name, no sensitive admin data
-}
+import type { SecureUserTicket, SecureUserTicketReply } from '@/types/userSupport';
 
 class UserSupportService {
   /**

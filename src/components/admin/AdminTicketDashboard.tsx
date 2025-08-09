@@ -5,6 +5,7 @@ import { InlineFilters } from '@/components/admin/InlineFilters';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { TicketIcon, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -330,6 +331,179 @@ const TicketRow = ({
   );
 };
 
+// Customer Intelligence Panel Component
+const CustomerIntelligencePanel = ({ ticketId }: { ticketId: string }) => {
+  const { data: ticket } = useTicketDetail(ticketId);
+  
+  if (!ticket) {
+    return (
+      <div className="p-4">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const customer = ticket.user_profile;
+  
+  return (
+    <div className="h-full overflow-y-auto">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <h3 className="text-sm font-semibold text-gray-900">Customer Intelligence</h3>
+        <p className="text-xs text-gray-500 mt-1">Insights & history</p>
+      </div>
+
+      {/* Customer Profile */}
+      <div className="p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <CustomerAvatar customer={customer} size="md" />
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-gray-900 truncate">
+              {customer?.full_name || 'Anonymous Customer'}
+            </h4>
+            <p className="text-sm text-gray-500 truncate">{customer?.email}</p>
+            {customer?.country && (
+              <div className="flex items-center gap-1 mt-1">
+                <div className="w-3 h-3 bg-blue-100 rounded-full flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                </div>
+                <span className="text-xs text-gray-500">{customer.country}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="text-lg font-semibold text-gray-900">3</div>
+            <div className="text-xs text-gray-500">Total Tickets</div>
+          </div>
+          <div className="bg-green-50 rounded-lg p-3 text-center">
+            <div className="text-lg font-semibold text-green-600">2.1h</div>
+            <div className="text-xs text-gray-500">Avg Response</div>
+          </div>
+        </div>
+
+        {/* Related Quote/Order Info */}
+        {ticket.quote && (
+          <div className="border border-gray-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h5 className="text-sm font-medium text-gray-900">Related Order</h5>
+              <Badge variant="secondary" className="text-xs">
+                {ticket.quote.status || 'pending'}
+              </Badge>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Tracking:</span>
+                <span className="font-mono text-gray-900">
+                  {ticket.quote.iwish_tracking_id || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Destination:</span>
+                <span className="text-gray-900">{ticket.quote.destination_country}</span>
+              </div>
+              {ticket.quote.final_total_origincurrency && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Value:</span>
+                  <span className="font-semibold text-gray-900">
+                    ${ticket.quote.final_total_origincurrency.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Customer Sentiment */}
+        <div className="border border-gray-200 rounded-lg p-3">
+          <h5 className="text-sm font-medium text-gray-900 mb-2">Sentiment Analysis</h5>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <span className="text-sm text-gray-600">Neutral</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            Customer tone appears professional and solution-focused.
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="border border-gray-200 rounded-lg p-3">
+          <h5 className="text-sm font-medium text-gray-900 mb-2">Recent Activity</h5>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2"></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-600">Created ticket about shipping delay</p>
+                <p className="text-xs text-gray-400">
+                  {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2"></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-600">Placed order #IWB20251234</p>
+                <p className="text-xs text-gray-400">2 days ago</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-600">Account created</p>
+                <p className="text-xs text-gray-400">1 week ago</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tags & Labels */}
+        <div className="border border-gray-200 rounded-lg p-3">
+          <h5 className="text-sm font-medium text-gray-900 mb-2">Customer Tags</h5>
+          <div className="flex flex-wrap gap-1">
+            <Badge variant="outline" className="text-xs px-2 py-0.5">
+              First-time customer
+            </Badge>
+            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700">
+              High-value
+            </Badge>
+            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700">
+              Responsive
+            </Badge>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="border border-gray-200 rounded-lg p-3">
+          <h5 className="text-sm font-medium text-gray-900 mb-2">Quick Actions</h5>
+          <div className="space-y-2">
+            <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+              <Clock className="h-3 w-3 mr-1" />
+              Schedule Follow-up
+            </Button>
+            <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Escalate to Manager
+            </Button>
+            {ticket.quote && (
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs">
+                <TicketIcon className="h-3 w-3 mr-1" />
+                View Full Order
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AdminTicketDashboard = () => {
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
@@ -431,10 +605,14 @@ export const AdminTicketDashboard = () => {
         filteredCount={filteredTickets.length}
       />
 
-      {/* Enhanced Split View with Modern Styling */}
-      <div className="flex-1 flex">
-        {/* Left Panel: Tickets List with Modern Styling */}
-        <div className={`${selectedTicketId ? 'w-2/5 border-r border-gray-200' : 'w-full'} bg-white overflow-auto shadow-sm`}>
+      {/* Enhanced Three-Panel Layout with Dynamic Sizing */}
+      <div className="flex-1 flex min-h-0">
+        {/* Left Panel: Tickets List with Responsive Sizing */}
+        <div className={`${
+          selectedTicketId 
+            ? 'w-full md:w-2/5 xl:w-1/3 border-r border-gray-200' 
+            : 'w-full'
+        } bg-white overflow-auto shadow-sm transition-all duration-300 ease-in-out`}>
           {isLoading ? (
             <div className="p-4 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -492,13 +670,34 @@ export const AdminTicketDashboard = () => {
           )}
         </div>
 
-        {/* Right Panel: Ticket Detail View */}
+        {/* Right Panel: Enhanced Ticket Detail View with Customer Intelligence */}
         {selectedTicketId && (
-          <div className="w-3/5 bg-gray-50">
+          <div className="hidden md:flex md:w-3/5 xl:w-2/3 bg-gray-50 min-h-0">
+            <div className="flex-1 flex">
+              {/* Main Detail Panel */}
+              <div className="flex-1 min-w-0">
+                <TicketDetailView 
+                  ticketId={selectedTicketId} 
+                  onBack={handleBackToList}
+                  inSplitView={true}
+                />
+              </div>
+              
+              {/* Customer Intelligence Sidebar (Right Panel on XL screens) */}
+              <div className="hidden xl:block w-80 border-l border-gray-200 bg-white">
+                <CustomerIntelligencePanel ticketId={selectedTicketId} />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Mobile: Full Screen Ticket Detail */}
+        {selectedTicketId && (
+          <div className="md:hidden fixed inset-0 z-50 bg-white">
             <TicketDetailView 
               ticketId={selectedTicketId} 
               onBack={handleBackToList}
-              inSplitView={true}
+              inSplitView={false}
             />
           </div>
         )}

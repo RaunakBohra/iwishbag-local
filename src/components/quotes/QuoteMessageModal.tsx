@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { OptimizedIcon } from '@/components/ui/OptimizedIcon';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface QuoteMessageModalProps {
   quote: any;
@@ -25,6 +26,7 @@ const QuoteMessageModal: React.FC<QuoteMessageModalProps> = ({
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const categories = [
     { id: 'pricing', label: 'Price', icon: 'DollarSign', description: 'Cost, discounts, or pricing questions' },
@@ -80,39 +82,63 @@ const QuoteMessageModal: React.FC<QuoteMessageModalProps> = ({
       // Auto-categorize the message if no category selected
       let category = selectedCategory;
       if (!category) {
-        const { data: autoCategory, error: catError } = await supabase.rpc('categorize_message', {
-          p_message: message.trim()
-        });
-        
-        if (catError) {
-          console.error('Auto-categorization error:', catError);
+        // Simple auto-categorization logic (can be enhanced later)
+        const lowerMessage = message.toLowerCase();
+        if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('discount')) {
+          category = 'pricing';
+        } else if (lowerMessage.includes('item') || lowerMessage.includes('product')) {
+          category = 'items';
+        } else if (lowerMessage.includes('ship') || lowerMessage.includes('deliver')) {
+          category = 'shipping';
+        } else if (lowerMessage.includes('urgent') || lowerMessage.includes('asap')) {
+          category = 'timeline';
+        } else {
+          category = 'other';
         }
-        
-        category = autoCategory || 'other';
       }
 
-      // Create quote discussion
-      const { data, error } = await supabase.rpc('create_quote_discussion', {
-        p_customer_id: userData.user.id,
-        p_quote_id: quote.id,
-        p_message: message.trim(),
-        p_category: category
-      });
+      // Create support ticket using the new secure system
+      const { data, error } = await supabase
+        .from('support_system')
+        .insert({
+          user_id: userData.user.id,
+          quote_id: quote.id,
+          system_type: 'ticket',
+          ticket_data: {
+            subject: `Question about Quote #${quote.quote_number || quote.id?.slice(-8)}`,
+            description: message.trim(),
+            status: 'open',
+            priority: category === 'timeline' ? 'urgent' : 'medium',
+            category: category,
+            quote_number: quote.quote_number || quote.id?.slice(-8),
+            quote_total: quote.total_quote_origincurrency,
+            quote_status: quote.status
+          },
+          is_active: true
+        })
+        .select('id')
+        .single();
 
       if (error) {
-        console.error('Quote discussion creation error:', error);
+        console.error('Support ticket creation error:', error);
         throw error;
       }
 
       // Check if we got a support ticket ID back
-      if (!data) {
-        throw new Error('Failed to create quote discussion');
+      if (!data?.id) {
+        throw new Error('Failed to create support ticket');
       }
 
       toast({
-        title: "Message Sent Successfully",
-        description: "Your message has been sent to our team. We'll respond within 24 hours.",
+        title: "Support Ticket Created!",
+        description: "Your message has been sent to our team. View your ticket in the support section to track responses."
       });
+
+      // Navigate after a short delay to let the user see the success message
+      setTimeout(() => {
+        const quoteParam = quote.quote_number || quote.id?.slice(-8) || '';
+        navigate(`/support/my-tickets?quote=${quoteParam}`);
+      }, 1500);
 
       resetForm();
       onClose();
@@ -141,10 +167,10 @@ const QuoteMessageModal: React.FC<QuoteMessageModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <OptimizedIcon name="MessageCircle" className="w-5 h-5 text-blue-600" />
-            Message About Quote #{quote.quote_number || quote.id?.slice(-8)}
+            Create Support Ticket - Quote #{quote.quote_number || quote.id?.slice(-8)}
           </DialogTitle>
           <DialogDescription>
-            Send us a message about this quote. Our team will respond within 24 hours.
+            Create a support ticket about this quote. You can track responses and continue the conversation in your support tickets section.
           </DialogDescription>
         </DialogHeader>
         
@@ -237,7 +263,7 @@ const QuoteMessageModal: React.FC<QuoteMessageModalProps> = ({
               ) : (
                 <>
                   <OptimizedIcon name="Send" className="w-4 h-4 mr-2" />
-                  Send Message
+                  Create Support Ticket
                 </>
               )}
             </Button>

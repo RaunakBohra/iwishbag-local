@@ -36,8 +36,9 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
   const [editValue, setEditValue] = useState(value);
   const [hasAutoFilled, setHasAutoFilled] = useState<string | null>(null);
   
-  // Product scraping hook (only initialize when needed)
-  const productScraping = showFetchButton ? useProductScraping() : null;
+  // Product scraping hook (always call hook, but conditionally use it)
+  const productScraping = useProductScraping();
+  const shouldUseProductScraping = showFetchButton;
   
   // Watch for when scraping completes and auto-fill data becomes available
   useEffect(() => {
@@ -45,7 +46,8 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
     // 1. We have scraping data and it should auto-fill
     // 2. We haven't already auto-filled for this URL
     // 3. We have a callback to trigger
-    if (productScraping?.shouldAutoFill && 
+    if (shouldUseProductScraping &&
+        productScraping?.shouldAutoFill && 
         productScraping?.autoFillData && 
         onDataFetched &&
         value && 
@@ -59,7 +61,7 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
       // Mark this URL as auto-filled to prevent re-triggering
       setHasAutoFilled(value);
     }
-  }, [productScraping?.shouldAutoFill, value, hasAutoFilled]);
+  }, [shouldUseProductScraping, productScraping?.shouldAutoFill, productScraping?.autoFillData, onDataFetched, value, hasAutoFilled]);
   
   // If no URL is set yet, start in edit mode
   const shouldShowEditMode = isEditing || (!value && !disabled);
@@ -88,7 +90,7 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
   };
   
   const handleFetch = async () => {
-    if (!value || !productScraping || !onDataFetched) {
+    if (!value || !shouldUseProductScraping || !productScraping || !onDataFetched) {
       console.log('🚫 HandleFetch early return:', { value: !!value, productScraping: !!productScraping, onDataFetched: !!onDataFetched });
       return;  
     }

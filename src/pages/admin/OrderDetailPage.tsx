@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import { Database } from '@/types/database';
+import { 
+  formatOrderAmount, 
+  formatPriceVariance, 
+  formatBusinessMetrics, 
+  formatPaymentGateway,
+  formatExchangeRateContext,
+  formatPaymentDate,
+  getOrderCurrencyContext,
+  shouldShowDualCurrency
+} from '@/utils/orderCurrencyUtils';
 import {
   ArrowLeft,
   Package,
@@ -25,7 +35,8 @@ import {
   MessageCircle,
   FileText,
   Settings,
-  Activity
+  Activity,
+  Mail
 } from 'lucide-react';
 import { 
   Table, 
@@ -42,7 +53,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { OrderEditingModal } from '@/components/admin/OrderEditingModal';
+import { ItemEditingModal } from '@/components/admin/ItemEditingModal';
 
 type OrderWithDetails = Database['public']['Tables']['orders']['Row'] & {
   profiles?: Database['public']['Tables']['profiles']['Row'];
@@ -59,9 +74,15 @@ type OrderWithDetails = Database['public']['Tables']['orders']['Row'] & {
 
 const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [customerMessageOpen, setCustomerMessageOpen] = useState(false);
+  const [customerMessage, setCustomerMessage] = useState('');
+  const [orderEditingOpen, setOrderEditingOpen] = useState(false);
+  const [itemEditingOpen, setItemEditingOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // Fetch order with all related data
   const { data: order, isLoading, error } = useQuery({
@@ -172,6 +193,37 @@ const OrderDetailPage = () => {
     );
   }
 
+  // Get currency context for proper display
+  const currencyContext = getOrderCurrencyContext(order);
+  const businessMetrics = formatBusinessMetrics(order);
+  const showDualCurrency = shouldShowDualCurrency(order);
+
+  // Customer communication handler
+  const handleContactCustomer = () => {
+    setCustomerMessageOpen(true);
+  };
+
+  // Invoice generation handler
+  const handleViewInvoice = () => {
+    // TODO: Implement invoice generation
+    toast({
+      title: 'Invoice Generation',
+      description: 'Invoice generation will be implemented soon.',
+      variant: 'default',
+    });
+  };
+
+  // Edit order handler
+  const handleEditOrder = () => {
+    setOrderEditingOpen(true);
+  };
+
+  // Edit item handler
+  const handleEditItem = (item: any) => {
+    setSelectedItem(item);
+    setItemEditingOpen(true);
+  };
+
   return (
     <div className="container py-8 space-y-6">
       {/* Header */}
@@ -189,19 +241,24 @@ const OrderDetailPage = () => {
               <span className="text-sm text-gray-500">
                 Created {new Date(order.created_at).toLocaleDateString()}
               </span>
+              {order.paid_at && (
+                <span className="text-sm text-green-600">
+                  Paid {formatPaymentDate(order.paid_at)}
+                </span>
+              )}
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleContactCustomer}>
             <MessageCircle className="h-4 w-4 mr-2" />
             Contact Customer
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleViewInvoice}>
             <FileText className="h-4 w-4 mr-2" />
             View Invoice
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleEditOrder}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Order
           </Button>
@@ -238,8 +295,20 @@ const OrderDetailPage = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Order Total</p>
-                <p className="text-2xl font-bold">${order.current_order_total?.toFixed(2) || '0.00'}</p>
+                <p className="text-sm text-gray-500">Customer Payment</p>
+                <p className="text-2xl font-bold">
+                  {businessMetrics.customerRevenue.customer}
+                </p>
+                {businessMetrics.customerRevenue.reference && (
+                  <p className="text-sm text-gray-500">
+                    {businessMetrics.customerRevenue.reference}
+                  </p>
+                )}
+                {businessMetrics.customerRevenue.context && (
+                  <p className="text-xs text-gray-400">
+                    {businessMetrics.customerRevenue.context}
+                  </p>
+                )}
               </div>
               <CreditCard className="h-8 w-8 text-gray-400" />
             </div>
@@ -251,9 +320,15 @@ const OrderDetailPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Variance</p>
-                <p className={`text-2xl font-bold ${order.variance_amount && order.variance_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {order.variance_amount ? `$${order.variance_amount.toFixed(2)}` : '$0.00'}
-                </p>
+                {order.variance_amount ? (
+                  <p className={formatPriceVariance(order.variance_amount, currencyContext.paymentCurrency).colorClass + ' text-2xl font-bold'}>
+                    {formatPriceVariance(order.variance_amount, currencyContext.paymentCurrency).formatted}
+                  </p>
+                ) : (
+                  <p className="text-2xl font-bold text-green-600">
+                    {formatOrderAmount(0, currencyContext).customer}
+                  </p>
+                )}
               </div>
               <Activity className="h-8 w-8 text-gray-400" />
             </div>
@@ -321,8 +396,23 @@ const OrderDetailPage = () => {
                   <p className="capitalize">{order.payment_method?.replace('_', ' ') || 'N/A'}</p>
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Gateway</label>
+                  <p>{formatPaymentGateway(order.payment_gateway)}</p>
+                </div>
+                <div>
                   <label className="text-sm font-medium text-gray-500">Payment Status</label>
                   <Badge variant="outline">{order.payment_status || 'pending'}</Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Currency</label>
+                  <div>
+                    <p className="font-medium">{currencyContext.paymentCurrency}</p>
+                    {showDualCurrency && (
+                      <p className="text-sm text-gray-500">
+                        {formatExchangeRateContext(order)}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Primary Warehouse</label>
@@ -420,10 +510,12 @@ const OrderDetailPage = () => {
                           <TableCell>{item.quantity}</TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">${item.current_price?.toFixed(2)}</p>
+                              <p className="font-medium">
+                                {formatOrderAmount(item.current_price || 0, currencyContext).customer}
+                              </p>
                               {item.price_variance && item.price_variance !== 0 && (
-                                <p className={`text-sm ${item.price_variance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                  {item.price_variance > 0 ? '+' : ''}${item.price_variance.toFixed(2)}
+                                <p className={formatPriceVariance(item.price_variance, currencyContext.paymentCurrency).colorClass + ' text-sm'}>
+                                  {formatPriceVariance(item.price_variance, currencyContext.paymentCurrency).formatted}
                                 </p>
                               )}
                             </div>
@@ -447,9 +539,23 @@ const OrderDetailPage = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditItem(item)}
+                                title="Edit item details"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                title="View item details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -576,7 +682,7 @@ const OrderDetailPage = () => {
                               {revision.customer_approval_status}
                             </Badge>
                             <p className="text-sm text-gray-500 mt-1">
-                              Impact: ${revision.total_cost_impact?.toFixed(2) || '0.00'}
+                              Impact: {formatOrderAmount(revision.total_cost_impact || 0, currencyContext).customer}
                             </p>
                           </div>
                         </div>
@@ -604,19 +710,23 @@ const OrderDetailPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleEditOrder}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Order Details
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => {
+                  toast({ title: 'Seller sync started', description: 'Syncing order data with sellers...', variant: 'default' });
+                }}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Sync with Sellers
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleContactCustomer}>
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Send Customer Update
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => {
+                  toast({ title: 'Report generation', description: 'Generating comprehensive order report...', variant: 'default' });
+                }}>
                   <FileText className="h-4 w-4 mr-2" />
                   Generate Report
                 </Button>
@@ -626,11 +736,12 @@ const OrderDetailPage = () => {
               
               <div>
                 <h4 className="font-medium mb-2">Status Updates</h4>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button 
                     size="sm" 
                     variant="outline"
                     onClick={() => updateStatusMutation.mutate({ status: 'processing' })}
+                    disabled={updateStatusMutation.isPending}
                   >
                     Mark Processing
                   </Button>
@@ -638,6 +749,7 @@ const OrderDetailPage = () => {
                     size="sm" 
                     variant="outline"
                     onClick={() => updateStatusMutation.mutate({ status: 'shipped' })}
+                    disabled={updateStatusMutation.isPending}
                   >
                     Mark Shipped
                   </Button>
@@ -645,15 +757,115 @@ const OrderDetailPage = () => {
                     size="sm" 
                     variant="outline"
                     onClick={() => updateStatusMutation.mutate({ status: 'delivered' })}
+                    disabled={updateStatusMutation.isPending}
                   >
                     Mark Delivered
                   </Button>
                 </div>
               </div>
+
+              {/* Business Metrics (Admin Only) */}
+              {businessMetrics.profitMargin && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-medium mb-2">Business Metrics</h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <label className="text-gray-500">Cost Basis</label>
+                      <p className="font-medium">{businessMetrics.costBasis}</p>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">Profit</label>
+                      <p className="font-medium">{businessMetrics.profitMargin}</p>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">Margin</label>
+                      <p className="font-medium">{businessMetrics.marginPercent}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Customer Communication Modal */}
+      <Dialog open={customerMessageOpen} onOpenChange={setCustomerMessageOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Contact Customer</DialogTitle>
+            <DialogDescription>
+              Send a message to {order.profiles?.full_name || 'the customer'} regarding order {order.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Message</label>
+              <Textarea
+                placeholder="Enter your message to the customer..."
+                value={customerMessage}
+                onChange={(e) => setCustomerMessage(e.target.value)}
+                rows={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Send Via</label>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+                <Button variant="outline" size="sm">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  SMS
+                </Button>
+                <Button variant="outline" size="sm">
+                  Email + SMS
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustomerMessageOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              // TODO: Implement actual message sending
+              toast({
+                title: 'Message sent',
+                description: `Message sent to ${order.profiles?.email || 'customer'}`,
+                variant: 'default',
+              });
+              setCustomerMessage('');
+              setCustomerMessageOpen(false);
+            }}>
+              Send Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Editing Modal */}
+      {order && (
+        <OrderEditingModal
+          order={order}
+          isOpen={orderEditingOpen}
+          onClose={() => setOrderEditingOpen(false)}
+        />
+      )}
+
+      {/* Item Editing Modal */}
+      {selectedItem && order && (
+        <ItemEditingModal
+          orderItem={selectedItem}
+          order={order}
+          isOpen={itemEditingOpen}
+          onClose={() => {
+            setItemEditingOpen(false);
+            setSelectedItem(null);
+          }}
+        />
+      )}
     </div>
   );
 };

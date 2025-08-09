@@ -32,6 +32,8 @@ import {
   AlertTriangle,
   ShoppingBag,
   CheckCircle,
+  Warehouse,
+  Navigation,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -161,8 +163,18 @@ const menuGroups = [
   {
     title: 'Operations',
     categoryIcon: Zap,
-    primaryUrl: '/admin/returns',
+    primaryUrl: '/admin/warehouse',
     items: [
+      {
+        title: 'Warehouse Management',
+        url: '/admin/warehouse',
+        icon: Warehouse,
+      },
+      {
+        title: 'Tracking Management',
+        url: '/admin/tracking',
+        icon: Navigation,
+      },
       {
         title: 'Regional Pricing',
         url: '/admin/regional-pricing',

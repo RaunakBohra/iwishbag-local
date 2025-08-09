@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, Star, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -64,45 +64,137 @@ export const InlineFilters = ({
     if (onQuoteChange) onQuoteChange('all');
   };
 
+  // Quick Filter Presets
+  const quickFilters = [
+    {
+      id: 'urgent',
+      label: 'Urgent',
+      icon: AlertTriangle,
+      color: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100',
+      count: 3,
+      onClick: () => {
+        onStatusChange('all');
+        onPriorityChange('urgent');
+        onCategoryChange('all');
+      },
+    },
+    {
+      id: 'my-tickets',
+      label: 'My Tickets',
+      icon: Star,
+      color: 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100',
+      count: 7,
+      onClick: () => {
+        // This would filter by current user assignment in a real implementation
+        onStatusChange('in_progress');
+        onPriorityChange('all');
+        onCategoryChange('all');
+      },
+    },
+    {
+      id: 'overdue',
+      label: 'Overdue',
+      icon: Clock,
+      color: 'text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100',
+      count: 2,
+      onClick: () => {
+        onStatusChange('pending');
+        onPriorityChange('all');
+        onCategoryChange('all');
+      },
+    },
+    {
+      id: 'today',
+      label: 'Today',
+      icon: CheckCircle,
+      color: 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100',
+      count: 12,
+      onClick: () => {
+        // Filter by today's tickets
+        onStatusChange('all');
+        onPriorityChange('all');
+        onCategoryChange('all');
+      },
+    },
+  ];
+
   return (
-    <div className="border-b bg-white">
-      {/* Main Toolbar */}
-      <div className="flex items-center gap-3 p-4 flex-wrap sm:flex-nowrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+    <div className="bg-white border-b border-gray-200">
+      {/* Quick Filter Pills */}
+      <div className="px-6 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <span className="text-sm font-medium text-gray-500 mr-2 whitespace-nowrap">Quick filters:</span>
+          {quickFilters.map((filter) => {
+            const Icon = filter.icon;
+            return (
+              <button
+                key={filter.id}
+                onClick={filter.onClick}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap ${filter.color}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {filter.label}
+                <span className="text-xs opacity-75">({filter.count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Enhanced Main Toolbar */}
+      <div className="flex items-center gap-4 p-4 flex-wrap sm:flex-nowrap">
+        {/* Enhanced Search */}
+        <div className="relative flex-1 min-w-[300px] max-w-lg">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search tickets, customers, tracking IDs, or destinations..."
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-12 pr-4 py-2.5 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg bg-gray-50 focus:bg-white transition-colors"
           />
+          {searchInput && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        {/* Status Filter */}
+        {/* Enhanced Status Filter */}
         <Select value={statusFilter} onValueChange={onStatusChange}>
-          <SelectTrigger className="w-[120px] sm:w-[140px]">
-            <SelectValue placeholder="Status" />
+          <SelectTrigger className="w-[140px] border-gray-300 shadow-sm hover:border-gray-400 transition-colors">
+            <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             {Object.entries(TICKET_STATUS_LABELS).map(([status, label]) => (
               <SelectItem key={status} value={status}>
-                {label}
+                <div className="flex items-center gap-2">
+                  {status === 'open' && <Clock className="h-3.5 w-3.5 text-blue-500" />}
+                  {status === 'in_progress' && <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />}
+                  {status === 'pending' && <Clock className="h-3.5 w-3.5 text-orange-500" />}
+                  {status === 'resolved' && <CheckCircle className="h-3.5 w-3.5 text-green-500" />}
+                  {status === 'closed' && <CheckCircle className="h-3.5 w-3.5 text-gray-500" />}
+                  {label}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Advanced Filters Popover */}
+        {/* Enhanced Advanced Filters */}
         <Popover open={showAdvanced} onOpenChange={setShowAdvanced}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="relative flex-shrink-0">
+            <Button variant="outline" className={`relative flex-shrink-0 border-gray-300 shadow-sm hover:border-gray-400 transition-colors ${
+              hasActiveFilters ? 'border-blue-500 bg-blue-50 text-blue-700' : ''
+            }`}>
               <Filter className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">More Filters</span>
+              <span className="hidden sm:inline">Advanced</span>
               <span className="sm:hidden">Filters</span>
               {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                   {activeFilterCount}
                 </span>
               )}

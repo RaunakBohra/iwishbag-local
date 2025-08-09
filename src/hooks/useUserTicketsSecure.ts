@@ -5,19 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { userSupportService } from '@/services/UserSupportService';
 import type { CreateCustomerTicketData } from '@/types/ticket';
-
-// Secure user ticket interface - limited data only
-export interface SecureUserTicket {
-  id: string;
-  subject: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: string;
-  created_at: string;
-  updated_at: string;
-  // NO internal system data, admin info, or detailed metadata
-}
+import type { SecureUserTicket } from '@/types/userSupport';
 
 // Secure query keys for user tickets
 const userTicketKeys = {

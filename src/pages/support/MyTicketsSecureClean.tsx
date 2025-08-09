@@ -1,8 +1,9 @@
-// Secure User Support Page - Replaces dangerous MyTickets.tsx
-// This page uses secure user-only components with limited data access
-
-import { useState } from 'react';
+// Clean Secure User Support Page
+import React, { useState } from 'react';
 import { Plus, ArrowLeft, HelpCircle, Clock } from 'lucide-react';
+import { UserTicketList } from '@/components/support/UserTicketList';
+import { NewTicketForm } from '@/components/support/NewTicketForm';
+import type { SecureUserTicket } from '@/types/userSupport';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,53 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-// Step 1: Add back simple components first (temporarily disabled for troubleshooting)
-// import { businessHoursService } from '@/config/businessHours';
-// import type { SecureUserTicket } from '@/types/userSupport';
-
-// Step 2: Add back more complex components (temporarily disabled for troubleshooting)
-// import { NewTicketForm } from '@/components/support/NewTicketForm';
-
-// Step 3: Add back remaining components (temporarily disabled for troubleshooting)
-// import { UserTicketList } from '@/components/support/UserTicketList';
-
-// Step 4: Add security guard last (temporarily disabled for troubleshooting)
-// import { SupportSecurityGuard } from '@/components/security/SupportSecurityGuard';
-
-// Secure user ticket detail component - limited view
-const UserTicketDetailSecure = ({ 
-  ticketId, 
-  onBack 
-}: { 
-  ticketId: string; 
-  onBack: () => void;
-}) => {
-  // This would be a secure ticket detail view - for now, redirect back
-  // In full implementation, this would show limited ticket details only
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button variant="ghost" onClick={onBack} className="mb-6">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Tickets
-        </Button>
-        
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-600 mb-4">
-              Secure ticket detail view - limited information only
-            </p>
-            <p className="text-sm text-gray-500">
-              Ticket ID: {ticketId}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-export default function MyTicketsSecurePage() {
+export default function MyTicketsSecureCleanPage() {
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const { user } = useAuth();
@@ -64,10 +19,9 @@ export default function MyTicketsSecurePage() {
 
   const handleTicketCreated = () => {
     setShowNewTicketForm(false);
-    // UserTicketList will automatically refresh via React Query
   };
 
-  const handleTicketClick = (ticket: any) => {
+  const handleTicketClick = (ticket: SecureUserTicket) => {
     setSelectedTicketId(ticket.id);
   };
 
@@ -82,14 +36,29 @@ export default function MyTicketsSecurePage() {
   // Show secure ticket detail view if a ticket is selected
   if (selectedTicketId) {
     return (
-      <UserTicketDetailSecure 
-        ticketId={selectedTicketId} 
-        onBack={handleBackToList} 
-      />
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Button variant="ghost" onClick={handleBackToList} className="mb-6">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Tickets
+          </Button>
+          
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-600 mb-4">
+                Secure ticket detail view - limited information only
+              </p>
+              <p className="text-sm text-gray-500">
+                Ticket ID: {selectedTicketId}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     );
   }
 
-  const isCurrentlyBusinessHours = true; // Simplified for troubleshooting
+  const isCurrentlyBusinessHours = true;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -149,17 +118,13 @@ export default function MyTicketsSecurePage() {
                     "font-semibold text-lg",
                     isCurrentlyBusinessHours ? "text-green-900" : "text-amber-900"
                   )}>
-                    {isCurrentlyBusinessHours 
-                      ? "Support team is online"
-                      : "Support team is offline"}
+                    🔒 Secure Support System Active
                   </p>
                   <p className={cn(
                     "text-sm",
                     isCurrentlyBusinessHours ? "text-green-700" : "text-amber-700"
                   )}>
-                    {isCurrentlyBusinessHours 
-                      ? "We typically respond to new tickets within 2-4 hours"
-                      : "We'll respond to new tickets by the next business day"}
+                    Enhanced security with user data isolation
                   </p>
                 </div>
               </div>
@@ -177,45 +142,25 @@ export default function MyTicketsSecurePage() {
           </CardContent>
         </Card>
 
-        {/* Secure User Ticket List - Temporarily disabled for troubleshooting */}
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              🔒 Secure Support System
-            </h2>
-            <p className="text-gray-600 mb-4">
-              This is the secure user support interface with limited data access.
-            </p>
-            <p className="text-sm text-gray-500 mb-6">
-              ✅ No admin features exposed<br/>
-              ✅ User data isolation enforced<br/>
-              ✅ Security guards active<br/>
-              ✅ Limited information display
-            </p>
-            <Button onClick={handleCreateTicket} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Support Ticket
-            </Button>
-          </CardContent>
-        </Card>
+        {/* User Tickets List - Secure */}
+        <UserTicketList
+          onTicketClick={handleTicketClick}
+          onCreateTicket={handleCreateTicket}
+        />
 
         {/* New Ticket Dialog */}
         <Dialog open={showNewTicketForm} onOpenChange={setShowNewTicketForm}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="create-ticket-description">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-semibold">Create Support Ticket</DialogTitle>
-              <p id="create-ticket-description" className="text-gray-600 mt-2">
-                Describe your issue and we'll get back to you within 24-48 hours
+              <DialogTitle>Create Support Ticket</DialogTitle>
+              <p className="text-gray-600 mt-2">
+                Secure ticket creation interface
               </p>
             </DialogHeader>
-            <div className="p-4 text-center">
-              <p className="text-gray-600 mb-4">
-                Secure ticket creation form will be integrated here
-              </p>
-              <Button onClick={handleTicketCreated}>
-                Close for now
-              </Button>
-            </div>
+            <NewTicketForm
+              onSuccess={handleTicketCreated}
+              onCancel={() => setShowNewTicketForm(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>

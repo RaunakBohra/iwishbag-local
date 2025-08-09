@@ -18,21 +18,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
-// Import ONLY user-safe ticket hooks (we'll create these)
+// Import ONLY user-safe ticket hooks
 import { useUserTicketsSecure } from '@/hooks/useUserTicketsSecure';
+import type { SecureUserTicket } from '@/types/userSupport';
 
-// Safe user ticket interface (limited data)
-interface UserTicket {
-  id: string;
-  subject: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: string;
-  created_at: string;
-  updated_at: string;
-  // NO internal system data, quote details, or admin info
-}
+// Use the secure user ticket type
+type UserTicket = SecureUserTicket;
 
 const USER_STATUS_LABELS = {
   open: 'Open',
@@ -169,7 +160,7 @@ interface UserTicketListProps {
   onCreateTicket?: () => void;
 }
 
-export const UserTicketList: React.FC<UserTicketListProps> = ({
+const UserTicketList: React.FC<UserTicketListProps> = ({
   onTicketClick,
   onCreateTicket
 }) => {
@@ -295,4 +286,5 @@ export const UserTicketList: React.FC<UserTicketListProps> = ({
   );
 };
 
+export { UserTicketList };
 export default UserTicketList;
