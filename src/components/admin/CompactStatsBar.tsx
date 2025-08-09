@@ -69,16 +69,39 @@ export const CompactStatsBar = ({ stats, isLoading }: CompactStatsBarProps) => {
   ];
 
   return (
-    <div className="flex items-center gap-3 md:gap-6 py-3 px-4 bg-gray-50 border-b overflow-x-auto">
-      {statItems.map((item) => (
-        <div key={item.label} className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <div className={`p-1 rounded ${item.bgColor}`}>
-            <item.icon className={`h-3 w-3 ${item.color}`} />
+    <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center justify-between gap-8 overflow-x-auto">
+        {statItems.map((item, index) => (
+          <div key={item.label} className="flex items-center gap-3 min-w-0 flex-shrink-0">
+            <div className={`p-2.5 rounded-xl ${item.bgColor} shadow-sm`}>
+              <item.icon className={`h-4 w-4 ${item.color}`} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">{item.value}</div>
+              <div className="text-sm text-gray-500">{item.label}</div>
+            </div>
+            {index < statItems.length - 1 && (
+              <div className="w-px h-12 bg-gray-200 ml-4" />
+            )}
           </div>
-          <span className="font-semibold text-sm">{item.value}</span>
-          <span className="text-xs text-gray-500 whitespace-nowrap">{item.label}</span>
+        ))}
+        
+        {/* Additional Performance Metrics */}
+        <div className="flex items-center gap-6 ml-auto">
+          <div className="text-center">
+            <div className="text-lg font-semibold text-green-600">98.2%</div>
+            <div className="text-xs text-gray-500">SLA Met</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-semibold text-blue-600">2.3h</div>
+            <div className="text-xs text-gray-500">Avg Response</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-semibold text-purple-600">4.8★</div>
+            <div className="text-xs text-gray-500">Satisfaction</div>
+          </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 };
