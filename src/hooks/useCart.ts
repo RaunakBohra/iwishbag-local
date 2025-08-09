@@ -8,6 +8,7 @@ import { currencyService } from '@/services/CurrencyService';
 import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
 import { analytics } from '@/utils/analytics';
+import { cartAbandonmentService } from '@/services/CartAbandonmentService';
 import type { Quote } from '@/types/cart';
 
 /**
@@ -26,6 +27,15 @@ export function useCart() {
       logger.error('Failed to initialize cart in useCart hook', error);
     });
   }, []);
+
+  // Track cart activity for abandonment detection
+  useEffect(() => {
+    if (items.length > 0) {
+      cartAbandonmentService.trackCartActivity(items, 'cart').catch(error => {
+        logger.warn('Failed to track cart activity:', error);
+      });
+    }
+  }, [items]);
 
   // Enhanced actions with error handling
   const addItem = useCallback(async (quote: Quote) => {

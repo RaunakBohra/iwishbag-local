@@ -526,6 +526,16 @@ export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep, sta
       ];
     }
     
+    if (status === 'under_review') {
+      return [
+        { label: 'Requested', step: 1 },
+        { label: 'Calculated', step: 2 },
+        { label: 'Under Review', step: 3, isUnderReview: true },
+        { label: 'Cart', step: 4 },
+        { label: 'Checkout', step: 5 }
+      ];
+    }
+    
     return [
       { label: 'Requested', step: 1 },
       { label: 'Calculated', step: 2 },
@@ -545,7 +555,7 @@ export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep, sta
             <div 
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                 step.step <= currentStep 
-                  ? (step.isRejected ? 'bg-red-500 text-white' : 'bg-green-500 text-white')
+                  ? (step.isRejected ? 'bg-red-500 text-white' : step.isUnderReview ? 'bg-amber-500 text-white' : 'bg-green-500 text-white')
                   : step.step === currentStep + 1 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-200 text-gray-500'
@@ -559,7 +569,7 @@ export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep, sta
             </div>
             <span className={`text-xs mt-1 ${
               step.step <= currentStep 
-                ? (step.isRejected ? 'text-red-600 font-medium' : 'text-green-600 font-medium')
+                ? (step.isRejected ? 'text-red-600 font-medium' : step.isUnderReview ? 'text-amber-600 font-medium' : 'text-green-600 font-medium')
                 : 'text-gray-500'
             }`}>
               {step.label}

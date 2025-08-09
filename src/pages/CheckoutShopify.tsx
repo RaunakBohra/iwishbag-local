@@ -27,6 +27,7 @@ import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
 import { analytics } from '@/utils/analytics';
+import { cartAbandonmentService } from '@/services/CartAbandonmentService';
 import { CheckoutService, AddonServiceSelection } from '@/services/CheckoutService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -115,8 +116,13 @@ const CheckoutShopify: React.FC = React.memo(() => {
           price: item.quote.total_quote_origincurrency || 0,
         }))
       });
+
+      // Track checkout stage for abandonment detection
+      cartAbandonmentService.trackCartActivity(items, 'checkout', user?.email).catch(error => {
+        logger.warn('Failed to track checkout activity:', error);
+      });
     }
-  }, [items]);
+  }, [items, user?.email]);
 
   // Redirect if cart is empty (but only after loading is complete)
   useEffect(() => {
@@ -179,6 +185,9 @@ const CheckoutShopify: React.FC = React.memo(() => {
         userId: user!.id,
         addonServices: selectedAddonServices
       });
+      
+      // Mark cart as recovered (successful purchase)
+      await cartAbandonmentService.markCartRecovered(user!.id, 'purchase');
       
       // Clear cart after successful order
       await clearCart();

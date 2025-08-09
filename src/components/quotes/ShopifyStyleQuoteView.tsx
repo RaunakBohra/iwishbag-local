@@ -26,6 +26,7 @@ import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import { useCart } from '@/hooks/useCart';
 import { useCartItem, ensureInitialized } from '@/stores/cartStore';
+import ReviewRequestModal from './ReviewRequestModal';
 
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
@@ -39,6 +40,16 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
         { label: 'Requested', step: 1 },
         { label: 'Calculated', step: 2 },
         { label: 'Rejected', step: 3, isRejected: true },
+        { label: 'In Cart', step: 4 },
+        { label: 'Checkout', step: 5 }
+      ];
+    }
+    
+    if (status === 'under_review') {
+      return [
+        { label: 'Requested', step: 1 },
+        { label: 'Calculated', step: 2 },
+        { label: 'Under Review', step: 3, isUnderReview: true },
         { label: 'In Cart', step: 4 },
         { label: 'Checkout', step: 5 }
       ];
@@ -63,7 +74,7 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
             <div 
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                 step.step <= currentStep 
-                  ? (step.isRejected ? 'bg-red-500 text-white' : 'bg-green-500 text-white')
+                  ? (step.isRejected ? 'bg-red-500 text-white' : step.isUnderReview ? 'bg-amber-500 text-white' : 'bg-green-500 text-white')
                   : step.step === currentStep + 1 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-200 text-gray-500'
@@ -77,7 +88,7 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
             </div>
             <span className={`text-xs mt-2 font-medium ${
               step.step <= currentStep 
-                ? (step.isRejected ? 'text-red-600' : 'text-green-600')
+                ? (step.isRejected ? 'text-red-600' : step.isUnderReview ? 'text-amber-600' : 'text-green-600')
                 : 'text-gray-500'
             }`}>
               {step.label}
@@ -85,7 +96,7 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
             {index < steps.length - 1 && (
               <div className={`h-0.5 w-full mt-1 ${
                 step.step < currentStep 
-                  ? (steps[index].isRejected ? 'bg-red-500' : 'bg-green-500')
+                  ? (steps[index].isRejected ? 'bg-red-500' : steps[index].isUnderReview ? 'bg-amber-500' : 'bg-green-500')
                   : 'bg-gray-200'
               }`} />
             )}
@@ -161,6 +172,11 @@ const getStatusHeaderData = (status: string, tier: string) => {
       return {
         title: 'Quote Expired',
         description: 'This quote has expired but can still be approved. Review the details and approve to continue.'
+      };
+    case 'under_review':
+      return {
+        title: 'Review in Progress',
+        description: 'We\'re reviewing your feedback and will send you an updated quote soon. We\'ll notify you once it\'s ready for approval.'
       };
     default:
       return {
@@ -367,6 +383,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDetails, setRejectDetails] = useState('');
   const [shippingOptionsExpanded, setShippingOptionsExpanded] = useState(false);
+  const [reviewRequestModalOpen, setReviewRequestModalOpen] = useState(false);
   
   // Addon services removed - only available in cart/checkout pages
   
@@ -656,10 +673,12 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     switch (status) {
       case 'approved': return 4; // In Cart
       case 'sent': return 3; // Awaiting Approval
-      case 'rejected': return 3; // Awaiting Approval (can be re-approved)
-      case 'expired': return 3; // Awaiting Approval (can be re-approved)
+      case 'rejected': return 3; // Rejected (can be re-approved)
+      case 'expired': return 3; // Expired (can be re-approved)
+      case 'under_review': return 3; // Under Review
       case 'calculated': return 2; // Calculated
       case 'pending': return 1; // Requested
+      case 'draft': return 1; // Draft/Requested
       default: return 3; // Default to Awaiting Approval
     }
   };
@@ -1227,6 +1246,18 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                     {/* Secondary Actions */}
                     <div className="grid grid-cols-2 gap-3">
+                      {/* Request Review button - primary secondary action for quotes that can be modified */}
+                      {['sent', 'approved', 'rejected', 'expired'].includes(quote.status) && (
+                        <Button 
+                          variant="outline" 
+                          className="h-12 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                          onClick={() => setReviewRequestModalOpen(true)}
+                        >
+                          <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
+                          Request Changes
+                        </Button>
+                      )}
+                      
                       {/* Reject button - show only for sent and expired quotes, hide for rejected quotes */}
                       {(quote.status === 'sent' || quote.status === 'expired') && (
                         <Button 
@@ -1239,15 +1270,17 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </Button>
                       )}
                       
-                      {/* Ask Question button - always visible, full width when reject not shown */}
-                      <Button 
-                        variant="outline" 
-                        className={(quote.status === 'sent' || quote.status === 'expired') ? 'h-12' : 'col-span-2 h-12'}
-                        onClick={() => setQuestionModalOpen(true)}
-                      >
-                        <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
-                        Ask Question
-                      </Button>
+                      {/* Ask Question button - when reject is not shown */}
+                      {!['sent', 'expired'].includes(quote.status) && (
+                        <Button 
+                          variant="outline" 
+                          className="h-12"
+                          onClick={() => setQuestionModalOpen(true)}
+                        >
+                          <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
+                          Ask Question
+                        </Button>
+                      )}
                     </div>
 
                   </div>
@@ -1281,14 +1314,14 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       </p>
                     </div>
                     
-                    {/* Allow questions for any non-full-access quote */}
+                    {/* Allow review requests for admin-only quotes too */}
                     <Button 
                       variant="outline" 
-                      className="w-full h-12"
-                      onClick={() => setQuestionModalOpen(true)}
+                      className="w-full h-12 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                      onClick={() => setReviewRequestModalOpen(true)}
                     >
-                      <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
-                      Ask Question
+                      <OptimizedIcon name="Edit" className="w-4 h-4 mr-2" />
+                      Request Changes
                     </Button>
                   </div>
                 )}
@@ -1477,6 +1510,16 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </DialogContent>
       </Dialog>
 
+      {/* Review Request Modal */}
+      <ReviewRequestModal 
+        open={reviewRequestModalOpen}
+        onClose={() => setReviewRequestModalOpen(false)}
+        quote={quote}
+        onSuccess={() => {
+          // Refresh quote data to show new status
+          refreshQuote();
+        }}
+      />
 
       {/* Mobile Sticky Bar - Only show for full access */}
       {shouldShowActions(visibilityTier) && (
@@ -1489,7 +1532,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             handleApprove();
           }
         }}
-        onRequestChanges={() => setQuestionModalOpen(true)}
+        onRequestChanges={() => setReviewRequestModalOpen(true)}
         onReject={() => setRejectModalOpen(true)}
         formatCurrency={formatCurrency}
         adjustedTotal={quoteOptions.adjustedTotal}
