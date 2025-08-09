@@ -149,22 +149,32 @@ const TicketRow = ({
     low: 'border-l-slate-400',
   };
 
-  // Enhanced background colors for unread tickets
-  const getTicketBackground = (ticket: any) => {
+  // Enhanced background colors for unread tickets and status
+  const getTicketRowBackground = (ticket: any) => {
+    // Unread tickets get priority-based colors
     if (ticket.has_unread_replies) {
-      return ticket.priority === 'urgent' ? 'bg-red-50/70' :
-             ticket.priority === 'high' ? 'bg-orange-50/70' :
-             'bg-blue-50/70'; // Medium/Low unread tickets
+      return ticket.priority === 'urgent' ? 'bg-red-50/80' :
+             ticket.priority === 'high' ? 'bg-orange-50/80' :
+             'bg-blue-50/80';
     }
-    return 'bg-white';
+    
+    // Status-based subtle background colors for all tickets
+    switch (ticket.status) {
+      case 'open': return 'bg-blue-50/30';
+      case 'in_progress': return 'bg-purple-50/30';
+      case 'pending': return 'bg-yellow-50/30';  
+      case 'resolved': return 'bg-green-50/30';
+      case 'closed': return 'bg-gray-50/30';
+      default: return 'bg-white';
+    }
   };
 
   return (
     <TableRow 
       className={`cursor-pointer hover:shadow-sm transition-all duration-200 border-l-4 ${
         priorityBorderColors[ticket.priority as keyof typeof priorityBorderColors] || priorityBorderColors.medium
-      } ${getTicketBackground(ticket)} ${
-        isSelected ? 'shadow-md ring-2 ring-blue-500/20' : 'hover:bg-gray-50/80'
+      } ${getTicketRowBackground(ticket)} ${
+        isSelected ? 'shadow-md ring-2 ring-blue-500/20' : 'hover:bg-opacity-60'
       }`} 
       onClick={() => onTicketClick(ticket.id)}
     >
@@ -441,14 +451,24 @@ const TicketCardView = ({
     low: 'border-l-slate-400',
   };
 
-  // Enhanced background colors for unread tickets in card view
+  // Enhanced background colors for cards - matching table row logic
   const getCardBackground = (ticket: any) => {
+    // Unread tickets get priority-based colors
     if (ticket.has_unread_replies) {
-      return ticket.priority === 'urgent' ? 'bg-red-50/70' :
-             ticket.priority === 'high' ? 'bg-orange-50/70' :
-             'bg-blue-50/70'; // Medium/Low unread tickets
+      return ticket.priority === 'urgent' ? 'bg-red-50/80' :
+             ticket.priority === 'high' ? 'bg-orange-50/80' :
+             'bg-blue-50/80';
     }
-    return 'bg-white';
+    
+    // Status-based subtle background colors for all cards
+    switch (ticket.status) {
+      case 'open': return 'bg-blue-50/30';
+      case 'in_progress': return 'bg-purple-50/30';
+      case 'pending': return 'bg-yellow-50/30';  
+      case 'resolved': return 'bg-green-50/30';
+      case 'closed': return 'bg-gray-50/30';
+      default: return 'bg-white';
+    }
   };
 
   return (
