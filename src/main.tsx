@@ -7,6 +7,7 @@ import { validateEnv } from './config/env';
 import { logger } from '@/utils/logger';
 import { assetPreloader } from '@/utils/assetPreloader';
 import { preloadStrategies } from '@/utils/dynamic-imports';
+import { analytics } from '@/utils/analytics';
 
 // Initialize Sentry for error and performance monitoring
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -53,6 +54,15 @@ if (import.meta.env.MODE === 'development') {
 // Initialize performance optimization systems
 assetPreloader.preloadCriticalAssets();
 logger.info('Asset preloader initialized');
+
+// Initialize analytics system
+analytics.initialize()
+  .then(() => {
+    logger.info('📊 Analytics system initialized - GA4, Facebook Pixel, and Cloudflare Analytics active');
+  })
+  .catch((error) => {
+    logger.warn('Analytics initialization failed:', error);
+  });
 
 // Initialize advanced code splitting systems with error handling
 import('./utils/routeCodeSplitting.tsx')

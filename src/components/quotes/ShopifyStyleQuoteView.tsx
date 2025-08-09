@@ -21,7 +21,7 @@ import {
   MobileTrustSignals, 
   MobileProgress
 } from './ShopifyMobileOptimizations';
-import { EnhancedAddonServicesSelector } from '@/components/quotes-v2/EnhancedAddonServicesSelector';
+// EnhancedAddonServicesSelector removed - addon services only available in cart/checkout
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
 import { useCart } from '@/hooks/useCart';
@@ -31,14 +31,29 @@ interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
 }
 
-const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
-  const steps = [
-    { label: 'Requested', step: 1 },
-    { label: 'Calculated', step: 2 },
-    { label: 'Awaiting Approval', step: 3 },
-    { label: 'In Cart', step: 4 },
-    { label: 'Checkout', step: 5 }
-  ];
+const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: string }) => {
+  // Dynamic steps based on quote status
+  const getSteps = (status: string) => {
+    if (status === 'rejected') {
+      return [
+        { label: 'Requested', step: 1 },
+        { label: 'Calculated', step: 2 },
+        { label: 'Rejected', step: 3, isRejected: true },
+        { label: 'In Cart', step: 4 },
+        { label: 'Checkout', step: 5 }
+      ];
+    }
+    
+    return [
+      { label: 'Requested', step: 1 },
+      { label: 'Calculated', step: 2 },
+      { label: 'Awaiting Approval', step: 3 },
+      { label: 'In Cart', step: 4 },
+      { label: 'Checkout', step: 5 }
+    ];
+  };
+  
+  const steps = getSteps(status);
 
   return (
     <div className="mb-8">
@@ -48,7 +63,7 @@ const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
             <div 
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                 step.step <= currentStep 
-                  ? 'bg-green-500 text-white' 
+                  ? (step.isRejected ? 'bg-red-500 text-white' : 'bg-green-500 text-white')
                   : step.step === currentStep + 1 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-200 text-gray-500'
@@ -61,13 +76,17 @@ const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
               )}
             </div>
             <span className={`text-xs mt-2 font-medium ${
-              step.step <= currentStep ? 'text-green-600' : 'text-gray-500'
+              step.step <= currentStep 
+                ? (step.isRejected ? 'text-red-600' : 'text-green-600')
+                : 'text-gray-500'
             }`}>
               {step.label}
             </span>
             {index < steps.length - 1 && (
               <div className={`h-0.5 w-full mt-1 ${
-                step.step < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                step.step < currentStep 
+                  ? (steps[index].isRejected ? 'bg-red-500' : 'bg-green-500')
+                  : 'bg-gray-200'
               }`} />
             )}
           </div>
@@ -107,6 +126,48 @@ const shouldShowActions = (tier: string): boolean => {
 
 const shouldShowInteractiveElements = (tier: string): boolean => {
   return tier === 'full';
+};
+
+// Status-specific header and description helper
+const getStatusHeaderData = (status: string, tier: string) => {
+  switch (status) {
+    case 'draft':
+      return {
+        title: 'Quote Being Prepared',
+        description: 'Here are the items you requested a quote for. Our team is working on pricing and will notify you once it\'s ready for review.'
+      };
+    case 'calculated':
+    case 'pending':
+      return {
+        title: 'Quote In Progress',
+        description: 'Here are the items you requested a quote for. Our team is working on pricing and will notify you once it\'s ready for review.'
+      };
+    case 'sent':
+      return {
+        title: 'Quote Ready for Review',
+        description: 'Your quote is ready! Please review the pricing and details below, then approve or request changes.'
+      };
+    case 'approved':
+      return {
+        title: 'Quote Approved',
+        description: 'Your quote has been approved! Add it to cart to continue with checkout.'
+      };
+    case 'rejected':
+      return {
+        title: 'Quote Rejected',
+        description: 'This quote was rejected. You can review the details below and approve it or request modifications.'
+      };
+    case 'expired':
+      return {
+        title: 'Quote Expired',
+        description: 'This quote has expired but can still be approved. Review the details and approve to continue.'
+      };
+    default:
+      return {
+        title: 'Your Quote',
+        description: 'Review your quote and take an action below.'
+      };
+  }
 };
 
 const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
@@ -307,16 +368,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const [rejectDetails, setRejectDetails] = useState('');
   const [shippingOptionsExpanded, setShippingOptionsExpanded] = useState(false);
   
-  // Addon services state
-  const [addonSelections, setAddonSelections] = useState([]);
-  const [addonTotalCost, setAddonTotalCost] = useState(0);
-
-  // Handle addon services selection changes
-  const handleAddonServicesChange = useCallback((selections, totalCost) => {
-    console.log('[ShopifyStyleQuoteView] Addon services updated:', { selections, totalCost });
-    setAddonSelections(selections);
-    setAddonTotalCost(totalCost);
-  }, []);
+  // Addon services removed - only available in cart/checkout pages
   
   // Cart functionality - reactive to cart state changes
   const cartItem = useCartItem(quote?.id || '');
@@ -402,53 +454,24 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     try {
       // Use adjusted total if options have been changed - CLEAR: This is in origin currency
       const baseTotalOriginCurrency = quoteOptions.adjustedTotal || quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
-      const finalTotalWithAddons = baseTotalOriginCurrency + addonTotalCost; // Include addon services
 
-      console.log('[ShopifyStyleQuoteView] Approving quote with addons:', {
+      console.log('[ShopifyStyleQuoteView] Approving quote:', {
         baseTotal: baseTotalOriginCurrency,
-        addonCost: addonTotalCost,
-        finalTotal: finalTotalWithAddons,
-        selectedAddons: addonSelections.filter(s => s.is_selected)
+        finalTotal: baseTotalOriginCurrency
       });
 
-      // Apply addon services to the quote first
-      if (addonSelections.length > 0) {
-        const { addonServicesService } = await import('@/services/AddonServicesService');
-        const applyResult = await addonServicesService.applyAddonServices(
-          quote.id,
-          'quote',
-          addonSelections,
-          user?.id
-        );
-
-        if (!applyResult.success) {
-          console.error('Failed to apply addon services:', applyResult.error);
-          toast({
-            title: 'Error applying add-on services',
-            description: applyResult.error || 'Please try again',
-            variant: 'destructive'
-          });
-          return;
-        }
-      }
-
-      // Update quote status to approved with selected options and addon services
+      // Update quote status to approved with selected options
       await supabase
         .from('quotes_v2')
         .update({ 
           status: 'approved',
           approved_at: new Date().toISOString(),
-          final_total_origincurrency: finalTotalWithAddons,
-          // Store selected options and addon services in applied_discounts JSONB field
+          final_total_origincurrency: baseTotalOriginCurrency,
+          // Store selected options in applied_discounts JSONB field
           applied_discounts: {
             shipping: quoteOptions.shipping,
-            finalTotal: finalTotalWithAddons,
+            finalTotal: baseTotalOriginCurrency,
             baseTotal: baseTotalOriginCurrency,
-            addonServices: {
-              totalCost: addonTotalCost,
-              selections: addonSelections.filter(s => s.is_selected),
-              currency: displayCurrency
-            },
             adjustments: {
               shippingAdjustment: quoteOptions.shippingAdjustment
             }
@@ -667,34 +690,19 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            {visibilityTier === 'admin-only' ? (
-              <h1 className="text-3xl font-bold">Quote In Progress</h1>
-            ) : visibilityTier === 'limited' ? (
-              <h1 className="text-3xl font-bold">Quote Received</h1>
-            ) : (
-              <h1 className="text-3xl font-bold">Your Quote is Ready</h1>
-            )}
+            <h1 className="text-3xl font-bold">{getStatusHeaderData(quote.status, visibilityTier).title}</h1>
             <QuoteStatusBadge status={quote.status} />
           </div>
           <p className="text-muted-foreground">
-            {visibilityTier === 'admin-only'
-              ? 'Here are the items you requested a quote for. Our team is working on pricing and will notify you once it\'s ready for review.'
-              : visibilityTier === 'limited' 
-                ? 'We\'ve sent you a quote! Our team is currently reviewing the final details and pricing. You\'ll be notified once it\'s ready for your approval.'
-                : quote.status === 'approved' 
-                  ? 'Your quote has been approved! Add it to cart to continue.'
-                  : quote.status === 'rejected' 
-                    ? 'This quote was rejected. You can approve it or ask questions below.'
-                    : 'Review your quote and take an action below'
-            }
+            {getStatusHeaderData(quote.status, visibilityTier).description}
           </p>
         </div>
 
         {/* Progress Indicator */}
         <div className="hidden md:block">
-          <QuoteProgress currentStep={currentStep} />
+          <QuoteProgress currentStep={currentStep} status={quote.status} />
         </div>
-        <MobileProgress currentStep={currentStep} />
+        <MobileProgress currentStep={currentStep} status={quote.status} />
 
         {/* Status Banner for admin-only quotes */}
         {visibilityTier === 'admin-only' && (
@@ -821,7 +829,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           )}
                         </h3>
                         <div className="text-sm text-muted-foreground">
-                          {items.length} item{items.length !== 1 ? 's' : ''} • {items.reduce((sum, item) => sum + (item.weight || 0), 0).toFixed(2)}kg total
+                          {items.length} item{items.length !== 1 ? 's' : ''} • {items.reduce((sum, item) => sum + (Number(item.weight) || 0), 0).toFixed(2)}kg total
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mb-3">
@@ -926,7 +934,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span>Qty: {item.quantity}</span>
                           <span>•</span>
-                          <span>{item.weight || 0}kg</span>
+                          <span>{Number(item.weight) || 0}kg</span>
                           {shouldShowPricing(visibilityTier) && (
                             <>
                               <span>•</span>
@@ -1115,21 +1123,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
 
 
-            {/* Enhanced Addon Services Selector - Only show for sent quotes (customers can add services during initial review) */}
-            {shouldShowInteractiveElements(visibilityTier) && quote.status === 'sent' && quote.total_quote_origincurrency && (
-              <EnhancedAddonServicesSelector
-                quoteId={quote.id}
-                orderValue={quote.total_quote_origincurrency}
-                currency={displayCurrency}
-                customerCountry={quote.destination_country}
-                customerTier={user ? 'regular' : 'new'}
-                onSelectionChange={handleAddonServicesChange}
-                showRecommendations={true}
-                showBundles={true}
-                compact={false}
-                className="mb-6"
-              />
-            )}
+            {/* Addon Services removed from quote page - only available in cart/checkout */}
           </div>
 
           {/* Right Column - Summary & Actions */}
@@ -1159,29 +1153,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         })()}
                       </div>
 
-                      {/* Addon Services Cost */}
-                      {addonTotalCost > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Add-on services:</span>
-                          <span className="font-medium text-blue-600">
-                            +{formatCurrency(addonTotalCost, displayCurrency)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Total with Add-ons */}
-                      {addonTotalCost > 0 && (
-                        <div className="pt-2 border-t">
-                          <div className="text-xl font-bold text-green-600">
-                            Total amount: {(() => {
-                              const baseTotal = quoteOptions.adjustedTotal > 0 
-                                ? quoteOptions.adjustedTotal
-                                : quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
-                              return formatCurrency(baseTotal + addonTotalCost, displayCurrency);
-                            })()}
-                          </div>
-                        </div>
-                      )}
+                      {/* Addon services removed from quote page - available in cart/checkout only */}
                     </>
                   ) : (
                     <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">

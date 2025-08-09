@@ -510,10 +510,32 @@ export const MobileTrustSignals: React.FC<MobileTrustSignalsProps> = () => {
 
 interface MobileProgressProps {
   currentStep: number;
+  status?: string;
 }
 
-export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep }) => {
-  const steps = ['Requested', 'Calculated', 'Approval', 'Cart', 'Checkout'];
+export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep, status = 'sent' }) => {
+  // Dynamic steps based on quote status
+  const getSteps = (status: string) => {
+    if (status === 'rejected') {
+      return [
+        { label: 'Requested', step: 1 },
+        { label: 'Calculated', step: 2 },
+        { label: 'Rejected', step: 3, isRejected: true },
+        { label: 'Cart', step: 4 },
+        { label: 'Checkout', step: 5 }
+      ];
+    }
+    
+    return [
+      { label: 'Requested', step: 1 },
+      { label: 'Calculated', step: 2 },
+      { label: 'Approval', step: 3 },
+      { label: 'Cart', step: 4 },
+      { label: 'Checkout', step: 5 }
+    ];
+  };
+  
+  const steps = getSteps(status);
   
   return (
     <div className="md:hidden mb-6">
@@ -522,23 +544,25 @@ export const MobileProgress: React.FC<MobileProgressProps> = ({ currentStep }) =
           <div key={index} className="flex flex-col items-center">
             <div 
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
-                index + 1 <= currentStep 
-                  ? 'bg-green-500 text-white' 
-                  : index + 1 === currentStep + 1 
+                step.step <= currentStep 
+                  ? (step.isRejected ? 'bg-red-500 text-white' : 'bg-green-500 text-white')
+                  : step.step === currentStep + 1 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-200 text-gray-500'
               }`}
             >
-              {index + 1 <= currentStep ? (
+              {step.step <= currentStep ? (
                 <CheckCircle className="w-3 h-3" />
               ) : (
-                index + 1
+                step.step
               )}
             </div>
             <span className={`text-xs mt-1 ${
-              index + 1 <= currentStep ? 'text-green-600 font-medium' : 'text-gray-500'
+              step.step <= currentStep 
+                ? (step.isRejected ? 'text-red-600 font-medium' : 'text-green-600 font-medium')
+                : 'text-gray-500'
             }`}>
-              {step}
+              {step.label}
             </span>
           </div>
         ))}

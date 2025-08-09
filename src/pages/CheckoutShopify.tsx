@@ -26,6 +26,7 @@ import { StandardLoading } from '@/components/patterns';
 import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/utils/logger';
+import { analytics } from '@/utils/analytics';
 import { CheckoutService, AddonServiceSelection } from '@/services/CheckoutService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -94,6 +95,29 @@ const CheckoutShopify: React.FC = React.memo(() => {
     fetchAddresses();
   }, [user]);
 
+  // Track begin checkout when component loads
+  useEffect(() => {
+    if (items.length > 0) {
+      // Calculate total value for analytics
+      const totalValue = items.reduce((sum, item) => sum + (item.quote.total_quote_origincurrency || 0), 0);
+      const currency = items[0]?.quote.destination_country === 'NP' ? 'NPR' : 'INR';
+      
+      // Track begin checkout event
+      analytics.trackEcommerce({
+        event_name: 'begin_checkout',
+        currency,
+        value: totalValue,
+        items: items.map(item => ({
+          item_id: item.quote.id,
+          item_name: item.quote.customer_data?.description || `Quote ${item.quote.id}`,
+          category: 'quote',
+          quantity: 1,
+          price: item.quote.total_quote_origincurrency || 0,
+        }))
+      });
+    }
+  }, [items]);
+
   // Redirect if cart is empty (but only after loading is complete)
   useEffect(() => {
     if (!isLoading && items.length === 0) {
@@ -130,6 +154,22 @@ const CheckoutShopify: React.FC = React.memo(() => {
       const destinationCountry = selectedAddress?.destination_country || user?.profile?.country || 'US';
       const orderSummary = await checkoutService.calculateOrderSummary(items, destinationCountry, selectedAddonServices);
       
+      // Track purchase event (before creating order to ensure it fires)
+      const currency = destinationCountry === 'NP' ? 'NPR' : 'INR';
+      analytics.trackEcommerce({
+        event_name: 'purchase',
+        currency,
+        value: orderSummary.total,
+        transaction_id: `order_${Date.now()}`,
+        items: items.map(item => ({
+          item_id: item.quote.id,
+          item_name: item.quote.customer_data?.description || `Quote ${item.quote.id}`,
+          category: 'quote',
+          quantity: 1,
+          price: item.quote.total_quote_origincurrency || 0,
+        }))
+      });
+      
       // Create order
       const order = await checkoutService.createOrder({
         items,
@@ -152,7 +192,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
     } finally {
       setProcessingOrder(false);
     }
-  }, [canPlaceOrder, checkoutService, items, selectedAddress, selectedPaymentMethod, user, clearCart, navigate]);
+  }, [canPlaceOrder, checkoutService, items, selectedAddress, selectedPaymentMethod, user, clearCart, navigate, selectedAddonServices]);
 
 
   return (

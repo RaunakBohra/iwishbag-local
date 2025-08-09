@@ -7,6 +7,7 @@ import { useCartStore, useCartActions, useCartItems, useCartSyncStatus, useCartH
 import { currencyService } from '@/services/CurrencyService';
 import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
+import { analytics } from '@/utils/analytics';
 import type { Quote } from '@/types/cart';
 
 /**
@@ -30,6 +31,21 @@ export function useCart() {
   const addItem = useCallback(async (quote: Quote) => {
     try {
       await actions.addItem(quote);
+      
+      // Track add to cart event
+      analytics.trackEcommerce({
+        event_name: 'add_to_cart',
+        currency: quote.destination_country === 'NP' ? 'NPR' : 'INR',
+        value: quote.total_quote_origincurrency || 0,
+        items: [{
+          item_id: quote.id,
+          item_name: quote.customer_data?.description || `Quote ${quote.id}`,
+          category: 'quote',
+          quantity: 1,
+          price: quote.total_quote_origincurrency || 0,
+        }]
+      });
+      
     } catch (error) {
       logger.error('Failed to add item to cart', { quoteId: quote.id, error });
       throw error;
@@ -38,12 +54,30 @@ export function useCart() {
 
   const removeItem = useCallback(async (quoteId: string) => {
     try {
+      const item = store.getItem(quoteId);
       await actions.removeItem(quoteId);
+      
+      // Track remove from cart event
+      if (item) {
+        analytics.trackEcommerce({
+          event_name: 'remove_from_cart',
+          currency: item.quote.destination_country === 'NP' ? 'NPR' : 'INR',
+          value: item.quote.total_quote_origincurrency || 0,
+          items: [{
+            item_id: item.quote.id,
+            item_name: item.quote.customer_data?.description || `Quote ${item.quote.id}`,
+            category: 'quote',
+            quantity: 1,
+            price: item.quote.total_quote_origincurrency || 0,
+          }]
+        });
+      }
+      
     } catch (error) {
       logger.error('Failed to remove item from cart', { quoteId, error });
       throw error;
     }
-  }, [actions]);
+  }, [actions, store]);
 
   const clearCart = useCallback(async () => {
     try {
