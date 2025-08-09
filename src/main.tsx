@@ -6,6 +6,7 @@ import './styles/amazon-address-form.css';
 import { validateEnv } from './config/env';
 import { logger } from '@/utils/logger';
 import { assetPreloader } from '@/utils/assetPreloader';
+import { preloadStrategies } from '@/utils/dynamic-imports';
 
 // Initialize Sentry for error and performance monitoring
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -120,5 +121,25 @@ if (import.meta.env.DEV) {
       logger.warn('Network optimization tests failed to load:', error);
     });
 }
+
+// Admin Bundle Intelligent Preloading - Only preload admin bundles for admin users
+setTimeout(() => {
+  // Check if user is likely an admin (in localStorage or cookies)
+  const hasAdminSession = localStorage.getItem('isAdmin') === 'true' || 
+                         document.cookie.includes('admin=true') ||
+                         window.location.pathname.includes('/admin');
+  
+  if (hasAdminSession) {
+    // Preload admin components in background after initial load
+    import('./utils/adminBundleSplitter')
+      .then(({ useAdminPreloader }) => {
+        // This will run after user auth check
+        logger.info('🔒 Admin bundle preloader initialized');
+      })
+      .catch((error) => {
+        logger.warn('Admin bundle preloader failed to load:', error);
+      });
+  }
+}, 3000); // 3 second delay to not interfere with critical path
 
 createRoot(document.getElementById('root')!).render(<App />);

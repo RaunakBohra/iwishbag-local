@@ -1,23 +1,25 @@
 // iwishBag Service Worker - Advanced Network & Caching Optimization
 // Version 2.0.0 - Enhanced Performance & Offline Support
 
-const SW_VERSION = '2.0.0';
-const CACHE_VERSION = 'v2';
+const SW_VERSION = '3.0.0';
+const CACHE_VERSION = 'v3-performance';
 const CACHE_NAME = `iwishbag-${CACHE_VERSION}`;
 const STATIC_CACHE = `iwishbag-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `iwishbag-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `iwishbag-api-${CACHE_VERSION}`;
 const IMAGE_CACHE = `iwishbag-images-${CACHE_VERSION}`;
 const FONT_CACHE = `iwishbag-fonts-${CACHE_VERSION}`;
+const ADMIN_CACHE = `iwishbag-admin-${CACHE_VERSION}`; // New admin-specific cache
 
-// Cache configuration
+// Enhanced Cache configuration for performance
 const CACHE_CONFIG = {
   maxEntries: {
-    static: 100,
-    dynamic: 50,
-    api: 200,
-    images: 300,
+    static: 150,      // Increased for more static assets
+    dynamic: 100,     // Increased for better coverage
+    api: 300,         // Increased for quote/order data
+    images: 500,      // Increased for product images
     fonts: 50,
+    admin: 200,       // New admin-specific cache
   },
   maxAge: {
     static: 30 * 24 * 60 * 60 * 1000, // 30 days
@@ -25,10 +27,18 @@ const CACHE_CONFIG = {
     api: 60 * 60 * 1000,                // 1 hour
     images: 30 * 24 * 60 * 60 * 1000,   // 30 days
     fonts: 365 * 24 * 60 * 60 * 1000,   // 1 year
+    admin: 24 * 60 * 60 * 1000,         // 24 hours for admin
   },
   staleWhileRevalidate: {
     enabled: true,
-    maxAge: 5 * 60 * 1000, // 5 minutes
+    maxAge: 3 * 60 * 1000, // Reduced to 3 minutes for faster updates
+  },
+  // Performance-focused strategies
+  performance: {
+    priorityCaching: true,        // Cache critical resources first
+    predictivePrefetch: true,     // Prefetch likely next resources
+    adminLazyLoad: true,         // Only cache admin resources when needed
+    compressionPreference: 'br', // Prefer Brotli compression
   },
 };
 
@@ -769,4 +779,199 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] Service worker loaded successfully');
+// ============================================================================
+// PERFORMANCE-FOCUSED ADMIN BUNDLE CACHING
+// ============================================================================
+
+/**
+ * Enhanced admin resource caching - only cache admin bundles when accessed
+ */
+async function handleAdminResource(request) {
+  const adminCache = await caches.open(ADMIN_CACHE);
+  
+  // Check if user has admin session (based on URL patterns)
+  const isAdminUser = request.url.includes('/admin') || 
+                     request.headers.get('x-admin-session') === 'true';
+  
+  if (!isAdminUser) {
+    // Don't cache admin resources for non-admin users
+    return fetch(request);
+  }
+  
+  try {
+    // For admin users, use stale-while-revalidate for better UX
+    const cachedResponse = await adminCache.match(request);
+    
+    if (cachedResponse) {
+      // Return cached version immediately
+      const cachedClone = cachedResponse.clone();
+      
+      // Update in background for next visit
+      fetch(request)
+        .then(networkResponse => {
+          if (networkResponse.ok) {
+            adminCache.put(request, networkResponse.clone());
+            
+            // Notify admin UI of updated resources
+            self.clients.matchAll().then(clients => {
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'ADMIN_CACHE_UPDATED',
+                  resource: request.url,
+                  timestamp: Date.now()
+                });
+              });
+            });
+          }
+        })
+        .catch(() => {}); // Ignore background update failures
+      
+      return cachedClone;
+    }
+    
+    // No cache, fetch from network
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      // Cache admin resources with longer TTL
+      adminCache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+    
+  } catch (error) {
+    // Network failed, try cache
+    const cachedResponse = await adminCache.match(request);
+    return cachedResponse || createOfflineResponse(request);
+  }
+}
+
+/**
+ * Predictive prefetching for likely next resources
+ */
+async function prefetchLikelyResources(request) {
+  if (!CACHE_CONFIG.performance.predictivePrefetch) return;
+  
+  const url = new URL(request.url);
+  
+  // Prefetch patterns based on current page
+  const prefetchMap = {
+    '/dashboard': ['/api/quotes/recent', '/api/user/profile'],
+    '/quote': ['/api/quotes/calculate', '/api/shipping/options'],
+    '/admin': ['/api/admin/stats', '/api/quotes/pending'],
+    '/admin/quotes': ['/api/admin/quotes', '/api/admin/customers'],
+  };
+  
+  const prefetchUrls = prefetchMap[url.pathname];
+  
+  if (prefetchUrls) {
+    // Prefetch in background with low priority
+    setTimeout(() => {
+      prefetchUrls.forEach(async (prefetchUrl) => {
+        try {
+          const cache = await caches.open(API_CACHE);
+          const cached = await cache.match(prefetchUrl);
+          
+          if (!cached) {
+            const response = await fetch(prefetchUrl, { priority: 'low' });
+            if (response.ok) {
+              cache.put(prefetchUrl, response.clone());
+            }
+          }
+        } catch (error) {
+          // Ignore prefetch failures
+        }
+      });
+    }, 1000); // 1 second delay to not interfere with current request
+  }
+}
+
+/**
+ * Performance monitoring for cache effectiveness
+ */
+let cacheStats = {
+  hits: 0,
+  misses: 0,
+  adminHits: 0,
+  adminMisses: 0,
+  avgResponseTime: 0,
+  requests: 0
+};
+
+function trackCachePerformance(request, response, source = 'cache') {
+  cacheStats.requests++;
+  
+  if (source === 'cache') {
+    cacheStats.hits++;
+    if (request.url.includes('/admin')) {
+      cacheStats.adminHits++;
+    }
+  } else {
+    cacheStats.misses++;
+    if (request.url.includes('/admin')) {
+      cacheStats.adminMisses++;
+    }
+  }
+  
+  // Calculate cache hit ratio
+  const hitRatio = (cacheStats.hits / cacheStats.requests * 100).toFixed(1);
+  const adminHitRatio = ((cacheStats.adminHits / (cacheStats.adminHits + cacheStats.adminMisses)) * 100).toFixed(1);
+  
+  // Log performance stats every 50 requests
+  if (cacheStats.requests % 50 === 0) {
+    console.log(`[SW] Performance Stats:
+      📊 Total Requests: ${cacheStats.requests}
+      🎯 Cache Hit Ratio: ${hitRatio}%
+      🔒 Admin Hit Ratio: ${adminHitRatio}%
+      ⚡ Avg Response Time: ${cacheStats.avgResponseTime.toFixed(2)}ms
+    `);
+    
+    // Send stats to main thread for analytics
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'SW_PERFORMANCE_STATS',
+          data: {
+            ...cacheStats,
+            hitRatio: parseFloat(hitRatio),
+            adminHitRatio: parseFloat(adminHitRatio)
+          }
+        });
+      });
+    });
+  }
+}
+
+/**
+ * Clean up old cache versions for performance
+ */
+async function cleanupOldCaches() {
+  try {
+    const cacheNames = await caches.keys();
+    const currentCaches = [CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE, API_CACHE, IMAGE_CACHE, FONT_CACHE, ADMIN_CACHE];
+    
+    const oldCaches = cacheNames.filter(cacheName => 
+      cacheName.startsWith('iwishbag-') && !currentCaches.includes(cacheName)
+    );
+    
+    await Promise.all(
+      oldCaches.map(cacheName => {
+        console.log(`[SW] Deleting old cache: ${cacheName}`);
+        return caches.delete(cacheName);
+      })
+    );
+    
+    if (oldCaches.length > 0) {
+      console.log(`[SW] Cleaned up ${oldCaches.length} old cache versions`);
+    }
+  } catch (error) {
+    console.error('[SW] Cache cleanup failed:', error);
+  }
+}
+
+// Run cache cleanup on activation
+self.addEventListener('activate', (event) => {
+  event.waitUntil(cleanupOldCaches());
+});
+
+console.log(`[SW] Enhanced Performance Service Worker v${SW_VERSION} loaded successfully 🚀`);

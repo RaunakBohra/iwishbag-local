@@ -267,6 +267,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [paymentGateway, setPaymentGateway] = useState('stripe');
   const [adminNotes, setAdminNotes] = useState('');
+  const [rejectionData, setRejectionData] = useState<string | null>(null);
   const [customerCurrency, setCustomerCurrency] = useState('NPR');
   const [insuranceEnabled, setInsuranceEnabled] = useState(true); // Insurance toggle
   
@@ -748,7 +749,11 @@ const QuoteCalculatorV2: React.FC = () => {
         // Reset user override flag when loading from database
         setUserOverrodeDestination(false);
         setCustomerCurrency(quote.customer_currency || 'USD');
-        setAdminNotes(quote.admin_notes || '');
+        
+        // Parse admin notes to separate rejection data from admin notes
+        const parsedNotes = parseAdminNotes(quote.admin_notes || '');
+        setRejectionData(parsedNotes.rejectionData);
+        setAdminNotes(parsedNotes.adminNotes);
         
         // Load shipping method from database
         logger.debug({
@@ -1565,7 +1570,7 @@ const QuoteCalculatorV2: React.FC = () => {
           customer_notes: item.notes
         })),
         customer_currency: customerCurrency,
-        admin_notes: adminNotes,
+        admin_notes: combineNotesForSaving(rejectionData, adminNotes),
         discount_codes: discountCodes.length > 0 ? discountCodes : null,
       };
 
@@ -1817,6 +1822,33 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
+  // Helper function to parse and separate rejection data from admin notes
+  const parseAdminNotes = (notes: string): { rejectionData: string | null; adminNotes: string } => {
+    if (!notes) return { rejectionData: null, adminNotes: '' };
+    
+    // Check if notes contain rejection data
+    const rejectionMatch = notes.match(/Rejection Reason:.*?Rejected at:.*?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/s);
+    
+    if (rejectionMatch) {
+      const rejectionData = rejectionMatch[0];
+      const remainingNotes = notes.replace(rejectionData, '').trim();
+      return { rejectionData, adminNotes: remainingNotes };
+    }
+    
+    return { rejectionData: null, adminNotes: notes };
+  };
+
+  // Helper function to combine rejection data with admin notes for saving
+  const combineNotesForSaving = (rejectionData: string | null, adminNotes: string): string => {
+    if (rejectionData && adminNotes.trim()) {
+      return `${rejectionData}\n\n--- Admin Notes ---\n${adminNotes}`;
+    } else if (rejectionData) {
+      return rejectionData;
+    } else {
+      return adminNotes;
+    }
+  };
+
   const getCustomerCurrency = async (countryCode: string, customerId?: string): Promise<string> => {
     // Use CurrencyCalculationService for customer-aware currency resolution
     try {
@@ -1892,8 +1924,15 @@ const QuoteCalculatorV2: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
           )}
           
+          {/* DEBUG: Rejection Display Info */}
+          {isEditMode && (
+            <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
+              <strong>DEBUG:</strong> Status: "{currentQuoteStatus}" | RejectionData: "{rejectionData ? 'EXISTS' : 'NONE'}" | AdminNotes: "{adminNotes ? adminNotes.substring(0, 50) + '...' : 'EMPTY'}"
+            </div>
+          )}
+          
           {/* Prominent Rejection Reason Display */}
-          {currentQuoteStatus === 'rejected' && adminNotes && (
+          {currentQuoteStatus === 'rejected' && (
             <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <OptimizedIcon name="AlertCircle" className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
@@ -1902,10 +1941,10 @@ const QuoteCalculatorV2: React.FC = () => {
                     Quote Rejected by Customer
                   </h3>
                   <div className="text-red-800 text-sm">
-                    {(() => {
-                      const rejectionMatch = adminNotes.match(/Rejection Reason:\s*([^\n]+)/);
-                      const detailsMatch = adminNotes.match(/Details:\s*([^\n]+)/);
-                      const dateMatch = adminNotes.match(/Rejected at:\s*([^\n]+)/);
+                    {rejectionData ? (() => {
+                      const rejectionMatch = rejectionData.match(/Rejection Reason:\s*([^\n]+)/);
+                      const detailsMatch = rejectionData.match(/Details:\s*([^\n]+)/);
+                      const dateMatch = rejectionData.match(/Rejected at:\s*([^\n]+)/);
                       
                       return (
                         <div className="space-y-2">
@@ -1931,7 +1970,12 @@ const QuoteCalculatorV2: React.FC = () => {
                           )}
                         </div>
                       );
-                    })()}
+                    })() : (
+                      // No rejection data available
+                      <div className="text-red-700 italic">
+                        This quote was rejected but no rejection details are available.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3525,12 +3569,17 @@ const QuoteCalculatorV2: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Admin Notes</CardTitle>
+              {currentQuoteStatus === 'rejected' && rejectionData && (
+                <CardDescription className="text-amber-700">
+                  📝 Note: Customer rejection details are preserved separately above. These are additional admin notes.
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent>
               <Textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Internal notes about this quote..."
+                placeholder={currentQuoteStatus === 'rejected' ? "Additional internal notes about this rejected quote..." : "Internal notes about this quote..."}
                 rows={3}
               />
             </CardContent>
