@@ -143,18 +143,28 @@ const TicketRow = ({
   };
 
   const priorityBorderColors = {
-    urgent: 'border-l-red-500 bg-red-50/50',
-    high: 'border-l-orange-500 bg-orange-50/50', 
-    medium: 'border-l-blue-500 bg-blue-50/50',
-    low: 'border-l-gray-400 bg-gray-50/50',
+    urgent: 'border-l-red-500',
+    high: 'border-l-orange-500', 
+    medium: 'border-l-blue-500',
+    low: 'border-l-slate-400',
+  };
+
+  // Enhanced background colors for unread tickets
+  const getTicketBackground = (ticket: any) => {
+    if (ticket.has_unread_replies) {
+      return ticket.priority === 'urgent' ? 'bg-red-50/70' :
+             ticket.priority === 'high' ? 'bg-orange-50/70' :
+             'bg-blue-50/70'; // Medium/Low unread tickets
+    }
+    return 'bg-white';
   };
 
   return (
     <TableRow 
       className={`cursor-pointer hover:shadow-sm transition-all duration-200 border-l-4 ${
         priorityBorderColors[ticket.priority as keyof typeof priorityBorderColors] || priorityBorderColors.medium
-      } ${
-        isSelected ? 'shadow-md ring-2 ring-blue-500/20' : 'border-l-transparent hover:border-l-gray-300'
+      } ${getTicketBackground(ticket)} ${
+        isSelected ? 'shadow-md ring-2 ring-blue-500/20' : 'hover:bg-gray-50/80'
       }`} 
       onClick={() => onTicketClick(ticket.id)}
     >
@@ -169,9 +179,16 @@ const TicketRow = ({
               <p className={`font-semibold text-gray-900 hover:text-blue-600 truncate ${isCompact ? 'text-sm' : ''}`}>
                 {ticket.subject}
               </p>
-              {/* Unread indicator - show if ticket has unread replies */}
+              {/* Enhanced unread indicator - priority-based colors */}
               {(ticket as any).has_unread_replies && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" title="Has unread replies" />
+                <div 
+                  className={`w-2 h-2 rounded-full animate-pulse ${
+                    ticket.priority === 'urgent' ? 'bg-red-500' : 
+                    ticket.priority === 'high' ? 'bg-orange-500' :
+                    'bg-blue-500'
+                  }`} 
+                  title={`Has unread customer replies (${ticket.priority} priority)`} 
+                />
               )}
             </div>
             <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{ticket.description}</p>
@@ -418,10 +435,20 @@ const TicketCardView = ({
   };
 
   const priorityBorderColors = {
-    urgent: 'border-l-red-500 bg-red-50/30',
-    high: 'border-l-orange-500 bg-orange-50/30', 
-    medium: 'border-l-blue-500 bg-blue-50/30',
-    low: 'border-l-gray-400 bg-gray-50/30',
+    urgent: 'border-l-red-500',
+    high: 'border-l-orange-500', 
+    medium: 'border-l-blue-500',
+    low: 'border-l-slate-400',
+  };
+
+  // Enhanced background colors for unread tickets in card view
+  const getCardBackground = (ticket: any) => {
+    if (ticket.has_unread_replies) {
+      return ticket.priority === 'urgent' ? 'bg-red-50/70' :
+             ticket.priority === 'high' ? 'bg-orange-50/70' :
+             'bg-blue-50/70'; // Medium/Low unread tickets
+    }
+    return 'bg-white';
   };
 
   return (
@@ -430,10 +457,10 @@ const TicketCardView = ({
         <div
           key={ticket.id}
           onClick={() => onTicketClick(ticket.id)}
-          className={`bg-white rounded-lg border-l-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-4 ${
+          className={`${getCardBackground(ticket)} rounded-lg border-l-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-4 ${
             priorityBorderColors[ticket.priority as keyof typeof priorityBorderColors] || priorityBorderColors.medium
           } ${
-            selectedTicketId === ticket.id ? 'ring-2 ring-blue-500/20 shadow-lg' : ''
+            selectedTicketId === ticket.id ? 'ring-2 ring-blue-500/20 shadow-lg' : 'hover:shadow-lg'
           }`}
         >
           {/* Header */}

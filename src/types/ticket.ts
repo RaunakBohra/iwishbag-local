@@ -255,19 +255,74 @@ export const CUSTOMER_HELP_TYPE_LABELS: Record<CustomerHelpType, string> = {
   other: 'Other',
 };
 
-// Status color mapping for UI badges
+// Status color mapping for UI badges - Intuitive color system
 export const TICKET_STATUS_COLORS: Record<TicketStatus, string> = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  pending: 'bg-orange-100 text-orange-800',
-  resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-100 text-gray-800',
+  open: 'bg-blue-100 text-blue-800',           // Blue: New/Active tickets needing attention
+  in_progress: 'bg-purple-100 text-purple-800', // Purple: Currently being worked on by admin
+  pending: 'bg-yellow-100 text-yellow-800',     // Yellow: Waiting for customer response
+  resolved: 'bg-green-100 text-green-800',      // Green: Successfully resolved (positive outcome)
+  closed: 'bg-gray-100 text-gray-800',          // Gray: Completed/archived tickets
 };
 
-// Priority color mapping for UI badges
+// Priority color mapping for UI badges - Urgency-based system
 export const TICKET_PRIORITY_COLORS: Record<TicketPriority, string> = {
-  low: 'bg-gray-100 text-gray-800',
-  medium: 'bg-blue-100 text-blue-800',
-  high: 'bg-orange-100 text-orange-800',
-  urgent: 'bg-red-100 text-red-800',
+  low: 'bg-slate-100 text-slate-700',           // Slate: Low priority, calm neutral
+  medium: 'bg-blue-100 text-blue-800',          // Blue: Standard priority, professional
+  high: 'bg-orange-100 text-orange-800',        // Orange: High priority, attention needed
+  urgent: 'bg-red-100 text-red-800',            // Red: Urgent, immediate action required
 };
+
+// Enhanced color system for special states
+export const TICKET_ENHANCED_COLORS = {
+  // Unread states - more vibrant colors to grab attention
+  unread_indicator: 'bg-blue-500 animate-pulse',     // Bright blue pulsing dot
+  unread_urgent: 'bg-red-500 animate-pulse',         // Red pulsing for urgent unread
+  unread_background: 'bg-blue-50 border-blue-200',   // Subtle background for unread tickets
+  
+  // Customer interaction states
+  awaiting_customer: 'bg-amber-100 text-amber-800',  // Amber for customer action needed
+  customer_replied: 'bg-emerald-100 text-emerald-800 border-emerald-300', // Emerald for new customer reply
+  
+  // Admin action states  
+  admin_working: 'bg-indigo-100 text-indigo-800',    // Indigo for admin actively working
+  escalated: 'bg-rose-100 text-rose-800',            // Rose for escalated tickets
+  
+  // Status-specific border colors (for cards and highlights)
+  border_colors: {
+    open: 'border-blue-300',
+    in_progress: 'border-purple-300', 
+    pending: 'border-yellow-300',
+    resolved: 'border-green-300',
+    closed: 'border-gray-300',
+  }
+};
+
+/**
+ * COMPREHENSIVE COLOR GUIDE FOR TICKET SYSTEM
+ * ===========================================
+ * 
+ * STATUS COLORS (Intuitive Logic):
+ * - Open (Blue): New tickets needing attention - fresh and actionable
+ * - In Progress (Purple): Currently being worked on by admin - distinctive work state  
+ * - Pending (Yellow): Waiting for customer response - warning/attention needed
+ * - Resolved (Green): Successfully resolved - positive completion
+ * - Closed (Gray): Completed/archived - neutral completion
+ * 
+ * PRIORITY COLORS (Urgency-Based):
+ * - Low (Slate): Calm, low urgency
+ * - Medium (Blue): Standard, professional
+ * - High (Orange): Elevated attention needed
+ * - Urgent (Red): Immediate action required
+ * 
+ * UNREAD INDICATORS:
+ * - Blue dot: Standard unread customer reply
+ * - Orange dot: High priority unread reply  
+ * - Red dot: Urgent priority unread reply
+ * - Background: Subtle tinted background for unread tickets
+ * 
+ * VISUAL HIERARCHY:
+ * - Left border: Priority indication (4px colored border)
+ * - Background: Unread state indication (tinted background)
+ * - Dot indicator: Unread customer replies (animated pulse)
+ * - Status badges: Current ticket state (colored text badges)
+ */
