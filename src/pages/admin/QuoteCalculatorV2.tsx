@@ -130,6 +130,8 @@ const QuoteCalculatorV2: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [dynamicShippingMethods, setDynamicShippingMethods] = useState<any[]>([]);
+  const [reviewRequestData, setReviewRequestData] = useState<any>(null);
+  const [reviewRequestedAt, setReviewRequestedAt] = useState<string | null>(null);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -735,6 +737,8 @@ const QuoteCalculatorV2: React.FC = () => {
         setExpiresAt(quote.expires_at || null);
         setReminderCount(quote.reminder_count || 0);
         setLastReminderAt(quote.last_reminder_at || null);
+        setReviewRequestData(quote.review_request_data || null);
+        setReviewRequestedAt(quote.review_requested_at || null);
 
         // Map quote data to form fields
         setCustomerEmail(quote.customer_email || '');
@@ -1927,7 +1931,7 @@ const QuoteCalculatorV2: React.FC = () => {
           {/* DEBUG: Rejection Display Info */}
           {isEditMode && (
             <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
-              <strong>DEBUG:</strong> Status: "{currentQuoteStatus}" | RejectionData: "{rejectionData ? 'EXISTS' : 'NONE'}" | AdminNotes: "{adminNotes ? adminNotes.substring(0, 50) + '...' : 'EMPTY'}"
+              <strong>DEBUG:</strong> Status: "{currentQuoteStatus}" | RejectionData: "{rejectionData ? 'EXISTS' : 'NONE'}" | ReviewRequestData: "{reviewRequestData ? 'EXISTS' : 'NONE'}" | AdminNotes: "{adminNotes ? adminNotes.substring(0, 50) + '...' : 'EMPTY'}"
             </div>
           )}
           
@@ -1976,6 +1980,110 @@ const QuoteCalculatorV2: React.FC = () => {
                         This quote was rejected but no rejection details are available.
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Customer Review Request Display */}
+          {currentQuoteStatus === 'under_review' && reviewRequestData && (
+            <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <OptimizedIcon name="AlertTriangle" className="w-6 h-6 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 text-lg mb-2">
+                    🔄 Customer Review Request
+                  </h3>
+                  <div className="text-amber-800 text-sm space-y-3">
+                    {/* Request metadata */}
+                    <div className="flex flex-wrap items-center gap-4 pb-2 border-b border-amber-200">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Category:</span>
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">
+                          {reviewRequestData.category?.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Priority:</span>
+                        <Badge className={`border-0 ${
+                          reviewRequestData.urgency === 'high' ? 'bg-red-100 text-red-700' :
+                          reviewRequestData.urgency === 'medium' ? 'bg-orange-100 text-orange-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {reviewRequestData.urgency?.toUpperCase()} PRIORITY
+                        </Badge>
+                      </div>
+                      {reviewRequestedAt && (
+                        <div className="text-amber-700 text-xs">
+                          <OptimizedIcon name="Clock" className="w-3 h-3 inline mr-1" />
+                          {Math.round((Date.now() - new Date(reviewRequestedAt).getTime()) / (1000 * 60 * 60))}h ago
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Customer feedback */}
+                    <div>
+                      <span className="font-medium text-amber-900">What the customer wants changed:</span>
+                      <div className="mt-1 p-3 bg-white rounded-md border border-amber-200">
+                        <p className="text-gray-700 whitespace-pre-wrap">{reviewRequestData.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Expected changes */}
+                    {reviewRequestData.expected_changes && (
+                      <div>
+                        <span className="font-medium text-amber-900">Expected outcome:</span>
+                        <div className="mt-1 p-3 bg-white rounded-md border border-amber-200">
+                          <p className="text-gray-700 whitespace-pre-wrap">{reviewRequestData.expected_changes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Budget constraint */}
+                    {reviewRequestData.budget_constraint && (
+                      <div>
+                        <span className="font-medium text-amber-900">Target budget:</span>
+                        <div className="mt-1 p-3 bg-white rounded-md border border-amber-200">
+                          <p className="text-gray-700 font-medium">
+                            ${parseFloat(reviewRequestData.budget_constraint).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Specific items mentioned */}
+                    {reviewRequestData.specific_items && reviewRequestData.specific_items.length > 0 && (
+                      <div>
+                        <span className="font-medium text-amber-900">Items mentioned:</span>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {reviewRequestData.specific_items.map((itemId: string, index: number) => {
+                            const item = items.find(i => i.id === itemId) || 
+                                       items[parseInt(itemId)] ||
+                                       { name: `Item ${index + 1}` };
+                            return (
+                              <Badge key={index} variant="outline" className="bg-white border-amber-300">
+                                {item.name || `Item ${index + 1}`}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action required banner */}
+                    <div className="mt-4 p-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-md">
+                      <div className="flex items-center gap-2">
+                        <OptimizedIcon name="AlertTriangle" className="w-4 h-4" />
+                        <div>
+                          <p className="font-medium text-sm">Action Required</p>
+                          <p className="text-xs opacity-90">
+                            Review the customer's feedback and update the quote accordingly.
+                            Update the quote status when you've made the necessary changes.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

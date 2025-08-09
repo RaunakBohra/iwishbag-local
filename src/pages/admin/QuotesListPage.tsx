@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, RefreshCw, Clock, AlertTriangle, Zap, Edit, MessageCircle, CheckCircle, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBatchProcessing } from '@/hooks/useBatchProcessing';
@@ -255,220 +254,94 @@ const QuotesListPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="priority" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="priority">Priority View</TabsTrigger>
-            <TabsTrigger value="all">All Quotes</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="priority" className="space-y-4">
-            {/* Review Requests - Highest Priority */}
-            {quoteGroups.reviewRequests.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-red-900">🚨 Review Requests</CardTitle>
-                      <p className="text-sm text-red-700">Customer feedback requires immediate attention</p>
-                    </div>
-                    <Badge variant="destructive" className="text-lg px-3 py-1">
-                      {quoteGroups.reviewRequests.length}
-                    </Badge>
+        <div className="space-y-6">
+          {/* Review Requests Section - Always at top when they exist */}
+          {quoteGroups.reviewRequests.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {quoteGroups.reviewRequests.map((quote) => (
-                      <div key={quote.id} className="relative">
-                        {/* Urgency indicator */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                          quote.review_request_data?.urgency === 'high' ? 'bg-red-500' :
-                          quote.review_request_data?.urgency === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'
-                        }`} />
-                        <div className="pl-4">
-                          <CompactQuoteListItem
-                            quote={quote}
-                            onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                          />
-                          {/* Review request summary */}
-                          <div className="px-4 pb-3 bg-amber-50 border-t">
-                            <div className="flex items-center gap-4 text-sm">
-                              <Badge className={`${
-                                quote.review_request_data?.urgency === 'high' ? 'bg-red-100 text-red-700' :
-                                quote.review_request_data?.urgency === 'medium' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {quote.review_request_data?.urgency?.toUpperCase()} PRIORITY
-                              </Badge>
-                              <span className="text-gray-600">
-                                {quote.review_request_data?.category?.replace('_', ' ')?.toUpperCase()}
-                              </span>
-                              <span className="text-gray-500">
-                                {quote.review_requested_at && 
-                                  `${Math.round((Date.now() - new Date(quote.review_requested_at).getTime()) / (1000 * 60 * 60))}h ago`
-                                }
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                              {quote.review_request_data?.description}
-                            </p>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg text-amber-900">🚨 Review Requests</CardTitle>
+                    <p className="text-sm text-amber-700">Customer feedback requires immediate attention</p>
+                  </div>
+                  <Badge className="bg-amber-600 text-white text-lg px-3 py-1">
+                    {quoteGroups.reviewRequests.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-amber-200">
+                  {quoteGroups.reviewRequests.map((quote) => (
+                    <div key={quote.id} className="relative">
+                      {/* Urgency indicator */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                        quote.review_request_data?.urgency === 'high' ? 'bg-red-500' :
+                        quote.review_request_data?.urgency === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'
+                      }`} />
+                      <div className="pl-4">
+                        <CompactQuoteListItem
+                          quote={quote}
+                          onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
+                        />
+                        {/* Review request summary */}
+                        <div className="px-4 pb-3 bg-white border-t border-amber-200">
+                          <div className="flex items-center gap-4 text-sm">
+                            <Badge className={`${
+                              quote.review_request_data?.urgency === 'high' ? 'bg-red-100 text-red-700' :
+                              quote.review_request_data?.urgency === 'medium' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {quote.review_request_data?.urgency?.toUpperCase()} PRIORITY
+                            </Badge>
+                            <span className="text-gray-600">
+                              {quote.review_request_data?.category?.replace('_', ' ')?.toUpperCase()}
+                            </span>
+                            <span className="text-gray-500">
+                              {quote.review_requested_at && 
+                                `${Math.round((Date.now() - new Date(quote.review_requested_at).getTime()) / (1000 * 60 * 60))}h ago`
+                              }
+                            </span>
                           </div>
+                          <p className="text-sm text-gray-700 mt-1 line-clamp-2">
+                            {quote.review_request_data?.description}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Awaiting Customer Response */}
-            {quoteGroups.awaitingCustomer.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Clock className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-blue-900">📤 Awaiting Customer Response</CardTitle>
-                      <p className="text-sm text-blue-700">Quotes sent and waiting for customer action</p>
-                    </div>
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
-                      {quoteGroups.awaitingCustomer.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {quoteGroups.awaitingCustomer.map((quote) => (
-                      <CompactQuoteListItem
-                        key={quote.id}
-                        quote={quote}
-                        onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Ready to Process */}
-            {quoteGroups.readyToProcess.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-green-900">✅ Ready to Process</CardTitle>
-                      <p className="text-sm text-green-700">Approved quotes ready for cart/checkout</p>
-                    </div>
-                    <Badge className="bg-green-100 text-green-700 text-lg px-3 py-1">
-                      {quoteGroups.readyToProcess.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {quoteGroups.readyToProcess.map((quote) => (
-                      <CompactQuoteListItem
-                        key={quote.id}
-                        quote={quote}
-                        onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* In Progress */}
-            {quoteGroups.inProgress.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <Package className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-gray-900">🔄 In Progress</CardTitle>
-                      <p className="text-sm text-gray-700">Drafts and pending internal processing</p>
-                    </div>
-                    <Badge variant="outline" className="text-lg px-3 py-1">
-                      {quoteGroups.inProgress.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {quoteGroups.inProgress.map((quote) => (
-                      <CompactQuoteListItem
-                        key={quote.id}
-                        quote={quote}
-                        onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Completed/Archived - Collapsed by default */}
-            {quoteGroups.completed.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <Package className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-gray-900">📁 Completed & Archived</CardTitle>
-                      <p className="text-sm text-gray-700">Finished quotes and historical records</p>
-                    </div>
-                    <Badge variant="outline" className="text-lg px-3 py-1">
-                      {quoteGroups.completed.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y max-h-96 overflow-y-auto">
-                    {quoteGroups.completed.slice(0, 20).map((quote) => (
-                      <CompactQuoteListItem
-                        key={quote.id}
-                        quote={quote}
-                        onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                      />
-                    ))}
-                    {quoteGroups.completed.length > 20 && (
-                      <div className="p-4 text-center text-gray-500">
-                        ... and {quoteGroups.completed.length - 20} more
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="all">
-            <Card className="w-full">
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {prioritizedQuotes.map((quote) => (
-                    <CompactQuoteListItem
-                      key={quote.id}
-                      quote={quote}
-                      onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                    />
                   ))}
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          )}
+
+          {/* All Quotes Section */}
+          <Card className="w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">All Quotes</CardTitle>
+                  <p className="text-sm text-gray-600">Complete list of quotes sorted by priority</p>
+                </div>
+                <Badge variant="outline" className="text-lg px-3 py-1">
+                  {safeQuotes.length} Total
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {prioritizedQuotes.map((quote) => (
+                  <CompactQuoteListItem
+                    key={quote.id}
+                    quote={quote}
+                    onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Batch Processing Modal */}
