@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { SmartSavingsWidget } from '@/components/quotes-v2/SmartSavingsWidget';
-import { AdminDiscountControls } from '@/components/quotes-v2/AdminDiscountControls';
+import { AdminDiscountControls } from '@/components/admin/discount/AdminDiscountControls';
 import { getDiscountService } from '@/services/unified/DiscountService';
 
 /**

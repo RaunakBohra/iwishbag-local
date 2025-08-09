@@ -8,7 +8,16 @@ interface QueryProviderProps {
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
-  const [queryClient] = useState(() => createQueryClient());
+  const [queryClient] = useState(() => {
+    const client = createQueryClient();
+    
+    // Expose query client globally for smart invalidation
+    if (typeof window !== 'undefined') {
+      (window as any).__REACT_QUERY_CLIENT__ = client;
+    }
+    
+    return client;
+  });
 
   return (
     <QueryClientProvider client={queryClient}>

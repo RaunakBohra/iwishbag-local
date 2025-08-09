@@ -87,6 +87,7 @@ const OrderDetailPage = React.lazy(() => import('@/pages/admin/OrderDetailPage')
 const AutomationManagementPage = React.lazy(() => import('@/pages/admin/AutomationManagementPage'));
 const RevisionManagementPage = React.lazy(() => import('@/pages/admin/RevisionManagementPage'));
 const ExceptionManagementPage = React.lazy(() => import('@/pages/admin/ExceptionManagementPage'));
+const QualityControlPage = React.lazy(() => import('@/pages/admin/QualityControlPage'));
 const CountrySettings = React.lazy(() => import('@/components/admin/CountrySettings'));
 const BankAccountSettings = React.lazy(() => import('@/components/admin/BankAccountSettings'));
 const SystemSettings = React.lazy(() => import('@/components/admin/SystemSettings'));
@@ -222,6 +223,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <ExceptionManagementPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'quality-control',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <QualityControlPage />
               </ErrorBoundary>
             ),
           },

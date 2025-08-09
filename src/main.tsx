@@ -68,4 +68,20 @@ import('./utils/criticalPathOptimization').then(({ criticalPathOptimizer }) => {
   logger.info('Critical path optimizer initialized');
 });
 
+// Initialize service worker for advanced caching and offline support
+import('./utils/serviceWorkerManager').then(({ serviceWorkerManager }) => {
+  serviceWorkerManager.initialize().then((success) => {
+    if (success) {
+      logger.info('🚀 Service Worker activated - offline support enabled');
+    } else {
+      logger.warn('⚠️ Service Worker initialization failed - limited offline support');
+    }
+  });
+});
+
+// Initialize advanced resource preloading
+import('./utils/resourcePreloader').then(({ resourcePreloader }) => {
+  logger.info('⚡ Resource preloader initialized - intelligent prefetching active');
+});
+
 createRoot(document.getElementById('root')!).render(<App />);

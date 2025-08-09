@@ -26,10 +26,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-import { ContactInformationSection } from '@/components/request-quote/ContactInformationSection';
-import { MultipleProductsSection } from '@/components/request-quote/MultipleProductsSection';
-import { DeliveryAddressSection } from '@/components/request-quote/DeliveryAddressSection';
-import { QuoteSuccessPage } from '@/components/request-quote/QuoteSuccessPage';
+import { ContactInformationSection } from '@/components/forms/quote-request/ContactInformationSection';
+import { MultipleProductsSection } from '@/components/forms/quote-request/MultipleProductsSection';
+import { DeliveryAddressSection } from '@/components/forms/quote-request/DeliveryAddressSection';
+import { QuoteSuccessPage } from '@/components/forms/quote-request/QuoteSuccessPage';
 
 // Form validation schema
 const requestQuoteSchema = z.object({

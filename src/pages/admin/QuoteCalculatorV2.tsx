@@ -61,7 +61,7 @@ import { DiscountEligibilityNotification } from '@/components/quotes-v2/Discount
 import { DiscountPreviewPanel } from '@/components/quotes-v2/DiscountPreviewPanel';
 import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview';
 import { SmartSavingsWidget } from '@/components/quotes-v2/SmartSavingsWidget';
-import { AdminDiscountControls } from '@/components/quotes-v2/AdminDiscountControls';
+import { AdminDiscountControls } from '@/components/admin/discount/AdminDiscountControls';
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
 import { CompactHSNSearch } from '@/components/forms/quote-form-fields/CompactHSNSearch';

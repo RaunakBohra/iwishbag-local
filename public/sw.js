@@ -1,10 +1,36 @@
-// iwishBag Service Worker - Progressive Web App Features
-// Version 1.0.0 - Unified Quote System
+// iwishBag Service Worker - Advanced Network & Caching Optimization
+// Version 2.0.0 - Enhanced Performance & Offline Support
 
-const CACHE_NAME = 'iwishbag-v1.0.0';
-const STATIC_CACHE = 'iwishbag-static-v1.0.0';
-const DYNAMIC_CACHE = 'iwishbag-dynamic-v1.0.0';
-const API_CACHE = 'iwishbag-api-v1.0.0';
+const SW_VERSION = '2.0.0';
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `iwishbag-${CACHE_VERSION}`;
+const STATIC_CACHE = `iwishbag-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `iwishbag-dynamic-${CACHE_VERSION}`;
+const API_CACHE = `iwishbag-api-${CACHE_VERSION}`;
+const IMAGE_CACHE = `iwishbag-images-${CACHE_VERSION}`;
+const FONT_CACHE = `iwishbag-fonts-${CACHE_VERSION}`;
+
+// Cache configuration
+const CACHE_CONFIG = {
+  maxEntries: {
+    static: 100,
+    dynamic: 50,
+    api: 200,
+    images: 300,
+    fonts: 50,
+  },
+  maxAge: {
+    static: 30 * 24 * 60 * 60 * 1000, // 30 days
+    dynamic: 7 * 24 * 60 * 60 * 1000,  // 7 days
+    api: 60 * 60 * 1000,                // 1 hour
+    images: 30 * 24 * 60 * 60 * 1000,   // 30 days
+    fonts: 365 * 24 * 60 * 60 * 1000,   // 1 year
+  },
+  staleWhileRevalidate: {
+    enabled: true,
+    maxAge: 5 * 60 * 1000, // 5 minutes
+  },
+};
 
 // Files to cache for offline functionality
 const STATIC_ASSETS = [
@@ -83,7 +109,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - implement caching strategies
+// Fetch event - implement advanced caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -98,26 +124,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // API requests - Cache First with Network Fallback
+  // Route to appropriate caching strategy
   if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase')) {
-    event.respondWith(handleAPIRequest(request));
+    // API requests - Stale While Revalidate for better UX
+    event.respondWith(handleStaleWhileRevalidate(request, API_CACHE));
     return;
   }
   
-  // Static assets - Cache First
+  if (isImageAsset(request)) {
+    // Images - Cache First with long expiry
+    event.respondWith(handleCacheFirst(request, IMAGE_CACHE, CACHE_CONFIG.maxAge.images));
+    return;
+  }
+  
+  if (isFontAsset(request)) {
+    // Fonts - Cache First with very long expiry
+    event.respondWith(handleCacheFirst(request, FONT_CACHE, CACHE_CONFIG.maxAge.fonts));
+    return;
+  }
+  
   if (isStaticAsset(request)) {
-    event.respondWith(handleStaticAsset(request));
+    // Static JS/CSS - Cache First with hash-based invalidation
+    event.respondWith(handleCacheFirst(request, STATIC_CACHE, CACHE_CONFIG.maxAge.static));
     return;
   }
   
-  // App shell and pages - Stale While Revalidate
   if (isAppShell(request)) {
-    event.respondWith(handleAppShell(request));
+    // App shell - Network First with cache fallback
+    event.respondWith(handleNetworkFirst(request, DYNAMIC_CACHE));
     return;
   }
   
-  // Default - Network First
-  event.respondWith(handleDefault(request));
+  // Default - Network First for unknown resources
+  event.respondWith(handleNetworkFirst(request, DYNAMIC_CACHE));
 });
 
 // Background sync for offline quote submissions
@@ -188,9 +227,23 @@ self.addEventListener('notificationclick', (event) => {
 
 // Utility functions
 
+// Enhanced asset detection functions
 function isStaticAsset(request) {
   const url = new URL(request.url);
-  return url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$/);
+  return url.pathname.match(/\.(js|css)$/) || 
+         (url.origin === location.origin && url.pathname.startsWith('/assets/'));
+}
+
+function isImageAsset(request) {
+  const url = new URL(request.url);
+  return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|avif|bmp)$/i) ||
+         url.hostname.includes('cloudinary.com') ||
+         url.hostname.includes('images.');
+}
+
+function isFontAsset(request) {
+  const url = new URL(request.url);
+  return url.pathname.match(/\.(woff|woff2|ttf|otf|eot)$/i);
 }
 
 function isAppShell(request) {
@@ -200,7 +253,318 @@ function isAppShell(request) {
           url.pathname.startsWith('/dashboard') ||
           url.pathname.startsWith('/quote') ||
           url.pathname.startsWith('/track') ||
-          url.pathname.startsWith('/admin'));
+          url.pathname.startsWith('/admin') ||
+          url.pathname.startsWith('/auth') ||
+          url.pathname.startsWith('/profile'));
+}
+
+// Advanced caching strategy implementations
+
+/**
+ * Stale While Revalidate - Best for API responses
+ * Returns cached response immediately, updates cache in background
+ */
+async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CONFIG.maxAge.api) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  
+  // If we have a cached response, return it immediately
+  if (cachedResponse) {
+    // Check if response is still fresh
+    const responseDate = cachedResponse.headers.get('date');
+    const isStale = responseDate && 
+      (Date.now() - new Date(responseDate).getTime()) > maxAge;
+    
+    if (!isStale && !CACHE_CONFIG.staleWhileRevalidate.enabled) {
+      return cachedResponse;
+    }
+    
+    // Return stale response immediately, update in background
+    updateCacheInBackground(request, cacheName);
+    
+    // Add header to indicate stale response
+    const response = cachedResponse.clone();
+    response.headers.set('x-cache', 'STALE');
+    return response;
+  }
+  
+  // No cached response, try network
+  try {
+    const networkResponse = await fetchWithTimeout(request, 5000);
+    
+    if (networkResponse && networkResponse.ok) {
+      // Cache successful response
+      const responseClone = networkResponse.clone();
+      responseClone.headers.set('x-cache', 'MISS');
+      cache.put(request, responseClone);
+      
+      // Clean up old entries
+      cleanupCache(cacheName, CACHE_CONFIG.maxEntries.api);
+      
+      return networkResponse;
+    }
+    
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.error('[SW] Network request failed:', error);
+    
+    // Return cached response even if stale
+    if (cachedResponse) {
+      const response = cachedResponse.clone();
+      response.headers.set('x-cache', 'STALE-ERROR');
+      return response;
+    }
+    
+    // Return offline response for API requests
+    return createOfflineResponse(request);
+  }
+}
+
+/**
+ * Cache First - Best for static assets with long cache times
+ */
+async function handleCacheFirst(request, cacheName, maxAge) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  
+  if (cachedResponse) {
+    // Check if cached response is still valid
+    const responseDate = cachedResponse.headers.get('date');
+    const isExpired = responseDate && 
+      (Date.now() - new Date(responseDate).getTime()) > maxAge;
+    
+    if (!isExpired) {
+      const response = cachedResponse.clone();
+      response.headers.set('x-cache', 'HIT');
+      return response;
+    }
+  }
+  
+  // Try network for fresh content
+  try {
+    const networkResponse = await fetchWithTimeout(request, 10000);
+    
+    if (networkResponse && networkResponse.ok) {
+      // Cache successful response
+      const responseClone = networkResponse.clone();
+      responseClone.headers.set('x-cache', 'MISS');
+      cache.put(request, responseClone);
+      
+      // Clean up old entries
+      const maxEntries = CACHE_CONFIG.maxEntries[getCacheType(cacheName)] || 100;
+      cleanupCache(cacheName, maxEntries);
+      
+      return networkResponse;
+    }
+    
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.error('[SW] Cache first network failed:', error);
+    
+    // Return cached response even if expired
+    if (cachedResponse) {
+      const response = cachedResponse.clone();
+      response.headers.set('x-cache', 'STALE');
+      return response;
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Network First - Best for app shell and dynamic content
+ */
+async function handleNetworkFirst(request, cacheName) {
+  try {
+    const networkResponse = await fetchWithTimeout(request, 3000);
+    
+    if (networkResponse && networkResponse.ok) {
+      // Cache successful response
+      const cache = await caches.open(cacheName);
+      const responseClone = networkResponse.clone();
+      responseClone.headers.set('x-cache', 'MISS');
+      cache.put(request, responseClone);
+      
+      // Clean up old entries
+      cleanupCache(cacheName, CACHE_CONFIG.maxEntries.dynamic);
+      
+      return networkResponse;
+    }
+    
+    throw new Error('Network response not ok');
+  } catch (error) {
+    console.log('[SW] Network first failed, trying cache:', request.url);
+    
+    // Fallback to cache
+    const cache = await caches.open(cacheName);
+    const cachedResponse = await cache.match(request);
+    
+    if (cachedResponse) {
+      const response = cachedResponse.clone();
+      response.headers.set('x-cache', 'STALE');
+      return response;
+    }
+    
+    // For app shell requests, return index.html
+    if (isAppShell(request)) {
+      const appShell = await cache.match('/');
+      if (appShell) {
+        return appShell;
+      }
+    }
+    
+    return createOfflineResponse(request);
+  }
+}
+
+// Helper functions
+
+async function fetchWithTimeout(request, timeout = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(request, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+async function updateCacheInBackground(request, cacheName) {
+  try {
+    const networkResponse = await fetchWithTimeout(request, 10000);
+    
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(cacheName);
+      const responseClone = networkResponse.clone();
+      responseClone.headers.set('x-cache', 'BACKGROUND-UPDATE');
+      cache.put(request, responseClone);
+      
+      // Notify main thread of cache update
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'CACHE_UPDATED',
+            data: { url: request.url, cacheName }
+          });
+        });
+      });
+    }
+  } catch (error) {
+    console.log('[SW] Background cache update failed:', error);
+  }
+}
+
+async function cleanupCache(cacheName, maxEntries) {
+  try {
+    const cache = await caches.open(cacheName);
+    const requests = await cache.keys();
+    
+    if (requests.length <= maxEntries) {
+      return;
+    }
+    
+    // Sort by date (oldest first)
+    const requestsWithDates = await Promise.all(
+      requests.map(async (request) => {
+        const response = await cache.match(request);
+        const dateHeader = response?.headers.get('date');
+        return {
+          request,
+          date: dateHeader ? new Date(dateHeader).getTime() : 0
+        };
+      })
+    );
+    
+    requestsWithDates.sort((a, b) => a.date - b.date);
+    
+    // Delete oldest entries
+    const toDelete = requestsWithDates.slice(0, requests.length - maxEntries);
+    await Promise.all(
+      toDelete.map(({ request }) => cache.delete(request))
+    );
+    
+    console.log(`[SW] Cleaned up ${toDelete.length} old entries from ${cacheName}`);
+  } catch (error) {
+    console.error('[SW] Cache cleanup failed:', error);
+  }
+}
+
+function getCacheType(cacheName) {
+  if (cacheName.includes('static')) return 'static';
+  if (cacheName.includes('api')) return 'api';
+  if (cacheName.includes('images')) return 'images';
+  if (cacheName.includes('fonts')) return 'fonts';
+  return 'dynamic';
+}
+
+function createOfflineResponse(request) {
+  const url = new URL(request.url);
+  
+  // API requests - return structured offline response
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase')) {
+    return new Response(
+      JSON.stringify({
+        error: 'Offline',
+        message: 'This feature is not available offline',
+        offline: true,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: 503,
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-cache': 'OFFLINE'
+        }
+      }
+    );
+  }
+  
+  // HTML requests - return offline page
+  if (request.headers.get('Accept')?.includes('text/html')) {
+    return new Response(
+      `<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Offline - iwishBag</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: system-ui; text-align: center; padding: 2rem; }
+            .offline { color: #666; }
+            .retry { margin-top: 1rem; }
+            button { padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+          </style>
+        </head>
+        <body>
+          <h1>📱 You're Offline</h1>
+          <p class="offline">Please check your internet connection and try again.</p>
+          <div class="retry">
+            <button onclick="window.location.reload()">Retry</button>
+          </div>
+        </body>
+      </html>`,
+      {
+        status: 503,
+        headers: { 
+          'Content-Type': 'text/html',
+          'x-cache': 'OFFLINE'
+        }
+      }
+    );
+  }
+  
+  // Default offline response
+  return new Response('Offline', { 
+    status: 503,
+    headers: { 'x-cache': 'OFFLINE' }
+  });
 }
 
 async function handleAPIRequest(request) {

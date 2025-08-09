@@ -226,7 +226,7 @@ export const IntegratedAddonServices: React.FC<IntegratedAddonServicesProps> = (
             <Checkbox
               id={`addon-service-${service.service_key}`}
               checked={isSelected}
-              onCheckedChange={(checked) => handleServiceToggle(service.service_key, checked)}
+              onCheckedChange={(checked) => handleServiceToggle(service.service_key, checked === true)}
               className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
             

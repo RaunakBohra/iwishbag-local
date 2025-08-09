@@ -43,7 +43,7 @@ export const LazyRegionalPricingManager = createComponentLazyRoute(
 
 // Enhanced Addon Services Selector - Heavy product selection
 export const LazyEnhancedAddonServicesSelector = createComponentLazyRoute(
-  () => import('@/components/quote/EnhancedAddonServicesSelector'),
+  () => import('@/components/quotes-v2/EnhancedAddonServicesSelector'),
   'addon-services-selector'
 );
 
