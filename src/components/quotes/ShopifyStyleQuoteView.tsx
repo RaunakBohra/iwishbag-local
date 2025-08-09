@@ -78,6 +78,37 @@ const QuoteProgress = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
+// Quote visibility tiers for progressive disclosure
+const getQuoteVisibilityTier = (status: string, viewMode: 'customer' | 'shared'): 'admin-only' | 'limited' | 'full' => {
+  // Admin-only statuses: customers shouldn't see these quotes at all
+  const adminOnlyStatuses = ['draft', 'calculated', 'pending'];
+  
+  // Limited visibility: customers can see basic info but no pricing/interactions
+  const limitedStatuses = [];
+  
+  // Full access: customers can see everything and interact
+  const fullAccessStatuses = ['sent', 'approved', 'rejected', 'expired'];
+  
+  if (adminOnlyStatuses.includes(status)) return 'admin-only';
+  if (limitedStatuses.includes(status)) return 'limited';
+  if (fullAccessStatuses.includes(status)) return 'full';
+  
+  // Default to limited for unknown statuses as a safety measure
+  return 'limited';
+};
+
+const shouldShowPricing = (tier: string): boolean => {
+  return tier === 'full';
+};
+
+const shouldShowActions = (tier: string): boolean => {
+  return tier === 'full';
+};
+
+const shouldShowInteractiveElements = (tier: string): boolean => {
+  return tier === 'full';
+};
+
 const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   viewMode
 }) => {
@@ -598,7 +629,46 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   const items = quote.items || [];
   const breakdown = quote.calculation_data?.breakdown || {};
   const daysLeft = getDaysUntilExpiry();
-  const currentStep = quote.status === 'approved' ? 4 : 3;
+  const getCurrentStep = (status: string): number => {
+    switch (status) {
+      case 'approved': return 4; // In Cart
+      case 'sent': return 3; // Awaiting Approval
+      case 'rejected': return 3; // Awaiting Approval (can be re-approved)
+      case 'expired': return 3; // Awaiting Approval (can be re-approved)
+      case 'calculated': return 2; // Calculated
+      case 'pending': return 1; // Requested
+      default: return 3; // Default to Awaiting Approval
+    }
+  };
+  
+  const currentStep = getCurrentStep(quote.status);
+  
+  // Determine visibility tier for progressive disclosure
+  const visibilityTier = getQuoteVisibilityTier(quote.status, viewMode);
+  
+  // Check if customer should have access to this quote at all
+  if (viewMode === 'customer' && visibilityTier === 'admin-only') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="max-w-md mx-4">
+          <CardContent className="pt-6 text-center">
+            <OptimizedIcon name="Clock" className="w-12 h-12 mx-auto text-blue-500 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Quote Being Prepared</h2>
+            <p className="text-muted-foreground mb-4">
+              Our team is working on your quote and will notify you once it's ready for review.
+            </p>
+            <div className="text-sm text-muted-foreground mb-6">
+              <p>Expected timeline: 1-2 business days</p>
+              <p className="mt-2">You'll receive an email notification when your quote is ready.</p>
+            </div>
+            <Button onClick={() => navigate('/dashboard/quotes')} className="w-full">
+              Back to Quotes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -618,13 +688,22 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <h1 className="text-3xl font-bold">Your Quote is Ready</h1>
+            {visibilityTier === 'limited' ? (
+              <h1 className="text-3xl font-bold">Quote Received</h1>
+            ) : (
+              <h1 className="text-3xl font-bold">Your Quote is Ready</h1>
+            )}
             <QuoteStatusBadge status={quote.status} />
           </div>
           <p className="text-muted-foreground">
-            {quote.status === 'approved' ? 'Your quote has been approved! Add it to cart to continue.' :
-             quote.status === 'rejected' ? 'This quote was rejected. You can approve it or ask questions below.' :
-             'Review your quote and take an action below'}
+            {visibilityTier === 'limited' 
+              ? 'We\'ve sent you a quote! Our team is currently reviewing the final details and pricing. You\'ll be notified once it\'s ready for your approval.'
+              : quote.status === 'approved' 
+                ? 'Your quote has been approved! Add it to cart to continue.'
+                : quote.status === 'rejected' 
+                  ? 'This quote was rejected. You can approve it or ask questions below.'
+                  : 'Review your quote and take an action below'
+            }
           </p>
         </div>
 
@@ -661,7 +740,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           displayCurrency={displayCurrency}
         />
         
-        
+        {/* Mobile Breakdown - Only show for full access */}
+        {shouldShowPricing(visibilityTier) && (
         <MobileBreakdown 
           quote={quote}
           breakdown={breakdown}
@@ -672,6 +752,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           onOptionsChange={setQuoteOptions}
           displayCurrency={displayCurrency}
         />
+        )}
         
         <MobileTrustSignals />
 
@@ -749,17 +830,28 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       </div>
                       <div className="text-sm text-muted-foreground">
                         <div className="space-y-1">
-                          <div>
-                            <span className="font-medium">
-                              Item costs: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-2">
-                              (in {getOriginCurrency(quote.origin_country)})
-                            </span>
-                          </div>
-                          <div className="text-blue-700 font-semibold">
-                            Total quote: {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
-                          </div>
+                          {shouldShowPricing(visibilityTier) ? (
+                            <>
+                              <div>
+                                <span className="font-medium">
+                                  Item costs: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
+                                </span>
+                                <span className="text-xs text-gray-500 ml-2">
+                                  (in {getOriginCurrency(quote.origin_country)})
+                                </span>
+                              </div>
+                              <div className="text-blue-700 font-semibold">
+                                Total quote: {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-amber-700 font-medium bg-amber-50 px-3 py-2 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <OptimizedIcon name="Clock" className="w-4 h-4" />
+                                <span>Pricing being finalized - will be available soon</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -833,14 +925,18 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <span>Qty: {item.quantity}</span>
                           <span>•</span>
                           <span>{item.weight || 0}kg</span>
-                          <span>•</span>
-                          <span className="font-medium text-gray-700">
-                            {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))} each
-                          </span>
-                          <span>•</span>
-                          <span className="font-semibold text-gray-900">
-                            Total: {formatCurrency(item.costprice_origin * item.quantity, getOriginCurrency(quote.origin_country))}
-                          </span>
+                          {shouldShowPricing(visibilityTier) && (
+                            <>
+                              <span>•</span>
+                              <span className="font-medium text-gray-700">
+                                {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))} each
+                              </span>
+                              <span>•</span>
+                              <span className="font-semibold text-gray-900">
+                                Total: {formatCurrency(item.costprice_origin * item.quantity, getOriginCurrency(quote.origin_country))}
+                              </span>
+                            </>
+                          )}
                         </div>
                         {item.customer_notes && (
                           <div className="flex items-start gap-2 mt-2 p-2 bg-blue-50 rounded-md">
@@ -859,7 +955,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               </CardContent>
             </Card>
 
-            {/* Shipping Options - Collapsible */}
+            {/* Shipping Options - Collapsible - Only show for full access */}
+            {shouldShowInteractiveElements(visibilityTier) && (
             <Card className="mb-6">
               <CardHeader 
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
@@ -1012,11 +1109,12 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               </CardContent>
               )}
             </Card>
+            )}
 
 
 
-            {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes */}
-            {(quote.status === 'pending' || quote.status === 'rejected') && quote.total_quote_origincurrency && (
+            {/* Enhanced Addon Services Selector - Only show for pending/rejected quotes with full access */}
+            {shouldShowInteractiveElements(visibilityTier) && (quote.status === 'pending' || quote.status === 'rejected') && quote.total_quote_origincurrency && (
               <EnhancedAddonServicesSelector
                 quoteId={quote.id}
                 orderValue={quote.total_quote_origincurrency}
@@ -1039,45 +1137,59 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
               <CardContent className="p-6">
                 {/* Quote Info */}
                 <div className="space-y-3 mb-6">
-                  {/* Base Quote Total */}
-                  <div className="text-lg font-semibold text-gray-900">
-                    Quote total: {(() => {
-                      if (quoteOptions.adjustedTotal > 0) {
-                        return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
-                      }
-                      if (sharedTotal?.formatted) {
-                        return sharedTotal.formatted;
-                      }
-                      if (convertedAmounts.total) {
-                        return convertedAmounts.total;
-                      }
-                      const total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
-                      const currency = displayCurrency || getBreakdownSourceCurrency(quote);
-                      return formatCurrency(total, currency);
-                    })()}
-                  </div>
-
-                  {/* Addon Services Cost */}
-                  {addonTotalCost > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Add-on services:</span>
-                      <span className="font-medium text-blue-600">
-                        +{formatCurrency(addonTotalCost, displayCurrency)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Total with Add-ons */}
-                  {addonTotalCost > 0 && (
-                    <div className="pt-2 border-t">
-                      <div className="text-xl font-bold text-green-600">
-                        Total amount: {(() => {
-                          const baseTotal = quoteOptions.adjustedTotal > 0 
-                            ? quoteOptions.adjustedTotal
-                            : quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
-                          return formatCurrency(baseTotal + addonTotalCost, displayCurrency);
+                  {shouldShowPricing(visibilityTier) ? (
+                    <>
+                      {/* Base Quote Total */}
+                      <div className="text-lg font-semibold text-gray-900">
+                        Quote total: {(() => {
+                          if (quoteOptions.adjustedTotal > 0) {
+                            return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
+                          }
+                          if (sharedTotal?.formatted) {
+                            return sharedTotal.formatted;
+                          }
+                          if (convertedAmounts.total) {
+                            return convertedAmounts.total;
+                          }
+                          const total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
+                          const currency = displayCurrency || getBreakdownSourceCurrency(quote);
+                          return formatCurrency(total, currency);
                         })()}
                       </div>
+
+                      {/* Addon Services Cost */}
+                      {addonTotalCost > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Add-on services:</span>
+                          <span className="font-medium text-blue-600">
+                            +{formatCurrency(addonTotalCost, displayCurrency)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Total with Add-ons */}
+                      {addonTotalCost > 0 && (
+                        <div className="pt-2 border-t">
+                          <div className="text-xl font-bold text-green-600">
+                            Total amount: {(() => {
+                              const baseTotal = quoteOptions.adjustedTotal > 0 
+                                ? quoteOptions.adjustedTotal
+                                : quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount || 0;
+                              return formatCurrency(baseTotal + addonTotalCost, displayCurrency);
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600" />
+                        <span className="font-medium text-blue-900">Quote In Progress</span>
+                      </div>
+                      <p className="text-sm text-blue-800">
+                        Our team is finalizing your pricing and will notify you once it's ready for review.
+                      </p>
                     </div>
                   )}
                   
@@ -1095,6 +1207,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 <Separator className="mb-6" />
 
                 {/* Actions - Dynamic buttons based on quote status and cart state */}
+                {shouldShowActions(visibilityTier) ? (
                 <div className="space-y-3">
                     {/* Primary Action Button */}
                     {quote.status === 'approved' ? (
@@ -1159,8 +1272,31 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     </div>
 
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <OptimizedIcon name="Bell" className="w-5 h-5 text-amber-600" />
+                        <span className="font-medium text-amber-900">We'll Notify You</span>
+                      </div>
+                      <p className="text-sm text-amber-800">
+                        You'll receive an email notification once your quote is ready for approval.
+                      </p>
+                    </div>
+                    
+                    {/* Limited action - only allow questions */}
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12"
+                      onClick={() => setQuestionModalOpen(true)}
+                    >
+                      <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
+                      Ask Question
+                    </Button>
+                  </div>
+                )}
 
-                  <Separator />
+                <Separator />
 
                   {/* Trust Signals */}
                   <div className="text-center text-xs text-muted-foreground">
@@ -1345,7 +1481,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       </Dialog>
 
 
-      {/* Mobile Sticky Bar */}
+      {/* Mobile Sticky Bar - Only show for full access */}
+      {shouldShowActions(visibilityTier) && (
       <MobileStickyBar 
         quote={quote}
         onApprove={() => {
@@ -1362,6 +1499,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         displayCurrency={displayCurrency}
         convertedTotal={convertedAmounts.total}
       />
+      )}
 
     </div>
   );
