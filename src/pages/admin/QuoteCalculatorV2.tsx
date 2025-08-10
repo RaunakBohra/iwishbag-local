@@ -266,6 +266,18 @@ const QuoteCalculatorV2: React.FC = () => {
   const [suggestedNCMBranches, setSuggestedNCMBranches] = useState<SmartBranchMapping[]>([]);
   const [isAutoSelected, setIsAutoSelected] = useState(false);
   const [userOverrodeNCMBranch, setUserOverrodeNCMBranch] = useState(false);
+  
+  // Visual feedback for NCM auto-selection
+  const [ncmAutoSelectionState, setNCMAutoSelectionState] = useState<{
+    isSearching: boolean;
+    suggestionsFound: number;
+    autoSelectedBranch?: string;
+    lastSearchQuery?: string;
+    searchStartTime?: number;
+  }>({ 
+    isSearching: false, 
+    suggestionsFound: 0 
+  });
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [paymentGateway, setPaymentGateway] = useState('stripe');
   const [adminNotes, setAdminNotes] = useState('');
@@ -1084,12 +1096,21 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
 
-  // Smart NCM branch mapping based on address
+  // Smart NCM branch mapping based on address with visual feedback
   const smartMapNCMBranch = async (address: any) => {
     if (!address || destinationCountry !== 'NP') {
       console.log('🧠 [Smart Mapping] Skipping - no address or not Nepal:', { address, destinationCountry });
       return;
     }
+
+    // Start visual feedback
+    const searchQuery = `${address.city || ''} ${address.state_province_region || ''}`.trim();
+    setNCMAutoSelectionState({
+      isSearching: true,
+      suggestionsFound: 0,
+      lastSearchQuery: searchQuery,
+      searchStartTime: Date.now()
+    });
 
     try {
       console.log('🧠 [Smart Mapping] Starting smart NCM branch mapping for:', {

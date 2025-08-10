@@ -44,9 +44,9 @@ SET row_security = off;
 -- Name: _realtime; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
--- CREATE SCHEMA _realtime; -- System schema
+CREATE SCHEMA _realtime;
 
--- ALTER SCHEMA _realtime OWNER TO postgres;
+ALTER SCHEMA _realtime OWNER TO postgres;
 
 --
 -- Name: pg_net; Type: EXTENSION; Schema: -; Owner: -
@@ -64,16 +64,17 @@ COMMENT ON EXTENSION pg_net IS 'Async HTTP';
 -- Name: pgbouncer; Type: SCHEMA; Schema: -; Owner: pgbouncer
 --
 
+-- CREATE SCHEMA pgbouncer; -- System schema, skipping
 
--- ALTER SCHEMA pgbouncer OWNER TO pgbouncer;
+ALTER SCHEMA pgbouncer OWNER TO pgbouncer;
 
 --
 -- Name: supabase_migrations; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
--- CREATE SCHEMA supabase_migrations; -- Already exists
+CREATE SCHEMA supabase_migrations;
 
--- ALTER SCHEMA supabase_migrations OWNER TO postgres;
+ALTER SCHEMA supabase_migrations OWNER TO postgres;
 
 --
 -- Name: pg_graphql; Type: EXTENSION; Schema: -; Owner: -
@@ -176,6 +177,11 @@ ALTER TYPE public.quote_priority OWNER TO postgres;
 -- Name: get_auth(text); Type: FUNCTION; Schema: pgbouncer; Owner: supabase_admin
 --
 
+CREATE FUNCTION pgbouncer.get_auth(p_usename text) RETURNS TABLE(username text, password text)
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $_$
+begin
+    raise debug 'PgBouncer auth request: %', p_usename;
 
     return query
     select 
