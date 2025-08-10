@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => ({
         manualChunks: mode === 'production' ? (id) => {
           if (id.includes('node_modules')) {
             // Core vendor splitting - Keep React and UI components together
-            if (id.includes('react') || id.includes('react-dom') || id.includes('@radix-ui') || id.includes('use-callback-ref')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('@radix-ui') || id.includes('use-callback-ref') || id.includes('use-sync-external-store')) {
               return 'react-vendor';
             }
             if (id.includes('recharts') || id.includes('chart') || id.includes('d3')) {

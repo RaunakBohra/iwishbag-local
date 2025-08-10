@@ -1256,14 +1256,29 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             <>
                               <div>
                                 <span className="font-medium">
-                                  Item costs: {formatAmountWithFinancialPrecision(
-                                    items.reduce((sum, item) => {
+                                  Item costs: {(() => {
+                                    const discountedSubtotal = quote.calculation_data?.calculation_steps?.discounted_items_subtotal;
+                                    const itemsSubtotal = quote.calculation_data?.calculation_steps?.items_subtotal;
+                                    const manualSum = items.reduce((sum, item) => {
                                       const costPrice = item.costprice_origin || 0;
                                       const quantity = item.quantity || 0;
                                       return sum + (costPrice * quantity);
-                                    }, 0), 
-                                    getOriginCurrency(quote.origin_country)
-                                  )}
+                                    }, 0);
+                                    
+                                    const amount = discountedSubtotal || itemsSubtotal || manualSum;
+                                    
+                                    // Debug logging to understand data source
+                                    console.log('[Item Costs Debug]', {
+                                      discountedSubtotal,
+                                      itemsSubtotal, 
+                                      manualSum,
+                                      finalAmount: amount,
+                                      source: discountedSubtotal ? 'discounted_items_subtotal' : 
+                                             itemsSubtotal ? 'items_subtotal' : 'manual_calculation'
+                                    });
+                                    
+                                    return formatAmountWithFinancialPrecision(amount, getOriginCurrency(quote.origin_country));
+                                  })()}
                                 </span>
                                 <span className="text-xs text-gray-500 ml-2">
                                   (in {getOriginCurrency(quote.origin_country)})

@@ -1,8 +1,9 @@
 // iwishBag Service Worker - Advanced Network & Caching Optimization
 // Version 2.0.0 - Enhanced Performance & Offline Support
 
-const SW_VERSION = '3.1.0';
+const SW_VERSION = '3.1.1';
 const CACHE_VERSION = 'v3.1.1-headers-fixed';
+const BUILD_TIMESTAMP = Date.now(); // Force browser to recognize new SW
 const CACHE_NAME = `iwishbag-${CACHE_VERSION}`;
 const STATIC_CACHE = `iwishbag-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `iwishbag-dynamic-${CACHE_VERSION}`;
