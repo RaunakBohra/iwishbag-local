@@ -96,15 +96,15 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
     setIsLoading(loading);
   };
 
-  // Button size configurations
+  // Button size configurations - Improved for better alignment
   const sizeConfig = {
     sm: {
-      button: 'h-8 px-3 text-sm',
-      icon: 'w-3 h-3',
-      gap: 'gap-1.5'
+      button: 'h-10 px-3 text-sm',
+      icon: 'w-4 h-4',
+      gap: 'gap-2'
     },
     md: {
-      button: 'h-10 px-4 text-sm',
+      button: 'h-12 px-4 text-sm',
       icon: 'w-4 h-4', 
       gap: 'gap-2'
     },
@@ -116,49 +116,45 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
   };
 
   const currentSize = sizeConfig[size];
-  const containerClass = stacked
-    ? `flex flex-col gap-2 w-full ${className}`
-    : `inline-flex flex-col sm:flex-row gap-2 w-full sm:w-auto ${className}`;
+  
+  // Always use flex with proper justification for consistent alignment
+  const baseButtonClasses = `${currentSize.button} ${currentSize.gap} justify-center font-medium`;
+  const containerClass = className ? className : '';
 
   // STATE 1: Loading - Check for existing tickets
   if (checkingTicket) {
     return (
-      <div className={containerClass}>
-        <Button
-          variant={variant}
-          className={`${currentSize.button} ${currentSize.gap} min-w-[120px] justify-center ${stacked ? 'w-full' : ''}`}
-          disabled={true}
-        >
-          <div className={`animate-spin rounded-full ${currentSize.icon} border-2 border-current border-t-transparent`} />
-          <span>Loading...</span>
-        </Button>
-      </div>
+      <Button
+        variant={variant}
+        className={`${baseButtonClasses} min-w-[120px] ${containerClass}`}
+        disabled={true}
+      >
+        <div className={`animate-spin rounded-full ${currentSize.icon} border-2 border-current border-t-transparent`} />
+        <span>Loading...</span>
+      </Button>
     );
   }
 
   // STATE 2: Has Existing Tickets - Show dual action buttons
   if (existingTicket) {
     return (
-      <div className={containerClass}>
-        {/* Only show View Chat when a ticket already exists */}
-        <Button
-          variant="default"
-          className={`${currentSize.button} ${currentSize.gap} bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm flex-1 sm:flex-initial min-w-[140px] justify-center ${stacked ? 'w-full' : ''}`}
-          onClick={handleViewTicket}
-        >
-          <OptimizedIcon name="MessageCircle" className={currentSize.icon} />
-          <span>View Chat</span>
-        </Button>
-      </div>
+      <Button
+        variant="default"
+        className={`${baseButtonClasses} bg-green-600 hover:bg-green-700 text-white shadow-sm min-w-[140px] ${containerClass}`}
+        onClick={handleViewTicket}
+      >
+        <OptimizedIcon name="MessageCircle" className={currentSize.icon} />
+        <span>View Chat</span>
+      </Button>
     );
   }
 
   // STATE 3: No Existing Tickets - Show contact support
   return (
-    <div className={containerClass}>
+    <>
       <Button
         variant={variant}
-        className={`${currentSize.button} ${currentSize.gap} min-w-[140px] justify-center font-medium ${stacked ? 'w-full' : ''}`}
+        className={`${baseButtonClasses} min-w-[140px] ${containerClass}`}
         onClick={() => setModalOpen(true)}
         disabled={isLoading}
       >
@@ -183,7 +179,7 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
         onSuccess={handleSuccess}
         onSubmitting={handleSubmitting}
       />
-    </div>
+    </>
   );
 };
 

@@ -1878,6 +1878,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         onApprove={() => {
           if (quote.status === 'approved' && isInCart) {
             navigate('/cart');
+          } else if (quote.status === 'approved' && !isInCart) {
+            handleAddToCart();
           } else {
             handleApprove();
           }
@@ -1887,6 +1889,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         adjustedTotal={quoteOptions.adjustedTotal}
         displayCurrency={displayCurrency}
         convertedTotal={convertedAmounts.total}
+        isInCart={isInCart}
+        onAddToCart={handleAddToCart}
+        onViewCart={() => navigate('/cart')}
       />
       )}
 
