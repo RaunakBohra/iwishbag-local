@@ -125,7 +125,6 @@
       "Bash(npx prettier:*)",
       "Bash(npx lhci:*)",
       "Bash(./fix-database-schema.sh:*)",
-      "Bash(vercel:*)",
       "Bash(for file in \"src/pages/auth/ResetPassword.tsx\" \"src/pages/PaymentFailure.tsx\" \"src/components/AddressHistory.tsx\" \"src/pages/About.tsx\" \"src/pages/auth/EmailConfirmation.tsx\")",
       "Bash(do echo \"=== $file ===\")",
       "mcp__ide__getDiagnostics",

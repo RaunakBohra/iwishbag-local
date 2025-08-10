@@ -351,7 +351,21 @@ export class SmartNCMBranchMapper {
     'ithr': 'sunsari',
     'btl': 'rupandehi',
     'bairahawa': 'rupandehi',
-    'siddharthanagar': 'rupandehi',
+    // Removed duplicates - these are already mapped above:
+    // 'siddharthanagar' -> already mapped to 'rupandehi' at line 267
+    // 'banke' -> already mapped to 'banke' at line 290
+    // 'bhaktapur' -> already mapped to 'kathmandu' at line 46
+    // 'lalitpur' -> already mapped to 'kathmandu' at line 44  
+    // 'kathmandu' -> already mapped to 'kathmandu' at line 42
+    // 'udayapur' -> already mapped to 'udayapur' at line 117
+    // 'dhankuta' -> already mapped to 'dhankuta' at line 125
+    // 'ilam' -> already mapped to 'ilam' at line 132
+    // 'panchthar' -> already mapped to 'panchthar' at line 142
+    // 'sindhuli' -> already mapped to 'sindhuli' at line 169
+    // 'mahottari' -> already mapped to 'mahottari' at line 204
+    // 'gorkha' -> already mapped to 'gorkha' at line 215
+    // 'baglung' -> already mapped to 'baglung' at line 245
+    
     'npljnj': 'banke',
     'dhngdh': 'kailali',
     'mhndrngr': 'kanchanpur',
@@ -366,7 +380,6 @@ export class SmartNCMBranchMapper {
     'parsa': 'parsa',
     'sunsari': 'sunsari',
     'rupandehi': 'rupandehi',
-    'banke': 'banke',
     'dhanusha': 'dhanusha',
     'makwanpur': 'makwanpur',
     'jhapa': 'jhapa',
@@ -374,19 +387,8 @@ export class SmartNCMBranchMapper {
     'saptari': 'saptari',
     'chitwan': 'chitwan',
     'kavrepalanchok': 'kavrepalanchok',
-    'bhaktapur': 'kathmandu',  // Route to Tinkune branch
-    'lalitpur': 'kathmandu',   // Route to Tinkune branch
-    'kathmandu': 'kathmandu',
-    'udayapur': 'udayapur',
-    'dhankuta': 'dhankuta',
-    'ilam': 'ilam',
-    'panchthar': 'panchthar',
-    'sindhuli': 'sindhuli',
-    'mahottari': 'mahottari',
-    'gorkha': 'gorkha',
     'lamjung': 'lamjung',
     'tanahu': 'tanahu',
-    'baglung': 'baglung',
     'parbat': 'parbat',
     'dang': 'dang',
     'kailali': 'kailali',

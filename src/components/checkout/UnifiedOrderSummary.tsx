@@ -20,11 +20,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
-import { convertCurrencyWithPrecision, convertAndFormatCurrency } from '@/utils/currencyConversion';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎭 The grand finale - no more currency confusion!
 
 /**
  * Helper function to get the quote total with fallback to calculation data
@@ -121,8 +121,11 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
   onAddonServicesChange
 }) => {
   const { items, getTotalValue, isLoading } = useCart();
-  const { displayCurrency } = useCartCurrency();
   const { user } = useAuth();
+  
+  // 🕺 Dancing with the same currency logic as quote page! No more confusion!
+  const firstQuote = items.length > 0 ? items[0].quote : undefined;
+  const { displayCurrency } = useQuoteCurrency(firstQuote);
 
   // State management
   const [showItemDetails, setShowItemDetails] = useState(true); // Show by default on desktop

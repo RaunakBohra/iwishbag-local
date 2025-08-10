@@ -14,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useCartCurrency } from '@/hooks/useCart';
 import { currencyService } from '@/services/CurrencyService';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🏃‍♀️ Running away from cart currency hell!
 
 interface CompactOrderItemsProps {
   items: Array<{
@@ -36,7 +36,10 @@ interface CompactOrderItemsProps {
 
 export function CompactOrderItems({ items, showDetails = false }: CompactOrderItemsProps) {
   const [isExpanded, setIsExpanded] = useState(showDetails);
-  const { displayCurrency } = useCartCurrency();
+  
+  // 🎭 The last stand - using quote currency like a civilized component!
+  const firstQuote = items.length > 0 ? items[0].quote : undefined;
+  const { displayCurrency } = useQuoteCurrency(firstQuote);
 
   const formatCheckoutAmount = (amount: number, currency: string) => {
     return currencyService.formatAmount(amount, currency);

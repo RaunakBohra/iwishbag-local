@@ -26,6 +26,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     assetsDir: 'assets',
     rollupOptions: {
+      // Ensure React is available globally to prevent import issues
+      external: [],
       output: {
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
@@ -41,15 +43,12 @@ export default defineConfig(({ mode }) => ({
         // Advanced admin bundle splitting for performance
         manualChunks: mode === 'production' ? (id) => {
           if (id.includes('node_modules')) {
-            // Core vendor splitting (stable, won't break mounting)
-            if (id.includes('react') || id.includes('react-dom')) {
+            // Core vendor splitting - Keep React and UI components together
+            if (id.includes('react') || id.includes('react-dom') || id.includes('@radix-ui') || id.includes('use-callback-ref')) {
               return 'react-vendor';
             }
             if (id.includes('recharts') || id.includes('chart') || id.includes('d3')) {
               return 'charts-vendor';
-            }
-            if (id.includes('@radix-ui')) {
-              return 'ui-vendor';
             }
             // Everything else stays in main vendor bundle
             return 'vendor';
@@ -88,5 +87,15 @@ export default defineConfig(({ mode }) => ({
   },
   esbuild: {
     drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'use-callback-ref',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu'
+    ],
   },
 }));

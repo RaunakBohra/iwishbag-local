@@ -302,63 +302,8 @@ export function useCartSync() {
   };
 }
 
-/**
- * Cart currency hook - uses customer's preferred display currency
- * 
- * FIXED: Uses the same priority logic as quote page to respect user profile preference:
- * 1. User profile preference (preferred_display_currency)
- * 2. Destination country currency (from cart items)
- * 3. USD fallback
- * 
- * This ensures cart/checkout shows currency consistently with quote page.
- */
-export function useCartCurrency() {
-  // Get the first item's quote to provide context for destination country
-  const items = useCartItems();
-  const firstQuote = items.length > 0 ? items[0].quote : undefined;
-  
-  // Use the same priority logic as quote page - NO quote.customer_currency override!
-  const { 
-    displayCurrency, 
-    formatAmountWithConversion, 
-    formatAmountSync 
-  } = useCurrency({ 
-    // Only pass country context, NOT the full quote to avoid customer_currency override
-    country: firstQuote?.destination_country 
-  });
-
-  const formatAmount = useCallback(async (amount: number, fromCurrency = 'USD') => {
-    try {
-      if (fromCurrency === displayCurrency) {
-        return currencyService.formatAmount(amount, fromCurrency);
-      }
-      // Use the same conversion logic as quote pages
-      return await formatAmountWithConversion(amount, fromCurrency);
-    } catch (error) {
-      logger.error('Failed to format amount', { amount, fromCurrency, error });
-      return formatAmountSync(amount, fromCurrency); // Better fallback
-    }
-  }, [displayCurrency, formatAmountWithConversion, formatAmountSync]);
-
-  const convertAmount = useCallback(async (amount: number, fromCurrency = 'USD') => {
-    if (fromCurrency === displayCurrency) {
-      return amount;
-    }
-    
-    try {
-      return await currencyService.convertAmount(amount, fromCurrency, displayCurrency);
-    } catch (error) {
-      logger.error('Currency conversion failed', { amount, fromCurrency, displayCurrency, error });
-      return amount; // Fallback to original amount
-    }
-  }, [displayCurrency]);
-
-  return {
-    displayCurrency,
-    formatAmount,
-    convertAmount
-  };
-}
+// REMOVED: useCartCurrency hook - replaced with quote page functions in quoteCurrencyUtils.ts
+// Cart/checkout components now use the same currency functions as quote page for consistency.
 
 /**
  * Cart analytics hook - simplified

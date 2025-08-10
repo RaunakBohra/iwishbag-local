@@ -23,8 +23,9 @@ import { Textarea } from '@/components/ui/textarea';
 // Import new unified patterns
 import { StandardLoading } from '@/components/patterns';
 
-import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎸 Rock on with quote currency!
 import { logger } from '@/utils/logger';
 import { analytics } from '@/utils/analytics';
 import { cartAbandonmentService } from '@/services/CartAbandonmentService';
@@ -68,7 +69,10 @@ const CheckoutShopify: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items, clearCart, isLoading } = useCart();
-  const { displayCurrency } = useCartCurrency();
+  
+  // 🚀 Blast off with the quote currency logic that actually works!
+  const firstQuote = items.length > 0 ? items[0].quote : undefined;
+  const { displayCurrency } = useQuoteCurrency(firstQuote);
   
   // State management
   const [error, setError] = useState<string | null>(null);

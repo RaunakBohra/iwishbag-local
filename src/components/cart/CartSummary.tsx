@@ -22,7 +22,7 @@ import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { useCart } from '@/hooks/useCart';
 import { SimpleCartSyncIndicator } from '@/components/cart/SimpleCartSyncIndicator';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { currencyService } from '@/services/CurrencyService';
@@ -30,7 +30,7 @@ import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { convertCurrencyWithPrecision } from '@/utils/currencyConversion';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎪 The circus of cart currency is over!
 
 interface CartSummaryProps {
   onCheckout?: () => void;
@@ -62,8 +62,11 @@ export const CartSummary = memo<CartSummaryProps>(({
   className = ''
 }) => {
   const { items, getTotalValue, isLoading } = useCart();
-  const { displayCurrency } = useCartCurrency();
   const { user } = useAuth();
+  
+  // 🎊 Finally! Using the same currency logic that actually works on quote page!
+  const firstQuote = items.length > 0 ? items[0].quote : undefined;
+  const { displayCurrency } = useQuoteCurrency(firstQuote);
   
   // Get sync status from original cart
   const { syncStatus } = useCart();

@@ -71,7 +71,7 @@ The following fix has been applied to resolve the 400 error:
 
 ### 1. Access Admin Interface
 ```
-https://your-app.vercel.app/admin/payment-management
+https://whyteclub.com/admin/payment-management
 ```
 
 ### 2. Verify PayPal Transactions Display

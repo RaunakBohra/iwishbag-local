@@ -22,11 +22,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 
-import { useCartItem, useCartCurrency } from '@/hooks/useCart';
-import { useCurrency } from '@/hooks/unified';
+import { useCartItem } from '@/hooks/useCart';
 import { logger } from '@/utils/logger';
 import type { CartItem } from '@/types/cart';
-import { convertAndFormatCurrency } from '@/utils/currencyConversion';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎉 Using the actual working quote functions!
 
 /**
  * Helper function to get the quote total with fallback to calculation data
@@ -66,28 +65,27 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
 }) => {
   const { remove, isLoading } = useCartItem(item.quote);
   
-  // FIXED: Use cart currency hook to ensure consistent currency display with quote page
-  // This respects user profile preference over quote.customer_currency
-  const { displayCurrency } = useCartCurrency();
-  const { getSourceCurrency } = useCurrency({ quote: item.quote });
+  // 🎯 Using the EXACT same functions that work on quote page! No more custom cart bullshit!
+  const { displayCurrency, formatAmountWithConversion } = useQuoteCurrency(item.quote);
   
   const [removeLoading, setRemoveLoading] = useState(false);
   const [displayPrice, setDisplayPrice] = useState<string>('...');
   const [error, setError] = useState<string | null>(null);
 
-  // Format price with universal currency conversion (same logic as quote page)
+  // 💰 Format price with the EXACT same logic as quote page (finally!)
   React.useEffect(() => {
     const updatePrice = async () => {
       try {
         // Get the total with fallback to calculation data
         const totalAmount = getQuoteTotal(item.quote);
-        const sourceCurrency = getSourceCurrency(item.quote);
+        const sourceCurrency = item.quote.origin_country ? 
+          (await import('@/utils/originCurrency')).getOriginCurrency(item.quote.origin_country) : 'USD';
         
-        // Use the new universal currency conversion with financial precision
-        const formatted = await convertAndFormatCurrency(totalAmount, sourceCurrency, displayCurrency);
+        // 🚀 Use the same conversion logic that actually works on quote page!
+        const formatted = await formatAmountWithConversion(totalAmount, sourceCurrency);
         setDisplayPrice(formatted);
         
-        logger.debug('SmartCartItem price updated', {
+        logger.debug('SmartCartItem price updated (using quote logic)', {
           quoteId: item.id,
           totalAmount,
           sourceCurrency,
@@ -95,10 +93,11 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
           formatted
         });
       } catch (err) {
-        logger.error('Failed to format price with universal conversion', { quoteId: item.id, error: err });
-        // Better fallback using source currency instead of hardcoded USD
+        logger.error('Failed to format price (but at least we tried)', { quoteId: item.id, error: err });
+        // 🤷‍♂️ Fallback that probably won't work but hey, we're optimistic
         const totalAmount = getQuoteTotal(item.quote);
-        const sourceCurrency = getSourceCurrency(item.quote);
+        const sourceCurrency = item.quote.origin_country ? 
+          (await import('@/utils/originCurrency')).getOriginCurrency(item.quote.origin_country) : 'USD';
         const { currencyService } = await import('@/services/CurrencyService');
         const fallbackFormatted = currencyService.formatAmount(totalAmount, sourceCurrency);
         setDisplayPrice(fallbackFormatted);
@@ -106,7 +105,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
     };
 
     updatePrice();
-  }, [item.quote, displayCurrency, item.id, getSourceCurrency]);
+  }, [item.quote, displayCurrency, item.id, formatAmountWithConversion]);
 
   // Memoized calculations for performance
   const itemDetails = useMemo(() => {

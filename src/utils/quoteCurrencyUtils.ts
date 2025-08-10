@@ -1,0 +1,152 @@
+/**
+ * Quote Currency Utils - Extracted from ShopifyStyleQuoteView
+ * 
+ * These are the EXACT same functions that work perfectly on the quote page.
+ * Using them everywhere ensures consistent currency display across the entire app.
+ * 
+ * Shopify/Amazon approach: One currency function, used everywhere.
+ */
+
+import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDestinationCurrency } from '@/utils/originCurrency';
+import { currencyService } from '@/services/CurrencyService';
+
+/**
+ * Get user profile for currency preferences
+ * EXACT same logic from quote page
+ */
+export function useUserProfile() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['user_profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+}
+
+/**
+ * Get display currency - EXACT same function from quote page
+ * Priority: User profile preference → Destination country → USD
+ * 
+ * This is the function that works perfectly on quote page!
+ */
+export function useDisplayCurrency(quote?: any) {
+  const { user } = useAuth();
+  const { data: userProfile } = useUserProfile();
+  
+  const getDisplayCurrency = useCallback(() => {
+    // For authenticated users, check profile preference first
+    if (user?.id && userProfile?.preferred_display_currency) {
+      return userProfile.preferred_display_currency;
+    }
+    // Fall back to destination country currency (customer's country)
+    if (quote?.destination_country) {
+      return getDestinationCurrency(quote.destination_country);
+    }
+    return 'USD';
+  }, [user?.id, userProfile?.preferred_display_currency, quote?.destination_country]);
+
+  return getDisplayCurrency();
+}
+
+/**
+ * Currency conversion with financial precision - EXACT same from quote page
+ */
+export const convertCurrency = async (amount: number, fromCurrency: string, toCurrency: string): Promise<number> => {
+  if (fromCurrency === toCurrency) {
+    return amount;
+  }
+  
+  try {
+    const converted = await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    // FINANCIAL PRECISION: Same as quote page
+    return Math.round(converted * 100) / 100;
+  } catch (error) {
+    console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
+    return amount;
+  }
+};
+
+/**
+ * Format amount with conversion - EXACT same logic from quote page
+ */
+export function useFormatAmountWithConversion(displayCurrency: string) {
+  const formatAmountWithConversion = useCallback(async (
+    amount: number, 
+    sourceCurrency?: string
+  ): Promise<string> => {
+    const fromCurrency = sourceCurrency || 'USD';
+    
+    if (fromCurrency === displayCurrency) {
+      return currencyService.formatAmount(amount, displayCurrency);
+    }
+    
+    try {
+      const convertedAmount = await convertCurrency(amount, fromCurrency, displayCurrency);
+      return currencyService.formatAmount(convertedAmount, displayCurrency);
+    } catch (error) {
+      console.warn('Currency formatting failed, using original:', error);
+      return currencyService.formatAmount(amount, fromCurrency);
+    }
+  }, [displayCurrency]);
+
+  return formatAmountWithConversion;
+}
+
+/**
+ * Quote price formatter - EXACT same logic from quote page
+ */
+export function useQuotePriceFormatter(quote: any, displayCurrency: string) {
+  const formatItemQuotePrice = useCallback(async (itemQuotePrice: number): Promise<string> => {
+    try {
+      const sourceCurrency = quote.origin_country ? 
+        (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
+      
+      if (sourceCurrency === displayCurrency) {
+        return currencyService.formatAmount(itemQuotePrice, displayCurrency);
+      }
+      
+      const convertedPrice = await convertCurrency(itemQuotePrice, sourceCurrency, displayCurrency);
+      return currencyService.formatAmount(convertedPrice, displayCurrency);
+    } catch (error) {
+      console.warn('Failed to convert item quote price:', error);
+      const fallbackCurrency = quote.origin_country ? 
+        (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
+      return currencyService.formatAmount(itemQuotePrice, fallbackCurrency);
+    }
+  }, [quote, displayCurrency]);
+
+  return formatItemQuotePrice;
+}
+
+/**
+ * Hook that provides all quote currency functions
+ * Use this in cart/checkout components instead of useCartCurrency
+ */
+export function useQuoteCurrency(quote?: any) {
+  const displayCurrency = useDisplayCurrency(quote);
+  const formatAmountWithConversion = useFormatAmountWithConversion(displayCurrency);
+  const formatItemQuotePrice = useQuotePriceFormatter(quote, displayCurrency);
+  
+  return {
+    displayCurrency,
+    formatAmountWithConversion,
+    formatItemQuotePrice,
+    convertCurrency
+  };
+}

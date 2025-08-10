@@ -23,9 +23,10 @@ import { SmartCartItem, SmartCartItemSkeleton } from '@/components/cart/SmartCar
 import { CartSummary } from '@/components/cart/CartSummary';
 import { CartUndoRedo } from '@/components/cart/CartUndoRedo';
 import { DeletedItemPlaceholder } from '@/components/cart/DeletedItemPlaceholder';
-import { useCart, useCartCurrency } from '@/hooks/useCart';
+import { useCart } from '@/hooks/useCart';
 import { useRecentlyDeleted } from '@/stores/cartStore';
 import { logger } from '@/utils/logger';
+import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🛒 Cart's final upgrade to quote currency!
 
 
 
