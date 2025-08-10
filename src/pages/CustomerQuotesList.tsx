@@ -18,28 +18,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getDestinationCurrency } from '@/utils/originCurrency';
-import { useCurrency } from '@/hooks/unified';
+import { useQuoteCurrency, formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
 
-// Currency display component with proper conversion
+// Currency display component with consistent financial precision like quote page
 const CurrencyDisplay = memo<{ amount: number; quote: any; fallback?: string }>(({ amount, quote, fallback }) => {
-  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote });
+  const { displayCurrency, formatAmountWithConversion } = useQuoteCurrency(quote);
   const [displayAmount, setDisplayAmount] = useState(fallback || '...');
 
   useEffect(() => {
     const updateAmount = async () => {
       try {
-        const sourceCurrency = getSourceCurrency(quote);
+        const sourceCurrency = quote.origin_country ? 
+          (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
         const formatted = await formatAmountWithConversion(amount, sourceCurrency);
         setDisplayAmount(formatted);
       } catch (error) {
         console.error('Currency conversion failed:', error);
-        const targetCurrency = quote.customer_currency || getDestinationCurrency(quote.destination_country);
-        setDisplayAmount(formatCurrency(amount, targetCurrency));
+        // Fallback to financial precision formatting
+        setDisplayAmount(formatAmountWithFinancialPrecision(amount, displayCurrency));
       }
     };
 
     updateAmount();
-  }, [amount, quote, formatAmountWithConversion, getSourceCurrency]);
+  }, [amount, quote, formatAmountWithConversion, displayCurrency]);
 
   return <span>{displayAmount}</span>;
 });

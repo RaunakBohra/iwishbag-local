@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MembershipService, type MembershipStatus, type CustomerMembership } from '@/services/MembershipService';
 import { currencyService } from '@/services/CurrencyService';
+import { formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Crown, Package, Percent, HeadphonesIcon, Zap, Calendar, TrendingUp, Gift } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
@@ -174,7 +175,7 @@ export function MembershipDashboard() {
           <CardContent className="text-center pb-8">
             <div className="mb-8">
               <p className="text-4xl font-bold text-primary mb-2">
-                {currencyService.formatAmount(
+                {formatAmountWithFinancialPrecision(
                   user?.profile?.country === 'IN' ? 4999 : 
                   user?.profile?.country === 'NP' ? 8999 : 99,
                   user?.profile?.country === 'IN' ? 'INR' : 
@@ -336,7 +337,7 @@ export function MembershipDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">
-              {currencyService.formatAmount(stats.total_savings, 'USD')}
+              {formatAmountWithFinancialPrecision(stats.total_savings, 'USD')}
             </p>
             <p className="text-sm text-muted-foreground">From Plus benefits</p>
           </CardContent>
@@ -412,7 +413,7 @@ export function MembershipDashboard() {
           <div className="space-y-4 py-4">
             <div className="text-center">
               <p className="text-3xl font-bold mb-2">
-                {currencyService.formatAmount(
+                {formatAmountWithFinancialPrecision(
                   user?.profile?.country === 'IN' ? 4999 : 
                   user?.profile?.country === 'NP' ? 8999 : 99,
                   user?.profile?.country === 'IN' ? 'INR' : 

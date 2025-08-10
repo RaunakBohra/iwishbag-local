@@ -37,6 +37,7 @@ import {
 import { unifiedUserContextService, type UnifiedUserProfile } from '@/services/UnifiedUserContextService';
 import { masterServiceOrchestrator } from '@/services/MasterServiceOrchestrator';
 import { currencyService } from '@/services/CurrencyService';
+import { formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
 import { ShippingCalculator } from '@/components/dashboard/ShippingCalculator';
 // import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
 import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
@@ -191,7 +192,7 @@ export default function UnifiedCustomerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currencyService.formatAmount(
+              {formatAmountWithFinancialPrecision(
                 userContext.customer_data.lifetime_value - userContext.customer_data.total_spent_usd,
                 userContext.preferences.currency_code
               )}
@@ -210,7 +211,7 @@ export default function UnifiedCustomerDashboard() {
           <AlertDescription>
             You have outstanding storage fees of{' '}
             <strong>
-              {currencyService.formatAmount(
+              {formatAmountWithFinancialPrecision(
                 userContext.package_forwarding.outstanding_storage_fees,
                 userContext.preferences.currency_code
               )}
@@ -473,7 +474,7 @@ function UnifiedQuotesTab({ userContext, quotes, searchQuery, activeFilter }: Ta
                     {quote.status}
                   </Badge>
                   <p className="text-sm font-semibold mt-1">
-                    {currencyService.formatAmount(quote.total_amount_usd || 0, userContext.preferences.currency_code)}
+                    {formatAmountWithFinancialPrecision(quote.total_amount_usd || 0, userContext.preferences.currency_code)}
                   </p>
                 </div>
               </div>

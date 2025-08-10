@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DiscountService, type ApplicableDiscount } from '@/services/DiscountService';
 import { MembershipService } from '@/services/MembershipService';
 import { currencyService } from '@/services/CurrencyService';
+import { formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
 import { Tag, Percent, CreditCard, Crown, AlertCircle, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -128,7 +129,7 @@ export function DiscountDisplay({
     if (discount.discount_type === 'percentage') {
       return `${discount.discount_value}% off`;
     } else {
-      return currencyService.formatAmount(discount.discount_value, currency);
+      return formatAmountWithFinancialPrecision(discount.discount_value, currency);
     }
   };
 
@@ -144,7 +145,7 @@ export function DiscountDisplay({
             <CardTitle className="text-lg">Discounts & Offers</CardTitle>
             {totalDiscount > 0 && (
               <Badge variant="success" className="text-sm">
-                Save {currencyService.formatAmount(totalDiscount, currency)}
+                Save {formatAmountWithFinancialPrecision(totalDiscount, currency)}
               </Badge>
             )}
           </div>
@@ -162,7 +163,7 @@ export function DiscountDisplay({
                     <div>
                       <p className="font-medium text-sm">{discount.description}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatDiscount(discount)} • Saves {currencyService.formatAmount(discount.discount_amount, currency)}
+                        {formatDiscount(discount)} • Saves {formatAmountWithFinancialPrecision(discount.discount_amount, currency)}
                       </p>
                     </div>
                   </div>
@@ -270,7 +271,7 @@ export function DiscountDisplay({
                   </div>
                   <div className="pl-6 space-y-1 text-sm text-muted-foreground">
                     <p>Applied to: {discount.applies_to === 'total' ? 'Order total' : 'Handling fee only'}</p>
-                    <p>Discount amount: {currencyService.formatAmount(discount.discount_amount, currency)}</p>
+                    <p>Discount amount: {formatAmountWithFinancialPrecision(discount.discount_amount, currency)}</p>
                     {discount.is_stackable && <p className="text-green-600">✓ Can be combined with other discounts</p>}
                   </div>
                 </div>
@@ -281,7 +282,7 @@ export function DiscountDisplay({
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Total Discount</span>
                 <span className="font-semibold text-green-600">
-                  -{currencyService.formatAmount(totalDiscount, currency)}
+                  -{formatAmountWithFinancialPrecision(totalDiscount, currency)}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
@@ -322,14 +323,14 @@ export function DiscountSummary({
           <div key={index} className="flex justify-between text-sm">
             <span className="text-muted-foreground">{discount.description}</span>
             <span className="text-green-600">
-              -{currencyService.formatAmount(discount.discount_amount, currency)}
+              -{formatAmountWithFinancialPrecision(discount.discount_amount, currency)}
             </span>
           </div>
         ))}
         <div className="flex justify-between font-medium pt-2 border-t">
           <span>Total Savings</span>
           <span className="text-green-600">
-            -{currencyService.formatAmount(totalDiscount, currency)}
+            -{formatAmountWithFinancialPrecision(totalDiscount, currency)}
           </span>
         </div>
       </div>
