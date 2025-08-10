@@ -7,6 +7,7 @@
 import { NCMBranch } from './NCMService';
 import { NCMBranchMappingService } from './NCMBranchMappingService';
 import { NepalAddressService, District } from './NepalAddressService';
+import { ncmLogger } from './NCMLogger';
 
 export interface AddressInput {
   city?: string;
@@ -428,32 +429,33 @@ export class SmartNCMBranchMapper {
       return null;
     }
 
-    console.log('🧠 [SmartMapper] Finding best branch match for:', address);
+    const timer = ncmLogger.startTimer('SmartMapper', 'findBestMatch');
+    ncmLogger.debug('SmartMapper', 'Finding best branch match', address);
 
     // Create cache key
     const cacheKey = this.createCacheKey(address);
     const cached = this.getFromCache(cacheKey);
     if (cached) {
-      console.log('📦 [SmartMapper] Using cached result');
+      ncmLogger.debug('SmartMapper', 'Using cached result', { cacheKey });
       return cached;
     }
 
     try {
-      console.log('📡 [SmartMapper] Fetching NCM branches...');
+      ncmLogger.debug('SmartMapper', 'Fetching NCM branches');
       const branches = await this.ncmBranchMappingService.getBranches();
       
       if (!branches) {
-        console.error('❌ [SmartMapper] getBranches() returned null/undefined');
+        ncmLogger.error('SmartMapper', 'getBranches() returned null/undefined', 'No branches data');
         return null;
       }
       
       if (branches.length === 0) {
-        console.warn('⚠️ [SmartMapper] getBranches() returned empty array');
+        ncmLogger.warn('SmartMapper', 'getBranches() returned empty array');
         return null;
       }
 
-      console.log(`🔍 [SmartMapper] Found ${branches.length} NCM branches:`);
-      console.log('🔍 [SmartMapper] Available NCM branches:', branches.map(b => ({
+      ncmLogger.info('SmartMapper', `Found ${branches.length} NCM branches`);
+      ncmLogger.debug('SmartMapper', 'Available NCM branches', branches.map(b => ({
         name: b.name,
         district: b.district,
         coveredAreas: b.coveredAreas
@@ -501,7 +503,15 @@ export class SmartNCMBranchMapper {
         return fuzzyMatch;
       }
 
-      console.log('❌ [SmartMapper] No suitable single match found');
+      // Strategy 5: Enhanced province-based geographic fallback
+      const provinceMatch = this.findProvinceBasedFallback(address, branches);
+      if (provinceMatch) {
+        console.log(`✅ [SmartMapper] Found province fallback: ${provinceMatch.branch.name} (${provinceMatch.matchReason})`);
+        this.setCache(cacheKey, provinceMatch);
+        return provinceMatch;
+      }
+
+      console.log('❌ [SmartMapper] No suitable match found even with fallbacks');
       return null;
 
     } catch (error) {
@@ -844,22 +854,121 @@ export class SmartNCMBranchMapper {
   }
 
   /**
-   * Strategy 5: Province-based fallback
+   * Strategy 5: Enhanced province-based fallback with geographic logic
    */
   private findProvinceBasedFallback(address: AddressInput, branches: NCMBranch[]): SmartBranchMapping | null {
-    // For now, return Kathmandu as fallback (most central)
-    const kathmanduBranch = branches.find(b => 
-      b.district.toLowerCase().includes('kathmandu') || 
-      b.name.toLowerCase().includes('tinkune')
-    );
+    // Province to hub mapping for better geographic accuracy
+    const provinceHubMap: Record<string, string[]> = {
+      // Province 1 (Koshi) - Eastern Nepal
+      'province 1': ['morang', 'sunsari', 'jhapa'],
+      'province no. 1': ['morang', 'sunsari', 'jhapa'],
+      'koshi': ['morang', 'sunsari', 'jhapa'],
+      'eastern': ['morang', 'sunsari', 'jhapa'],
+      
+      // Madesh Province - Southern Nepal
+      'madesh': ['parsa', 'dhanusha', 'mahottari'],
+      'province 2': ['parsa', 'dhanusha', 'mahottari'],
+      'southern': ['parsa', 'dhanusha', 'mahottari'],
+      
+      // Bagmati Province - Central Nepal
+      'bagmati': ['kathmandu', 'lalitpur', 'chitwan'],
+      'province 3': ['kathmandu', 'lalitpur', 'chitwan'],
+      'central': ['kathmandu', 'lalitpur', 'chitwan'],
+      
+      // Gandaki Province - Western Nepal
+      'gandaki': ['kaski', 'gorkha', 'lamjung'],
+      'province 4': ['kaski', 'gorkha', 'lamjung'],
+      'western': ['kaski', 'gorkha', 'lamjung'],
+      
+      // Lumbini Province - Mid-Western Nepal
+      'lumbini': ['rupandehi', 'dang', 'banke'],
+      'province 5': ['rupandehi', 'dang', 'banke'],
+      'mid-western': ['rupandehi', 'dang', 'banke'],
+      
+      // Karnali Province - Northwestern Nepal
+      'karnali': ['banke', 'dang'], // Using nearby accessible hubs
+      'province 6': ['banke', 'dang'],
+      'northwestern': ['banke', 'dang'],
+      
+      // Sudurpashchim Province - Far Western Nepal
+      'sudurpashchim': ['kailali', 'kanchanpur'],
+      'province 7': ['kailali', 'kanchanpur'],
+      'far western': ['kailali', 'kanchanpur'],
+      'far-western': ['kailali', 'kanchanpur']
+    };
 
-    if (kathmanduBranch) {
+    // First try to match based on province/region information
+    const searchTerms = [
+      address.state?.toLowerCase(),
+      address.state_province_region?.toLowerCase(),
+      // Extract potential province from address line
+      address.addressLine1?.toLowerCase(),
+      address.addressLine2?.toLowerCase()
+    ].filter(Boolean);
+
+    for (const term of searchTerms) {
+      if (!term) continue;
+      
+      for (const [province, preferredDistricts] of Object.entries(provinceHubMap)) {
+        if (term.includes(province)) {
+          // Find best available branch in preferred districts
+          for (const preferredDistrict of preferredDistricts) {
+            const branch = branches.find(b => 
+              b.district.toLowerCase() === preferredDistrict.toLowerCase()
+            );
+            
+            if (branch) {
+              return {
+                branch,
+                confidence: 'medium',
+                matchReason: `Geographic fallback to ${province} province hub (${preferredDistrict})`,
+                matchType: 'province_fallback',
+                score: 50
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Ultimate fallback: Major hubs in order of accessibility
+    const majorHubs = [
+      'kathmandu', // Capital - most connected
+      'pokhara',   // Tourist hub - well connected
+      'chitwan',   // Central location
+      'biratnagar', // Eastern hub
+      'birgunj',   // Southern hub (border)
+      'butwal',    // Western hub
+      'nepalgunj', // Mid-western hub
+      'dhangadhi'  // Far-western hub
+    ];
+
+    for (const hub of majorHubs) {
+      const hubBranch = branches.find(b => 
+        b.district.toLowerCase().includes(hub) ||
+        b.name.toLowerCase().includes(hub) ||
+        (hub === 'kathmandu' && b.name.toLowerCase().includes('tinkune'))
+      );
+
+      if (hubBranch) {
+        return {
+          branch: hubBranch,
+          confidence: 'low',
+          matchReason: `Ultimate fallback to major hub (${hub})`,
+          matchType: 'province_fallback',
+          score: 30
+        };
+      }
+    }
+
+    // Last resort: any available branch
+    if (branches.length > 0) {
       return {
-        branch: kathmanduBranch,
+        branch: branches[0],
         confidence: 'low',
-        matchReason: 'Fallback to central location (Kathmandu)',
+        matchReason: 'Emergency fallback - first available branch',
         matchType: 'province_fallback',
-        score: 30
+        score: 10
       };
     }
 

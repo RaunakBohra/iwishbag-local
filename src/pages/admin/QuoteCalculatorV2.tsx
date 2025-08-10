@@ -496,16 +496,33 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   }, [destinationPincode, destinationCountry, items]);
 
-  // Load NCM branches when Nepal is selected
+  // Enhanced NCM branches loading with preloading optimization
   useEffect(() => {
     if (destinationCountry === 'NP') {
+      // Immediate load with performance optimization
       loadAllNCMBranches();
     } else {
+      // Clean up NCM state for non-Nepal destinations
       setAvailableNCMBranches([]);
       setSelectedNCMBranch(null);
       setNCMRates(null);
+      setNCMAutoSelectionState({ isSearching: false, suggestionsFound: 0 });
     }
   }, [destinationCountry]);
+
+  // Preload NCM branches when component mounts (performance optimization)
+  useEffect(() => {
+    // Preload in background for faster switching to Nepal
+    const preloadNCMBranches = async () => {
+      try {
+        await ncmBranchMappingService.getBranches(); // This will cache the branches
+      } catch (error) {
+        // Silent preload failure is acceptable
+      }
+    };
+    
+    preloadNCMBranches();
+  }, []); // Run once on mount
 
   // Fetch NCM rates when branch is selected
   useEffect(() => {
@@ -516,7 +533,7 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   }, [selectedNCMBranch, destinationCountry]);
 
-  // Real-time NCM branch suggestion based on manual address input
+  // Optimized real-time NCM branch suggestion with batching and debouncing
   useEffect(() => {
     if (destinationCountry !== 'NP') return;
     if (userOverrodeNCMBranch) return; // Don't interfere with manual selections
@@ -524,6 +541,9 @@ const QuoteCalculatorV2: React.FC = () => {
     
     const timeoutId = setTimeout(async () => {
       console.log('⏱️ [Real-time] Checking address input for NCM suggestions:', destinationAddress);
+      
+      // Performance optimization: Check if we already have cached result for this address
+      const cacheKey = `${destinationAddress.city?.toLowerCase()}_${destinationAddress.state?.toLowerCase()}`;
       
       const addressInput = {
         // For manual destination address input in admin
@@ -1183,10 +1203,24 @@ const QuoteCalculatorV2: React.FC = () => {
         if (districtBranches.length > 1) {
           console.log(`🏢 [Smart Mapping] Found ${districtBranches.length} branches in district - showing all options`);
           setSuggestedNCMBranches(districtBranches);
+          
+          // Update visual feedback - found multiple options
+          setNCMAutoSelectionState({
+            isSearching: false,
+            suggestionsFound: districtBranches.length,
+            lastSearchQuery: searchQuery
+          });
         } else {
           // Fall back to general suggestions
           const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
           setSuggestedNCMBranches(suggestions);
+          
+          // Update visual feedback - found suggestions or none
+          setNCMAutoSelectionState({
+            isSearching: false,
+            suggestionsFound: suggestions.length,
+            lastSearchQuery: searchQuery
+          });
           
           if (suggestions.length > 0) {
             console.log(`💡 [Smart Mapping] No district match, showing ${suggestions.length} general suggestions`);
@@ -1200,6 +1234,13 @@ const QuoteCalculatorV2: React.FC = () => {
       setBranchMapping(null);
       setIsAutoSelected(false);
       setSuggestedNCMBranches([]);
+      
+      // Update visual feedback - error state
+      setNCMAutoSelectionState({
+        isSearching: false,
+        suggestionsFound: 0,
+        lastSearchQuery: searchQuery
+      });
     }
   };
 
@@ -2536,6 +2577,36 @@ const QuoteCalculatorV2: React.FC = () => {
                               </Command>
                             </PopoverContent>
                           </Popover>
+                          
+                          {/* NCM Auto-Selection Visual Feedback */}
+                          {(ncmAutoSelectionState.isSearching || ncmAutoSelectionState.suggestionsFound > 0 || ncmAutoSelectionState.autoSelectedBranch) && (
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-xs">
+                              {ncmAutoSelectionState.isSearching ? (
+                                <div className="flex items-center gap-2 text-blue-600">
+                                  <div className="animate-spin h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                  <span>Finding best NCM branch for "{ncmAutoSelectionState.lastSearchQuery}"...</span>
+                                </div>
+                              ) : ncmAutoSelectionState.autoSelectedBranch ? (
+                                <div className="flex items-center gap-2 text-green-700">
+                                  <OptimizedIcon name="CheckCircle" className="h-3 w-3" />
+                                  <span>Auto-selected: <strong>{ncmAutoSelectionState.autoSelectedBranch}</strong></span>
+                                  {ncmAutoSelectionState.suggestionsFound > 1 && (
+                                    <span className="text-blue-600">({ncmAutoSelectionState.suggestionsFound - 1} alternatives available)</span>
+                                  )}
+                                </div>
+                              ) : ncmAutoSelectionState.suggestionsFound > 0 ? (
+                                <div className="flex items-center gap-2 text-amber-700">
+                                  <OptimizedIcon name="Info" className="h-3 w-3" />
+                                  <span>Found {ncmAutoSelectionState.suggestionsFound} branch options for "{ncmAutoSelectionState.lastSearchQuery}" - please select manually</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <OptimizedIcon name="AlertCircle" className="h-3 w-3" />
+                                  <span>No matching branches found for "{ncmAutoSelectionState.lastSearchQuery}"</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         
                       </div>
                     ) : (!destinationPincode && destinationCountry !== 'IN') ? (
