@@ -1037,7 +1037,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading your quote...</p>
@@ -1048,7 +1048,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   if (!quote) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Card className="max-w-md mx-4">
           <CardContent className="pt-6 text-center">
             <OptimizedIcon name="Package" className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -1091,7 +1091,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   // Instead, we show the products they requested but hide pricing/actions
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="container max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Back Button */}
         {viewMode === 'customer' && (
@@ -1200,7 +1200,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     {/* Compact Item Images */}
                     <div className="flex gap-2">
                       {items.slice(0, 3).map((item: any, index: number) => (
-                        <div key={index} className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                        <div key={index} className="w-16 h-16 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden">
                           {item.images?.[0] ? (
                             <img 
                               src={item.images[0]} 
@@ -1215,8 +1215,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </div>
                       ))}
                       {items.length > 3 && (
-                        <div className="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center">
-                          <span className="text-xs font-medium text-gray-600">+{items.length - 3}</span>
+                        <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center">
+                          <span className="text-xs font-medium text-slate-600">+{items.length - 3}</span>
                         </div>
                       )}
                     </div>
@@ -1323,7 +1323,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 <div className="space-y-3">
                   {items.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
-                      <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
+                      <div className="w-12 h-12 bg-slate-100 rounded flex-shrink-0 overflow-hidden">
                         {item.images?.[0] ? (
                           <img 
                             src={item.images[0]} 
@@ -1729,16 +1729,26 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
                 )}
 
-                <Separator />
+                <Separator className="my-6" />
 
-                  {/* Trust Signals */}
-                  <div className="text-center text-xs text-muted-foreground">
-                    <div className="flex items-center justify-center gap-2 text-xs">
-                      <a href="/terms-conditions#shipping" className="text-teal-600 hover:underline hover:text-teal-700">Shipping Terms</a>
-                      <span>•</span>
-                      <a href="/help" className="text-teal-600 hover:underline hover:text-teal-700">FAQ</a>
-                    </div>
+                {/* Trust Signals - Shipping Terms & FAQ */}
+                <div className="text-center py-4">
+                  <div className="flex items-center justify-center gap-3 text-sm text-slate-600">
+                    <a 
+                      href="/terms-conditions#shipping" 
+                      className="text-teal-600 hover:text-teal-700 hover:underline font-medium transition-colors"
+                    >
+                      Shipping Terms
+                    </a>
+                    <span className="text-slate-400">•</span>
+                    <a 
+                      href="/help" 
+                      className="text-teal-600 hover:text-teal-700 hover:underline font-medium transition-colors"
+                    >
+                      FAQ
+                    </a>
                   </div>
+                </div>
               </CardContent>
             </Card>
           </div>
