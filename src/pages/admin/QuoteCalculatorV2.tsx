@@ -284,7 +284,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [adminNotes, setAdminNotes] = useState('');
   const [rejectionData, setRejectionData] = useState<string | null>(null);
   const [customerCurrency, setCustomerCurrency] = useState('NPR');
-  const [insuranceEnabled, setInsuranceEnabled] = useState(true); // Insurance toggle
+  const [insuranceEnabled, setInsuranceEnabled] = useState(false); // Insurance toggle (default off)
   
   // Discount state
   const [orderDiscountType, setOrderDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -453,7 +453,10 @@ const QuoteCalculatorV2: React.FC = () => {
   }, [calculationResult]);
 
   // Auto-calculate on changes (but not during initial quote loading)
-  useEffect(() => {
+  // DISABLED: Auto-calculation now only happens on manual button click
+  /* useEffect(() => {
+    // Item validation: requires both product name and positive price in origin currency
+    // This prevents calculation attempts when the form is incomplete
     const hasValidItems = items.some(item => item.name && item.unit_price_origin > 0);
     logger.debug({
       loadingQuote,
@@ -473,17 +476,36 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     } else {
-      logger.error({
-        reason: loadingQuote 
-          ? 'still loading' 
-          : !hasValidItems 
-          ? 'no valid items' 
-          : isEditMode 
-          ? 'edit mode - preserving existing calculation'
-          : 'unknown'
-      });
+      // Use debug instead of error for normal validation states
+      const reason = loadingQuote 
+        ? 'still loading' 
+        : !hasValidItems 
+        ? 'no valid items' 
+        : isEditMode 
+        ? 'edit mode - preserving existing calculation'
+        : 'unknown';
+        
+      if (reason === 'no valid items' || reason === 'still loading') {
+        logger.debug({
+          reason,
+          validationDetails: !hasValidItems ? {
+            itemsWithName: items.filter(item => item.name).length,
+            itemsWithPrice: items.filter(item => item.unit_price_origin > 0).length,
+            totalItems: items.length,
+            // Show first item details for debugging (without sensitive data)
+            sampleItem: items[0] ? {
+              hasName: !!items[0].name,
+              nameLength: items[0].name?.length || 0,
+              hasPrice: items[0].unit_price_origin > 0,
+              priceValue: items[0].unit_price_origin
+            } : null
+          } : undefined
+        });
+      } else {
+        logger.warn({ reason });
+      }
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, insuranceEnabled, loadingQuote, isEditMode]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, insuranceEnabled, loadingQuote, isEditMode]); */
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -798,8 +820,8 @@ const QuoteCalculatorV2: React.FC = () => {
         });
         setShippingMethod(quote.shipping_method || 'standard');
         
-        // Load insurance preference from database (default to true if not set)
-        setInsuranceEnabled(quote.insurance_required !== undefined ? quote.insurance_required : true);
+        // Load insurance preference from database (default to false if not set)
+        setInsuranceEnabled(quote.insurance_required !== undefined ? quote.insurance_required : false);
 
         // Map items - convert from V2 format to calculator format
         if (quote.items && Array.isArray(quote.items)) {
