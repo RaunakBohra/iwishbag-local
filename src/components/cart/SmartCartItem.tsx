@@ -25,7 +25,7 @@ import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 import { useCartItem } from '@/hooks/useCart';
 import { logger } from '@/utils/logger';
 import type { CartItem } from '@/types/cart';
-import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎉 Using the actual working quote functions!
+import { useQuoteCurrency, formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils'; // 🎉 Using the actual working quote functions!
 
 /**
  * Helper function to get the quote total with fallback to calculation data
@@ -99,7 +99,7 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
         const sourceCurrency = item.quote.origin_country ? 
           (await import('@/utils/originCurrency')).getOriginCurrency(item.quote.origin_country) : 'USD';
         const { currencyService } = await import('@/services/CurrencyService');
-        const fallbackFormatted = currencyService.formatAmount(totalAmount, sourceCurrency);
+        const fallbackFormatted = formatAmountWithFinancialPrecision(totalAmount, sourceCurrency);
         setDisplayPrice(fallbackFormatted);
       }
     };

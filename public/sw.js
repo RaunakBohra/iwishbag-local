@@ -2,7 +2,7 @@
 // Version 2.0.0 - Enhanced Performance & Offline Support
 
 const SW_VERSION = '3.1.0';
-const CACHE_VERSION = 'v3.1-performance-fixed';
+const CACHE_VERSION = 'v3.1.1-headers-fixed';
 const CACHE_NAME = `iwishbag-${CACHE_VERSION}`;
 const STATIC_CACHE = `iwishbag-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `iwishbag-dynamic-${CACHE_VERSION}`;
@@ -306,12 +306,13 @@ async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CON
     updateCacheInBackground(request, cacheName);
     
     // Add header to indicate stale response - create new response since headers are immutable
+    const headers = new Headers(cachedResponse.headers);
+    headers.set('x-cache', 'STALE');
     const response = new Response(cachedResponse.body, {
       status: cachedResponse.status,
       statusText: cachedResponse.statusText,
-      headers: new Headers(cachedResponse.headers)
+      headers: headers
     });
-    response.headers.set('x-cache', 'STALE');
     return response;
   }
   
@@ -341,12 +342,13 @@ async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CON
     
     // Return cached response even if stale
     if (cachedResponse) {
+      const headers = new Headers(cachedResponse.headers);
+      headers.set('x-cache', 'STALE-ERROR');
       const response = new Response(cachedResponse.body, {
         status: cachedResponse.status,
         statusText: cachedResponse.statusText,
-        headers: new Headers(cachedResponse.headers)
+        headers: headers
       });
-      response.headers.set('x-cache', 'STALE-ERROR');
       return response;
     }
     
@@ -370,12 +372,13 @@ async function handleCacheFirst(request, cacheName, maxAge) {
     
     if (!isExpired) {
       // Create a new response with custom headers since headers are immutable
+      const headers = new Headers(cachedResponse.headers);
+      headers.set('x-cache', 'HIT');
       const response = new Response(cachedResponse.body, {
         status: cachedResponse.status,
         statusText: cachedResponse.statusText,
-        headers: new Headers(cachedResponse.headers)
+        headers: headers
       });
-      response.headers.set('x-cache', 'HIT');
       return response;
     }
   }
@@ -407,12 +410,13 @@ async function handleCacheFirst(request, cacheName, maxAge) {
     
     // Return cached response even if expired
     if (cachedResponse) {
+      const headers = new Headers(cachedResponse.headers);
+      headers.set('x-cache', 'STALE');
       const response = new Response(cachedResponse.body, {
         status: cachedResponse.status,
         statusText: cachedResponse.statusText,
-        headers: new Headers(cachedResponse.headers)
+        headers: headers
       });
-      response.headers.set('x-cache', 'STALE');
       return response;
     }
     
@@ -453,12 +457,13 @@ async function handleNetworkFirst(request, cacheName) {
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
+      const headers = new Headers(cachedResponse.headers);
+      headers.set('x-cache', 'STALE');
       const response = new Response(cachedResponse.body, {
         status: cachedResponse.status,
         statusText: cachedResponse.statusText,
-        headers: new Headers(cachedResponse.headers)
+        headers: headers
       });
-      response.headers.set('x-cache', 'STALE');
       return response;
     }
     

@@ -83,7 +83,31 @@ export const convertCurrency = async (amount: number, fromCurrency: string, toCu
 };
 
 /**
+ * Format amount with simple financial precision (2 decimals) like quote page
+ * Avoids CurrencyService's smart rounding that can show 0 decimals for large amounts
+ */
+export const formatAmountWithFinancialPrecision = (amount: number, currencyCode: string): string => {
+  const currency = currencyService.getCurrencySymbol(currencyCode);
+  
+  // Handle null, undefined, or NaN values
+  const safeAmount = amount == null || isNaN(amount) ? 0 : amount;
+  
+  // Apply simple 2-decimal precision like quote page (no smart rounding)
+  const preciseAmount = Math.round(safeAmount * 100) / 100;
+  
+  // Format with thousands separators but keep exactly 2 decimal places
+  const formatted = preciseAmount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true
+  });
+  
+  return `${currency}${formatted}`;
+};
+
+/**
  * Format amount with conversion - EXACT same logic from quote page
+ * Uses simple 2-decimal financial precision like quote page (not smart rounding)
  */
 export function useFormatAmountWithConversion(displayCurrency: string) {
   const formatAmountWithConversion = useCallback(async (
@@ -93,15 +117,17 @@ export function useFormatAmountWithConversion(displayCurrency: string) {
     const fromCurrency = sourceCurrency || 'USD';
     
     if (fromCurrency === displayCurrency) {
-      return currencyService.formatAmount(amount, displayCurrency);
+      // Use simple financial precision formatting instead of smart rounding
+      return formatAmountWithFinancialPrecision(amount, displayCurrency);
     }
     
     try {
       const convertedAmount = await convertCurrency(amount, fromCurrency, displayCurrency);
-      return currencyService.formatAmount(convertedAmount, displayCurrency);
+      // Use simple financial precision formatting instead of smart rounding  
+      return formatAmountWithFinancialPrecision(convertedAmount, displayCurrency);
     } catch (error) {
       console.warn('Currency formatting failed, using original:', error);
-      return currencyService.formatAmount(amount, fromCurrency);
+      return formatAmountWithFinancialPrecision(amount, fromCurrency);
     }
   }, [displayCurrency]);
 
@@ -110,6 +136,7 @@ export function useFormatAmountWithConversion(displayCurrency: string) {
 
 /**
  * Quote price formatter - EXACT same logic from quote page
+ * Uses simple financial precision to match quote page display
  */
 export function useQuotePriceFormatter(quote: any, displayCurrency: string) {
   const formatItemQuotePrice = useCallback(async (itemQuotePrice: number): Promise<string> => {
@@ -118,16 +145,16 @@ export function useQuotePriceFormatter(quote: any, displayCurrency: string) {
         (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
       
       if (sourceCurrency === displayCurrency) {
-        return currencyService.formatAmount(itemQuotePrice, displayCurrency);
+        return formatAmountWithFinancialPrecision(itemQuotePrice, displayCurrency);
       }
       
       const convertedPrice = await convertCurrency(itemQuotePrice, sourceCurrency, displayCurrency);
-      return currencyService.formatAmount(convertedPrice, displayCurrency);
+      return formatAmountWithFinancialPrecision(convertedPrice, displayCurrency);
     } catch (error) {
       console.warn('Failed to convert item quote price:', error);
       const fallbackCurrency = quote.origin_country ? 
         (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
-      return currencyService.formatAmount(itemQuotePrice, fallbackCurrency);
+      return formatAmountWithFinancialPrecision(itemQuotePrice, fallbackCurrency);
     }
   }, [quote, displayCurrency]);
 

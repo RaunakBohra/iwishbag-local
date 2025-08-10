@@ -30,7 +30,7 @@ import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎪 The circus of cart currency is over!
+import { useQuoteCurrency, formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils'; // 🎪 The circus of cart currency is over!
 
 interface CartSummaryProps {
   onCheckout?: () => void;
@@ -169,27 +169,27 @@ export const CartSummary = memo<CartSummaryProps>(({
     const subtotal = Math.round(rawSubtotal * 100) / 100;
     console.log(`[CART SUMMARY] Subtotal with precision: ${rawSubtotal} → ${subtotal} ${displayCurrency}`);
     
-    const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
+    const subtotalFormatted = formatAmountWithFinancialPrecision(subtotal, displayCurrency);
     console.log(`[CART SUMMARY] Subtotal formatted: ${subtotalFormatted}`);
 
     // No shipping or tax calculations needed
     const estimatedShipping = 0;
-    const estimatedShippingFormatted = currencyService.formatAmount(0, displayCurrency);
+    const estimatedShippingFormatted = formatAmountWithFinancialPrecision(0, displayCurrency);
     
     const estimatedTax = 0;
-    const estimatedTaxFormatted = currencyService.formatAmount(0, displayCurrency);
+    const estimatedTaxFormatted = formatAmountWithFinancialPrecision(0, displayCurrency);
 
     // Use actual discount from applied coupons with precision
     const rawDiscount = totalDiscount;
     const discount = Math.round(rawDiscount * 100) / 100;
-    const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
+    const discountFormatted = formatAmountWithFinancialPrecision(discount, displayCurrency);
 
     // Total including discount with financial precision
     const rawTotal = subtotal - discount;
     const total = Math.round(rawTotal * 100) / 100;
     console.log(`[CART SUMMARY] Final total with precision: ${subtotal} - ${discount} = ${rawTotal} → ${total} ${displayCurrency}`);
     
-    const totalFormatted = currencyService.formatAmount(total, displayCurrency);
+    const totalFormatted = formatAmountWithFinancialPrecision(total, displayCurrency);
 
     const result = {
       subtotal,

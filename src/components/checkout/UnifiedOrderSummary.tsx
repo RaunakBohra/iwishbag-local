@@ -24,7 +24,7 @@ import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
-import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🎭 The grand finale - no more currency confusion!
+import { useQuoteCurrency, formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils'; // 🎭 The grand finale - no more currency confusion!
 
 /**
  * Helper function to get the quote total with fallback to calculation data
@@ -69,7 +69,7 @@ const ItemPriceDisplay: React.FC<{ quote: any; displayCurrency: string }> = ({ q
       } catch (error) {
         logger.error('Failed to format item price', { quoteId: quote.id, error });
         // Fallback to direct formatting
-        setPriceDisplay(currencyService.formatAmount(getQuoteTotal(quote), displayCurrency));
+        setPriceDisplay(formatAmountWithFinancialPrecision(getQuoteTotal(quote), displayCurrency));
       }
     };
     
@@ -212,18 +212,18 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     
     // Apply financial precision to ensure consistency with quote page
     const precisionSubtotal = Math.round(subtotal * 100) / 100;
-    const subtotalFormatted = currencyService.formatAmount(precisionSubtotal, displayCurrency);
+    const subtotalFormatted = formatAmountWithFinancialPrecision(precisionSubtotal, displayCurrency);
 
     const addons = 0; // Start with 0, will be updated separately
-    const addonsFormatted = currencyService.formatAmount(addons, displayCurrency);
+    const addonsFormatted = formatAmountWithFinancialPrecision(addons, displayCurrency);
 
     const discount = totalDiscount;
-    const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
+    const discountFormatted = formatAmountWithFinancialPrecision(discount, displayCurrency);
 
     const total = precisionSubtotal + addons - discount;
     // Apply financial precision to final total as well
     const precisionTotal = Math.round(total * 100) / 100;
-    const totalFormatted = currencyService.formatAmount(precisionTotal, displayCurrency);
+    const totalFormatted = formatAmountWithFinancialPrecision(precisionTotal, displayCurrency);
 
     logger.debug('UnifiedOrderSummary calculation with precision', {
       rawSubtotal: subtotal,
@@ -297,9 +297,9 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
       const updatedCalculations = {
         ...calculations,
         addons: precisionAddonCost,
-        addonsFormatted: currencyService.formatAmount(precisionAddonCost, displayCurrency),
+        addonsFormatted: formatAmountWithFinancialPrecision(precisionAddonCost, displayCurrency),
         total: precisionTotal,
-        totalFormatted: currencyService.formatAmount(precisionTotal, displayCurrency),
+        totalFormatted: formatAmountWithFinancialPrecision(precisionTotal, displayCurrency),
       };
       
       logger.debug('UnifiedOrderSummary addon cost updated with precision', {

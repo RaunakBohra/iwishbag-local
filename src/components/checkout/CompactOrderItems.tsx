@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { currencyService } from '@/services/CurrencyService';
-import { useQuoteCurrency } from '@/utils/quoteCurrencyUtils'; // 🏃‍♀️ Running away from cart currency hell!
+import { useQuoteCurrency, formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils'; // 🏃‍♀️ Running away from cart currency hell!
 
 interface CompactOrderItemsProps {
   items: Array<{
@@ -42,7 +42,8 @@ export function CompactOrderItems({ items, showDetails = false }: CompactOrderIt
   const { displayCurrency } = useQuoteCurrency(firstQuote);
 
   const formatCheckoutAmount = (amount: number, currency: string) => {
-    return currencyService.formatAmount(amount, currency);
+    // Use financial precision formatting to match quote page exactly
+    return formatAmountWithFinancialPrecision(amount, currency);
   };
 
   const getTotalItemsCount = (quoteItems?: Array<{ quantity?: number }>) => {
