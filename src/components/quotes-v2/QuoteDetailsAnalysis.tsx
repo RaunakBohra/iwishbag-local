@@ -80,8 +80,18 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   const weightUnit = originCountry === 'US' ? 'lb' : 'kg';
   const weightConversionFactor = originCountry === 'US' ? 2.20462 : 1;
 
+  // FINANCIAL PRECISION: Use exact formatting without additional rounding
   const formatCurrency = (amount: number, currency?: string) => {
-    return currencyService.formatAmount(amount, currency || breakdownCurrency);
+    const targetCurrency = currency || breakdownCurrency;
+    const symbol = currencyService.getCurrencySymbol(targetCurrency);
+    const decimalPlaces = currencyService.getCurrencyFormatOptions(targetCurrency).decimalPlaces;
+    
+    // Format with exact precision
+    const parts = amount.toFixed(decimalPlaces).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    
+    const formatted = parts.join('.');
+    return `${symbol}${formatted}`;
   };
   
   const displayWeight = (weightKg: number): string => {
@@ -130,7 +140,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
           breakdownCurrency, 
           destinationCurrency
         );
-        setDestinationTotal(converted);
+        // FINANCIAL PRECISION: Round after currency conversion to avoid floating point issues
+        setDestinationTotal(Math.round(converted * 100) / 100);
       } catch (error) {
         console.warn('Currency conversion failed:', error);
         // Fallback to origin amount
@@ -265,7 +276,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
       value: breakdownCurrency !== destinationCurrency 
         ? conversionLoading 
           ? `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency} / Converting...`
-          : `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency} / ${currencyService.formatAmount(destinationTotal || finalTotalOrigin, destinationCurrency)}`
+          : `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency} / ${formatCurrency(destinationTotal || finalTotalOrigin, destinationCurrency)}`
         : `${formatCurrency(finalTotalOrigin)} ${breakdownCurrency}`,
       subtitle: breakdownCurrency !== destinationCurrency ? 'Origin pricing / Customer pays' : 'Final amount',
       color: 'text-green-600'

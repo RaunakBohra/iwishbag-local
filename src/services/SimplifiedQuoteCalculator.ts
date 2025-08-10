@@ -508,12 +508,12 @@ class SimplifiedQuoteCalculator {
 
       totalChargeableWeight += chargeableWeight;
 
-      // Store weight analysis for this item
+      // Store weight analysis for this item (keep precision during calculations)
       weightAnalysisItems.push({
         item_index: itemIndex,
-        actual_weight: this.round(actualWeight),
-        volumetric_weight: volumetricWeight > 0 ? this.round(volumetricWeight) : undefined,
-        chargeable_weight: this.round(chargeableWeight),
+        actual_weight: actualWeight,
+        volumetric_weight: volumetricWeight > 0 ? volumetricWeight : undefined,
+        chargeable_weight: chargeableWeight,
         is_volumetric: isVolumetric,
         divisor_used: divisorUsed,
         dimensions: dimensionsData
@@ -903,12 +903,12 @@ class SimplifiedQuoteCalculator {
           // Store detailed conversion information for transparency
           const conversionRate = input.origin_currency === 'INR' ? 1 : (domesticDelivery / deliveryRateINR);
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: this.round(deliveryRateINR),
+            original_amount: this.roundForStorage(deliveryRateINR),
             original_currency: 'INR',
             provider: 'Delhivery',
-            conversion_rate: this.round(conversionRate, 6),
+            conversion_rate: this.roundForStorage(conversionRate),
             debug_info: `Delhivery API rate: ₹${deliveryRateINR} INR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
           
@@ -930,12 +930,12 @@ class SimplifiedQuoteCalculator {
           
           const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: this.round(baseRate),
+            original_amount: this.roundForStorage(baseRate),
             original_currency: config.currency, // Dynamic currency based on provider
             provider: `${config.provider} Fallback`,
-            conversion_rate: this.round(conversionRate, 6),
+            conversion_rate: this.roundForStorage(conversionRate),
             debug_info: `${config.provider} Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
         }
@@ -971,12 +971,12 @@ class SimplifiedQuoteCalculator {
           // Last resort: use emergency default from config service
           domesticDelivery = 10; // Emergency USD rate
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency,
-            original_amount: 10,
+            original_amount: this.roundForStorage(10),
             original_currency: 'USD',
             provider: 'Emergency Fallback',
-            conversion_rate: 1,
+            conversion_rate: this.roundForStorage(1),
             debug_info: `Emergency fallback - using default rate: $10 USD (both API and config failed)`
           };
         }
@@ -1024,12 +1024,12 @@ class SimplifiedQuoteCalculator {
           // Store detailed conversion information for transparency
           const conversionRate = input.origin_currency === 'NPR' ? 1 : (domesticDelivery / deliveryRateNPR);
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: this.round(deliveryRateNPR),
+            original_amount: this.roundForStorage(deliveryRateNPR),
             original_currency: 'NPR',
             provider: 'NCM',
-            conversion_rate: this.round(conversionRate, 6),
+            conversion_rate: this.roundForStorage(conversionRate),
             debug_info: `NCM API rate: ₨${deliveryRateNPR} NPR → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
           
@@ -1051,12 +1051,12 @@ class SimplifiedQuoteCalculator {
           
           const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency, // Admin shows origin currency
-            original_amount: this.round(baseRate),
+            original_amount: this.roundForStorage(baseRate),
             original_currency: config.currency, // Dynamic currency based on provider
             provider: `${config.provider} Fallback`,
-            conversion_rate: this.round(conversionRate, 6),
+            conversion_rate: this.roundForStorage(conversionRate),
             debug_info: `${config.provider} Fallback rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
           };
         }
@@ -1092,12 +1092,12 @@ class SimplifiedQuoteCalculator {
           // Last resort: use emergency default from config service
           domesticDelivery = 10; // Emergency USD rate
           domesticDeliveryDetails = {
-            amount: this.round(domesticDelivery),
+            amount: this.roundForStorage(domesticDelivery),
             currency: input.origin_currency,
-            original_amount: 10,
+            original_amount: this.roundForStorage(10),
             original_currency: 'USD',
             provider: 'Emergency Fallback',
-            conversion_rate: 1,
+            conversion_rate: this.roundForStorage(1),
             debug_info: `Emergency fallback - using default rate: $10 USD (both API and config failed)`
           };
         }
@@ -1118,12 +1118,12 @@ class SimplifiedQuoteCalculator {
       
       const conversionRate = input.origin_currency === config.currency ? 1 : (domesticDelivery / baseRate);
       domesticDeliveryDetails = {
-        amount: this.round(domesticDelivery),
+        amount: this.roundForStorage(domesticDelivery),
         currency: input.origin_currency, // Admin shows origin currency
-        original_amount: this.round(baseRate),
+        original_amount: this.roundForStorage(baseRate),
         original_currency: config.currency, // Dynamic currency based on provider
         provider: config.provider,
-        conversion_rate: this.round(conversionRate, 6),
+        conversion_rate: this.roundForStorage(conversionRate),
         debug_info: `${config.provider} rate: ${baseRate} ${config.currency} → ${domesticDelivery.toFixed(2)} ${input.origin_currency}`
       };
     }
@@ -1205,12 +1205,12 @@ class SimplifiedQuoteCalculator {
     // Return structured result
     return {
       inputs: {
-        items_cost: itemsTotal,
-        total_weight_kg: this.round(totalActualWeight),
-        total_volumetric_weight_kg: totalVolumetricWeight > 0 ? this.round(totalVolumetricWeight) : undefined,
-        total_chargeable_weight_kg: this.round(totalChargeableWeight),
+        items_cost: this.roundForStorage(itemsTotal),
+        total_weight_kg: this.roundForStorage(totalActualWeight),
+        total_volumetric_weight_kg: totalVolumetricWeight > 0 ? this.roundForStorage(totalVolumetricWeight) : undefined,
+        total_chargeable_weight_kg: this.roundForStorage(totalChargeableWeight),
         origin_country: input.origin_country,
-        origin_currency: input.origin_currency, // NEW: Origin currency
+        origin_currency: input.origin_currency, // Origin currency
         origin_state: input.origin_state,
         destination_country: input.destination_country,
         destination_state: input.destination_state,
@@ -1233,43 +1233,50 @@ class SimplifiedQuoteCalculator {
         hsn_items_count: itemsWithHSN.length
       },
       calculation_steps: {
-        items_subtotal: this.round(itemsTotal),
-        item_discounts: this.round(totalItemDiscounts),
-        discounted_items_subtotal: this.round(discountedItemsSubtotal),
-        order_discount_amount: this.round(orderDiscountAmount),
-        origin_sales_tax: this.round(originSalesTax),
-        shipping_cost: this.round(baseShippingCost),
-        shipping_discount_amount: this.round(shippingDiscountAmount),
-        discounted_shipping_cost: this.round(finalShippingCost),
-        insurance_amount: this.round(insuranceAmount),
-        cif_value: this.round(cifValueForCustoms),
-        customs_duty: this.round(customsDuty),
-        customs_discount_amount: this.round(customsDiscountAmount),
-        discounted_customs_duty: this.round(discountedCustomsDuty),
-        handling_fee: this.round(handlingFee),
-        handling_discount_amount: this.round(handlingDiscountAmount),
-        discounted_handling_fee: this.round(discountedHandlingFee),
-        domestic_delivery: this.round(domesticDelivery),
-        domestic_delivery_details: domesticDeliveryDetails, // NEW: Enhanced domestic delivery tracking
-        delivery_discount_amount: this.round(deliveryDiscountAmount),
-        discounted_delivery: this.round(discountedDelivery),
+        // FINANCIAL PRECISION: Round only final values for storage/display consistency
+        items_subtotal: this.roundForStorage(itemsTotal),
+        item_discounts: this.roundForStorage(totalItemDiscounts),
+        discounted_items_subtotal: this.roundForStorage(discountedItemsSubtotal),
+        order_discount_amount: this.roundForStorage(orderDiscountAmount),
+        origin_sales_tax: this.roundForStorage(originSalesTax),
+        shipping_cost: this.roundForStorage(baseShippingCost),
+        shipping_discount_amount: this.roundForStorage(shippingDiscountAmount),
+        discounted_shipping_cost: this.roundForStorage(finalShippingCost),
+        insurance_amount: this.roundForStorage(insuranceAmount),
+        cif_value: this.roundForStorage(cifValueForCustoms),
+        customs_duty: this.roundForStorage(customsDuty),
+        customs_discount_amount: this.roundForStorage(customsDiscountAmount),
+        discounted_customs_duty: this.roundForStorage(discountedCustomsDuty),
+        handling_fee: this.roundForStorage(handlingFee),
+        handling_discount_amount: this.roundForStorage(handlingDiscountAmount),
+        discounted_handling_fee: this.roundForStorage(discountedHandlingFee),
+        domestic_delivery: this.roundForStorage(domesticDelivery),
+        domestic_delivery_details: domesticDeliveryDetails, // Enhanced domestic delivery tracking
+        delivery_discount_amount: this.roundForStorage(deliveryDiscountAmount),
+        discounted_delivery: this.roundForStorage(discountedDelivery),
         delhivery_rates: delhiveryRates,
         ncm_rates: ncmRates,
-        taxable_value: this.round(taxableValue),
-        local_tax_amount: this.round(localTaxAmount),
-        tax_discount_amount: this.round(taxDiscountAmount),
-        discounted_tax_amount: this.round(discountedTaxAmount),
-        subtotal_before_gateway: this.round(subtotalBeforeGateway),
-        payment_gateway_fee: this.round(paymentGatewayFee),
-        total_origin_currency: this.round(totalOriginCurrency), // Single source of truth
-        total_savings: this.round(totalSavings),
+        taxable_value: this.roundForStorage(taxableValue),
+        local_tax_amount: this.roundForStorage(localTaxAmount),
+        tax_discount_amount: this.roundForStorage(taxDiscountAmount),
+        discounted_tax_amount: this.roundForStorage(discountedTaxAmount),
+        subtotal_before_gateway: this.roundForStorage(subtotalBeforeGateway),
+        payment_gateway_fee: this.roundForStorage(paymentGatewayFee),
+        total_origin_currency: this.roundForStorage(totalOriginCurrency), // Single source of truth - properly rounded for storage
+        total_savings: this.roundForStorage(totalSavings),
         component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined,
         weight_analysis: {
-          items: weightAnalysisItems,
+          items: weightAnalysisItems.map(item => ({
+            ...item,
+            // Round weight values for display but keep precision during calculations
+            actual_weight: this.roundForStorage(item.actual_weight),
+            volumetric_weight: item.volumetric_weight ? this.roundForStorage(item.volumetric_weight) : undefined,
+            chargeable_weight: this.roundForStorage(item.chargeable_weight)
+          })),
           totals: {
-            total_actual_weight: this.round(totalActualWeight),
-            total_volumetric_weight: this.round(totalVolumetricWeight),
-            total_chargeable_weight: this.round(totalChargeableWeight),
+            total_actual_weight: this.roundForStorage(totalActualWeight),
+            total_volumetric_weight: this.roundForStorage(totalVolumetricWeight),
+            total_chargeable_weight: this.roundForStorage(totalChargeableWeight),
             volumetric_items_count: volumetricItemsCount
           }
         }
@@ -1304,8 +1311,14 @@ class SimplifiedQuoteCalculator {
     return amountUSD * exchangeRate;
   }
 
-  private round(value: number): number {
+  // FINANCIAL PRECISION: Only round final values for storage/display
+  private roundForStorage(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  // Keep full precision during calculations  
+  private keepPrecision(value: number): number {
+    return value; // No rounding during calculations
   }
 
   // Get tax info for display

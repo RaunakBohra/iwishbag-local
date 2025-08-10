@@ -31,6 +31,23 @@ import { cartAbandonmentService } from '@/services/CartAbandonmentService';
 import { CheckoutService, AddonServiceSelection } from '@/services/CheckoutService';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Helper function to get the quote total with fallback to calculation data
+ * Fixes issue where quote fields are zero but calculation data has correct amount
+ */
+const getQuoteTotal = (quote: any): number => {
+  // First, try quote fields
+  let total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+  
+  // If quote fields are zero/null, fallback to calculation data
+  if (!total || total <= 0) {
+    total = quote.calculation_data?.calculation_steps?.total_origin_currency || 
+           quote.calculation_data?.calculation_steps?.total_quote_origincurrency;
+  }
+  
+  return total || 0;
+};
+
 // Import existing payment components
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { CompactAddressDisplay } from '@/components/checkout/CompactAddressDisplay';
@@ -100,7 +117,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
   useEffect(() => {
     if (items.length > 0) {
       // Calculate total value for analytics
-      const totalValue = items.reduce((sum, item) => sum + (item.quote.total_quote_origincurrency || 0), 0);
+      const totalValue = items.reduce((sum, item) => sum + getQuoteTotal(item.quote), 0);
       const currency = items[0]?.quote.destination_country === 'NP' ? 'NPR' : 'INR';
       
       // Track begin checkout event
@@ -113,7 +130,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
           item_name: item.quote.customer_data?.description || `Quote ${item.quote.id}`,
           category: 'quote',
           quantity: 1,
-          price: item.quote.total_quote_origincurrency || 0,
+          price: getQuoteTotal(item.quote),
         }))
       });
 
@@ -172,7 +189,7 @@ const CheckoutShopify: React.FC = React.memo(() => {
           item_name: item.quote.customer_data?.description || `Quote ${item.quote.id}`,
           category: 'quote',
           quantity: 1,
-          price: item.quote.total_quote_origincurrency || 0,
+          price: getQuoteTotal(item.quote),
         }))
       });
       

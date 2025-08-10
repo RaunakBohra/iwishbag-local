@@ -1,8 +1,8 @@
 // iwishBag Service Worker - Advanced Network & Caching Optimization
 // Version 2.0.0 - Enhanced Performance & Offline Support
 
-const SW_VERSION = '3.0.0';
-const CACHE_VERSION = 'v3-performance';
+const SW_VERSION = '3.1.0';
+const CACHE_VERSION = 'v3.1-performance-fixed';
 const CACHE_NAME = `iwishbag-${CACHE_VERSION}`;
 const STATIC_CACHE = `iwishbag-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `iwishbag-dynamic-${CACHE_VERSION}`;
@@ -74,7 +74,7 @@ const SYNC_TAGS = {
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log(`[SW] Installing service worker v${SW_VERSION} (Headers Fixed)...`);
   
   event.waitUntil(
     Promise.all([
@@ -84,7 +84,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll(STATIC_ASSETS);
       }),
       
-      // Skip waiting to activate immediately
+      // Force immediate activation to replace old SW
       self.skipWaiting()
     ])
   );
@@ -92,19 +92,19 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.log(`[SW] Activating service worker v${SW_VERSION} with fixed headers...`);
   
   event.waitUntil(
     Promise.all([
-      // Clean up old caches
+      // Aggressively clean up ALL old caches for fresh start
       caches.keys().then((cacheNames) => {
+        console.log('[SW] Found existing caches:', cacheNames);
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName.startsWith('iwishbag-') && 
-                     cacheName !== STATIC_CACHE && 
-                     cacheName !== DYNAMIC_CACHE &&
-                     cacheName !== API_CACHE;
+              // Keep only the new cache versions
+              const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE, IMAGE_CACHE, FONT_CACHE, ADMIN_CACHE];
+              return !currentCaches.includes(cacheName);
             })
             .map((cacheName) => {
               console.log('[SW] Deleting old cache:', cacheName);
@@ -113,10 +113,23 @@ self.addEventListener('activate', (event) => {
         );
       }),
       
-      // Claim all clients
+      // Force claim all clients immediately
       self.clients.claim()
     ])
-  );
+  ).then(() => {
+    console.log(`[SW] v${SW_VERSION} activated successfully! Headers issue fixed.`);
+    
+    // Notify all clients that SW has been updated
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'SW_UPDATED',
+          version: SW_VERSION,
+          message: 'Service Worker updated with header fixes!'
+        });
+      });
+    });
+  });
 });
 
 // Fetch event - implement advanced caching strategies
@@ -292,8 +305,12 @@ async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CON
     // Return stale response immediately, update in background
     updateCacheInBackground(request, cacheName);
     
-    // Add header to indicate stale response
-    const response = cachedResponse.clone();
+    // Add header to indicate stale response - create new response since headers are immutable
+    const response = new Response(cachedResponse.body, {
+      status: cachedResponse.status,
+      statusText: cachedResponse.statusText,
+      headers: new Headers(cachedResponse.headers)
+    });
     response.headers.set('x-cache', 'STALE');
     return response;
   }
@@ -304,9 +321,13 @@ async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CON
     
     if (networkResponse && networkResponse.ok) {
       // Cache successful response
-      const responseClone = networkResponse.clone();
-      responseClone.headers.set('x-cache', 'MISS');
-      cache.put(request, responseClone);
+      const responseForCache = new Response(networkResponse.body, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers: new Headers(networkResponse.headers)
+      });
+      responseForCache.headers.set('x-cache', 'MISS');
+      cache.put(request, responseForCache);
       
       // Clean up old entries
       cleanupCache(cacheName, CACHE_CONFIG.maxEntries.api);
@@ -320,7 +341,11 @@ async function handleStaleWhileRevalidate(request, cacheName, maxAge = CACHE_CON
     
     // Return cached response even if stale
     if (cachedResponse) {
-      const response = cachedResponse.clone();
+      const response = new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers: new Headers(cachedResponse.headers)
+      });
       response.headers.set('x-cache', 'STALE-ERROR');
       return response;
     }
@@ -344,7 +369,12 @@ async function handleCacheFirst(request, cacheName, maxAge) {
       (Date.now() - new Date(responseDate).getTime()) > maxAge;
     
     if (!isExpired) {
-      const response = cachedResponse.clone();
+      // Create a new response with custom headers since headers are immutable
+      const response = new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers: new Headers(cachedResponse.headers)
+      });
       response.headers.set('x-cache', 'HIT');
       return response;
     }
@@ -356,9 +386,13 @@ async function handleCacheFirst(request, cacheName, maxAge) {
     
     if (networkResponse && networkResponse.ok) {
       // Cache successful response
-      const responseClone = networkResponse.clone();
-      responseClone.headers.set('x-cache', 'MISS');
-      cache.put(request, responseClone);
+      const responseForCache = new Response(networkResponse.body, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers: new Headers(networkResponse.headers)
+      });
+      responseForCache.headers.set('x-cache', 'MISS');
+      cache.put(request, responseForCache);
       
       // Clean up old entries
       const maxEntries = CACHE_CONFIG.maxEntries[getCacheType(cacheName)] || 100;
@@ -373,7 +407,11 @@ async function handleCacheFirst(request, cacheName, maxAge) {
     
     // Return cached response even if expired
     if (cachedResponse) {
-      const response = cachedResponse.clone();
+      const response = new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers: new Headers(cachedResponse.headers)
+      });
       response.headers.set('x-cache', 'STALE');
       return response;
     }
@@ -392,9 +430,13 @@ async function handleNetworkFirst(request, cacheName) {
     if (networkResponse && networkResponse.ok) {
       // Cache successful response
       const cache = await caches.open(cacheName);
-      const responseClone = networkResponse.clone();
-      responseClone.headers.set('x-cache', 'MISS');
-      cache.put(request, responseClone);
+      const responseForCache = new Response(networkResponse.body, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers: new Headers(networkResponse.headers)
+      });
+      responseForCache.headers.set('x-cache', 'MISS');
+      cache.put(request, responseForCache);
       
       // Clean up old entries
       cleanupCache(cacheName, CACHE_CONFIG.maxEntries.dynamic);
@@ -411,7 +453,11 @@ async function handleNetworkFirst(request, cacheName) {
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      const response = cachedResponse.clone();
+      const response = new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers: new Headers(cachedResponse.headers)
+      });
       response.headers.set('x-cache', 'STALE');
       return response;
     }
@@ -452,9 +498,13 @@ async function updateCacheInBackground(request, cacheName) {
     
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(cacheName);
-      const responseClone = networkResponse.clone();
-      responseClone.headers.set('x-cache', 'BACKGROUND-UPDATE');
-      cache.put(request, responseClone);
+      const responseForCache = new Response(networkResponse.body, {
+        status: networkResponse.status,
+        statusText: networkResponse.statusText,
+        headers: new Headers(networkResponse.headers)
+      });
+      responseForCache.headers.set('x-cache', 'BACKGROUND-UPDATE');
+      cache.put(request, responseForCache);
       
       // Notify main thread of cache update
       self.clients.matchAll().then(clients => {

@@ -22,10 +22,28 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cartDesignTokens, animations } from '@/styles/cart-design-system';
 
-import { useCartItem } from '@/hooks/useCart';
+import { useCartItem, useCartCurrency } from '@/hooks/useCart';
 import { useCurrency } from '@/hooks/unified';
 import { logger } from '@/utils/logger';
 import type { CartItem } from '@/types/cart';
+import { convertAndFormatCurrency } from '@/utils/currencyConversion';
+
+/**
+ * Helper function to get the quote total with fallback to calculation data
+ * Fixes issue where quote fields are zero but calculation data has correct amount
+ */
+const getQuoteTotal = (quote: any): number => {
+  // First, try quote fields
+  let total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+  
+  // If quote fields are zero/null, fallback to calculation data
+  if (!total || total <= 0) {
+    total = quote.calculation_data?.calculation_steps?.total_origin_currency || 
+           quote.calculation_data?.calculation_steps?.total_quote_origincurrency;
+  }
+  
+  return total || 0;
+};
 
 // Removed PriceAtAddDisplay helper - no longer needed for cleaner UX
 
@@ -47,32 +65,48 @@ export const SmartCartItem = memo<SmartCartItemProps>(({
   onError
 }) => {
   const { remove, isLoading } = useCartItem(item.quote);
-  const { formatAmountWithConversion, getSourceCurrency } = useCurrency({ quote: item.quote });
+  
+  // FIXED: Use cart currency hook to ensure consistent currency display with quote page
+  // This respects user profile preference over quote.customer_currency
+  const { displayCurrency } = useCartCurrency();
+  const { getSourceCurrency } = useCurrency({ quote: item.quote });
   
   const [removeLoading, setRemoveLoading] = useState(false);
   const [displayPrice, setDisplayPrice] = useState<string>('...');
   const [error, setError] = useState<string | null>(null);
 
-  // Format price with currency conversion from origin to customer preferred currency
+  // Format price with universal currency conversion (same logic as quote page)
   React.useEffect(() => {
     const updatePrice = async () => {
       try {
-        // Get the actual origin currency for this quote
+        // Get the total with fallback to calculation data
+        const totalAmount = getQuoteTotal(item.quote);
         const sourceCurrency = getSourceCurrency(item.quote);
-        const formatted = await formatAmountWithConversion(item.quote.final_total_origincurrency, sourceCurrency);
+        
+        // Use the new universal currency conversion with financial precision
+        const formatted = await convertAndFormatCurrency(totalAmount, sourceCurrency, displayCurrency);
         setDisplayPrice(formatted);
+        
+        logger.debug('SmartCartItem price updated', {
+          quoteId: item.id,
+          totalAmount,
+          sourceCurrency,
+          displayCurrency,
+          formatted
+        });
       } catch (err) {
-        logger.error('Failed to format price', { quoteId: item.id, error: err });
+        logger.error('Failed to format price with universal conversion', { quoteId: item.id, error: err });
         // Better fallback using source currency instead of hardcoded USD
+        const totalAmount = getQuoteTotal(item.quote);
         const sourceCurrency = getSourceCurrency(item.quote);
         const { currencyService } = await import('@/services/CurrencyService');
-        const fallbackFormatted = currencyService.formatAmount(item.quote.final_total_origincurrency, sourceCurrency);
+        const fallbackFormatted = currencyService.formatAmount(totalAmount, sourceCurrency);
         setDisplayPrice(fallbackFormatted);
       }
     };
 
     updatePrice();
-  }, [item.quote.final_total_origincurrency, formatAmountWithConversion, item.id, getSourceCurrency, item.quote]);
+  }, [item.quote, displayCurrency, item.id, getSourceCurrency]);
 
   // Memoized calculations for performance
   const itemDetails = useMemo(() => {

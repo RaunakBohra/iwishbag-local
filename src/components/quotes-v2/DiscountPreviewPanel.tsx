@@ -162,8 +162,11 @@ export const DiscountPreviewPanel: React.FC<DiscountPreviewPanelProps> = ({
 
   const calculateSavings = (value: number, type: 'percentage' | 'fixed', componentValue: number): number => {
     if (type === 'percentage') {
-      return (componentValue * value) / 100;
+      // FINANCIAL PRECISION: Round after percentage calculation to avoid floating point issues
+      const calculatedSavings = (componentValue * value) / 100;
+      return Math.round(calculatedSavings * 100) / 100;
     }
+    // Fixed amount savings - no rounding needed for simple minimum
     return Math.min(value, componentValue);
   };
 
@@ -326,7 +329,7 @@ export const DiscountPreviewPanel: React.FC<DiscountPreviewPanelProps> = ({
             <TrendingUp className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
               <strong>Total Savings Opportunity:</strong> ${totalPotentialSavings.toFixed(2)} 
-              ({((totalPotentialSavings / orderTotal) * 100).toFixed(1)}% off your order)
+              ({(Math.round((totalPotentialSavings / orderTotal) * 1000) / 10).toFixed(1)}% off your order)
             </AlertDescription>
           </Alert>
         )}

@@ -62,10 +62,15 @@ export async function validateQuoteForCart(quote: Quote): Promise<CartCurrencyVa
       criticalIssues.push(`Quote blocked from cart: ${blockCheck.reason}`);
     }
 
-    // 3. Price validation
-    if (!quote.total_quote_origincurrency && !quote.final_total_origin) {
+    // 3. Price validation - check multiple sources for pricing data
+    const priceFromQuote = quote.total_quote_origincurrency || quote.final_total_origin || quote.total_origin_currency;
+    const priceFromCalculation = quote.calculation_data?.calculation_steps?.total_origin_currency || 
+                                quote.calculation_data?.calculation_steps?.total_quote_origincurrency;
+    const totalPrice = priceFromQuote || priceFromCalculation;
+
+    if (!totalPrice) {
       criticalIssues.push('Quote has no price information');
-    } else if ((quote.total_quote_origincurrency || 0) <= 0 && (quote.final_total_origin || 0) <= 0) {
+    } else if (totalPrice <= 0) {
       criticalIssues.push('Quote has invalid price (zero or negative)');
     }
 

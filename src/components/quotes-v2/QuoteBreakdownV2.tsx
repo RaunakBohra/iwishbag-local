@@ -73,9 +73,22 @@ const AdminDestinationTotal: React.FC<{
     return <p className="text-lg text-green-600">Conversion failed</p>;
   }
 
+  // FINANCIAL PRECISION: Use exact formatting like the main breakdown
+  const formatDestinationTotal = (amount: number, currencyCode: string): string => {
+    const symbol = currencyService.getCurrencySymbol(currencyCode);
+    const decimalPlaces = currencyService.getCurrencyFormatOptions(currencyCode).decimalPlaces;
+    
+    // Format with exact precision - no additional rounding
+    const parts = amount.toFixed(decimalPlaces).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    
+    const formatted = parts.join('.');
+    return `${symbol}${formatted}`;
+  };
+
   return (
     <p className="text-lg text-green-700">
-      {currencyService.formatAmount(destinationTotal, destinationCurrency)}
+      {formatDestinationTotal(destinationTotal, destinationCurrency)}
     </p>
   );
 };
@@ -98,19 +111,11 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   const breakdownCurrency = getBreakdownSourceCurrency(quote);
   
   // Helper function to format amounts in breakdown currency (now origin currency)
-  // Since values are now already proportionally rounded, we use exact formatting to avoid additional rounding
+  // FINANCIAL PRECISION: Values from calculator service are already properly rounded
   const formatBreakdownAmount = (amount: number): string => {
-    // Check if this quote has proportional rounding applied
-    const hasProportionalRounding = calc._proportional_rounding_applied || 
-                                   calc.calculation_steps?._rounding_metadata;
-    
-    if (hasProportionalRounding) {
-      // Use exact formatting to preserve the proportionally rounded values
-      return formatExactAmount(amount, breakdownCurrency);
-    } else {
-      // Legacy quotes: apply individual rounding
-      return currencyService.formatAmount(amount, breakdownCurrency);
-    }
+    // NEW: Always use exact formatting since calculator service handles precision correctly
+    // No need to check for proportional rounding flags - all values are properly rounded for storage
+    return formatExactAmount(amount, breakdownCurrency);
   };
   
   // Helper function for exact formatting without additional rounding
@@ -144,7 +149,9 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
     }
     
     try {
-      return await currencyService.convertAmount(originTotal, breakdownCurrency, destinationCurrency);
+      const convertedAmount = await currencyService.convertAmount(originTotal, breakdownCurrency, destinationCurrency);
+      // FINANCIAL PRECISION: Round after currency conversion to avoid floating point precision issues
+      return Math.round(convertedAmount * 100) / 100;
     } catch (error) {
       console.warn('Currency conversion failed, using origin amount:', error);
       return originTotal;
@@ -683,11 +690,9 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <Clock className="w-3 h-3 mr-1" />
                 <span>Calculated: {new Date(calc.calculation_timestamp).toLocaleString()}</span>
               </div>
-              {(calc._proportional_rounding_applied || calc.calculation_steps?._rounding_metadata) && (
-                <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
-                  ✓ Proportional Rounding Applied
-                </Badge>
-              )}
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300">
+                ✓ Precision Handled by Calculator Service
+              </Badge>
             </div>
             <Badge variant="outline">Version: {calc.calculation_version}</Badge>
           </div>

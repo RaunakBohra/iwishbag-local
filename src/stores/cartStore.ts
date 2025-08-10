@@ -16,6 +16,23 @@ import type {
   Quote
 } from '@/types/cart';
 
+/**
+ * Helper function to get the quote total with fallback to calculation data
+ * Fixes issue where quote fields are zero but calculation data has correct amount
+ */
+const getQuoteTotal = (quote: any): number => {
+  // First, try quote fields
+  let total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+  
+  // If quote fields are zero/null, fallback to calculation data
+  if (!total || total <= 0) {
+    total = quote.calculation_data?.calculation_steps?.total_origin_currency || 
+           quote.calculation_data?.calculation_steps?.total_quote_origincurrency;
+  }
+  
+  return total || 0;
+};
+
 // Enhanced sync status types
 export type EnhancedSyncStatus = 
   | 'offline'           // No network, using localStorage only
@@ -1154,9 +1171,8 @@ export const useCartStore = create<SimpleCartStore>()(
       const currencySummary: Record<string, number> = {};
       
       items.forEach((item) => {
-        const priceOrigin = item.quote.total_quote_origincurrency;
-        const priceFinal = item.quote.final_total_origincurrency;
-        const priceUsed = priceOrigin || priceFinal || 0;
+        // Use helper function to get correct total with calculation data fallback
+        const priceUsed = getQuoteTotal(item.quote);
         
         // Use origin country to determine currency
         const originCurrency = getOriginCurrency(item.quote.origin_country);
@@ -1189,9 +1205,8 @@ export const useCartStore = create<SimpleCartStore>()(
       const totalsByCurrency: Record<string, number> = {};
       
       items.forEach((item) => {
-        const priceOrigin = item.quote.total_quote_origincurrency;
-        const priceFinal = item.quote.final_total_origincurrency;
-        const priceUsed = priceOrigin || priceFinal || 0;
+        // Use helper function to get correct total with calculation data fallback
+        const priceUsed = getQuoteTotal(item.quote);
         
         // Use origin country to determine currency (simplified approach)
         const originCurrency = getOriginCurrency(item.quote.origin_country);

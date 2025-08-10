@@ -1353,100 +1353,9 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
-  /**
-   * Apply proportional rounding to calculation result and return both rounded values for DB storage
-   * and the rounded breakdown for consistent display
-   */
-  const applyProportionalRounding = (result: any, currency: string) => {
-    if (!result?.calculation_steps) {
-      console.warn('[ProportionalRounding] No calculation_steps found in result');
-      return result;
-    }
-
-    const steps = result.calculation_steps;
-    console.log('[ProportionalRounding] Original result:', {
-      total_origin_currency: steps.total_origin_currency,
-      total_quote_origincurrency: steps.total_quote_origincurrency,
-      steps: Object.keys(steps)
-    });
-
-    // Get the precise total that should be the target
-    const preciseTotal = steps.total_origin_currency || steps.total_quote_origincurrency || 0;
-    
-    if (preciseTotal <= 0) {
-      console.warn('[ProportionalRounding] Invalid total, skipping rounding:', preciseTotal);
-      return result;
-    }
-
-    // Define the breakdown components that should sum to the total
-    const components = [
-      { label: 'items_subtotal', amount: steps.items_subtotal || 0 },
-      { label: 'item_discounts', amount: -(steps.item_discounts || 0) },
-      { label: 'order_discount_amount', amount: -(steps.order_discount_amount || 0) },
-      { label: 'origin_sales_tax', amount: steps.origin_sales_tax || 0 },
-      { label: 'shipping_cost', amount: steps.shipping_cost || 0 },
-      { label: 'shipping_discount_amount', amount: -(steps.shipping_discount_amount || 0) },
-      { label: 'insurance_amount', amount: steps.insurance_amount || 0 },
-      { label: 'customs_duty', amount: steps.customs_duty || 0 },
-      { label: 'handling_fee', amount: steps.handling_fee || 0 },
-      { label: 'domestic_delivery', amount: steps.domestic_delivery || 0 },
-      { label: 'local_tax_amount', amount: steps.local_tax_amount || 0 },
-      { label: 'payment_gateway_fee', amount: steps.payment_gateway_fee || 0 }
-    ].filter(component => Math.abs(component.amount) > 0.001); // Only include non-zero components
-
-    console.log('[ProportionalRounding] Components for rounding:', components);
-
-    // Apply proportional rounding
-    const roundingResult = formatAmountGroup(components, preciseTotal, currency);
-    
-    // Create updated calculation steps with rounded values
-    const updatedSteps = { ...steps };
-    
-    // Update each component with its rounded value
-    roundingResult.components.forEach(component => {
-      const key = component.label;
-      if (key.includes('discount') || key.includes('item_discounts') || key.includes('order_discount_amount')) {
-        // Store discounts as positive values, they were negated for calculation
-        updatedSteps[key] = Math.abs(component.amount);
-      } else {
-        updatedSteps[key] = component.amount;
-      }
-    });
-
-    // Update totals with rounded values
-    updatedSteps.total_origin_currency = roundingResult.total.amount;
-    updatedSteps.total_quote_origincurrency = roundingResult.total.amount; // Store rounded value for backward compatibility
-    
-    // If we have customer currency conversion, apply it to the rounded total
-    if (steps.total_quote_origincurrency && steps.total_origin_currency) {
-      const conversionRate = steps.total_quote_origincurrency / steps.total_origin_currency;
-      updatedSteps.total_quote_origincurrency = roundingResult.total.amount * conversionRate;
-    }
-
-    // Add rounding metadata for audit purposes
-    updatedSteps._rounding_metadata = {
-      applied_at: new Date().toISOString(),
-      currency: currency,
-      original_total: preciseTotal,
-      rounded_total: roundingResult.total.amount,
-      adjustments_made: roundingResult.adjustments.length,
-      adjustments: roundingResult.adjustments
-    };
-
-    console.log('[ProportionalRounding] ✅ Applied proportional rounding:', {
-      original_total: preciseTotal,
-      rounded_total: roundingResult.total.amount,
-      adjustments: roundingResult.adjustments.length,
-      verification_sum: roundingResult.components.reduce((sum, c) => sum + c.amount, 0)
-    });
-
-    // Return updated result
-    return {
-      ...result,
-      calculation_steps: updatedSteps,
-      _proportional_rounding_applied: true
-    };
-  };
+  // REMOVED: applyProportionalRounding function 
+  // The calculator service now handles precision correctly with roundForStorage()
+  // No additional UI-side rounding is needed or wanted
 
   const calculateQuote = async () => {
     logger.debug({
@@ -1554,23 +1463,20 @@ const QuoteCalculatorV2: React.FC = () => {
         calculationStepsKeys: result?.calculation_steps ? Object.keys(result.calculation_steps) : null
       });
 
-      // Apply proportional rounding to ensure consistent display and database values
-      // Use origin currency derived from origin_country (this is the correct approach)
-      const originCurrency = await getCustomerCurrency(originCountry);
-      const roundedResult = applyProportionalRounding(result, originCurrency);
-      
-      setCalculationResult(roundedResult);
-      console.log('🎯 [DEBUG] State updated - calculationResult set with proportional rounding:', {
-        resultSet: !!roundedResult,
-        calculationSteps: !!roundedResult?.calculation_steps,
-        proportionalRoundingApplied: roundedResult?._proportional_rounding_applied,
+      // FINANCIAL PRECISION: Use calculator service results directly (already properly rounded)
+      // No additional rounding needed - calculator service handles precision correctly
+      setCalculationResult(result);
+      console.log('🎯 [DEBUG] State updated - calculationResult set directly from calculator service:', {
+        resultSet: !!result,
+        calculationSteps: !!result?.calculation_steps,
+        calculatorServiceHandledPrecision: true,
         stateHasResult: !!calculationResult, // This might still be old state
-        newResultKeys: roundedResult ? Object.keys(roundedResult) : null
+        newResultKeys: result ? Object.keys(result) : null
       });
       
       // Auto-save calculation result if in edit mode (with calculate flag)
-      console.log('🔍 Auto-save check:', { isEditMode, quoteId: !!quoteId, hasResult: !!roundedResult });
-      if (isEditMode && quoteId && roundedResult) {
+      console.log('🔍 Auto-save check:', { isEditMode, quoteId: !!quoteId, hasResult: !!result });
+      if (isEditMode && quoteId && result) {
         console.log('💾 Auto-saving calculation result from Calculate button...');
         setTimeout(() => {
           saveQuote(true); // Pass true to indicate this is from Calculate button

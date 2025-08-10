@@ -24,6 +24,24 @@ import { useCart, useCartCurrency } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { currencyService } from '@/services/CurrencyService';
 import { logger } from '@/utils/logger';
+import { convertCurrencyWithPrecision, convertAndFormatCurrency } from '@/utils/currencyConversion';
+
+/**
+ * Helper function to get the quote total with fallback to calculation data
+ * Fixes issue where quote fields are zero but calculation data has correct amount
+ */
+const getQuoteTotal = (quote: any): number => {
+  // First, try quote fields
+  let total = quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount;
+  
+  // If quote fields are zero/null, fallback to calculation data
+  if (!total || total <= 0) {
+    total = quote.calculation_data?.calculation_steps?.total_origin_currency || 
+           quote.calculation_data?.calculation_steps?.total_quote_origincurrency;
+  }
+  
+  return total || 0;
+};
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cartDesignTokens } from '@/styles/cart-design-system';
@@ -31,6 +49,35 @@ import { cartDesignTokens } from '@/styles/cart-design-system';
 // Import existing components we'll integrate
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { IntegratedAddonServices } from '@/components/checkout/IntegratedAddonServices';
+
+/**
+ * Component to display item price with universal currency conversion
+ */
+const ItemPriceDisplay: React.FC<{ quote: any; displayCurrency: string }> = ({ quote, displayCurrency }) => {
+  const [priceDisplay, setPriceDisplay] = useState<string>('...');
+  
+  useEffect(() => {
+    const updatePrice = async () => {
+      try {
+        const totalAmount = getQuoteTotal(quote);
+        const sourceCurrency = quote.origin_country ? 
+          (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';
+        
+        // Use universal currency conversion with financial precision
+        const formatted = await convertAndFormatCurrency(totalAmount, sourceCurrency, displayCurrency);
+        setPriceDisplay(formatted);
+      } catch (error) {
+        logger.error('Failed to format item price', { quoteId: quote.id, error });
+        // Fallback to direct formatting
+        setPriceDisplay(currencyService.formatAmount(getQuoteTotal(quote), displayCurrency));
+      }
+    };
+    
+    updatePrice();
+  }, [quote, displayCurrency]);
+  
+  return <span>{priceDisplay}</span>;
+};
 
 interface UnifiedOrderSummaryProps {
   onPlaceOrder?: () => void;
@@ -155,10 +202,14 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     setTotalDiscount(newTotalDiscount);
   }, [appliedCoupons]);
 
-  // Calculate base summary totals (without addons - calculated separately to avoid circular deps)
+  // Calculate base summary totals with universal currency conversion (same precision as quote page)
   const calculateBaseSummary = useMemo(() => async (): Promise<SummaryCalculations> => {
+    // Get subtotal using existing getTotalValue which already handles conversion
     const subtotal = await getTotalValue(displayCurrency);
-    const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
+    
+    // Apply financial precision to ensure consistency with quote page
+    const precisionSubtotal = Math.round(subtotal * 100) / 100;
+    const subtotalFormatted = currencyService.formatAmount(precisionSubtotal, displayCurrency);
 
     const addons = 0; // Start with 0, will be updated separately
     const addonsFormatted = currencyService.formatAmount(addons, displayCurrency);
@@ -166,17 +217,29 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     const discount = totalDiscount;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    const total = subtotal + addons - discount;
-    const totalFormatted = currencyService.formatAmount(total, displayCurrency);
+    const total = precisionSubtotal + addons - discount;
+    // Apply financial precision to final total as well
+    const precisionTotal = Math.round(total * 100) / 100;
+    const totalFormatted = currencyService.formatAmount(precisionTotal, displayCurrency);
+
+    logger.debug('UnifiedOrderSummary calculation with precision', {
+      rawSubtotal: subtotal,
+      precisionSubtotal,
+      addons,
+      discount,
+      rawTotal: total,
+      precisionTotal,
+      displayCurrency
+    });
 
     return {
-      subtotal,
+      subtotal: precisionSubtotal,
       subtotalFormatted,
       addons,
       addonsFormatted,
       discount,
       discountFormatted,
-      total,
+      total: precisionTotal,
       totalFormatted,
       currency: displayCurrency
     };
@@ -220,19 +283,30 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
     };
   }, [calculateBaseSummary, items.length]);
 
-  // Update calculations when addon cost changes (without re-calculating base)
+  // Update calculations when addon cost changes with financial precision
   useEffect(() => {
     if (calculations && totalAddonCost !== calculations.addons) {
+      // Apply financial precision to addon cost and final total
+      const precisionAddonCost = Math.round(totalAddonCost * 100) / 100;
+      const rawTotal = calculations.subtotal + precisionAddonCost - calculations.discount;
+      const precisionTotal = Math.round(rawTotal * 100) / 100;
+      
       const updatedCalculations = {
         ...calculations,
-        addons: totalAddonCost,
-        addonsFormatted: currencyService.formatAmount(totalAddonCost, displayCurrency),
-        total: calculations.subtotal + totalAddonCost - calculations.discount,
-        totalFormatted: currencyService.formatAmount(
-          calculations.subtotal + totalAddonCost - calculations.discount,
-          displayCurrency
-        ),
+        addons: precisionAddonCost,
+        addonsFormatted: currencyService.formatAmount(precisionAddonCost, displayCurrency),
+        total: precisionTotal,
+        totalFormatted: currencyService.formatAmount(precisionTotal, displayCurrency),
       };
+      
+      logger.debug('UnifiedOrderSummary addon cost updated with precision', {
+        rawAddonCost: totalAddonCost,
+        precisionAddonCost,
+        rawTotal,
+        precisionTotal,
+        displayCurrency
+      });
+      
       setCalculations(updatedCalculations);
     }
   }, [totalAddonCost, calculations, displayCurrency]);
@@ -406,10 +480,7 @@ export const UnifiedOrderSummary = memo<UnifiedOrderSummaryProps>(({
                     {/* Item price */}
                     <div className="text-right flex-shrink-0">
                       <div className="font-medium text-gray-900 text-sm">
-                        {currencyService.formatAmount(
-                          item.quote.final_total_origin || item.quote.total_quote_origincurrency || 0,
-                          displayCurrency
-                        )}
+                        <ItemPriceDisplay quote={item.quote} displayCurrency={displayCurrency} />
                       </div>
                     </div>
                   </div>

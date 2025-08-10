@@ -30,6 +30,7 @@ import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { convertCurrencyWithPrecision } from '@/utils/currencyConversion';
 
 interface CartSummaryProps {
   onCheckout?: () => void;
@@ -143,9 +144,9 @@ export const CartSummary = memo<CartSummaryProps>(({
     });
   }, [appliedCoupons]);
 
-  // Calculate summary totals
+  // Calculate summary totals with universal currency precision (same as quote page)
   const calculateSummary = useMemo(() => async (): Promise<SummaryCalculations> => {
-    console.log('[CART SUMMARY] Starting calculation...', {
+    console.log('[CART SUMMARY] Starting calculation with financial precision...', {
       itemsCount: items.length,
       displayCurrency,
       items: items.map(item => ({
@@ -159,8 +160,11 @@ export const CartSummary = memo<CartSummaryProps>(({
     
     // Base subtotal in display currency
     console.log('[CART SUMMARY] Getting total value...');
-    const subtotal = await getTotalValue(displayCurrency);
-    console.log(`[CART SUMMARY] Subtotal: ${subtotal} ${displayCurrency}`);
+    const rawSubtotal = await getTotalValue(displayCurrency);
+    
+    // Apply financial precision to match quote page behavior
+    const subtotal = Math.round(rawSubtotal * 100) / 100;
+    console.log(`[CART SUMMARY] Subtotal with precision: ${rawSubtotal} → ${subtotal} ${displayCurrency}`);
     
     const subtotalFormatted = currencyService.formatAmount(subtotal, displayCurrency);
     console.log(`[CART SUMMARY] Subtotal formatted: ${subtotalFormatted}`);
@@ -172,14 +176,15 @@ export const CartSummary = memo<CartSummaryProps>(({
     const estimatedTax = 0;
     const estimatedTaxFormatted = currencyService.formatAmount(0, displayCurrency);
 
-
-    // Use actual discount from applied coupons
-    const discount = totalDiscount;
+    // Use actual discount from applied coupons with precision
+    const rawDiscount = totalDiscount;
+    const discount = Math.round(rawDiscount * 100) / 100;
     const discountFormatted = currencyService.formatAmount(discount, displayCurrency);
 
-    // Total including discount
-    const total = subtotal - discount;
-    console.log(`[CART SUMMARY] Final total: ${subtotal} - ${discount} = ${total} ${displayCurrency}`);
+    // Total including discount with financial precision
+    const rawTotal = subtotal - discount;
+    const total = Math.round(rawTotal * 100) / 100;
+    console.log(`[CART SUMMARY] Final total with precision: ${subtotal} - ${discount} = ${rawTotal} → ${total} ${displayCurrency}`);
     
     const totalFormatted = currencyService.formatAmount(total, displayCurrency);
 
@@ -197,7 +202,7 @@ export const CartSummary = memo<CartSummaryProps>(({
       currency: displayCurrency
     };
 
-    console.log('[CART SUMMARY] Calculation complete:', result);
+    console.log('[CART SUMMARY] Calculation complete with financial precision:', result);
     return result;
   }, [items, displayCurrency, getTotalValue, totalDiscount]);
 
