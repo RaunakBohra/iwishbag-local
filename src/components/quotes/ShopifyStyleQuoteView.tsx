@@ -70,9 +70,9 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 
   if (!quote || !quote.calculation_data) {
     return (
-      <Card className={`${className} border-slate-200 shadow-sm`}>
+      <Card className={`${className} border-teal-200 shadow-sm`}>
         <CardContent className="p-8">
-          <div className="flex items-center justify-center text-slate-500">
+          <div className="flex items-center justify-center text-teal-500">
             <OptimizedIcon name="FileText" className="w-5 h-5 mr-2" />
             <span className="text-sm">Breakdown not available</span>
           </div>
@@ -206,19 +206,19 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
   }, [finalTotal, currency, onTotalCalculated, formatCurrency, lastSharedTotal]);
 
   return (
-    <Card className={`${className} border-slate-200 shadow-sm bg-white`}>
+    <Card className={`${className} border-teal-200 shadow-sm bg-white`}>
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
-            <OptimizedIcon name="FileText" className="w-5 h-5 text-slate-600" />
-            <h3 className="text-lg font-semibold text-slate-900">Quote Breakdown</h3>
+            <OptimizedIcon name="FileText" className="w-5 h-5 text-teal-600" />
+            <h3 className="text-lg font-semibold text-teal-800">Quote Breakdown</h3>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowDetails(!showDetails)}
-            className="text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+            className="text-teal-600 hover:text-teal-800 hover:bg-teal-50 transition-colors"
           >
             <span className="text-sm font-medium mr-2">
               {showDetails ? 'Hide Details' : 'Show Details'}
@@ -233,10 +233,10 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 
         {/* Currency Notice */}
         {displayCurrency && displayCurrency !== originCurrency && (
-          <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="mb-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
             <div className="flex items-start space-x-2">
-              <OptimizedIcon name="Info" className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-slate-600">
+              <OptimizedIcon name="Info" className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-teal-600">
                 <span className="font-medium">Currency Note:</span> Item prices shown in {originCurrency}, 
                 other amounts converted to {displayCurrency} for your convenience.
               </div>
@@ -249,22 +249,22 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
           {summaryItems.map((item, index) => (
             <div key={index} className="flex items-center justify-between py-3">
               <div className="flex items-center space-x-3">
-                <div className="text-slate-500 flex-shrink-0">
+                <div className="text-teal-500 flex-shrink-0">
                   {item.icon}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-slate-700 font-medium">
+                  <span className="text-teal-700 font-medium">
                     {item.label}
                   </span>
                   {item.showCurrencyNote && item.currencyNote && (
-                    <span className="text-xs text-slate-500 mt-1">
+                    <span className="text-xs text-teal-500 mt-1">
                       {item.currencyNote}
                     </span>
                   )}
                 </div>
               </div>
               <div className="text-right">
-                <span className="font-mono font-medium text-slate-700">
+                <span className="font-mono font-medium text-teal-700">
                   {formatCurrency(item.amount, item.currency)}
                 </span>
               </div>
@@ -272,19 +272,19 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
           ))}
 
           {/* Total */}
-          <div className="flex items-center justify-between py-3 border-t border-slate-200 pt-4 mt-2">
+          <div className="flex items-center justify-between py-3 border-t border-teal-200 pt-4 mt-2">
             <div className="flex items-center space-x-3">
-              <div className="text-slate-500 flex-shrink-0">
+              <div className="text-teal-500 flex-shrink-0">
                 <CheckCircle className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-slate-900 text-lg">
+                <span className="font-semibold text-teal-800 text-lg">
                   Total
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <span className="font-mono font-bold text-lg text-slate-900">
+              <span className="font-mono font-bold text-lg text-teal-800">
                 {formatCurrency(finalTotal, currency)}
               </span>
             </div>
@@ -292,8 +292,8 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
         </div>
 
         {/* Trust Signals */}
-        <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-          <div className="flex items-center justify-center space-x-6 text-xs text-slate-600">
+        <div className="mt-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+          <div className="flex items-center justify-center space-x-6 text-xs text-teal-600">
             <div className="flex items-center space-x-1">
               <OptimizedIcon name="Shield" className="w-3 h-3" />
               <span>Secure Payment</span>
@@ -311,17 +311,17 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 
         {/* Detailed Breakdown (Expandable) */}
         {showDetails && (
-          <div className="mt-8 pt-6 border-t border-slate-200">
+          <div className="mt-8 pt-6 border-t border-teal-200">
             <div className="space-y-6">
               {/* Items & Products */}
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                <h4 className="text-sm font-semibold text-teal-800 mb-3 uppercase tracking-wide">
                   Items & Products
                 </h4>
                 <div className="space-y-2">
                   <div className="flex justify-between items-start text-sm">
-                    <span className="text-slate-600">Items Subtotal</span>
-                    <span className="font-mono font-medium ml-4 text-slate-700">
+                    <span className="text-teal-600">Items Subtotal</span>
+                    <span className="font-mono font-medium ml-4 text-teal-700">
                       {formatCurrency(steps.items_subtotal || 0, originCurrency)}
                     </span>
                   </div>
@@ -338,30 +338,30 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 
               {/* Shipping & Logistics */}
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                <h4 className="text-sm font-semibold text-teal-800 mb-3 uppercase tracking-wide">
                   Shipping & Logistics
                 </h4>
                 <div className="space-y-2">
                   {steps.shipping_cost > 0 && (
                     <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">International Shipping</span>
-                      <span className="font-mono font-medium ml-4 text-slate-700">
+                      <span className="text-teal-600">International Shipping</span>
+                      <span className="font-mono font-medium ml-4 text-teal-700">
                         {formatCurrency(steps.shipping_cost || 0, currency)}
                       </span>
                     </div>
                   )}
                   {steps.insurance_amount > 0 && (
                     <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">Package Insurance</span>
-                      <span className="font-mono font-medium ml-4 text-slate-700">
+                      <span className="text-teal-600">Package Insurance</span>
+                      <span className="font-mono font-medium ml-4 text-teal-700">
                         {formatCurrency(steps.insurance_amount || 0, currency)}
                       </span>
                     </div>
                   )}
                   {steps.domestic_delivery > 0 && (
                     <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">Local Delivery</span>
-                      <span className="font-mono font-medium ml-4 text-slate-700">
+                      <span className="text-teal-600">Local Delivery</span>
+                      <span className="font-mono font-medium ml-4 text-teal-700">
                         {formatCurrency(steps.domestic_delivery || 0, currency)}
                       </span>
                     </div>
@@ -372,22 +372,22 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
               {/* Taxes & Duties */}
               {(steps.customs_duty > 0 || steps.local_tax_amount > 0) && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                  <h4 className="text-sm font-semibold text-teal-800 mb-3 uppercase tracking-wide">
                     Taxes & Duties
                   </h4>
                   <div className="space-y-2">
                     {steps.customs_duty > 0 && (
                       <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Import Duties</span>
-                        <span className="font-mono font-medium ml-4 text-slate-700">
+                        <span className="text-teal-600">Import Duties</span>
+                        <span className="font-mono font-medium ml-4 text-teal-700">
                           {formatCurrency(steps.customs_duty || 0, currency)}
                         </span>
                       </div>
                     )}
                     {steps.local_tax_amount > 0 && (
                       <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Local Tax</span>
-                        <span className="font-mono font-medium ml-4 text-slate-700">
+                        <span className="text-teal-600">Local Tax</span>
+                        <span className="font-mono font-medium ml-4 text-teal-700">
                           {formatCurrency(steps.local_tax_amount || 0, currency)}
                         </span>
                       </div>
@@ -399,22 +399,22 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
               {/* Service Fees */}
               {(steps.handling_fee > 0 || steps.payment_gateway_fee > 0) && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
+                  <h4 className="text-sm font-semibold text-teal-800 mb-3 uppercase tracking-wide">
                     Service Fees
                   </h4>
                   <div className="space-y-2">
                     {steps.handling_fee > 0 && (
                       <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Handling Fee</span>
-                        <span className="font-mono font-medium ml-4 text-slate-700">
+                        <span className="text-teal-600">Handling Fee</span>
+                        <span className="font-mono font-medium ml-4 text-teal-700">
                           {formatCurrency(steps.handling_fee || 0, currency)}
                         </span>
                       </div>
                     )}
                     {steps.payment_gateway_fee > 0 && (
                       <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Payment Processing</span>
-                        <span className="font-mono font-medium ml-4 text-slate-700">
+                        <span className="text-teal-600">Payment Processing</span>
+                        <span className="font-mono font-medium ml-4 text-teal-700">
                           {formatCurrency(steps.payment_gateway_fee || 0, currency)}
                         </span>
                       </div>
@@ -443,13 +443,13 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
               )}
 
               {/* Additional Information */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <div className="text-sm text-slate-600 space-y-2">
+              <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                <div className="text-sm text-teal-600 space-y-2">
                   <div className="flex items-start space-x-2">
-                    <OptimizedIcon name="Info" className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                    <OptimizedIcon name="Info" className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-slate-800 mb-1">Additional Information</p>
-                      <ul className="space-y-1 text-slate-600">
+                      <p className="font-medium text-teal-800 mb-1">Additional Information</p>
+                      <ul className="space-y-1 text-teal-600">
                         <li>• All prices include applicable taxes and duties</li>
                         <li>• Package weight: {calc.inputs?.total_weight_kg || 0}kg</li>
                         <li>• Exchange rates updated daily</li>
@@ -514,10 +514,10 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
             <div 
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                 step.step <= currentStep 
-                  ? (step.isRejected ? 'bg-red-500 text-white' : step.isUnderReview ? 'bg-amber-500 text-white' : 'bg-green-500 text-white')
+                  ? (step.isRejected ? 'bg-red-500 text-white' : step.isUnderReview ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white')
                   : step.step === currentStep + 1 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-500'
+                    ? 'bg-teal-500 text-white' 
+                    : 'bg-teal-100 text-teal-400'
               }`}
             >
               {step.step <= currentStep ? (
@@ -528,16 +528,16 @@ const QuoteProgress = ({ currentStep, status }: { currentStep: number; status: s
             </div>
             <span className={`text-xs mt-2 font-medium ${
               step.step <= currentStep 
-                ? (step.isRejected ? 'text-red-600' : step.isUnderReview ? 'text-amber-600' : 'text-green-600')
-                : 'text-gray-500'
+                ? (step.isRejected ? 'text-red-600' : step.isUnderReview ? 'text-amber-600' : 'text-emerald-600')
+                : 'text-teal-500'
             }`}>
               {step.label}
             </span>
             {index < steps.length - 1 && (
               <div className={`h-0.5 w-full mt-1 ${
                 step.step < currentStep 
-                  ? (steps[index].isRejected ? 'bg-red-500' : steps[index].isUnderReview ? 'bg-amber-500' : 'bg-green-500')
-                  : 'bg-gray-200'
+                  ? (steps[index].isRejected ? 'bg-red-500' : steps[index].isUnderReview ? 'bg-amber-500' : 'bg-emerald-500')
+                  : 'bg-teal-200'
               }`} />
             )}
           </div>
@@ -1108,10 +1108,10 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <h1 className="text-3xl font-bold">{getStatusHeaderData(quote.status, visibilityTier).title}</h1>
+            <h1 className="text-3xl font-bold text-teal-800">{getStatusHeaderData(quote.status, visibilityTier).title}</h1>
             <QuoteStatusBadge status={quote.status} />
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-teal-600">
             {getStatusHeaderData(quote.status, visibilityTier).description}
           </p>
         </div>
@@ -1124,15 +1124,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
         {/* Status Banner for admin-only quotes */}
         {visibilityTier === 'admin-only' && (
-          <Card className="mb-6 border-blue-200 bg-blue-50">
+          <Card className="mb-6 border-teal-200 bg-teal-50">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600" />
+                <OptimizedIcon name="Clock" className="w-5 h-5 text-teal-600" />
                 <div>
-                  <p className="font-medium text-blue-900">
+                  <p className="font-medium text-teal-900">
                     Quote Being Prepared
                   </p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-teal-700">
                     Our team is calculating pricing and shipping costs. You'll receive an email notification when it's ready.
                   </p>
                 </div>
@@ -1189,13 +1189,13 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           <div className="lg:col-span-2 hidden md:block">
 
             {/* Your Order - Enhanced as Main Product Display */}
-            <Card className="mb-6">
+            <Card className="mb-6 border-teal-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Your Order</CardTitle>
+                <CardTitle className="text-lg text-teal-800">Your Order</CardTitle>
               </CardHeader>
               <CardContent>
                 {/* Visual Header with Item Images and Stats */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
+                <div className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-100">
                   <div className="flex items-start gap-4 mb-4">
                     {/* Compact Item Images */}
                     <div className="flex gap-2">
@@ -1237,12 +1237,12 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                                 href={items[0].url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                                className="text-teal-600 hover:text-teal-700 hover:underline"
                               >
                                 {items[0]?.name}
                               </a>
                             ) : (
-                              <span>{items[0]?.name}</span>
+                              <span className="text-teal-800">{items[0]?.name}</span>
                             )
                           )}
                         </h3>
@@ -1251,7 +1251,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="flex items-center text-green-600">
+                        <div className="flex items-center text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
                           <CheckCircle className="w-4 h-4 mr-1" />
                           <span className="text-sm font-medium">All items verified</span>
                         </div>
@@ -1268,7 +1268,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                                   (in {getOriginCurrency(quote.origin_country)})
                                 </span>
                               </div>
-                              <div className="text-blue-700 font-semibold">
+                              <div className="text-teal-700 font-semibold">
                                 Total quote: {convertedAmounts.total || formatCurrency(quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount, displayCurrency)}
                               </div>
                             </>
@@ -1286,13 +1286,13 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
 
                   {/* Delivery Estimate */}
-                  <div className="pt-3 border-t border-gray-200">
+                  <div className="pt-3 border-t border-teal-200">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center text-muted-foreground">
+                      <div className="flex items-center text-teal-600">
                         <OptimizedIcon name="Truck" className="w-4 h-4 mr-2" />
                         <span className="text-sm font-medium">Estimated delivery</span>
                       </div>
-                      <span className="font-semibold text-blue-700">
+                      <span className="font-semibold text-teal-700">
                         {(() => {
                           // Get selected shipping option from route calculations
                           const routeCalculations = quote.calculation_data?.route_calculations;
@@ -1322,7 +1322,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 {items.length > 1 && (
                 <div className="space-y-3">
                   {items.map((item: any, index: number) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="flex items-center gap-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
                       <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
                         {item.images?.[0] ? (
                           <img 
@@ -1342,12 +1342,12 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             href={item.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                            className="font-medium text-sm text-teal-600 hover:text-teal-700 hover:underline"
                           >
                             {item.name}
                           </a>
                         ) : (
-                          <p className="font-medium text-sm">{item.name}</p>
+                          <p className="font-medium text-sm text-teal-800">{item.name}</p>
                         )}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span>Qty: {item.quantity}</span>
@@ -1367,9 +1367,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           )}
                         </div>
                         {item.customer_notes && (
-                          <div className="flex items-start gap-2 mt-2 p-2 bg-blue-50 rounded-md">
-                            <OptimizedIcon name="MessageCircle" className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-xs text-blue-700">
+                          <div className="flex items-start gap-2 mt-2 p-2 bg-teal-50 rounded-md border border-teal-200">
+                            <OptimizedIcon name="MessageCircle" className="w-3 h-3 text-teal-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-xs text-teal-700">
                               <span className="font-medium">Your note:</span> {item.customer_notes}
                             </span>
                           </div>
@@ -1387,15 +1387,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
             {shouldShowInteractiveElements(visibilityTier) && (
             <Card className="mb-6">
               <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                className="cursor-pointer hover:bg-teal-50 transition-colors"
                 onClick={() => setShippingOptionsExpanded(!shippingOptionsExpanded)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <OptimizedIcon name="Truck" className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="text-lg">Choose Your Shipping Speed</CardTitle>
+                    <OptimizedIcon name="Truck" className="w-5 h-5 text-teal-600" />
+                    <CardTitle className="text-lg text-teal-800">Choose Your Shipping Speed</CardTitle>
                   </div>
-                  <OptimizedIcon name="ChevronDown" className={`w-5 h-5 text-gray-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
+                  <OptimizedIcon name="ChevronDown" className={`w-5 h-5 text-teal-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
                 </div>
                 <p className="text-sm text-muted-foreground text-left">
                   Select your preferred shipping option. Faster shipping costs more but gets your items quicker.
@@ -1406,8 +1406,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 <div className="grid gap-3">
                   {/* Standard Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-gray-50 transition-all ${
-                      quoteOptions.shipping === 'standard' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-teal-50 transition-all ${
+                      quoteOptions.shipping === 'standard' ? 'border-teal-500 bg-teal-50' : 'border-teal-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1427,10 +1427,10 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 0,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                         }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-teal-600 border-teal-300 focus:ring-teal-500"
                       />
                       <div className="flex items-center gap-3">
-                        <Package className="w-5 h-5 text-blue-600" />
+                        <Package className="w-5 h-5 text-teal-600" />
                         <div>
                           <div className="font-medium">Standard Shipping</div>
                           <div className="text-sm text-muted-foreground">7-14 business days</div>
@@ -1445,8 +1445,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                   {/* Express Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-gray-50 transition-all ${
-                      quoteOptions.shipping === 'express' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-50 transition-all ${
+                      quoteOptions.shipping === 'express' ? 'border-orange-500 bg-orange-50' : 'border-teal-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1466,7 +1466,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 25,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                         }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-orange-600 border-orange-300 focus:ring-orange-500"
                       />
                       <div className="flex items-center gap-3">
                         <OptimizedIcon name="Zap" className="w-5 h-5 text-orange-600" />
@@ -1484,8 +1484,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                   {/* Priority Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-gray-50 transition-all ${
-                      quoteOptions.shipping === 'priority' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-100 transition-all ${
+                      quoteOptions.shipping === 'priority' ? 'border-orange-600 bg-orange-100' : 'border-teal-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1505,10 +1505,10 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 45,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                         }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-orange-700 border-orange-300 focus:ring-orange-500"
                       />
                       <div className="flex items-center gap-3">
-                        <Truck className="w-5 h-5 text-red-600" />
+                        <Truck className="w-5 h-5 text-orange-700" />
                         <div>
                           <div className="font-medium">Priority Shipping</div>
                           <div className="text-sm text-muted-foreground">1-3 business days</div>
@@ -1523,12 +1523,12 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 </div>
 
                 {/* Shipping Info */}
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <div className="mt-4 p-3 bg-teal-50 rounded-lg border border-teal-200">
                   <div className="flex items-start gap-2">
-                    <Clock className="w-4 h-4 text-blue-600 mt-0.5" />
+                    <Clock className="w-4 h-4 text-teal-600 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium text-blue-900 mb-1">Delivery Timeline</p>
-                      <p className="text-blue-800">
+                      <p className="font-medium text-teal-800 mb-1">Delivery Timeline</p>
+                      <p className="text-teal-700">
                         Business days are Monday-Friday, excluding holidays. Express and Priority options include tracking.
                       </p>
                     </div>
@@ -1563,7 +1563,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   {shouldShowPricing(visibilityTier) ? (
                     <>
                       {/* Base Quote Total */}
-                      <div className="text-lg font-semibold text-gray-900">
+                      <div className="text-lg font-semibold text-teal-800">
                         Quote total: {(() => {
                           if (quoteOptions.adjustedTotal > 0) {
                             return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
@@ -1583,14 +1583,14 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       {/* Addon services removed from quote page - available in cart/checkout only */}
                     </>
                   ) : (
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-center p-4 bg-teal-50 rounded-lg border border-teal-200">
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <OptimizedIcon name="Clock" className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium text-blue-900">
+                        <OptimizedIcon name="Clock" className="w-5 h-5 text-teal-600" />
+                        <span className="font-medium text-teal-800">
                           {visibilityTier === 'admin-only' ? 'Calculating Your Quote' : 'Quote In Progress'}
                         </span>
                       </div>
-                      <p className="text-sm text-blue-800">
+                      <p className="text-sm text-teal-700">
                         {visibilityTier === 'admin-only' 
                           ? 'Our team is calculating pricing for the items you requested. You\'ll get an email notification when it\'s ready.'
                           : 'Our team is finalizing your pricing and will notify you once it\'s ready for review.'
@@ -1599,7 +1599,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     </div>
                   )}
                   
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-teal-600">
                     Valid until {quote.expires_at ? 
                       new Date(quote.expires_at).toLocaleDateString('en-US', { 
                         month: 'short', 
@@ -1619,7 +1619,11 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     {quote.status === 'approved' ? (
                       // For approved quotes: Show Add to Cart / Added to Cart
                       <Button 
-                        className="w-full h-12 text-base font-medium"
+                        className={`w-full h-12 text-base font-medium ${
+                          isInCart 
+                            ? 'border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100' 
+                            : 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white'
+                        }`}
                         onClick={async () => {
                           if (isInCart) {
                             navigate('/cart');
@@ -1644,7 +1648,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                     ) : (
                       // For sent/rejected/expired quotes: Show Approve button
                       <Button 
-                        className="w-full h-12 text-base font-medium"
+                        className="w-full h-12 text-base font-medium bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
                         onClick={handleApprove}
                       >
                         <CheckCircle className="w-5 h-5 mr-2" />
@@ -1659,7 +1663,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         quote={quote}
                         variant="outline"
                         size="lg"
-                        className="h-12 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                        className="h-12 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700"
                         stacked
                         onMessageSent={() => {
                           // Refresh quote data after sending message
@@ -1688,24 +1692,24 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   <div className="space-y-3">
                     <div className={`text-center p-4 rounded-lg border ${
                       visibilityTier === 'admin-only' 
-                        ? 'bg-blue-50 border-blue-200' 
+                        ? 'bg-teal-50 border-teal-200' 
                         : 'bg-amber-50 border-amber-200'
                     }`}>
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <OptimizedIcon 
                           name={visibilityTier === 'admin-only' ? 'Clock' : 'Bell'} 
                           className={`w-5 h-5 ${
-                            visibilityTier === 'admin-only' ? 'text-blue-600' : 'text-amber-600'
+                            visibilityTier === 'admin-only' ? 'text-teal-600' : 'text-amber-600'
                           }`} 
                         />
                         <span className={`font-medium ${
-                          visibilityTier === 'admin-only' ? 'text-blue-900' : 'text-amber-900'
+                          visibilityTier === 'admin-only' ? 'text-teal-800' : 'text-amber-900'
                         }`}>
                           {visibilityTier === 'admin-only' ? 'Calculating Pricing' : 'We\'ll Notify You'}
                         </span>
                       </div>
                       <p className={`text-sm ${
-                        visibilityTier === 'admin-only' ? 'text-blue-800' : 'text-amber-800'
+                        visibilityTier === 'admin-only' ? 'text-teal-700' : 'text-amber-800'
                       }`}>
                         {visibilityTier === 'admin-only' 
                           ? 'We\'re working on pricing for your requested items. You\'ll get an email when ready.'
@@ -1719,7 +1723,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       quote={quote}
                       variant="outline"
                       size="lg"
-                      className="w-full h-12 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                      className="w-full h-12 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700"
                       onMessageSent={() => {
                         // Refresh quote data after sending message  
                         refreshQuote();
@@ -1733,9 +1737,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   {/* Trust Signals */}
                   <div className="text-center text-xs text-muted-foreground">
                     <div className="flex items-center justify-center gap-2 text-xs">
-                      <a href="/terms-conditions#shipping" className="text-blue-600 hover:underline">Shipping Terms</a>
+                      <a href="/terms-conditions#shipping" className="text-teal-600 hover:underline hover:text-teal-700">Shipping Terms</a>
                       <span>•</span>
-                      <a href="/help" className="text-blue-600 hover:underline">FAQ</a>
+                      <a href="/help" className="text-teal-600 hover:underline hover:text-teal-700">FAQ</a>
                     </div>
                   </div>
               </CardContent>
