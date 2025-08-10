@@ -161,7 +161,7 @@
     "autoprefixer": "^10.4.20",
     "bundlewatch": "^0.4.1",
     "critical": "^7.2.1",
-    "critters": "^0.0.23",
+    "critters": "^0.0.25",
     "dotenv": "^17.2.1",
     "eslint": "^9.9.0",
     "eslint-config-prettier": "^10.1.8",
