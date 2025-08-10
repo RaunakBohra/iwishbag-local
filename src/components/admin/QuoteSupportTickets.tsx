@@ -52,6 +52,25 @@ export const QuoteSupportTickets: React.FC<QuoteSupportTicketsProps> = ({
   const { data: queryResult, isLoading, error, refetch } = useQuoteTickets(quoteId);
   const { data: quoteTickets = [], ticketCount = 0, isEmpty = true } = queryResult || {};
 
+  const handleTicketCreated = () => {
+    // Refresh the tickets list
+    refetch();
+    
+    // Call parent callback if provided
+    if (onTicketCreated) {
+      onTicketCreated();
+    }
+  };
+
+  const handleTicketClick = (ticketId: string) => {
+    if (onTicketClick) {
+      onTicketClick(ticketId);
+    } else {
+      // Open in support tickets page
+      window.open(`/admin/support-tickets/${ticketId}`, '_blank');
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -158,25 +177,6 @@ export const QuoteSupportTickets: React.FC<QuoteSupportTicketsProps> = ({
       </Card>
     );
   }
-
-  const handleTicketCreated = () => {
-    // Refresh the tickets list
-    refetch();
-    
-    // Call parent callback if provided
-    if (onTicketCreated) {
-      onTicketCreated();
-    }
-  };
-
-  const handleTicketClick = (ticketId: string) => {
-    if (onTicketClick) {
-      onTicketClick(ticketId);
-    } else {
-      // Open in support tickets page
-      window.open(`/admin/support-tickets/${ticketId}`, '_blank');
-    }
-  };
 
   return (
     <Card>
