@@ -67,46 +67,8 @@ const QuotesListPage: React.FC = () => {
   // Calculate metrics and organize quotes by priority
   const safeQuotes = quotes || [];
   
-  // Sort quotes by business priority
-  const prioritizedQuotes = [...safeQuotes].sort((a, b) => {
-    const statusPriority = {
-      'under_review': 1, // TOP PRIORITY
-      'sent': 2,
-      'approved': 3, 
-      'draft': 4,
-      'calculated': 4,
-      'pending': 4,
-      'rejected': 5,
-      'expired': 5,
-      'paid': 6,
-      'ordered': 6,
-      'shipped': 6,
-      'completed': 6,
-      'cancelled': 7
-    };
-    
-    // 1. Status priority
-    const aPriority = statusPriority[a.status] || 8;
-    const bPriority = statusPriority[b.status] || 8;
-    if (aPriority !== bPriority) {
-      return aPriority - bPriority;
-    }
-    
-    // 2. Within same status
-    if (a.status === 'under_review') {
-      // Urgency then oldest first
-      const urgencyOrder = { high: 1, medium: 2, low: 3 };
-      const aUrgency = a.review_request_data?.urgency || 'medium';
-      const bUrgency = b.review_request_data?.urgency || 'medium';
-      if (aUrgency !== bUrgency) {
-        return urgencyOrder[aUrgency] - urgencyOrder[bUrgency];
-      }
-      return new Date(a.review_requested_at) - new Date(b.review_requested_at);
-    }
-    
-    // 3. Default: most recent first (by creation date for consistency with DB query)
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
+  // Use quotes in database order (already sorted by created_at DESC)
+  const prioritizedQuotes = safeQuotes;
   
   // Group quotes by category for organized display
   const quoteGroups = {

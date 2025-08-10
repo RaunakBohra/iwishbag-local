@@ -151,36 +151,69 @@ export function ExchangeRateManager() {
 
       let routeUpdatedCount = 0;
 
-      // Use our enhanced CurrencyService to calculate fresh rates for each route
+      // Calculate fresh rates directly from country_settings data instead of using stale D1 cache
       console.log(`🔄 [ExchangeRateManager] Found ${routes.length} active shipping routes to update:`, routes);
+      
+      // Get fresh country settings data directly from database
+      const { data: countrySettings, error: countryError } = await supabase
+        .from('country_settings')
+        .select('code, rate_from_usd, currency')
+        .not('rate_from_usd', 'is', null);
+
+      if (countryError) {
+        console.error('❌ [ExchangeRateManager] Failed to fetch country settings:', countryError);
+        throw new Error(`Could not fetch country settings: ${countryError.message}`);
+      }
+
+      console.log(`✅ [ExchangeRateManager] Loaded ${countrySettings.length} country settings with fresh USD rates`);
+      
+      // Create lookup map for quick access
+      const countryRates = new Map();
+      countrySettings.forEach(country => {
+        countryRates.set(country.code, country.rate_from_usd);
+        console.log(`📊 [ExchangeRateManager] ${country.code} (${country.currency}): ${country.rate_from_usd} per USD`);
+      });
       
       for (const route of routes) {
         try {
           console.log(`🔄 [ExchangeRateManager] Processing route ${route.id}: ${route.origin_country} → ${route.destination_country}`);
           
-          const exchangeRate = await currencyService.getExchangeRate(route.origin_country, route.destination_country);
-          console.log(`🔄 [ExchangeRateManager] CurrencyService returned rate:`, exchangeRate);
+          // Skip INR → NPR (India → Nepal) route - do not update this exchange rate
+          if (route.origin_country === 'IN' && route.destination_country === 'NP') {
+            console.log(`⏭️ [ExchangeRateManager] Skipping INR → NPR route ${route.id} as requested - keeping existing rate`);
+            continue;
+          }
           
-          if (exchangeRate && exchangeRate > 0) {
-            const roundedRate = parseFloat(exchangeRate.toFixed(4));
-            console.log(`🔄 [ExchangeRateManager] Updating route ${route.id} with rate: ${roundedRate}`);
-            
-            const { error: routeUpdateError } = await supabase
-              .from('shipping_routes')
-              .update({
-                exchange_rate: roundedRate,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', route.id);
+          // Calculate exchange rate directly from country_settings data
+          const originRate = countryRates.get(route.origin_country);
+          const destRate = countryRates.get(route.destination_country);
+          
+          console.log(`📊 [ExchangeRateManager] Rates: ${route.origin_country}=${originRate}/USD, ${route.destination_country}=${destRate}/USD`);
+          
+          if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
+            console.warn(`⚠️ [ExchangeRateManager] Skipping route ${route.id}: missing or invalid rates (${originRate}, ${destRate})`);
+            continue;
+          }
+          
+          // Cross-rate calculation: dest_rate / origin_rate
+          const exchangeRate = destRate / originRate;
+          const roundedRate = parseFloat(exchangeRate.toFixed(4));
+          
+          console.log(`🧮 [ExchangeRateManager] Calculated cross-rate: ${destRate} ÷ ${originRate} = ${roundedRate}`);
+          
+          const { error: routeUpdateError } = await supabase
+            .from('shipping_routes')
+            .update({
+              exchange_rate: roundedRate,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', route.id);
 
-            if (!routeUpdateError) {
-              routeUpdatedCount++;
-              console.log(`✅ [ExchangeRateManager] Route ${route.id} updated: ${route.origin_country} → ${route.destination_country} = ${roundedRate}`);
-            } else {
-              console.error(`❌ [ExchangeRateManager] Route ${route.id} update failed:`, routeUpdateError);
-            }
+          if (!routeUpdateError) {
+            routeUpdatedCount++;
+            console.log(`✅ [ExchangeRateManager] Route ${route.id} updated: ${route.origin_country} → ${route.destination_country} = ${roundedRate}`);
           } else {
-            console.warn(`⚠️ [ExchangeRateManager] Skipped route ${route.id} with invalid rate: ${route.origin_country} → ${route.destination_country}, received: ${exchangeRate}`);
+            console.error(`❌ [ExchangeRateManager] Route ${route.id} update failed:`, routeUpdateError);
           }
         } catch (routeError) {
           console.error(`❌ [ExchangeRateManager] Route ${route.id} calculation failed for ${route.origin_country} → ${route.destination_country}:`, routeError);
@@ -277,12 +310,65 @@ export function ExchangeRateManager() {
     try {
       console.log(`🧪 [TEST] Starting exchange rate test: ${originCountry} → ${destinationCountry}`);
       
-      // Clear cache to force fresh data
-      currencyService.clearCache();
-      console.log(`🧹 [TEST] Cache cleared for fresh test`);
+      // Calculate rate directly from country_settings data (bypass D1 cache completely)
+      console.log(`🔄 [TEST] Fetching fresh country_settings data directly from database...`);
       
-      const rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
-      console.log(`🧪 [TEST] Test completed successfully: ${rate}`);
+      const { data: countrySettings, error: countryError } = await supabase
+        .from('country_settings')
+        .select('code, rate_from_usd, currency')
+        .in('code', [originCountry, destinationCountry])
+        .not('rate_from_usd', 'is', null);
+
+      if (countryError) {
+        console.error('❌ [TEST] Failed to fetch country settings:', countryError);
+        throw new Error(`Could not fetch country settings: ${countryError.message}`);
+      }
+
+      console.log(`✅ [TEST] Loaded ${countrySettings.length} country settings:`, countrySettings);
+      
+      const originCountryData = countrySettings.find(c => c.code === originCountry);
+      const destCountryData = countrySettings.find(c => c.code === destinationCountry);
+      
+      if (!originCountryData || !destCountryData) {
+        console.log(`❌ [TEST] Missing country data - origin: ${!!originCountryData}, dest: ${!!destCountryData}`);
+        toast({
+          title: 'Test Failed - Country Data Missing',
+          description: `Missing exchange rate data for ${originCountry} or ${destinationCountry} in database.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Same currency check
+      if (originCountry === destinationCountry) {
+        console.log(`✅ [TEST] Same country, returning rate: 1.0`);
+        const rate = 1.0;
+        
+        toast({
+          title: `Exchange Rate Test - Same Country`,
+          description: `${originCountry} → ${destinationCountry}: Rate = 1.0000 (same currency)`,
+        });
+        return;
+      }
+      
+      // Cross-rate calculation: dest_rate / origin_rate
+      const originRate = originCountryData.rate_from_usd;
+      const destRate = destCountryData.rate_from_usd;
+      const rate = destRate / originRate;
+      
+      console.log(`🧮 [TEST] Calculated cross-rate: ${destRate} (${destCountryData.currency}/USD) ÷ ${originRate} (${originCountryData.currency}/USD) = ${rate}`);
+      console.log(`🧪 [TEST] Test completed with fresh database rate: ${rate}`);
+
+      // Validation check
+      if (!rate || rate <= 0 || rate > 10000) {
+        console.log(`❌ [TEST] Invalid calculated rate: ${rate}`);
+        toast({
+          title: 'Test Failed - Invalid Rate',
+          description: `Calculated invalid exchange rate: ${rate}. Check country settings data.`,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       // Get currency symbols for better display
       const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);

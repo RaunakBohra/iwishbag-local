@@ -1207,9 +1207,9 @@ class CurrencyService {
             // Log comparison with external API for transparency
             this.logExternalRateComparison(originCountry, destinationCountry, crossRate).catch(console.error);
             
-            // D1 data is stale, so we'll return null to trigger the database fallback in the catch block
-            console.log(`🔄 [ExchangeRate] D1 data is stale, returning null to trigger database fallback...`);
-            return null;
+            // D1 data is stale, so we'll throw an error to trigger the database fallback in getCachedData
+            console.log(`🔄 [ExchangeRate] D1 data is stale, throwing error to trigger database fallback...`);
+            throw new Error(`D1_STALE_DATA: Origin: ${originAgeHours}h, Dest: ${destAgeHours}h (max: 48h)`);
           } else {
             console.log(`✅ [ExchangeRate] D1 rates are fresh - Origin: ${originAgeHours}h, Dest: ${destAgeHours}h`);
             
@@ -1240,7 +1240,14 @@ class CurrencyService {
         d1Endpoint
       );
     } catch (error) {
-      console.error(`💥 [ExchangeRate] Critical error in exchange rate lookup:`, error);
+      console.error(`💥 [ExchangeRate] Error in exchange rate lookup:`, error);
+      
+      // If this is a D1 stale data error, it should have been caught by getCachedData
+      // and fallen back to database. If we reach here, it means database fallback also failed.
+      if (error.message?.includes('D1_STALE_DATA')) {
+        console.log(`🚨 [ExchangeRate] D1 stale data error reached outer catch - database fallback may have failed`);
+      }
+      
       throw error;
     }
   }

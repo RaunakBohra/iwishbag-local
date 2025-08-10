@@ -53,11 +53,11 @@ export class QuoteV2Service {
         table: 'quotes_v2'
       });
 
-      // Build base query with count - sort by most recent activity first
+      // Build base query with count - sort by creation date (newest first)
       let query = supabase
         .from('quotes_v2')
         .select('*', { count: 'exact' })
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + pageSize - 1);
 
       // Apply filters
