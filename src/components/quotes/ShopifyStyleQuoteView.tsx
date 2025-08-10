@@ -1086,7 +1086,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
+      <div className="container max-w-7xl mx-auto px-4 py-8 pb-8">
         {/* Back Button */}
         {viewMode === 'customer' && (
           <Button 
@@ -1375,7 +1375,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                 <div className="grid gap-4">
                   {/* Standard Shipping */}
                   <div 
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-teal-50 transition-all ${
+                    className={`flex flex-row items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-teal-50 transition-all ${
                       quoteOptions.shipping === 'standard' ? 'border-teal-500 bg-teal-50' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
@@ -1385,7 +1385,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                     }))}
                   >
-                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
+                    <div className="flex items-center gap-3">
                       <input
                         type="radio"
                         name="shipping"
@@ -1406,7 +1406,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </div>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                    <div className="text-right">
                       <div className="font-semibold text-emerald-600">Included</div>
                       <div className="text-xs text-slate-500">No additional cost</div>
                     </div>
@@ -1414,7 +1414,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                   {/* Express Shipping */}
                   <div 
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-50 transition-all ${
+                    className={`flex flex-row items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-50 transition-all ${
                       quoteOptions.shipping === 'express' ? 'border-orange-500 bg-orange-50' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
@@ -1424,7 +1424,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                     }))}
                   >
-                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
+                    <div className="flex items-center gap-3">
                       <input
                         type="radio"
                         name="shipping"
@@ -1445,7 +1445,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </div>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                    <div className="text-right">
                       <div className="font-semibold text-slate-900">+{formatCurrency(25, displayCurrency)}</div>
                       <div className="text-xs text-slate-500">Additional cost</div>
                     </div>
@@ -1453,7 +1453,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
                   {/* Priority Shipping */}
                   <div 
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-100 transition-all ${
+                    className={`flex flex-row items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-100 transition-all ${
                       quoteOptions.shipping === 'priority' ? 'border-orange-600 bg-orange-100' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
@@ -1463,7 +1463,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                     }))}
                   >
-                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
+                    <div className="flex items-center gap-3">
                       <input
                         type="radio"
                         name="shipping"
@@ -1484,7 +1484,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         </div>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                    <div className="text-right">
                       <div className="font-semibold text-slate-900">+{formatCurrency(45, displayCurrency)}</div>
                       <div className="text-xs text-slate-500">Fastest option</div>
                     </div>
@@ -1523,7 +1523,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           </div>
 
           {/* Right Column - Summary & Actions */}
-          <div className="hidden md:block">
+          <div>
             {/* Quote Summary */}
             <Card className="mb-6 sticky top-6">
               <CardContent className="p-6">
@@ -1840,29 +1840,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       {/* Ask Question flow removed in favor of unified ticket/chat */}
 
 
-      {/* Mobile Sticky Bar - Only show for full access */}
-      {shouldShowActions(visibilityTier) && (
-      <MobileStickyBar 
-        quote={quote}
-        onApprove={() => {
-          if (quote.status === 'approved' && isInCart) {
-            navigate('/cart');
-          } else if (quote.status === 'approved' && !isInCart) {
-            handleAddToCart();
-          } else {
-            handleApprove();
-          }
-        }}
-        onReject={() => setRejectModalOpen(true)}
-        formatCurrency={formatCurrency}
-        adjustedTotal={quoteOptions.adjustedTotal}
-        displayCurrency={displayCurrency}
-        convertedTotal={convertedAmounts.total}
-        isInCart={isInCart}
-        onAddToCart={handleAddToCart}
-        onViewCart={() => navigate('/cart')}
-      />
-      )}
+      {/* Mobile components removed for desktop-only experience */}
 
     </div>
   );
