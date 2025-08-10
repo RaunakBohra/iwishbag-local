@@ -1567,6 +1567,18 @@ const QuoteCalculatorV2: React.FC = () => {
         stateHasResult: !!calculationResult, // This might still be old state
         newResultKeys: roundedResult ? Object.keys(roundedResult) : null
       });
+      
+      // Auto-save calculation result if in edit mode (with calculate flag)
+      console.log('🔍 Auto-save check:', { isEditMode, quoteId: !!quoteId, hasResult: !!roundedResult });
+      if (isEditMode && quoteId && roundedResult) {
+        console.log('💾 Auto-saving calculation result from Calculate button...');
+        setTimeout(() => {
+          saveQuote(true); // Pass true to indicate this is from Calculate button
+        }, 100); // Small delay to ensure state is updated
+      } else {
+        console.log('❌ Auto-save skipped:', { isEditMode, quoteId, hasRoundedResult: !!roundedResult });
+      }
+      
       setShippingError(null); // Clear any previous shipping errors
       
       // Sync shipping method dropdown with calculation results
@@ -1602,7 +1614,8 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
-  const saveQuote = async () => {
+  const saveQuote = async (isCalculateAction = false) => {
+    console.log('🚀 saveQuote called with isCalculateAction:', isCalculateAction);
     logger.debug({
       isEditMode,
       quoteId,
@@ -1671,17 +1684,32 @@ const QuoteCalculatorV2: React.FC = () => {
       };
 
       // Add calculation data only if available (for new quotes or when recalculated)
-      const quoteData = calculationResult && calculationResult.calculation_steps ? {
+      const quoteData = isCalculateAction && calculationResult && calculationResult.calculation_steps ? {
         ...baseQuoteData,
         calculation_data: calculationResult,
         total_quote_origincurrency: calculationResult.calculation_steps.total_quote_origincurrency || 0,
-        status: 'calculated',
+        status: (() => {
+          const newStatus = (isCalculateAction && (currentQuoteStatus === 'pending' || currentQuoteStatus === 'draft' || currentQuoteStatus === 'under_review')) ? 'calculated' : currentQuoteStatus;
+          console.log('🔍 Calculate path status:', { isCalculateAction, currentStatus: currentQuoteStatus, newStatus });
+          return newStatus;
+        })(),
         calculated_at: new Date().toISOString(),
       } : {
         ...baseQuoteData,
-        // For field-only updates, preserve existing status or set to draft
-        status: isEditMode ? currentQuoteStatus : 'draft',
+        // For field-only updates, use smart status logic for Update Quote button
+        status: (() => {
+          const newStatus = (isEditMode && currentQuoteStatus === 'calculated' && !isCalculateAction) ? 'sent' : (isEditMode ? currentQuoteStatus : 'draft');
+          console.log('🔍 Update path status:', { isEditMode, isCalculateAction, currentStatus: currentQuoteStatus, newStatus });
+          return newStatus;
+        })(),
       };
+      
+      console.log('💾 About to save quote with status:', quoteData.status);
+      console.log('📊 Full quote data:', { 
+        status: quoteData.status, 
+        hasCalculation: !!quoteData.calculation_data,
+        isCalculateAction 
+      });
 
       logger.debug({
         origin_country: quoteData.origin_country,
@@ -1715,8 +1743,24 @@ const QuoteCalculatorV2: React.FC = () => {
           .single();
 
         if (error) {
+          console.log('❌ Database update FAILED:', error);
           logger.error('❌ [DEBUG] Database update error:', error);
           throw error;
+        }
+        
+        console.log('✅ Database update SUCCESS! Returned status:', data?.status);
+        console.log('📄 Full returned data:', data);
+        
+        // Update UI state to match database
+        if (data?.status && data.status !== currentQuoteStatus) {
+          console.log('🔄 Updating UI status:', currentQuoteStatus, '→', data.status);
+          setCurrentQuoteStatus(data.status);
+          
+          // Show status change success message
+          toast({
+            title: 'Status Updated',
+            description: `Quote status changed from "${currentQuoteStatus}" to "${data.status}"`,
+          });
         }
         
         logger.info({
@@ -1753,7 +1797,12 @@ const QuoteCalculatorV2: React.FC = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.log('❌ Database insert FAILED:', error);
+          throw error;
+        }
+        
+        console.log('✅ New quote created with status:', data?.status);
         result = data;
 
         toast({
@@ -1761,9 +1810,14 @@ const QuoteCalculatorV2: React.FC = () => {
           description: `Quote ${quoteNumber} created successfully`
         });
 
-        // Switch to edit mode after creating
+        // Switch to edit mode after creating and sync UI status
         setIsEditMode(true);
-        setCurrentQuoteStatus('draft');
+        if (data?.status) {
+          console.log('🔄 Setting new quote status:', data.status);
+          setCurrentQuoteStatus(data.status);
+        } else {
+          setCurrentQuoteStatus('draft');
+        }
         
         // Update URL to include the new quote ID
         navigate(`/admin/quote-calculator-v2/${data.id}`, { replace: true });
@@ -3747,7 +3801,7 @@ const QuoteCalculatorV2: React.FC = () => {
                   </Button>
                   
                   <Button 
-                    onClick={saveQuote} 
+                    onClick={() => saveQuote(false)} 
                     variant="default"
                     className="w-full"
                     disabled={loading}
