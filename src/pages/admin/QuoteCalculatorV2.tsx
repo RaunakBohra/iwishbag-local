@@ -1163,6 +1163,14 @@ const QuoteCalculatorV2: React.FC = () => {
         const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
         setSuggestedNCMBranches(suggestions.filter(s => s.branch.name !== mapping.branch.name));
         
+        // Update visual feedback - successful auto-selection
+        setNCMAutoSelectionState({
+          isSearching: false,
+          suggestionsFound: suggestions.length + 1, // +1 for the selected branch
+          autoSelectedBranch: mapping.branch.name,
+          lastSearchQuery: searchQuery
+        });
+        
         console.log(`ℹ️ [Smart Mapping] Auto-selected ${mapping.branch.name} with ${suggestions.length} alternatives`);
       } else {
         logger.debug();

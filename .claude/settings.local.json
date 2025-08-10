@@ -308,7 +308,8 @@
       "WebFetch(domain:shopify.dev)",
       "WebFetch(domain:www.shopify.com)",
       "WebFetch(domain:www.amazon.com)",
-      "Bash(./validate-agents.sh)"
+      "Bash(./validate-agents.sh)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch check-email-content.js add-stripe-gateway.sql deploy-sms-system.sh' --prune-empty --tag-name-filter cat -- --all)"
     ],
     "deny": []
   }
