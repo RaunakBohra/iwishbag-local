@@ -27,6 +27,16 @@ const CurrencyDisplay = memo<{ amount: number; quote: any; fallback?: string }>(
 
   useEffect(() => {
     const updateAmount = async () => {
+      // Debug logging for NaN amounts
+      if (amount == null || isNaN(amount) || typeof amount !== 'number') {
+        console.warn('[CurrencyDisplay] Invalid amount received:', { 
+          amount, 
+          type: typeof amount, 
+          quote: quote?.id,
+          displayCurrency 
+        });
+      }
+
       try {
         const sourceCurrency = quote.origin_country ? 
           (await import('@/utils/originCurrency')).getOriginCurrency(quote.origin_country) : 'USD';

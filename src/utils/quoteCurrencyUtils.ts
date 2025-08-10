@@ -74,8 +74,34 @@ export const convertCurrency = async (amount: number, fromCurrency: string, toCu
   
   try {
     const converted = await currencyService.convertAmount(amount, fromCurrency, toCurrency);
+    
+    // Debug logging for currency conversion
+    if (isNaN(converted)) {
+      console.warn(`[Currency] NaN detected in conversion:`, {
+        amount,
+        fromCurrency,
+        toCurrency,
+        converted,
+        stackTrace: new Error().stack
+      });
+    }
+    
     // FINANCIAL PRECISION: Same as quote page
-    return Math.round(converted * 100) / 100;
+    const result = Math.round(converted * 100) / 100;
+    
+    // Final NaN check
+    if (isNaN(result)) {
+      console.warn(`[Currency] NaN detected in final result:`, {
+        amount,
+        fromCurrency,
+        toCurrency,
+        converted,
+        result
+      });
+      return 0; // Fallback to 0 instead of NaN
+    }
+    
+    return result;
   } catch (error) {
     console.warn(`Currency conversion failed ${fromCurrency}->${toCurrency}:`, error);
     return amount;
@@ -88,6 +114,17 @@ export const convertCurrency = async (amount: number, fromCurrency: string, toCu
  */
 export const formatAmountWithFinancialPrecision = (amount: number, currencyCode: string): string => {
   const currency = currencyService.getCurrencySymbol(currencyCode);
+  
+  // Debug logging for NaN issues
+  if (amount !== amount || isNaN(amount) || amount == null) {
+    console.warn(`[Currency] Invalid amount detected:`, { 
+      amount, 
+      type: typeof amount, 
+      isNaN: isNaN(amount),
+      currencyCode,
+      stackTrace: new Error().stack 
+    });
+  }
   
   // Handle null, undefined, or NaN values
   const safeAmount = amount == null || isNaN(amount) ? 0 : amount;
