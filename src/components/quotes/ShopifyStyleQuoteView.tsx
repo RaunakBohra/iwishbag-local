@@ -14,13 +14,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { QuoteStatusBadge } from '@/components/ui/QuoteStatusBadge';
-import { 
-  MobileStickyBar, 
-  MobileProductSummary, 
-  MobileBreakdown, 
-  MobileTrustSignals, 
-  MobileProgress
-} from './ShopifyMobileOptimizations';
+// Mobile components removed for desktop-only experience
 // EnhancedAddonServicesSelector removed - addon services only available in cart/checkout
 import { getBreakdownSourceCurrency } from '@/utils/currencyMigration';
 import { getOriginCurrency, getDestinationCurrency } from '@/utils/originCurrency';
@@ -810,7 +804,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   }, [quote, displayCurrency, convertCurrency]);
 
   const [approveModalOpen, setApproveModalOpen] = useState(false);
-  const [mobileBreakdownExpanded, setMobileBreakdownExpanded] = useState(false);
+  // Mobile breakdown state removed for desktop-only experience
   const [quoteOptions, setQuoteOptions] = useState({
     shipping: 'express',
     adjustedTotal: 0,
@@ -1116,11 +1110,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           </p>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="hidden md:block">
-          <QuoteProgress currentStep={currentStep} status={quote.status} />
-        </div>
-        <MobileProgress currentStep={currentStep} status={quote.status} />
+        {/* Progress Indicator - Desktop Only */}
+        <QuoteProgress currentStep={currentStep} status={quote.status} />
 
         {/* Status Banner for admin-only quotes */}
         {visibilityTier === 'admin-only' && (
@@ -1160,33 +1151,11 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
           </Card>
         )}
 
-        {/* Mobile Components */}
-        <MobileProductSummary 
-          items={items} 
-          quote={quote} 
-          formatCurrency={formatCurrency}
-          displayCurrency={displayCurrency}
-        />
-        
-        {/* Mobile Breakdown - Only show for full access (has pricing) */}
-        {shouldShowPricing(visibilityTier) && (
-        <MobileBreakdown 
-          quote={quote}
-          breakdown={breakdown}
-          expanded={mobileBreakdownExpanded}
-          onToggle={() => setMobileBreakdownExpanded(!mobileBreakdownExpanded)}
-          formatCurrency={formatCurrency}
-          quoteOptions={quoteOptions}
-          onOptionsChange={setQuoteOptions}
-          displayCurrency={displayCurrency}
-        />
-        )}
-        
-        <MobileTrustSignals />
+        {/* Mobile components removed for desktop-only experience */}
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-3 gap-8">
           {/* Left Column - Product Details & Options */}
-          <div className="lg:col-span-2 hidden md:block">
+          <div className="col-span-2">
 
             {/* Your Order - Enhanced as Main Product Display */}
             <Card className="mb-6 border-teal-200 shadow-sm">
