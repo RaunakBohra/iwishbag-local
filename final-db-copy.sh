@@ -17,7 +17,7 @@ CLOUD_HOST="db.grgvlrvywsfmnmkxrecd.supabase.co"
 CLOUD_PORT="5432"
 CLOUD_DB="postgres"
 CLOUD_USER="postgres"
-CLOUD_PASSWORD="aZenjDCQxwMifCEY"
+CLOUD_PASSWORD="${SUPABASE_DB_PASSWORD}"
 
 # Use Docker to avoid version mismatch
 echo "📤 Creating database dump from local using Docker..."

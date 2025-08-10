@@ -34,8 +34,8 @@
 
 **Local Development** (`supabase/.env.local`):
 ```bash
-AWS_ACCESS_KEY_ID=AKIAYWBJYE26OFEJGTHW
-AWS_SECRET_ACCESS_KEY=oVd9fyAfsyGYYFjJGYFJyB+ZYhfD8dDf5NPIKEhg
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
 AWS_REGION=us-east-1
 ```
 

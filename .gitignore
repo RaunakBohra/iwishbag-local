@@ -80,3 +80,18 @@ storybook-static
 
 # Cloudflare credentials
 .env.cloudflare
+
+# AWS Configuration and Policy Files
+aws-*.json
+s3-*.json
+*.aws
+.aws/
+configure-aws-cli.sh
+**/aws-credentials*
+lambda-deployment.zip
+
+# Additional sensitive files found during security audit
+final-db-copy.sh
+scripts/sync-rates-to-d1.js
+cloudflare-worker-bestbuy.js
+src/services/R2StorageServiceSimple.ts

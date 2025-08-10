@@ -7,7 +7,14 @@ case 'bestbuy_product':
 
 // Add this function to your Cloudflare Worker:
 async function handleBestBuyProduct(url) {
-  const API_KEY = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+  const API_KEY = env.BRIGHTDATA_API_KEY;
+  
+  if (!API_KEY) {
+    return new Response(JSON.stringify({ error: 'BRIGHTDATA_API_KEY not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   const DATASET_ID = 'gd_ltre1jqe1jfr7cccf';
   
   console.log(`🛒 Best Buy Product Scraping: ${url}`);

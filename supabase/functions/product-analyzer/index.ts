@@ -24,7 +24,7 @@ serve(async (req) => {
       );
     }
     // Get ScraperAPI key from environment
-    const scraperApiKey = '33a27d4eb3da57503b7819845dca495e';
+    const scraperApiKey = Deno.env.get('SCRAPER_API_KEY') || '33a27d4eb3da57503b7819845dca495e';
     // Uncomment below for production:
     // let scraperApiKey = Deno.env.get('SCRAPER_API_KEY');
     console.log('ScraperAPI key found:', !!scraperApiKey);

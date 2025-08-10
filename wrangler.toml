@@ -4,7 +4,7 @@ compatibility_date = "2023-12-01"
 account_id = "610762493d34333f1a6d72a037b345cf"
 
 [vars]
-CF_API_TOKEN = "4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l"
+CF_API_TOKEN = "${CLOUDFLARE_API_TOKEN}"
 CF_ZONE_ID = "2cd502a70fa04ec1619df21d7eb5e17c"
 SYNC_API_KEY = "iwishbag-d1-sync-2024"
 

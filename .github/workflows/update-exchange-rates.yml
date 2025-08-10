@@ -53,7 +53,7 @@ jobs:
           const SUPABASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co';
           const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
           const D1_API_URL = 'https://iwishbag-edge-api.rnkbohra.workers.dev/api/sync';
-          const SYNC_API_KEY = '78420fca737891955965e6a5f1b119fa2922b8257cb84d218aaa8c755ee62029';
+          const SYNC_API_KEY = '${{ secrets.SYNC_API_KEY }}';
           
           async function syncToD1() {
             console.log('🚀 Starting D1 sync from GitHub Actions...');

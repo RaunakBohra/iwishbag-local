@@ -15,7 +15,12 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'http://127.0.0.1:54321'; // Local Supabase
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 const D1_API_URL = 'https://iwishbag-edge-api.rnkbohra.workers.dev/api/sync';
-const SYNC_API_KEY = '78420fca737891955965e6a5f1b119fa2922b8257cb84d218aaa8c755ee62029'; // Secure API key
+const SYNC_API_KEY = process.env.SYNC_API_KEY; // Secure API key
+
+if (!SYNC_API_KEY) {
+  console.error('❌ SYNC_API_KEY environment variable is required');
+  process.exit(1);
+}
 
 async function main() {
   console.log('🚀 Starting D1 Exchange Rate Sync...\n');
