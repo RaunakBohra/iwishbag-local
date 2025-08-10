@@ -306,6 +306,13 @@ const CheckoutShopify: React.FC = React.memo(() => {
                   currency={displayCurrency}
                   country={selectedAddress?.destination_country || user?.profile?.country || 'US'}
                 />
+                {/* Debug info for payment method issues */}
+                {import.meta.env.DEV && (
+                  <div className="mt-2 p-2 bg-gray-100 text-xs rounded">
+                    <strong>Debug:</strong> Currency: {displayCurrency}, Country: {selectedAddress?.destination_country || user?.profile?.country || 'US'}, 
+                    Address Country: {selectedAddress?.destination_country}, Profile Country: {user?.profile?.country}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

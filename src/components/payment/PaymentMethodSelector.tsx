@@ -69,7 +69,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     getRecommendedPaymentMethod,
     getPaymentMethodDisplay,
     _PAYMENT_METHOD_DISPLAYS,
-  } = usePaymentGateways(currency, country);
+  } = usePaymentGateways(currency, country); // Pass country as shipping country override
 
   // Prefer props over hook data (for guest checkout)
   const availableMethods =

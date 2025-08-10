@@ -10,7 +10,7 @@
     "dev": "vite",
     "dev:local": "npm run db:start && vite --mode development",
     "dev:cloud": "vite --mode production",
-    "build": "tsc && vite build && node scripts/optimize-preloads.cjs && node scripts/extract-critical-css.cjs",
+    "build": "tsc && vite build && node scripts/optimize-preloads.cjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --report-unused-disable-directives --max-warnings 0 --fix",

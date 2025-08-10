@@ -20,6 +20,7 @@ const HEAVY_CHUNKS_TO_REMOVE = [
   'charts-vendor',
   'image-processing-vendor',
   'animations-vendor',
+  'animation-vendor', // Added - framer-motion should load after React
   'monitoring-vendor',
   'admin-core',
   'admin-pages',

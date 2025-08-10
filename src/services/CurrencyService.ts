@@ -998,6 +998,13 @@ class CurrencyService {
       console.log(`📋 [ExchangeRate] PRIORITY TIER: Checking shipping_routes table...`);
       console.log(`📋 [ExchangeRate] Query: shipping_routes WHERE origin_country='${originCountry}' AND destination_country='${destinationCountry}' AND exchange_rate IS NOT NULL`);
       
+      // Debug: Log request details for troubleshooting 406 errors
+      console.log(`🔧 [ExchangeRate] DEBUG: Supabase client configuration:`, {
+        url: supabase.supabaseUrl,
+        key: supabase.supabaseKey ? 'PRESENT' : 'MISSING',
+        headers: 'Headers configured in client setup'
+      });
+      
       const { data: shippingRoute, error: routeError } = await supabase
         .from('shipping_routes')
         .select('exchange_rate, updated_at, id')
@@ -1013,11 +1020,48 @@ class CurrencyService {
         return shippingRoute.exchange_rate;
       } else if (routeError) {
         console.log(`⚠️ [ExchangeRate] PRIORITY: Shipping routes error:`, routeError.code, routeError.message);
+        
+        // Enhanced debugging for all errors
+        console.log(`🔧 [ExchangeRate] DEBUG: Full error details:`, {
+          code: routeError.code,
+          message: routeError.message,
+          details: routeError.details,
+          status: routeError.status,
+          statusCode: (routeError as any)?.statusCode,
+          hint: routeError.hint,
+          error: routeError
+        });
+        
+        // Handle 406 (Not Acceptable) errors specifically
+        if (routeError.code === 'PGRST106' || routeError.message?.includes('406') || routeError.status === 406) {
+          console.log(`🚨 [ExchangeRate] PRIORITY: 406 Not Acceptable error detected`);
+          console.log(`🚨 [ExchangeRate] PRIORITY: This is a known PostgREST header issue, skipping shipping_routes and using cross-calculation`);
+          console.log(`🔄 [ExchangeRate] PRIORITY: Moving directly to unified config cross-calculation...`);
+          // Skip shipping_routes and go directly to unified config calculation
+        }
       } else {
         console.log(`📋 [ExchangeRate] PRIORITY: No shipping route found for ${originCountry}→${destinationCountry}`);
       }
     } catch (priorityError) {
       console.error(`❌ [ExchangeRate] PRIORITY: Error checking shipping_routes:`, priorityError);
+      
+      // Enhanced debugging for catch block errors
+      console.log(`🔧 [ExchangeRate] DEBUG: Catch block error details:`, {
+        message: priorityError.message,
+        status: (priorityError as any)?.status,
+        statusCode: (priorityError as any)?.statusCode,
+        code: (priorityError as any)?.code,
+        name: priorityError.name,
+        stack: priorityError.stack?.split('\n')[0], // First line of stack trace
+        fullError: priorityError
+      });
+      
+      // Handle 406 errors from JavaScript fetch (browser)
+      if (priorityError.message?.includes('406') || (priorityError as any)?.status === 406) {
+        console.log(`🚨 [ExchangeRate] PRIORITY: 406 Not Acceptable error in catch block`);
+        console.log(`🚨 [ExchangeRate] PRIORITY: Browser request headers conflict with PostgREST, using fallback`);
+        console.log(`🔄 [ExchangeRate] PRIORITY: Skipping shipping_routes, proceeding with cross-calculation...`);
+      }
     }
     
     console.log(`🔄 [ExchangeRate] FALLBACK: No shipping route found, using cache system for cross-calculation...`);

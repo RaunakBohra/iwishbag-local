@@ -301,7 +301,7 @@ export const getPaymentMethodsByCurrency = async (
   return [...new Set(finalMethods)];
 };
 
-export const usePaymentGateways = (overrideCurrency?: string, guestShippingCountry?: string) => {
+export const usePaymentGateways = (overrideCurrency?: string, shippingCountryOverride?: string) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -362,18 +362,18 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           'available-payment-methods',
           'authenticated',
           userProfile?.preferred_display_currency,
-          userProfile?.country,
+          shippingCountryOverride || userProfile?.country, // Use shipping country override if provided
           userProfile?.cod_enabled,
           user.id,
         ]
-      : ['available-payment-methods', 'guest', overrideCurrency, guestShippingCountry],
+      : ['available-payment-methods', 'guest', overrideCurrency, shippingCountryOverride],
     queryFn: async (): Promise<PaymentGateway[]> => {
       // Use override currency if provided (for guest checkout), otherwise use user's preferred currency
       // FIXED: Always provide USD fallback to prevent empty payment methods for users without currency set
       const currencyCode = overrideCurrency || userProfile?.preferred_display_currency || 'USD';
-      // Use guest shipping country or user's country
+      // Use shipping country override, guest shipping country, or user's country
       // FIXED: Provide US fallback for country code as well
-      const countryCode = guestShippingCountry || userProfile?.country || 'US';
+      const countryCode = shippingCountryOverride || userProfile?.country || 'US';
 
       // This should never happen now due to USD fallback, but keeping as safety check
       if (!currencyCode) {
@@ -395,7 +395,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           countryCode,
           isGuest: !user,
           overrideCurrency,
-          guestShippingCountry,
+          shippingCountryOverride,
         });
       }
 
@@ -623,8 +623,8 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         // For guests: check if shipping country supports COD
         else if (
           !user &&
-          guestShippingCountry &&
-          codGateway.supported_countries.includes(guestShippingCountry)
+          shippingCountryOverride &&
+          codGateway.supported_countries.includes(shippingCountryOverride)
         ) {
           finalMethods.push('cod');
         }
@@ -645,7 +645,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
         console.log('🔧 Query context:', {
           isGuest: !user,
           overrideCurrency,
-          guestShippingCountry,
+          shippingCountryOverride,
           userProfileCurrency: userProfile?.preferred_display_currency,
           userCountry: userProfile?.country,
         });
@@ -664,7 +664,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
           metadata: {
             isGuest: !user,
             overrideCurrency,
-            guestShippingCountry,
+            shippingCountryOverride,
           },
         },
       );
@@ -1037,7 +1037,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
     try {
       // Use country-specific recommendation if country is provided
-      const targetCountry = countryCode || guestShippingCountry || userProfile?.country;
+      const targetCountry = countryCode || shippingCountryOverride || userProfile?.country;
 
       if (targetCountry) {
         // Try to get country-specific default gateway

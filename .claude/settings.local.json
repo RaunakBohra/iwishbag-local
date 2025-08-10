@@ -310,7 +310,11 @@
       "Bash(./validate-agents.sh)",
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch check-email-content.js add-stripe-gateway.sql deploy-sms-system.sh' --prune-empty --tag-name-filter cat -- --all)",
       "Bash(git rev-list:*)",
-      "Bash(git gc:*)"
+      "Bash(git gc:*)",
+      "WebFetch(domain:whyteclub.com)",
+      "WebFetch(domain:92a89f46.iwishbag.pages.dev)",
+      "WebFetch(domain:dd329c86.iwishbag.pages.dev)",
+      "WebFetch(domain:d64273c7.iwishbag.pages.dev)"
     ],
     "deny": []
   }

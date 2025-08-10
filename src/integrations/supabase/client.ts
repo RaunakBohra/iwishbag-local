@@ -31,4 +31,15 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
       eventsPerSecond: 10,
     },
   },
+  global: {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 });

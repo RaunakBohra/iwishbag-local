@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { OptimizedIcon, CheckCircle, Package, Truck, Clock, ChevronDown, X } from '@/components/ui/OptimizedIcon';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
-import { formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
+import { formatAmountWithFinancialPrecision, convertCurrency } from '@/utils/quoteCurrencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { QuoteStatusBadge } from '@/components/ui/QuoteStatusBadge';
@@ -42,6 +44,36 @@ const getQuoteTotal = (quote: any): number => {
   return total || 0;
 };
 
+/**
+ * Helper function to format dual currency display for better UX
+ * Format: ₹8,234.56 (~$123.45 USD) when currencies differ, or just ₹8,234.56 when same
+ */
+const formatDualCurrency = async (
+  amount: number, 
+  primaryCurrency: string, 
+  secondaryCurrency: string
+): Promise<string> => {
+  // If currencies are the same, show single currency
+  if (primaryCurrency === secondaryCurrency) {
+    return formatAmountWithFinancialPrecision(amount, primaryCurrency);
+  }
+  
+  try {
+    // Format primary amount
+    const primaryFormatted = formatAmountWithFinancialPrecision(amount, primaryCurrency);
+    
+    // Convert to secondary currency
+    const convertedAmount = await convertCurrency(amount, primaryCurrency, secondaryCurrency);
+    const secondaryFormatted = formatAmountWithFinancialPrecision(convertedAmount, secondaryCurrency);
+    
+    // Return dual format: Primary (~Secondary)
+    return `${primaryFormatted} (~${secondaryFormatted})`;
+  } catch (error) {
+    console.warn('Dual currency conversion failed, showing primary only:', error);
+    return formatAmountWithFinancialPrecision(amount, primaryCurrency);
+  }
+};
+
 interface ShopifyStyleQuoteViewProps {
   viewMode: 'customer' | 'shared';
 }
@@ -64,6 +96,19 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
+  const [itemsDualCurrencyDisplay, setItemsDualCurrencyDisplay] = useState<string>('');
+  const [detailedItemsDualCurrencyDisplay, setDetailedItemsDualCurrencyDisplay] = useState<string>('');
+  const [detailedBreakdownDualCurrency, setDetailedBreakdownDualCurrency] = useState<{[key: string]: string}>({});
+  const [detailedBreakdownTableData, setDetailedBreakdownTableData] = useState<Array<{
+    category: string;
+    description: string;
+    originAmount: number;
+    originCurrency: string;
+    customerAmount: number;
+    customerCurrency: string;
+    key: string;
+  }>>([]);
+  const [weightDisplay, setWeightDisplay] = useState<{ value: number; unit: string }>({ value: 0, unit: 'kg' });
 
   // Currency conversion function
   const convertCurrency = useCallback(async (amount: number, fromCurrency: string, toCurrency: string) => {
@@ -145,6 +190,202 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
     convertAmounts();
   }, [quote.id, quote.origin_country, displayCurrency, convertCurrency]);
 
+  // Calculate dual currency display for Items section
+  useEffect(() => {
+    const calculateItemsDualCurrency = async () => {
+      const itemsAmount = steps.discounted_items_subtotal || steps.items_subtotal || 0;
+      if (!itemsAmount || !displayCurrency || !originCurrency) {
+        setItemsDualCurrencyDisplay(formatAmountWithFinancialPrecision(itemsAmount, originCurrency));
+        return;
+      }
+
+      try {
+        // Items should show origin currency first (primary), then customer currency (secondary)
+        const dualDisplay = await formatDualCurrency(itemsAmount, originCurrency, displayCurrency);
+        setItemsDualCurrencyDisplay(dualDisplay);
+      } catch (error) {
+        console.warn('Failed to calculate dual currency display for items:', error);
+        setItemsDualCurrencyDisplay(formatAmountWithFinancialPrecision(itemsAmount, originCurrency));
+      }
+    };
+
+    calculateItemsDualCurrency();
+  }, [steps.discounted_items_subtotal, steps.items_subtotal, displayCurrency, originCurrency]);
+
+  // Calculate dual currency display for detailed breakdown Items Subtotal
+  useEffect(() => {
+    const calculateDetailedItemsDualCurrency = async () => {
+      // For detailed breakdown, use steps.items_subtotal (not discounted version)
+      const itemsSubtotal = steps.items_subtotal || 0;
+      if (!itemsSubtotal || !displayCurrency || !originCurrency) {
+        setDetailedItemsDualCurrencyDisplay(formatAmountWithFinancialPrecision(itemsSubtotal, originCurrency));
+        return;
+      }
+
+      try {
+        // Items should show origin currency first (primary), then customer currency (secondary)
+        const dualDisplay = await formatDualCurrency(itemsSubtotal, originCurrency, displayCurrency);
+        setDetailedItemsDualCurrencyDisplay(dualDisplay);
+      } catch (error) {
+        console.warn('Failed to calculate detailed dual currency display for items:', error);
+        setDetailedItemsDualCurrencyDisplay(formatAmountWithFinancialPrecision(itemsSubtotal, originCurrency));
+      }
+    };
+
+    calculateDetailedItemsDualCurrency();
+  }, [steps.items_subtotal, displayCurrency, originCurrency]);
+
+  // Calculate dual currency display for all detailed breakdown items
+  useEffect(() => {
+    const calculateDetailedBreakdownDualCurrency = async () => {
+      if (!displayCurrency || !originCurrency) return;
+
+      // Define all the breakdown items that should show dual currency
+      const breakdownItems = {
+        'shipping_cost': steps.shipping_cost || 0,
+        'insurance_amount': steps.insurance_amount || 0, 
+        'domestic_delivery': steps.domestic_delivery || 0,
+        'customs_duty': steps.customs_duty || 0,
+        'local_tax_amount': steps.local_tax_amount || 0,
+        'handling_fee': steps.handling_fee || 0,
+        'payment_gateway_fee': steps.payment_gateway_fee || 0,
+        'item_discounts': steps.item_discounts || 0
+      };
+
+      const dualDisplays: {[key: string]: string} = {};
+
+      try {
+        for (const [key, amount] of Object.entries(breakdownItems)) {
+          if (amount > 0) {
+            // Determine source currency based on the fee type
+            let sourceCurrency = originCurrency; // Default
+            
+            // Different fee types might be stored in different currencies
+            if (['item_discounts', 'shipping_cost', 'insurance_amount'].includes(key)) {
+              // Items-related costs are in origin currency
+              sourceCurrency = originCurrency;
+            } else if (['customs_duty', 'local_tax_amount', 'domestic_delivery'].includes(key)) {
+              // Local/destination costs might be in destination currency
+              // But for now, assume all are stored in origin currency for consistency
+              sourceCurrency = originCurrency;
+            } else {
+              // Service fees (handling, payment) - assume origin currency
+              sourceCurrency = originCurrency;
+            }
+            
+            const dualDisplay = await formatDualCurrency(amount, sourceCurrency, displayCurrency);
+            dualDisplays[key] = dualDisplay;
+          }
+        }
+        
+        setDetailedBreakdownDualCurrency(dualDisplays);
+      } catch (error) {
+        console.warn('Failed to calculate detailed breakdown dual currency:', error);
+        setDetailedBreakdownDualCurrency({});
+      }
+    };
+
+    calculateDetailedBreakdownDualCurrency();
+  }, [steps, displayCurrency, originCurrency]);
+
+  // Calculate table data for detailed breakdown
+  useEffect(() => {
+    const calculateTableData = async () => {
+      if (!displayCurrency || !originCurrency || !steps) return;
+
+      const tableRows: Array<{
+        category: string;
+        description: string;
+        originAmount: number;
+        originCurrency: string;
+        customerAmount: number;
+        customerCurrency: string;
+        key: string;
+      }> = [];
+
+      // Define all breakdown items with categories
+      const breakdownItems = [
+        // Items & Products
+        { key: 'items_subtotal', category: 'Items & Products', description: 'Items Subtotal', amount: steps.items_subtotal || 0 },
+        { key: 'item_discounts', category: 'Items & Products', description: 'Item Discounts', amount: steps.item_discounts || 0, isDiscount: true },
+        
+        // Shipping & Logistics
+        { key: 'shipping_cost', category: 'Shipping & Logistics', description: 'International Shipping', amount: steps.shipping_cost || 0 },
+        { key: 'insurance_amount', category: 'Shipping & Logistics', description: 'Package Insurance', amount: steps.insurance_amount || 0 },
+        { key: 'domestic_delivery', category: 'Shipping & Logistics', description: 'Local Delivery', amount: steps.domestic_delivery || 0 },
+        
+        // Taxes & Duties
+        { key: 'customs_duty', category: 'Taxes & Duties', description: 'Import Duties', amount: steps.customs_duty || 0 },
+        { key: 'local_tax_amount', category: 'Taxes & Duties', description: 'Local Tax', amount: steps.local_tax_amount || 0 },
+        
+        // Service Fees
+        { key: 'handling_fee', category: 'Service Fees', description: 'Handling Fee', amount: steps.handling_fee || 0 },
+        { key: 'payment_gateway_fee', category: 'Service Fees', description: 'Payment Processing', amount: steps.payment_gateway_fee || 0 },
+      ];
+
+      try {
+        for (const item of breakdownItems) {
+          if (item.amount > 0) {
+            // Convert from origin currency to customer currency
+            const customerAmount = await convertCurrency(item.amount, originCurrency, displayCurrency);
+            
+            tableRows.push({
+              category: item.category,
+              description: item.description,
+              originAmount: item.amount,
+              originCurrency: originCurrency,
+              customerAmount: customerAmount,
+              customerCurrency: displayCurrency,
+              key: item.key
+            });
+          }
+        }
+
+        setDetailedBreakdownTableData(tableRows);
+      } catch (error) {
+        console.warn('Failed to calculate table data for detailed breakdown:', error);
+        setDetailedBreakdownTableData([]);
+      }
+    };
+
+    calculateTableData();
+  }, [steps, displayCurrency, originCurrency, convertCurrency]);
+
+  // Calculate weight display with correct unit based on origin country
+  useEffect(() => {
+    const calculateWeightDisplay = async () => {
+      // Get weight from calculation data
+      const totalWeight = quote.calculation_data?.inputs?.total_weight_kg || 0;
+      
+      try {
+        // Fetch origin country weight unit from country_settings
+        const { data: countrySettings } = await supabase
+          .from('country_settings')
+          .select('weight_unit')
+          .eq('code', quote.origin_country)
+          .single();
+
+        const weightUnit = countrySettings?.weight_unit || 'kg';
+        
+        // Keep same number, just change unit display
+        setWeightDisplay({
+          value: totalWeight,
+          unit: weightUnit
+        });
+      } catch (error) {
+        console.warn('Failed to fetch weight unit, defaulting to kg:', error);
+        setWeightDisplay({
+          value: totalWeight,
+          unit: 'kg'
+        });
+      }
+    };
+
+    if (quote?.origin_country && quote?.calculation_data?.inputs?.total_weight_kg) {
+      calculateWeightDisplay();
+    }
+  }, [quote?.origin_country, quote?.calculation_data?.inputs?.total_weight_kg]);
+
   // Helper function to get amounts
   const getAmount = (key: string, originalAmount: number) => {
     const itemCostKeys = ['items_subtotal', 'item_discounts', 'order_discount_amount'];
@@ -166,8 +407,11 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
       label: 'Items',
       amount: getAmount('items_subtotal', steps.discounted_items_subtotal || steps.items_subtotal || 0),
       currency: originCurrency, // Items always in origin currency
-      showCurrencyNote: displayCurrency !== originCurrency,
-      currencyNote: displayCurrency !== originCurrency ? `Shown in ${originCurrency}` : undefined
+      showCurrencyNote: false, // Disable currency note since dual display provides better context
+      currencyNote: undefined, // No need for currency note with dual currency display
+      // New: dual currency display for better UX
+      dualCurrencyDisplay: itemsDualCurrencyDisplay,
+      useDualCurrency: true // Flag to use dual currency display instead of single amount
     },
     {
       icon: <Truck className="w-4 h-4" />,
@@ -212,19 +456,32 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
   return (
     <Card className={`${className} border-teal-200 shadow-sm bg-white`}>
       <CardContent className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <OptimizedIcon name="FileText" className="w-5 h-5 text-teal-600" />
-            <h3 className="text-lg font-semibold text-slate-900">Quote Breakdown</h3>
+        {/* Enhanced Header with Better Visual Hierarchy */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-teal-100 rounded-lg">
+              <OptimizedIcon name="FileText" className="w-4 h-4 text-teal-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Quote Breakdown</h3>
+              <p className="text-sm text-slate-500">
+                {showDetails ? 'Detailed analysis of all costs' : 'Summary view with main categories'}
+              </p>
+            </div>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setShowDetails(!showDetails)}
-            className="text-teal-600 hover:text-teal-800 hover:bg-teal-50 transition-colors"
+            className={`
+              transition-all duration-200 ease-in-out font-medium border-2
+              ${showDetails 
+                ? 'text-slate-700 bg-slate-50 border-slate-300 hover:bg-slate-100 hover:border-slate-400' 
+                : 'text-teal-700 bg-teal-50 border-teal-300 hover:bg-teal-100 hover:border-teal-400'
+              }
+            `}
           >
-            <span className="text-sm font-medium mr-2">
+            <span className="mr-2">
               {showDetails ? 'Hide Details' : 'Show Details'}
             </span>
             {showDetails ? (
@@ -248,10 +505,14 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
           </div>
         )}
 
-        {/* Summary View - Main Categories */}
-        <div className="space-y-1">
-          {summaryItems.map((item, index) => (
-            <div key={index} className="flex items-center justify-between py-3">
+        {/* Summary View - Main Categories (Hidden when details are shown) */}
+        {!showDetails && (
+          <div className="space-y-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <div className="text-sm font-medium text-slate-700 mb-2 uppercase tracking-wide">
+              Cost Breakdown Summary
+            </div>
+            {summaryItems.map((item, index) => (
+            <div key={index} className="flex items-center justify-between py-3 px-2 hover:bg-white hover:shadow-sm rounded-md transition-all duration-150">
               <div className="flex items-center space-x-3">
                 <div className="text-teal-500 flex-shrink-0">
                   {item.icon}
@@ -269,7 +530,9 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
               </div>
               <div className="text-right">
                 <span className="font-mono font-medium text-slate-900">
-                  {formatCurrency(item.amount, item.currency)}
+                  {item.useDualCurrency && item.dualCurrencyDisplay 
+                    ? item.dualCurrencyDisplay 
+                    : formatCurrency(item.amount, item.currency)}
                 </span>
               </div>
             </div>
@@ -293,139 +556,91 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Trust Signals */}
-        <div className="mt-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
-          <div className="flex items-center justify-center space-x-6 text-xs text-slate-600">
-            <div className="flex items-center space-x-1">
-              <OptimizedIcon name="Shield" className="w-3 h-3" />
-              <span>Secure Payment</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <CheckCircle className="w-3 h-3" />
-              <span>All Taxes Included</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Truck className="w-3 h-3" />
-              <span>Insured Shipping</span>
+          {/* Trust Signals */}
+          <div className="mt-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+            <div className="flex items-center justify-center space-x-6 text-xs text-slate-600">
+              <div className="flex items-center space-x-1">
+                <OptimizedIcon name="Shield" className="w-3 h-3" />
+                <span>Secure Payment</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-3 h-3" />
+                <span>All Taxes Included</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Truck className="w-3 h-3" />
+                <span>Insured Shipping</span>
+              </div>
             </div>
           </div>
         </div>
+        )}
 
-        {/* Detailed Breakdown (Expandable) */}
-        {showDetails && (
-          <div className="mt-8 pt-6 border-t border-teal-200">
+        {/* Detailed Breakdown (Expandable) with Smooth Animation */}
+        <div className={`
+          transition-all duration-300 ease-in-out overflow-hidden
+          ${showDetails ? 'max-h-none opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'}
+        `}>
+          {showDetails && (
+            <div className="pt-8 border-t border-slate-200">
+{/* Professional Breakdown Table */}
             <div className="space-y-6">
-              {/* Items & Products */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
-                  Items & Products
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start text-sm">
-                    <span className="text-slate-600">Items Subtotal</span>
-                    <span className="font-mono font-medium ml-4 text-slate-900">
-                      {formatCurrency(steps.items_subtotal || 0, originCurrency)}
-                    </span>
-                  </div>
-                  {steps.item_discounts > 0 && (
-                    <div className="flex justify-between items-start text-sm">
-                      <span className="text-emerald-700">Item Discounts</span>
-                      <span className="font-mono font-medium ml-4 text-emerald-700">
-                        -{formatCurrency(steps.item_discounts || 0, originCurrency)}
-                      </span>
-                    </div>
-                  )}
+              <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-full">
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead className="text-left font-semibold text-slate-800 min-w-[150px] sm:min-w-[200px]">Description</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-800 min-w-[100px] whitespace-nowrap">Origin ({originCurrency})</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-800 min-w-[100px] whitespace-nowrap">Your Currency ({displayCurrency})</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detailedBreakdownTableData.length > 0 ? (
+                      (() => {
+                        const categories = [...new Set(detailedBreakdownTableData.map(item => item.category))];
+                        return categories.map(category => {
+                          const categoryItems = detailedBreakdownTableData.filter(item => item.category === category);
+                          return (
+                            <React.Fragment key={category}>
+                              {/* Category Header */}
+                              <TableRow className="bg-slate-50/50">
+                                <TableCell colSpan={3} className="font-semibold text-slate-800 text-xs uppercase tracking-wide py-3">
+                                  {category}
+                                </TableCell>
+                              </TableRow>
+                              {/* Category Items */}
+                              {categoryItems.map(item => (
+                                <TableRow key={item.key} className="hover:bg-slate-50/30 transition-colors">
+                                  <TableCell className="text-slate-600 py-3 text-sm">
+                                    {item.description}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono font-medium text-slate-900 py-3 text-sm whitespace-nowrap">
+                                    {item.key === 'item_discounts' ? '-' : ''}
+                                    {formatAmountWithFinancialPrecision(item.originAmount, item.originCurrency)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono font-medium text-slate-700 py-3 text-sm whitespace-nowrap">
+                                    {item.key === 'item_discounts' ? '-' : ''}
+                                    {formatAmountWithFinancialPrecision(item.customerAmount, item.customerCurrency)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </React.Fragment>
+                          );
+                        });
+                      })()
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-slate-500 py-6">
+                          No breakdown details available
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                  </Table>
                 </div>
               </div>
-
-              {/* Shipping & Logistics */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
-                  Shipping & Logistics
-                </h4>
-                <div className="space-y-2">
-                  {steps.shipping_cost > 0 && (
-                    <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">International Shipping</span>
-                      <span className="font-mono font-medium ml-4 text-slate-900">
-                        {formatCurrency(steps.shipping_cost || 0, currency)}
-                      </span>
-                    </div>
-                  )}
-                  {steps.insurance_amount > 0 && (
-                    <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">Package Insurance</span>
-                      <span className="font-mono font-medium ml-4 text-slate-900">
-                        {formatCurrency(steps.insurance_amount || 0, currency)}
-                      </span>
-                    </div>
-                  )}
-                  {steps.domestic_delivery > 0 && (
-                    <div className="flex justify-between items-start text-sm">
-                      <span className="text-slate-600">Local Delivery</span>
-                      <span className="font-mono font-medium ml-4 text-slate-900">
-                        {formatCurrency(steps.domestic_delivery || 0, currency)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Taxes & Duties */}
-              {(steps.customs_duty > 0 || steps.local_tax_amount > 0) && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
-                    Taxes & Duties
-                  </h4>
-                  <div className="space-y-2">
-                    {steps.customs_duty > 0 && (
-                      <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Import Duties</span>
-                        <span className="font-mono font-medium ml-4 text-slate-900">
-                          {formatCurrency(steps.customs_duty || 0, currency)}
-                        </span>
-                      </div>
-                    )}
-                    {steps.local_tax_amount > 0 && (
-                      <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Local Tax</span>
-                        <span className="font-mono font-medium ml-4 text-slate-900">
-                          {formatCurrency(steps.local_tax_amount || 0, currency)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Service Fees */}
-              {(steps.handling_fee > 0 || steps.payment_gateway_fee > 0) && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wide">
-                    Service Fees
-                  </h4>
-                  <div className="space-y-2">
-                    {steps.handling_fee > 0 && (
-                      <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Handling Fee</span>
-                        <span className="font-mono font-medium ml-4 text-slate-900">
-                          {formatCurrency(steps.handling_fee || 0, currency)}
-                        </span>
-                      </div>
-                    )}
-                    {steps.payment_gateway_fee > 0 && (
-                      <div className="flex justify-between items-start text-sm">
-                        <span className="text-slate-600">Payment Processing</span>
-                        <span className="font-mono font-medium ml-4 text-slate-900">
-                          {formatCurrency(steps.payment_gateway_fee || 0, currency)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Total Savings */}
               {totalSavings > 0 && (
@@ -446,29 +661,71 @@ const ProfessionalBreakdown: React.FC<ProfessionalBreakdownProps> = ({
                 </div>
               )}
 
-              {/* Additional Information */}
-              <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
-                <div className="text-sm text-slate-600 space-y-2">
-                  <div className="flex items-start space-x-2">
-                    <OptimizedIcon name="Info" className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+              {/* Professional Final Total Summary */}
+              <div className="mt-6 p-6 bg-white border border-teal-200 rounded-lg shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-1 h-12 bg-teal-600 rounded-full"></div>
                     <div>
-                      <p className="font-medium text-slate-800 mb-1">Additional Information</p>
-                      <ul className="space-y-1 text-slate-600">
-                        <li>• All prices include applicable taxes and duties</li>
-                        <li>• Package weight: {calc.inputs?.total_weight_kg || 0}kg</li>
-                        <li>• Exchange rates updated daily</li>
-                        {steps.insurance_amount > 0 && (
-                          <li>• Package insurance covers full value and shipping</li>
-                        )}
-                        <li className="text-emerald-700">• ✓ Enhanced precision with financial-grade calculations</li>
-                      </ul>
+                      <h4 className="text-xl font-bold text-slate-900">Final Total</h4>
+                      <p className="text-sm text-slate-600 mt-1">
+                        {(() => {
+                          const totalWeight = quote?.calculation_data?.inputs?.total_weight_kg || 0;
+                          const weightUnit = quote?.origin_country === 'US' ? 'lbs' : 'kg';
+                          return totalWeight ? `${totalWeight} ${weightUnit} • ` : '';
+                        })()}
+                        All taxes & fees included
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-slate-900 font-mono">
+                      {formatCurrency(finalTotal, currency)}
+                    </div>
+                    <div className="text-sm text-orange-600 font-medium mt-1">
+                      Ready for approval
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Professional Quote Details */}
+              <div className="mt-4 p-5 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="text-sm space-y-3">
+                  <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                    <div className="w-1 h-4 bg-orange-500 rounded-full mr-2"></div>
+                    Quote Details
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                      <span>All taxes and duties included</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                      <span>Package weight: {(() => {
+                        const totalWeight = quote?.calculation_data?.inputs?.total_weight_kg || 0;
+                        const unit = quote?.origin_country === 'US' ? 'lbs' : 'kg';
+                        return `${totalWeight || 0} ${unit}`;
+                      })()}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                      <span>Exchange rates updated daily</span>
+                    </div>
+                    {steps.insurance_amount > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                        <span>Insurance covers full value</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -760,6 +1017,8 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     numeric: number;
     currency: string;
   } | null>(null);
+  
+  // Note: Weight display is handled inline with direct calculation for better performance
 
   // Memoized callback to prevent infinite re-renders
   const handleTotalCalculated = useCallback((formattedTotal: string, numericTotal: number, currency: string) => {
@@ -1241,7 +1500,11 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           )}
                         </h3>
                         <div className="text-sm text-muted-foreground">
-                          {items.length} item{items.length !== 1 ? 's' : ''} • {items.reduce((sum, item) => sum + (Number(item.weight) || 0), 0).toFixed(2)}kg total
+                          {items.length} item{items.length !== 1 ? 's' : ''} • {(() => {
+                            const totalWeight = quote?.calculation_data?.inputs?.total_weight_kg || items.reduce((sum, item) => sum + (Number(item.weight_kg) || Number(item.weight) || 0), 0);
+                            const unit = quote?.origin_country === 'US' ? 'lbs' : 'kg';
+                            return `${totalWeight.toFixed(2)} ${unit}`;
+                          })()}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mb-3">
@@ -1381,7 +1644,11 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span>Qty: {item.quantity}</span>
                           <span>•</span>
-                          <span>{Number(item.weight) || 0}kg</span>
+                          <span>{(() => {
+                            const weight = Number(item.weight_kg) || Number(item.weight) || 0;
+                            const unit = quote?.origin_country === 'US' ? 'lbs' : 'kg';
+                            return `${weight} ${unit}`;
+                          })()}</span>
                           {shouldShowPricing(visibilityTier) && (
                             <>
                               <span>•</span>
@@ -1594,20 +1861,26 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       {/* Base Quote Total */}
                       <div className="text-lg font-semibold text-slate-900">
                         Quote total: {(() => {
+                          let totalDisplay = '';
                           if (quoteOptions.adjustedTotal > 0) {
-                            return formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
+                            totalDisplay = formatCurrency(quoteOptions.adjustedTotal, displayCurrency);
+                          } else if (sharedTotal?.formatted) {
+                            totalDisplay = sharedTotal.formatted;
+                          } else if (convertedAmounts.total) {
+                            totalDisplay = convertedAmounts.total;
+                          } else {
+                            // Get total with fallback logic built-in
+                            const total = getQuoteTotal(quote);
+                            const currency = displayCurrency || getBreakdownSourceCurrency(quote);
+                            totalDisplay = formatCurrency(total, currency);
                           }
-                          if (sharedTotal?.formatted) {
-                            return sharedTotal.formatted;
-                          }
-                          if (convertedAmounts.total) {
-                            return convertedAmounts.total;
-                          }
-                          // Get total with fallback logic built-in
-                          const total = getQuoteTotal(quote);
                           
-                          const currency = displayCurrency || getBreakdownSourceCurrency(quote);
-                          return formatCurrency(total, currency);
+                          // Add weight display in brackets
+                          const totalWeight = quote?.calculation_data?.inputs?.total_weight_kg || 0;
+                          const weightUnit = quote?.origin_country === 'US' ? 'lbs' : 'kg';
+                          const weightDisplay = totalWeight ? ` (${totalWeight} ${weightUnit})` : '';
+                          
+                          return `${totalDisplay}${weightDisplay}`;
                         })()}
                       </div>
 
