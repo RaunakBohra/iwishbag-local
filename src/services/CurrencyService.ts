@@ -989,6 +989,39 @@ class CurrencyService {
       return 1.0;
     }
 
+    // CRITICAL: For exchange rates, check shipping_routes FIRST before any caching
+    // This ensures business-defined rates take priority over calculated cross-rates
+    console.log(`🎯 [ExchangeRate] PRIORITY CHECK: Checking shipping_routes before cache...`);
+    
+    try {
+      // Direct shipping_routes check (no caching) - highest priority
+      console.log(`📋 [ExchangeRate] PRIORITY TIER: Checking shipping_routes table...`);
+      console.log(`📋 [ExchangeRate] Query: shipping_routes WHERE origin_country='${originCountry}' AND destination_country='${destinationCountry}' AND exchange_rate IS NOT NULL`);
+      
+      const { data: shippingRoute, error: routeError } = await supabase
+        .from('shipping_routes')
+        .select('exchange_rate, updated_at, id')
+        .eq('origin_country', originCountry)
+        .eq('destination_country', destinationCountry)
+        .not('exchange_rate', 'is', null)
+        .single();
+
+      if (!routeError && shippingRoute?.exchange_rate) {
+        console.log(`✅ [ExchangeRate] PRIORITY SUCCESS: Using shipping_routes rate!`);
+        console.log(`✅ [ExchangeRate] Route ID: ${shippingRoute.id}, Rate: ${shippingRoute.exchange_rate}, Updated: ${shippingRoute.updated_at}`);
+        console.log(`🎉 [ExchangeRate] BUSINESS RATE: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`);
+        return shippingRoute.exchange_rate;
+      } else if (routeError) {
+        console.log(`⚠️ [ExchangeRate] PRIORITY: Shipping routes error:`, routeError.code, routeError.message);
+      } else {
+        console.log(`📋 [ExchangeRate] PRIORITY: No shipping route found for ${originCountry}→${destinationCountry}`);
+      }
+    } catch (priorityError) {
+      console.error(`❌ [ExchangeRate] PRIORITY: Error checking shipping_routes:`, priorityError);
+    }
+    
+    console.log(`🔄 [ExchangeRate] FALLBACK: No shipping route found, using cache system for cross-calculation...`);
+    
     // Use D1 countries endpoint (which has live rates) instead of the broken rates endpoint
     const d1Endpoint = `/api/countries`;
     console.log(`🌐 [ExchangeRate] D1 endpoint: ${EDGE_API_URL}${d1Endpoint}`);
@@ -999,41 +1032,11 @@ class CurrencyService {
         cacheKey,
         async () => {
         console.log(`💾 [ExchangeRate] Cache miss, fetching exchange rate from database sources`);
-        console.log(`💾 [ExchangeRate] Available data sources: 1) Shipping Routes 2) Country Settings 3) Fallback Rates`);
+        console.log(`💾 [ExchangeRate] Note: Shipping routes already checked at priority level - this is USD cross-calculation fallback`);
         
         try {
-          // Tier 1: Check shipping routes for direct exchange rates (highest priority)
-          console.log(`📋 [ExchangeRate] TIER 1: Checking shipping routes table...`);
-          console.log(`📋 [ExchangeRate] Query: shipping_routes WHERE origin_country='${originCountry}' AND destination_country='${destinationCountry}' AND exchange_rate IS NOT NULL`);
-          
-          const { data: shippingRoute, error: routeError } = await supabase
-            .from('shipping_routes')
-            .select('exchange_rate, updated_at, id')
-            .eq('origin_country', originCountry)
-            .eq('destination_country', destinationCountry)
-            .not('exchange_rate', 'is', null)
-            .single();
-
-          console.log(`📋 [ExchangeRate] Shipping route query result:`, { 
-            data: shippingRoute, 
-            error: routeError?.message || 'none',
-            errorCode: routeError?.code || 'none'
-          });
-
-          // Skip shipping_routes query if it's causing 406 errors
-          if (routeError?.code === '406' || routeError?.message?.includes('Not Acceptable')) {
-            console.log(`⚠️ [ExchangeRate] Shipping routes table not accessible (406), skipping to country settings`);
-          } else if (!routeError && shippingRoute?.exchange_rate) {
-            console.log(`✅ [ExchangeRate] TIER 1 SUCCESS: Using shipping route rate`);
-            console.log(`✅ [ExchangeRate] Route ID: ${shippingRoute.id}, Rate: ${shippingRoute.exchange_rate}, Updated: ${shippingRoute.updated_at}`);
-            return shippingRoute.exchange_rate;
-          } else {
-            console.log(`❌ [ExchangeRate] TIER 1 FAILED: No shipping route found or rate is null`);
-            console.log(`❌ [ExchangeRate] Moving to TIER 2: Country Settings...`);
-          }
-
-          // Tier 2: Fallback to unified configuration USD-based conversion
-          console.log(`🌍 [ExchangeRate] TIER 2: Checking country settings via unified config...`);
+          // Tier 1: Fallback to unified configuration USD-based conversion  
+          console.log(`🌍 [ExchangeRate] TIER 1: Checking country settings via unified config...`);
           console.log(`🌍 [ExchangeRate] Fetching configs for: ${originCountry} and ${destinationCountry}`);
           
           const [originConfig, destConfig] = await Promise.all([
@@ -1056,9 +1059,9 @@ class CurrencyService {
           });
 
           if (!originConfig || !destConfig) {
-            console.log(`❌ [ExchangeRate] TIER 2 FAILED: Missing country config`);
+            console.log(`❌ [ExchangeRate] TIER 1 FAILED: Missing country config`);
             console.log(`❌ [ExchangeRate] originConfig exists: ${!!originConfig}, destConfig exists: ${!!destConfig}`);
-            console.log(`❌ [ExchangeRate] Moving to TIER 3: Fallback rates...`);
+            console.log(`❌ [ExchangeRate] Moving to TIER 2: Fallback rates...`);
             
             // Fallback to default exchange rate (1.0 for same currency, or common rates)
             if (originCountry === destinationCountry) {
@@ -1077,7 +1080,7 @@ class CurrencyService {
             };
             const fallbackKey = `${originCountry}_${destinationCountry}`;
             const fallbackRate = fallbackRates[fallbackKey] || 1.0;
-            console.log(`⚠️ [ExchangeRate] TIER 3: Using hardcoded fallback rate: ${fallbackKey} = ${fallbackRate}`);
+            console.log(`⚠️ [ExchangeRate] TIER 2: Using hardcoded fallback rate: ${fallbackKey} = ${fallbackRate}`);
             return fallbackRate;
           }
 
@@ -1089,7 +1092,7 @@ class CurrencyService {
           console.log(`🧮 [ExchangeRate] - Destination (${destinationCountry}): ${destRate} ${destConfig.currency}/USD`);
 
           if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
-            console.log(`❌ [ExchangeRate] TIER 2 FAILED: Invalid exchange rates`);
+            console.log(`❌ [ExchangeRate] TIER 1 FAILED: Invalid exchange rates`);
             console.log(`❌ [ExchangeRate] originRate: ${originRate} (valid: ${!!(originRate && originRate > 0)})`);
             console.log(`❌ [ExchangeRate] destRate: ${destRate} (valid: ${!!(destRate && destRate > 0)})`);
             throw new Error(
@@ -1099,7 +1102,7 @@ class CurrencyService {
 
           // Calculate cross rate via USD: destination_rate / origin_rate
           const crossRate = destRate / originRate;
-          console.log(`✅ [ExchangeRate] TIER 2 SUCCESS: Calculated cross-rate via USD from local database`);
+          console.log(`✅ [ExchangeRate] TIER 1 SUCCESS: Calculated cross-rate via USD from local database`);
           console.log(`✅ [ExchangeRate] Formula: ${destRate} (${destinationCountry} per USD) ÷ ${originRate} (${originCountry} per USD) = ${crossRate}`);
           console.log(`✅ [ExchangeRate] Final rate: 1 ${originConfig.currency} = ${crossRate} ${destConfig.currency}`);
           
