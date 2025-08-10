@@ -98,7 +98,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     sourcemap: true,
-    minify: 'esbuild',
+    minify: 'esbuild', // Keep esbuild but with conservative settings
     target: 'es2020',
     // Enable CSS code splitting
     cssCodeSplit: true,
@@ -106,13 +106,15 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1000,
   },
   esbuild: {
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
-    // Safer minification settings to prevent initialization issues
-    keepNames: true, // Preserve function and variable names for debugging
+    drop: mode === 'production' ? [] : [], // Don't drop console/debugger to prevent hoisting issues
+    // Conservative minification to prevent variable initialization errors
+    keepNames: true, // Preserve function and variable names
     minifyIdentifiers: false, // Don't rename variables aggressively
-    minifySyntax: true, // Safe syntax minification
-    minifyWhitespace: true, // Remove whitespace
+    minifySyntax: false, // Disable syntax minification that can cause hoisting issues
+    minifyWhitespace: true, // Safe whitespace removal only
     legalComments: 'none',
+    // Force ES2020 target to ensure proper variable declarations
+    target: 'es2020',
   },
   optimizeDeps: {
     include: [
