@@ -37,10 +37,111 @@ jobs:
             exit 1
           fi
 
+      - name: Sync Fresh Rates to D1 Edge Cache
+        if: success()
+        run: |
+          echo "🔄 Syncing fresh exchange rates to D1 Edge API..."
+          
+          # Install Node.js dependencies for the sync script
+          echo "📦 Installing dependencies..."
+          npm install --no-save @supabase/supabase-js
+          
+          # Create temporary sync script
+          cat > sync-to-d1.js << 'EOF'
+          import { createClient } from '@supabase/supabase-js';
+          
+          const SUPABASE_URL = 'https://grgvlrvywsfmnmkxrecd.supabase.co';
+          const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const D1_API_URL = 'https://iwishbag-edge-api.rnkbohra.workers.dev/api/sync';
+          const SYNC_API_KEY = '78420fca737891955965e6a5f1b119fa2922b8257cb84d218aaa8c755ee62029';
+          
+          async function syncToD1() {
+            console.log('🚀 Starting D1 sync from GitHub Actions...');
+            
+            const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+            
+            // Fetch fresh country settings
+            const { data: countries, error } = await supabase
+              .from('country_settings')
+              .select('code, name, currency, rate_from_usd, updated_at')
+              .not('rate_from_usd', 'is', null)
+              .order('code');
+            
+            if (error) throw new Error(`Database query failed: ${error.message}`);
+            
+            console.log(`✅ Loaded ${countries.length} countries with fresh rates`);
+            
+            // Sync to D1 (sample of key countries for speed)
+            const priorityCountries = countries.filter(c => 
+              ['US', 'IN', 'NP', 'GB', 'CA', 'AU', 'JP', 'CN', 'DE', 'FR'].includes(c.code)
+            );
+            
+            let successCount = 0;
+            for (const country of priorityCountries) {
+              try {
+                const countryData = {
+                  code: country.code,
+                  name: country.name,
+                  currency: country.currency,
+                  symbol: country.currency === 'USD' ? '$' : (country.currency === 'INR' ? '₹' : (country.currency === 'NPR' ? 'रू' : '$')),
+                  exchange_rate: country.rate_from_usd,
+                  updated_at: Math.floor(new Date(country.updated_at).getTime() / 1000)
+                };
+                
+                const response = await fetch(D1_API_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': SYNC_API_KEY
+                  },
+                  body: JSON.stringify({
+                    type: 'country',
+                    country: countryData
+                  })
+                });
+                
+                if (response.ok) {
+                  console.log(`   ✅ ${country.code}: Synced`);
+                  successCount++;
+                } else {
+                  console.log(`   ❌ ${country.code}: Failed`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+              } catch (error) {
+                console.log(`   ❌ ${country.code}: Error - ${error.message}`);
+              }
+            }
+            
+            console.log(`📈 D1 sync completed: ${successCount}/${priorityCountries.length} priority countries synced`);
+            return successCount > 0;
+          }
+          
+          syncToD1().then(success => {
+            if (success) {
+              console.log('🎉 D1 Edge API successfully updated with fresh exchange rates!');
+              process.exit(0);
+            } else {
+              console.log('❌ D1 sync failed');
+              process.exit(1);
+            }
+          }).catch(error => {
+            console.error('💥 D1 sync error:', error.message);
+            process.exit(1);
+          });
+          EOF
+          
+          # Run the sync script
+          node sync-to-d1.js
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Log Completion
         if: success()
         run: |
           echo "🎉 Exchange rate update completed at $(date -u)"
+          echo "📊 Database updated with fresh rates from external APIs"
+          echo "🌐 D1 Edge API synced with priority countries"
           echo "⏰ Next scheduled update in 24 hours (tomorrow at midnight IST)"
 
       - name: Handle Failure
