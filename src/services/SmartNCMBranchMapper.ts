@@ -581,6 +581,8 @@ export class SmartNCMBranchMapper {
     }
 
     try {
+      // Load configuration for city mappings
+      const config = await this.loadConfiguration();
       const branches = await this.ncmBranchMappingService.getBranches();
       if (!branches || branches.length === 0) return [];
 
@@ -589,9 +591,10 @@ export class SmartNCMBranchMapper {
       // Get district name from address or from city-to-district mapping
       let targetDistrict = address.district || address.state || address.state_province_region;
       
-      // If no direct district, try to map from city
+      // If no direct district, try to map from city using configuration and fallback
       if (!targetDistrict && address.city) {
-        const mappedDistrict = this.CITY_TO_DISTRICT_MAP[address.city.toLowerCase().trim()];
+        const normalizedCity = address.city.toLowerCase().trim();
+        const mappedDistrict = config.city_mappings[normalizedCity] || this.CITY_TO_DISTRICT_MAP[normalizedCity];
         if (mappedDistrict) {
           targetDistrict = mappedDistrict;
         }
@@ -628,17 +631,19 @@ export class SmartNCMBranchMapper {
    */
   async getSuggestions(address: AddressInput, limit: number = 3): Promise<SmartBranchMapping[]> {
     try {
+      // Load configuration first
+      const config = await this.loadConfiguration();
       const branches = await this.ncmBranchMappingService.getBranches();
       if (!branches || branches.length === 0) return [];
 
       const suggestions: SmartBranchMapping[] = [];
       
-      // Collect all possible matches - same priority as findBestMatch
+      // Collect all possible matches - same priority as findBestMatch, with config parameter
       const strategies = [
-        () => this.findExactCityMatch(address, branches),        // 1st: City match
-        () => this.findCityToDistrictMatch(address, branches),   // 2nd: City → District
-        () => this.findExactDistrictMatch(address, branches),    // 3rd: District match
-        () => this.findFuzzyMatch(address, branches)             // 4th: Fuzzy match
+        () => this.findExactCityMatch(address, branches, config),        // 1st: City match
+        () => this.findCityToDistrictMatch(address, branches, config),   // 2nd: City → District
+        () => this.findExactDistrictMatch(address, branches),            // 3rd: District match
+        () => this.findFuzzyMatch(address, branches)                     // 4th: Fuzzy match
       ];
 
       for (const strategy of strategies) {
@@ -654,7 +659,7 @@ export class SmartNCMBranchMapper {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('❌ [SmartMapper] Error getting suggestions:', error);
+      ncmLogger.error('SmartMapper', 'Error getting suggestions', error, address);
       return [];
     }
   }

@@ -68,8 +68,9 @@ class NCMConfigurationService {
         .eq('active', true)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
+      if (error && error.code !== 'PGRST116' && error.code !== '42P01') { // PGRST116 = no rows returned, 42P01 = table does not exist
+        ncmLogger.warn('Configuration', 'Database error loading configuration', error);
+        // Don't throw error, continue with defaults
       }
 
       let config: NCMConfiguration;
