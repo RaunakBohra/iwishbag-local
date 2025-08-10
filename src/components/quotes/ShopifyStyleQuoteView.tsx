@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { OptimizedIcon, CheckCircle, Package, Truck, Clock, ChevronDown, X } from '@/components/ui/OptimizedIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
+import { formatAmountWithFinancialPrecision } from '@/utils/quoteCurrencyUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { QuoteStatusBadge } from '@/components/ui/QuoteStatusBadge';
@@ -784,8 +785,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   // Helper function to format individual item quote price in display currency
   const formatItemQuotePrice = useCallback(async (item: any, items: any[]) => {
     try {
-      const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
-      const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
+      const itemsCost = items.reduce((sum, i) => {
+        const costPrice = i.costprice_origin || 0;
+        const quantity = i.quantity || 0;
+        return sum + (costPrice * quantity);
+      }, 0);
+      
+      const itemCostPrice = item.costprice_origin || 0;
+      const itemQuantity = item.quantity || 0;
+      const itemProportion = itemsCost > 0 ? (itemCostPrice * itemQuantity) / itemsCost : 0;
       
       // Use the appropriate total based on origin currency system - CLEAR: This is in origin country currency
       const totalOriginCurrency = getQuoteTotal(quote);
@@ -802,11 +810,19 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
       return formatCurrency(convertedPrice, displayCurrency);
     } catch (error) {
       console.warn('Failed to convert item quote price:', error);
-      const itemsCost = items.reduce((sum, i) => sum + (i.costprice_origin * i.quantity), 0);
-      const itemProportion = (item.costprice_origin * item.quantity) / itemsCost;
+      const itemsCost = items.reduce((sum, i) => {
+        const costPrice = i.costprice_origin || 0;
+        const quantity = i.quantity || 0;
+        return sum + (costPrice * quantity);
+      }, 0);
+      
+      const itemCostPrice = item.costprice_origin || 0;
+      const itemQuantity = item.quantity || 0;
+      const itemProportion = itemsCost > 0 ? (itemCostPrice * itemQuantity) / itemsCost : 0;
+      
       const totalOriginCurrency = getQuoteTotal(quote);
       const itemQuotePrice = totalOriginCurrency * itemProportion;
-      return formatCurrency(itemQuotePrice, getBreakdownSourceCurrency(quote));
+      return formatAmountWithFinancialPrecision(itemQuotePrice, getBreakdownSourceCurrency(quote));
     }
   }, [quote, displayCurrency, convertCurrency]);
 
@@ -1240,7 +1256,14 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             <>
                               <div>
                                 <span className="font-medium">
-                                  Item costs: {formatCurrency(items.reduce((sum, item) => sum + (item.costprice_origin * item.quantity), 0), getOriginCurrency(quote.origin_country))}
+                                  Item costs: {formatAmountWithFinancialPrecision(
+                                    items.reduce((sum, item) => {
+                                      const costPrice = item.costprice_origin || 0;
+                                      const quantity = item.quantity || 0;
+                                      return sum + (costPrice * quantity);
+                                    }, 0), 
+                                    getOriginCurrency(quote.origin_country)
+                                  )}
                                 </span>
                                 <span className="text-xs text-gray-500 ml-2">
                                   (in {getOriginCurrency(quote.origin_country)})
@@ -1348,11 +1371,11 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                             <>
                               <span>•</span>
                               <span className="font-medium text-gray-700">
-                                {formatCurrency(item.costprice_origin, getOriginCurrency(quote.origin_country))} each
+                                {formatAmountWithFinancialPrecision(item.costprice_origin || 0, getOriginCurrency(quote.origin_country))} each
                               </span>
                               <span>•</span>
                               <span className="font-semibold text-gray-900">
-                                Total: {formatCurrency(item.costprice_origin * item.quantity, getOriginCurrency(quote.origin_country))}
+                                Total: {formatAmountWithFinancialPrecision((item.costprice_origin || 0) * (item.quantity || 0), getOriginCurrency(quote.origin_country))}
                               </span>
                             </>
                           )}
