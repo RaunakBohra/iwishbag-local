@@ -1385,7 +1385,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
 
             {/* Shipping Options - Collapsible - Only show for full access */}
             {shouldShowInteractiveElements(visibilityTier) && (
-            <Card className="mb-6">
+            <Card className="mb-6 border-slate-200">
               <CardHeader 
                 className="cursor-pointer hover:bg-teal-50 transition-colors"
                 onClick={() => setShippingOptionsExpanded(!shippingOptionsExpanded)}
@@ -1397,17 +1397,17 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                   </div>
                   <OptimizedIcon name="ChevronDown" className={`w-5 h-5 text-teal-400 transition-transform ${shippingOptionsExpanded ? 'rotate-180' : ''}`} />
                 </div>
-                <p className="text-sm text-muted-foreground text-left">
+                <p className="text-sm text-slate-600 text-left">
                   Select your preferred shipping option. Faster shipping costs more but gets your items quicker.
                 </p>
               </CardHeader>
               {shippingOptionsExpanded && (
                 <CardContent>
-                <div className="grid gap-3">
+                <div className="grid gap-4">
                   {/* Standard Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-teal-50 transition-all ${
-                      quoteOptions.shipping === 'standard' ? 'border-teal-500 bg-teal-50' : 'border-teal-200'
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-teal-50 transition-all ${
+                      quoteOptions.shipping === 'standard' ? 'border-teal-500 bg-teal-50' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1416,7 +1416,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                     }))}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
                       <input
                         type="radio"
                         name="shipping"
@@ -1427,26 +1427,26 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 0,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount)
                         }))}
-                        className="w-4 h-4 text-teal-600 border-teal-300 focus:ring-teal-500"
+                        className="w-4 h-4 text-teal-600 border-slate-300 focus:ring-teal-500"
                       />
                       <div className="flex items-center gap-3">
                         <Package className="w-5 h-5 text-teal-600" />
                         <div>
-                          <div className="font-medium">Standard Shipping</div>
-                          <div className="text-sm text-muted-foreground">7-14 business days</div>
+                          <div className="font-medium text-slate-900">Standard Shipping</div>
+                          <div className="text-sm text-slate-600">7-14 business days</div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-green-600">Included</div>
-                      <div className="text-xs text-muted-foreground">No additional cost</div>
+                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                      <div className="font-semibold text-emerald-600">Included</div>
+                      <div className="text-xs text-slate-500">No additional cost</div>
                     </div>
                   </div>
 
                   {/* Express Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-50 transition-all ${
-                      quoteOptions.shipping === 'express' ? 'border-orange-500 bg-orange-50' : 'border-teal-200'
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-50 transition-all ${
+                      quoteOptions.shipping === 'express' ? 'border-orange-500 bg-orange-50' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1455,7 +1455,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                     }))}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
                       <input
                         type="radio"
                         name="shipping"
@@ -1466,26 +1466,26 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 25,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 25
                         }))}
-                        className="w-4 h-4 text-orange-600 border-orange-300 focus:ring-orange-500"
+                        className="w-4 h-4 text-orange-600 border-slate-300 focus:ring-orange-500"
                       />
                       <div className="flex items-center gap-3">
                         <OptimizedIcon name="Zap" className="w-5 h-5 text-orange-600" />
                         <div>
-                          <div className="font-medium">Express Shipping</div>
-                          <div className="text-sm text-muted-foreground">3-7 business days</div>
+                          <div className="font-medium text-slate-900">Express Shipping</div>
+                          <div className="text-sm text-slate-600">3-7 business days</div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">+{formatCurrency(25, displayCurrency)}</div>
-                      <div className="text-xs text-muted-foreground">Additional cost</div>
+                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                      <div className="font-semibold text-slate-900">+{formatCurrency(25, displayCurrency)}</div>
+                      <div className="text-xs text-slate-500">Additional cost</div>
                     </div>
                   </div>
 
                   {/* Priority Shipping */}
                   <div 
-                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-100 transition-all ${
-                      quoteOptions.shipping === 'priority' ? 'border-orange-600 bg-orange-100' : 'border-teal-200'
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border cursor-pointer hover:bg-orange-100 transition-all ${
+                      quoteOptions.shipping === 'priority' ? 'border-orange-600 bg-orange-100' : 'border-slate-200'
                     }`}
                     onClick={() => setQuoteOptions(prev => ({ 
                       ...prev, 
@@ -1494,7 +1494,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                       adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                     }))}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
                       <input
                         type="radio"
                         name="shipping"
@@ -1505,19 +1505,19 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           shippingAdjustment: 45,
                           adjustedTotal: (quote.total_quote_origincurrency || quote.total_origin_currency || quote.origin_total_amount) + 45
                         }))}
-                        className="w-4 h-4 text-orange-700 border-orange-300 focus:ring-orange-500"
+                        className="w-4 h-4 text-orange-700 border-slate-300 focus:ring-orange-500"
                       />
                       <div className="flex items-center gap-3">
                         <Truck className="w-5 h-5 text-orange-700" />
                         <div>
-                          <div className="font-medium">Priority Shipping</div>
-                          <div className="text-sm text-muted-foreground">1-3 business days</div>
+                          <div className="font-medium text-slate-900">Priority Shipping</div>
+                          <div className="text-sm text-slate-600">1-3 business days</div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">+{formatCurrency(45, displayCurrency)}</div>
-                      <div className="text-xs text-muted-foreground">Fastest option</div>
+                    <div className="text-left sm:text-right ml-7 sm:ml-0">
+                      <div className="font-semibold text-slate-900">+{formatCurrency(45, displayCurrency)}</div>
+                      <div className="text-xs text-slate-500">Fastest option</div>
                     </div>
                   </div>
                 </div>
