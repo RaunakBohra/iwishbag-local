@@ -105,9 +105,14 @@ class CurrencyService {
     ttl: number = this.STORAGE_TTL,
     d1Endpoint?: string
   ): Promise<T> {
+    console.log(`🔍 [Cache] getCachedData called for key: ${key}`);
+    console.log(`🔍 [Cache] TTL: ${ttl}ms, D1 endpoint: ${d1Endpoint || 'none'}`);
+    
     // Tier 1: Memory cache (instant access)
     const memoryCached = this.memoryCache.get(key);
     if (memoryCached && Date.now() < memoryCached.expires) {
+      const timeLeft = memoryCached.expires - Date.now();
+      console.log(`✅ [Cache] TIER 1 HIT: Memory cache for ${key} (${Math.round(timeLeft/1000)}s remaining)`);
       // Throttle cache hit logs to prevent spam
       const now = Date.now();
       const lastLog = this.logThrottle.get(key) || 0;
@@ -116,21 +121,40 @@ class CurrencyService {
         this.logThrottle.set(key, now);
       }
       return memoryCached.data;
+    } else if (memoryCached) {
+      console.log(`⏰ [Cache] TIER 1 EXPIRED: Memory cache expired for ${key}`);
+    } else {
+      console.log(`❌ [Cache] TIER 1 MISS: No memory cache for ${key}`);
     }
 
     // Tier 2: D1 Edge cache (global, <10ms)
     if (d1Endpoint) {
+      console.log(`🌐 [Cache] TIER 2: Trying D1 edge cache...`);
+      console.log(`🌐 [Cache] Fetching: ${EDGE_API_URL}${d1Endpoint}`);
+      
       try {
-        const response = await fetch(`${EDGE_API_URL}${d1Endpoint}`);
+        const fetchStart = performance.now();
+        const response = await fetch(`${EDGE_API_URL}${d1Endpoint}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'iwishbag-frontend/1.0'
+          }
+        });
+        const fetchTime = performance.now() - fetchStart;
+        
+        console.log(`🌐 [Cache] D1 fetch completed in ${Math.round(fetchTime)}ms, status: ${response.status}`);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log(`🌐 [Cache] D1 response data:`, data);
           
           // Check if D1 cache returned null/invalid data for exchange rates
           if (key.startsWith('rate_') && data && typeof data === 'object' && 'rate' in data && data.rate === null) {
-            console.log(`[CurrencyService] D1 edge cache returned null rate, skipping to database: ${key}`);
+            console.log(`⚠️ [Cache] D1 returned null rate, skipping to database: ${key}`);
             // Don't return null data, fall through to database fetch
           } else {
-            console.log(`[CurrencyService] D1 edge cache hit: ${key}`);
+            console.log(`✅ [Cache] TIER 2 HIT: D1 edge cache for ${key}`);
             
             // Cache in memory
             this.memoryCache.set(key, {
@@ -143,21 +167,35 @@ class CurrencyService {
             
             return data;
           }
+        } else {
+          console.log(`❌ [Cache] D1 request failed: ${response.status} ${response.statusText}`);
+          const errorText = await response.text().catch(() => 'Could not read error');
+          console.log(`❌ [Cache] D1 error details:`, errorText);
         }
       } catch (error) {
+        console.error(`💥 [Cache] D1 edge cache error:`, {
+          url: `${EDGE_API_URL}${d1Endpoint}`,
+          error: error.message,
+          type: error.name
+        });
         logger?.warn('D1 edge cache error, falling back', { error, key });
       }
     }
 
     // Tier 3: localStorage cache (very fast)
+    console.log(`💾 [Cache] TIER 3: Trying localStorage cache...`);
     try {
       const storageKey = `iwishbag_currency_${key}`;
       const storedData = localStorage.getItem(storageKey);
       
       if (storedData) {
         const parsed = JSON.parse(storedData);
+        const timeLeft = parsed.expires - Date.now();
+        console.log(`💾 [Cache] Found localStorage entry, expires in: ${Math.round(timeLeft/1000)}s`);
+        
         if (Date.now() < parsed.expires) {
-          console.log(`[CurrencyService] Storage cache hit: ${key}`);
+          console.log(`✅ [Cache] TIER 3 HIT: localStorage cache for ${key}`);
+          console.log(`✅ [Cache] Cached data:`, parsed.data);
           
           // Promote to memory cache
           this.memoryCache.set(key, {
@@ -166,15 +204,25 @@ class CurrencyService {
           });
           
           return parsed.data;
+        } else {
+          console.log(`⏰ [Cache] TIER 3 EXPIRED: localStorage cache expired for ${key}`);
         }
+      } else {
+        console.log(`❌ [Cache] TIER 3 MISS: No localStorage entry for ${key}`);
       }
     } catch (error) {
+      console.error(`💥 [Cache] localStorage error:`, error);
       logger.warn(`[CurrencyService] Storage cache error for ${key}:`, error);
     }
 
     // Tier 4: Database/API call
-    console.log(`[CurrencyService] Fetching from database: ${key}`);
+    console.log(`🔄 [Cache] TIER 4: Cache miss - fetching fresh data from database/API for ${key}`);
+    const fetchStart = performance.now();
     const data = await fetcher();
+    const fetchTime = performance.now() - fetchStart;
+    
+    console.log(`✅ [Cache] TIER 4 SUCCESS: Fresh data fetched in ${Math.round(fetchTime)}ms`);
+    console.log(`✅ [Cache] Fresh data:`, data);
     
     // Cache in both tiers
     this.memoryCache.set(key, {
@@ -183,6 +231,7 @@ class CurrencyService {
     });
 
     this.cacheToLocalStorage(key, data, ttl);
+    console.log(`💾 [Cache] Data cached in memory (${this.MEMORY_TTL}ms) and localStorage (${ttl}ms)`);
 
     return data;
   }
@@ -317,7 +366,7 @@ class CurrencyService {
       },
       24 * 60 * 60 * 1000 // 24 hours - currencies don't change often
       // '/api/countries' // D1 endpoint - temporarily disabled to force database query
-    ).then(result => {
+    ).then(async result => {
       // Handle D1 response format
       if (result && 'countries' in result) {
         // Convert country data to Currency format
@@ -930,56 +979,87 @@ class CurrencyService {
    */
   async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
     const cacheKey = `rate_${originCountry}_${destinationCountry}`;
-    console.log(`[CurrencyService] getExchangeRate called: ${originCountry}→${destinationCountry}, cacheKey: ${cacheKey}`);
+    console.log(`🔍 [ExchangeRate] Starting exchange rate lookup: ${originCountry}→${destinationCountry}`);
+    console.log(`🔍 [ExchangeRate] Cache key: ${cacheKey}`);
+    console.log(`🔍 [ExchangeRate] EDGE_API_URL: ${EDGE_API_URL}`);
     
     // Same currency = 1.0 (no caching needed)
     if (originCountry === destinationCountry) {
-      console.log(`[CurrencyService] Same country, returning 1.0`);
+      console.log(`✅ [ExchangeRate] Same country, returning 1.0`);
       return 1.0;
     }
 
-    // Try to get from D1 edge cache first
-    const d1Endpoint = `/api/currency/rates?from=${originCountry}&to=${destinationCountry}`;
+    // Use D1 countries endpoint (which has live rates) instead of the broken rates endpoint
+    const d1Endpoint = `/api/countries`;
+    console.log(`🌐 [ExchangeRate] D1 endpoint: ${EDGE_API_URL}${d1Endpoint}`);
     
-    // Use enhanced caching for exchange rates
-    return this.getCachedData(
-      cacheKey,
-      async () => {
-        console.log(`[CurrencyService] Cache miss, fetching exchange rate from database`);
+    // Use enhanced caching for exchange rates with proper error handling for stale data
+    try {
+      return await this.getCachedData(
+        cacheKey,
+        async () => {
+        console.log(`💾 [ExchangeRate] Cache miss, fetching exchange rate from database sources`);
+        console.log(`💾 [ExchangeRate] Available data sources: 1) Shipping Routes 2) Country Settings 3) Fallback Rates`);
         
         try {
           // Tier 1: Check shipping routes for direct exchange rates (highest priority)
-          console.log(`[CurrencyService] Checking shipping routes for ${originCountry}→${destinationCountry}`);
+          console.log(`📋 [ExchangeRate] TIER 1: Checking shipping routes table...`);
+          console.log(`📋 [ExchangeRate] Query: shipping_routes WHERE origin_country='${originCountry}' AND destination_country='${destinationCountry}' AND exchange_rate IS NOT NULL`);
+          
           const { data: shippingRoute, error: routeError } = await supabase
             .from('shipping_routes')
-            .select('exchange_rate')
+            .select('exchange_rate, updated_at, id')
             .eq('origin_country', originCountry)
             .eq('destination_country', destinationCountry)
             .not('exchange_rate', 'is', null)
             .single();
 
+          console.log(`📋 [ExchangeRate] Shipping route query result:`, { 
+            data: shippingRoute, 
+            error: routeError?.message || 'none',
+            errorCode: routeError?.code || 'none'
+          });
+
           // Skip shipping_routes query if it's causing 406 errors
           if (routeError?.code === '406' || routeError?.message?.includes('Not Acceptable')) {
-            console.log(`[CurrencyService] ⚠️ Shipping routes table not accessible (406), skipping to fallback`);
+            console.log(`⚠️ [ExchangeRate] Shipping routes table not accessible (406), skipping to country settings`);
           } else if (!routeError && shippingRoute?.exchange_rate) {
-            console.log(
-              `[CurrencyService] ✅ Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
-            );
+            console.log(`✅ [ExchangeRate] TIER 1 SUCCESS: Using shipping route rate`);
+            console.log(`✅ [ExchangeRate] Route ID: ${shippingRoute.id}, Rate: ${shippingRoute.exchange_rate}, Updated: ${shippingRoute.updated_at}`);
             return shippingRoute.exchange_rate;
           } else {
-            console.log(`[CurrencyService] ❌ No shipping route found, falling back to country settings`);
+            console.log(`❌ [ExchangeRate] TIER 1 FAILED: No shipping route found or rate is null`);
+            console.log(`❌ [ExchangeRate] Moving to TIER 2: Country Settings...`);
           }
 
           // Tier 2: Fallback to unified configuration USD-based conversion
+          console.log(`🌍 [ExchangeRate] TIER 2: Checking country settings via unified config...`);
+          console.log(`🌍 [ExchangeRate] Fetching configs for: ${originCountry} and ${destinationCountry}`);
+          
           const [originConfig, destConfig] = await Promise.all([
             unifiedConfigService.getCountryConfig(originCountry),
             unifiedConfigService.getCountryConfig(destinationCountry),
           ]);
 
+          console.log(`🌍 [ExchangeRate] Origin config (${originCountry}):`, {
+            found: !!originConfig,
+            rate_from_usd: originConfig?.rate_from_usd || 'missing',
+            currency: originConfig?.currency || 'missing',
+            name: originConfig?.name || 'missing'
+          });
+
+          console.log(`🌍 [ExchangeRate] Destination config (${destinationCountry}):`, {
+            found: !!destConfig,
+            rate_from_usd: destConfig?.rate_from_usd || 'missing',
+            currency: destConfig?.currency || 'missing',
+            name: destConfig?.name || 'missing'
+          });
+
           if (!originConfig || !destConfig) {
-            logger.warn(
-              `[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`,
-            );
+            console.log(`❌ [ExchangeRate] TIER 2 FAILED: Missing country config`);
+            console.log(`❌ [ExchangeRate] originConfig exists: ${!!originConfig}, destConfig exists: ${!!destConfig}`);
+            console.log(`❌ [ExchangeRate] Moving to TIER 3: Fallback rates...`);
+            
             // Fallback to default exchange rate (1.0 for same currency, or common rates)
             if (originCountry === destinationCountry) {
               return 1.0;
@@ -997,16 +1077,21 @@ class CurrencyService {
             };
             const fallbackKey = `${originCountry}_${destinationCountry}`;
             const fallbackRate = fallbackRates[fallbackKey] || 1.0;
-            logger.warn(
-              `[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`,
-            );
+            console.log(`⚠️ [ExchangeRate] TIER 3: Using hardcoded fallback rate: ${fallbackKey} = ${fallbackRate}`);
             return fallbackRate;
           }
 
           const originRate = originConfig.rate_from_usd;
           const destRate = destConfig.rate_from_usd;
 
+          console.log(`🧮 [ExchangeRate] Raw USD rates from country_settings table:`);
+          console.log(`🧮 [ExchangeRate] - Origin (${originCountry}): ${originRate} ${originConfig.currency}/USD`);
+          console.log(`🧮 [ExchangeRate] - Destination (${destinationCountry}): ${destRate} ${destConfig.currency}/USD`);
+
           if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
+            console.log(`❌ [ExchangeRate] TIER 2 FAILED: Invalid exchange rates`);
+            console.log(`❌ [ExchangeRate] originRate: ${originRate} (valid: ${!!(originRate && originRate > 0)})`);
+            console.log(`❌ [ExchangeRate] destRate: ${destRate} (valid: ${!!(destRate && destRate > 0)})`);
             throw new Error(
               `Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`,
             );
@@ -1014,29 +1099,324 @@ class CurrencyService {
 
           // Calculate cross rate via USD: destination_rate / origin_rate
           const crossRate = destRate / originRate;
-          console.log(
-            `[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`,
-          );
+          console.log(`✅ [ExchangeRate] TIER 2 SUCCESS: Calculated cross-rate via USD from local database`);
+          console.log(`✅ [ExchangeRate] Formula: ${destRate} (${destinationCountry} per USD) ÷ ${originRate} (${originCountry} per USD) = ${crossRate}`);
+          console.log(`✅ [ExchangeRate] Final rate: 1 ${originConfig.currency} = ${crossRate} ${destConfig.currency}`);
+          
+          // 🚨 CHECK DATABASE DATA FRESHNESS AND ENHANCE WITH LIVE RATES IF NEEDED
+          const dbOriginUpdated = originConfig.updated_at ? new Date(originConfig.updated_at).getTime() : 0;
+          const dbDestUpdated = destConfig.updated_at ? new Date(destConfig.updated_at).getTime() : 0;
+          const dbOriginAge = Date.now() - dbOriginUpdated;
+          const dbDestAge = Date.now() - dbDestUpdated;
+          const dbMaxStaleAge = 24 * 60 * 60 * 1000; // 24 hours for database tolerance
+          const dbIsStale = Math.max(dbOriginAge, dbDestAge) > dbMaxStaleAge;
+          
+          const dbOriginAgeHours = Math.round(dbOriginAge / (1000 * 60 * 60));
+          const dbDestAgeHours = Math.round(dbDestAge / (1000 * 60 * 60));
+          
+          if (dbIsStale) {
+            console.log(`🚨 [ExchangeRate] DATABASE DATA ALSO STALE - ATTEMPTING EXTERNAL API FALLBACK`);
+            console.log(`🚨 [ExchangeRate] DB Origin: ${dbOriginAgeHours}h, DB Dest: ${dbDestAgeHours}h (threshold: 24h)`);
+            
+            // Try to get live rate from external API as final fallback
+            try {
+              const liveRate = await this.getLiveExchangeRate(originCountry, destinationCountry);
+              if (liveRate !== null) {
+                console.log(`✅ [ExchangeRate] SUCCESS: Using LIVE external API rate: ${liveRate}`);
+                console.log(`📊 [ExchangeRate] Live rate comparison: DB=${crossRate.toFixed(4)}, Live=${liveRate.toFixed(4)}`);
+                return liveRate;
+              }
+            } catch (externalError) {
+              console.log(`❌ [ExchangeRate] External API fallback failed:`, externalError.message);
+            }
+          }
+          
+          console.log(`⚠️ [ExchangeRate] Using database rates - Origin: ${dbOriginAgeHours}h, Dest: ${dbDestAgeHours}h old`);
+          console.log(`⚠️ [ExchangeRate] Consider running exchange rate update service for fresh data`);
+          
+          // Compare with live rates for transparency (async)
+          this.logExternalRateComparison(originCountry, destinationCountry, crossRate).catch(console.error);
 
           return crossRate;
         } catch (error) {
-          logger.error(
-            `[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`,
-            error,
-          );
-          throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}`);
+          console.error(`💥 [ExchangeRate] CRITICAL ERROR in exchange rate lookup:`, {
+            originCountry,
+            destinationCountry,
+            error: error.message,
+            stack: error.stack?.split('\n').slice(0, 3).join('\n')
+          });
+          throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}: ${error.message}`);
         }
       },
       6 * 60 * 60 * 1000, // 6 hours - exchange rates are relatively stable
       d1Endpoint
-    ).then(result => {
-      console.log(`[CurrencyService] Final result for ${originCountry}→${destinationCountry}:`, result);
-      // Handle D1 response format
-      if (typeof result === 'object' && result && 'rate' in result) {
+    ).then(async result => {
+      console.log(`🎯 [ExchangeRate] FINAL RESULT for ${originCountry}→${destinationCountry}:`, {
+        rate: result,
+        type: typeof result,
+        source: 'cached_or_fresh'
+      });
+      
+      // Handle D1 countries response format
+      if (typeof result === 'object' && result && 'countries' in result && Array.isArray(result.countries)) {
+        console.log(`🔄 [ExchangeRate] D1 countries format detected, calculating cross-rate...`);
+        
+        // Find origin and destination countries in the D1 response
+        const originCountryData = result.countries.find(c => c.code === originCountry);
+        const destCountryData = result.countries.find(c => c.code === destinationCountry);
+        
+        console.log(`🔄 [ExchangeRate] D1 origin country (${originCountry}):`, originCountryData);
+        console.log(`🔄 [ExchangeRate] D1 dest country (${destinationCountry}):`, destCountryData);
+        
+        // Add detailed freshness analysis
+        if (originCountryData?.updated_at) {
+          const originTimestamp = new Date(originCountryData.updated_at * 1000);
+          const originAge = Date.now() - originTimestamp.getTime();
+          const originAgeHours = Math.round(originAge / (1000 * 60 * 60));
+          console.log(`📅 [ExchangeRate] D1 origin data age: ${originAgeHours}h old (updated: ${originTimestamp.toISOString()})`);
+        }
+        
+        if (destCountryData?.updated_at) {
+          const destTimestamp = new Date(destCountryData.updated_at * 1000);
+          const destAge = Date.now() - destTimestamp.getTime();
+          const destAgeHours = Math.round(destAge / (1000 * 60 * 60));
+          console.log(`📅 [ExchangeRate] D1 dest data age: ${destAgeHours}h old (updated: ${destTimestamp.toISOString()})`);
+        }
+        
+        if (originCountryData?.exchange_rate && destCountryData?.exchange_rate) {
+          // Calculate cross-rate: dest_rate / origin_rate
+          const crossRate = destCountryData.exchange_rate / originCountryData.exchange_rate;
+          
+          // 🚨 ENHANCED DATA FRESHNESS VALIDATION - Check if data is stale (older than 48 hours)
+          const currentTime = Date.now();
+          const originTimestamp = originCountryData.updated_at ? (originCountryData.updated_at * 1000) : 0;
+          const destTimestamp = destCountryData.updated_at ? (destCountryData.updated_at * 1000) : 0;
+          const originAge = currentTime - originTimestamp;
+          const destAge = currentTime - destTimestamp;
+          const maxAcceptableAge = 48 * 60 * 60 * 1000; // 48 hours (more lenient for production)
+          const isStale = Math.max(originAge, destAge) > maxAcceptableAge;
+          
+          const originAgeHours = Math.round(originAge / (1000 * 60 * 60));
+          const destAgeHours = Math.round(destAge / (1000 * 60 * 60));
+          
+          if (isStale) {
+            console.log(`🚨 [ExchangeRate] D1 DATA STALE - FORCING DATABASE FALLBACK`);
+            console.log(`🚨 [ExchangeRate] Origin data: ${originAgeHours}h old, Dest data: ${destAgeHours}h old (threshold: 48h)`);
+            console.log(`🔄 [ExchangeRate] Throwing error to trigger fresh database lookup...`);
+            
+            // Log comparison with external API for transparency
+            this.logExternalRateComparison(originCountry, destinationCountry, crossRate).catch(console.error);
+            
+            // D1 data is stale, so we'll return null to trigger the database fallback in the catch block
+            console.log(`🔄 [ExchangeRate] D1 data is stale, returning null to trigger database fallback...`);
+            return null;
+          } else {
+            console.log(`✅ [ExchangeRate] D1 rates are fresh - Origin: ${originAgeHours}h, Dest: ${destAgeHours}h`);
+            
+            // Still compare with external API for quality monitoring
+            if (originAgeHours > 6 || destAgeHours > 6) {
+              console.log(`⚠️ [ExchangeRate] D1 data is getting old (>6h), running quality check...`);
+              this.logExternalRateComparison(originCountry, destinationCountry, crossRate).catch(console.error);
+            }
+          }
+          
+          console.log(`🧮 [ExchangeRate] D1 cross-rate calculated: ${crossRate} (${destCountryData.exchange_rate} / ${originCountryData.exchange_rate})`);
+          console.log(`📊 [ExchangeRate] Rate breakdown: 1 ${originCountryData.currency} = ${crossRate.toFixed(4)} ${destCountryData.currency}`);
+          return crossRate;
+        } else {
+          console.log(`❌ [ExchangeRate] D1 missing exchange rate data, falling through to database`);
+        }
+      }
+      
+      // Handle legacy D1 rate response format  
+      if (typeof result === 'object' && result && 'rate' in result && result.rate !== null) {
+        console.log(`🔄 [ExchangeRate] D1 legacy rate format detected, extracting rate:`, result.rate);
         return result.rate;
       }
+      
       return result;
-    });
+        },
+        6 * 60 * 60 * 1000, // 6 hours - exchange rates are relatively stable
+        d1Endpoint
+      );
+    } catch (error) {
+      console.error(`💥 [ExchangeRate] Critical error in exchange rate lookup:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get live exchange rate from external APIs as final fallback
+   * @private
+   */
+  private async getLiveExchangeRate(originCountry: string, destinationCountry: string): Promise<number | null> {
+    try {
+      console.log(`🌐 [LiveRate] Fetching live exchange rate: ${originCountry} → ${destinationCountry}`);
+      
+      // Get currency codes
+      const originCurrency = this.getCurrencyForCountrySync(originCountry);
+      const destCurrency = this.getCurrencyForCountrySync(destinationCountry);
+      
+      console.log(`🌐 [LiveRate] Currency mapping: ${originCountry}(${originCurrency}) → ${destinationCountry}(${destCurrency})`);
+      
+      // Try multiple external APIs in order of preference
+      const externalSources = [
+        {
+          name: 'ExchangeRate-API',
+          url: `https://api.exchangerate-api.com/v4/latest/${originCurrency}`,
+          parseResponse: (data: any) => data.rates?.[destCurrency]
+        },
+        {
+          name: 'Fixer.io (Free)',
+          url: `https://api.fixer.io/latest?base=${originCurrency}&symbols=${destCurrency}`,
+          parseResponse: (data: any) => data.rates?.[destCurrency]
+        }
+      ];
+      
+      for (const source of externalSources) {
+        try {
+          console.log(`🌐 [LiveRate] Trying ${source.name}...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
+          const response = await fetch(source.url, { 
+            signal: controller.signal,
+            headers: { 
+              'User-Agent': 'iwishbag-exchange-service/1.0',
+              'Accept': 'application/json'
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            console.log(`❌ [LiveRate] ${source.name} HTTP error: ${response.status}`);
+            continue;
+          }
+          
+          const data = await response.json();
+          const rate = source.parseResponse(data);
+          
+          if (rate && typeof rate === 'number' && rate > 0) {
+            console.log(`✅ [LiveRate] ${source.name} SUCCESS: ${originCurrency} → ${destCurrency} = ${rate}`);
+            
+            // Apply country-specific adjustments if this is India or Nepal
+            let adjustedRate = rate;
+            if (destinationCountry === 'IN') {
+              adjustedRate = rate + 3; // Add 3 for India (same as server function)
+              console.log(`🔧 [LiveRate] Applied India adjustment: ${rate} + 3 = ${adjustedRate}`);
+            } else if (destinationCountry === 'NP') {
+              adjustedRate = rate + 2; // Add 2 for Nepal (same as server function)
+              console.log(`🔧 [LiveRate] Applied Nepal adjustment: ${rate} + 2 = ${adjustedRate}`);
+            }
+            
+            return adjustedRate;
+          } else {
+            console.log(`❌ [LiveRate] ${source.name} invalid rate:`, rate);
+          }
+        } catch (error) {
+          console.log(`❌ [LiveRate] ${source.name} error:`, error.message);
+        }
+      }
+      
+      console.log(`❌ [LiveRate] All external APIs failed for ${originCountry} → ${destinationCountry}`);
+      return null;
+      
+    } catch (error) {
+      console.log(`💥 [LiveRate] Critical error in live rate fetch:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Compare D1 rate with external API to verify freshness
+   * @private
+   */
+  private async logExternalRateComparison(originCountry: string, destinationCountry: string, d1Rate: number): Promise<void> {
+    try {
+      console.log(`🔍 [RateValidation] Comparing D1 rate with live external APIs...`);
+      
+      // Get currency codes
+      const originCurrency = this.getCurrencyForCountrySync(originCountry);
+      const destCurrency = this.getCurrencyForCountrySync(destinationCountry);
+      
+      console.log(`🔍 [RateValidation] Checking ${originCurrency} → ${destCurrency}`);
+      
+      // Try multiple external APIs for comparison
+      const externalSources = [
+        {
+          name: 'ExchangeRate-API',
+          url: `https://api.exchangerate-api.com/v4/latest/${originCurrency}`
+        },
+        {
+          name: 'Fixer.io',
+          url: `https://api.fixer.io/latest?base=${originCurrency}&symbols=${destCurrency}`
+        }
+      ];
+      
+      let liveRate: number | null = null;
+      let usedSource = '';
+      
+      for (const source of externalSources) {
+        try {
+          console.log(`🌐 [RateValidation] Trying ${source.name}...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          
+          const response = await fetch(source.url, { 
+            signal: controller.signal,
+            headers: { 'User-Agent': 'iwishbag-rate-validator/1.0' }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            console.log(`❌ [RateValidation] ${source.name} failed: ${response.status}`);
+            continue;
+          }
+          
+          const data = await response.json();
+          
+          if (source.name === 'ExchangeRate-API' && data.rates?.[destCurrency]) {
+            liveRate = data.rates[destCurrency];
+            usedSource = source.name;
+            console.log(`✅ [RateValidation] ${source.name} live rate: ${liveRate}`);
+            break;
+          } else if (source.name === 'Fixer.io' && data.rates?.[destCurrency]) {
+            liveRate = data.rates[destCurrency];
+            usedSource = source.name;
+            console.log(`✅ [RateValidation] ${source.name} live rate: ${liveRate}`);
+            break;
+          }
+        } catch (error) {
+          console.log(`❌ [RateValidation] ${source.name} error:`, error.message);
+        }
+      }
+      
+      if (liveRate !== null) {
+        const difference = Math.abs(d1Rate - liveRate);
+        const percentageDiff = ((difference / liveRate) * 100);
+        
+        console.log(`📊 [RateValidation] RATE COMPARISON:`);
+        console.log(`📊 [RateValidation] D1 Edge API:    ${d1Rate.toFixed(4)}`);
+        console.log(`📊 [RateValidation] Live ${usedSource}: ${liveRate.toFixed(4)}`);
+        console.log(`📊 [RateValidation] Difference:      ${difference.toFixed(4)} (${percentageDiff.toFixed(2)}%)`);
+        
+        if (percentageDiff > 2) {
+          console.log(`🚨 [RateValidation] SIGNIFICANT DISCREPANCY: D1 rate is ${percentageDiff.toFixed(2)}% off from live rate!`);
+          console.log(`🚨 [RateValidation] D1 Edge API needs rate update from external sources`);
+        } else if (percentageDiff > 0.5) {
+          console.log(`⚠️ [RateValidation] MINOR DISCREPANCY: D1 rate is ${percentageDiff.toFixed(2)}% off from live rate`);
+        } else {
+          console.log(`✅ [RateValidation] RATES MATCH: D1 and live rates are very close (${percentageDiff.toFixed(2)}% diff)`);
+        }
+      } else {
+        console.log(`❌ [RateValidation] Could not fetch live rate for comparison from external APIs`);
+      }
+      
+    } catch (error) {
+      console.log(`💥 [RateValidation] External rate comparison failed:`, error.message);
+    }
   }
 
   /**

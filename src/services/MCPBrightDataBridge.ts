@@ -148,6 +148,8 @@ class MCPBrightDataBridge {
       };
       console.log(`📤 Request body:`, JSON.stringify(requestBody, null, 2));
       
+      console.log(`📡 MCPBrightDataBridge: Making HTTP request to Cloudflare Worker...`);
+      
       console.log(`📡 Making initial HTTP request with 3-minute timeout...`);
       
       // Create AbortController for timeout
@@ -158,6 +160,7 @@ class MCPBrightDataBridge {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept-Encoding': 'gzip, br',
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal
@@ -674,32 +677,49 @@ class MCPBrightDataBridge {
    */
   async scrapeFlipkartProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
     try {
+      console.log(`🛒 MCPBrightDataBridge.scrapeFlipkartProduct: Starting for URL: ${url}`);
+      console.log(`📋 MCPBrightDataBridge.scrapeFlipkartProduct: Options:`, options);
+      
+      console.log(`📞 MCPBrightDataBridge.scrapeFlipkartProduct: Calling MCP tool 'flipkart_product'`);
       const result = await this.callMCPTool('flipkart_product', { url });
       
+      console.log(`📥 MCPBrightDataBridge.scrapeFlipkartProduct: Raw MCP result:`, result);
+      
       if (result && result.content && result.content[0] && result.content[0].text) {
+        console.log(`📋 MCPBrightDataBridge.scrapeFlipkartProduct: Parsing JSON from text content...`);
+        console.log(`📋 MCPBrightDataBridge.scrapeFlipkartProduct: Raw text content:`, result.content[0].text);
         const productData = JSON.parse(result.content[0].text)[0];
         
+        console.log(`📄 MCPBrightDataBridge.scrapeFlipkartProduct: Parsed product data:`, JSON.stringify(productData, null, 2));
+        
         if (productData.warning) {
+          console.log(`⚠️ MCPBrightDataBridge.scrapeFlipkartProduct: Warning received: ${productData.warning}`);
           return {
             success: false,
             error: `Flipkart scraping warning: ${productData.warning}`
           };
         }
         
+        console.log(`✅ MCPBrightDataBridge.scrapeFlipkartProduct: Success! Returning product data`);
         return {
           success: true,
           data: productData
         };
       }
       
+      console.log(`❌ MCPBrightDataBridge.scrapeFlipkartProduct: No content received from MCP tool`);
       return {
         success: false,
         error: 'No product data received from Flipkart'
       };
     } catch (error) {
+      console.error(`💥 MCPBrightDataBridge.scrapeFlipkartProduct: Exception caught:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Flipkart scraping failed';
+      console.error(`💥 MCPBrightDataBridge.scrapeFlipkartProduct: Error message: ${errorMessage}`);
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Flipkart scraping failed'
+        error: errorMessage
       };
     }
   }
@@ -945,6 +965,57 @@ class MCPBrightDataBridge {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Chanel scraping failed'
+      };
+    }
+  }
+
+  /**
+   * Scrape AliExpress product data using MCP
+   */
+  async scrapeAliExpressProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      console.log(`🛒 MCPBrightDataBridge.scrapeAliExpressProduct: Starting for URL: ${url}`);
+      console.log(`📋 MCPBrightDataBridge.scrapeAliExpressProduct: Options:`, options);
+      
+      console.log(`📞 MCPBrightDataBridge.scrapeAliExpressProduct: Calling MCP tool 'aliexpress_product'`);
+      const result = await this.callMCPTool('aliexpress_product', { url });
+      
+      console.log(`📥 MCPBrightDataBridge.scrapeAliExpressProduct: Raw MCP result:`, result);
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        console.log(`📋 MCPBrightDataBridge.scrapeAliExpressProduct: Parsing JSON from text content...`);
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        console.log(`📄 MCPBrightDataBridge.scrapeAliExpressProduct: Parsed product data:`, productData);
+        
+        if (productData.warning) {
+          console.log(`⚠️ MCPBrightDataBridge.scrapeAliExpressProduct: Warning received: ${productData.warning}`);
+          return {
+            success: false,
+            error: `AliExpress scraping warning: ${productData.warning}`
+          };
+        }
+        
+        console.log(`✅ MCPBrightDataBridge.scrapeAliExpressProduct: Success! Returning product data`);
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      console.log(`❌ MCPBrightDataBridge.scrapeAliExpressProduct: No content received from MCP tool`);
+      return {
+        success: false,
+        error: 'No product data received from AliExpress'
+      };
+    } catch (error) {
+      console.error(`💥 MCPBrightDataBridge.scrapeAliExpressProduct: Exception caught:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'AliExpress scraping failed';
+      console.error(`💥 MCPBrightDataBridge.scrapeAliExpressProduct: Error message: ${errorMessage}`);
+      
+      return {
+        success: false,
+        error: errorMessage
       };
     }
   }

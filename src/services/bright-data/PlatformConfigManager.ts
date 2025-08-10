@@ -199,6 +199,28 @@ export const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
     },
     estimatedTime: '15-60 seconds',
     pollingInterval: '15 seconds'
+  },
+  aliexpress: {
+    scraperType: 'aliexpress_product',
+    fields: ['title', 'current_price', 'original_price', 'currency', 'images', 'brand', 'specifications', 'variants', 'store_name', 'rating', 'review_count', 'sold_count'],
+    defaultCurrency: 'USD',
+    currencyDetection: true,
+    weightFields: ['Weight', 'Product Weight', 'Net Weight'],
+    categoryMapping: {
+      'consumer electronics': 'electronics',
+      'computers': 'electronics',
+      'phones': 'electronics',
+      'clothing': 'fashion',
+      'shoes': 'footwear',
+      'bags': 'accessories',
+      'jewelry': 'accessories',
+      'home & garden': 'home',
+      'tools': 'tools',
+      'automotive': 'automotive',
+      'sports': 'sports'
+    },
+    estimatedTime: '30-90 seconds',
+    pollingInterval: '30 seconds'
   }
 };
 
@@ -234,7 +256,19 @@ export class PlatformConfigManager {
         'hm.com': 'hm',
         'asos.com': 'asos',
         'etsy.com': 'etsy',
-        'zara.com': 'zara'
+        'zara.com': 'zara',
+        'aliexpress.com': 'aliexpress',
+        'aliexpress.us': 'aliexpress',
+        'es.aliexpress.com': 'aliexpress',
+        'fr.aliexpress.com': 'aliexpress',
+        'de.aliexpress.com': 'aliexpress',
+        'pt.aliexpress.com': 'aliexpress',
+        'it.aliexpress.com': 'aliexpress',
+        'nl.aliexpress.com': 'aliexpress',
+        'ja.aliexpress.com': 'aliexpress',
+        'ko.aliexpress.com': 'aliexpress',
+        'tr.aliexpress.com': 'aliexpress',
+        'ru.aliexpress.com': 'aliexpress'
       };
 
       // Check direct mapping first
@@ -317,7 +351,8 @@ export class PlatformConfigManager {
       'hm': 'H&M',
       'asos': 'ASOS',
       'etsy': 'Etsy',
-      'zara': 'Zara'
+      'zara': 'Zara',
+      'aliexpress': 'AliExpress'
     };
     
     return displayNames[platform || 'unknown'] || 'Product';

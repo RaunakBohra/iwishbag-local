@@ -29,13 +29,35 @@ export const useQuotesPaginated = (
 ) => {
   const quoteService = QuoteV2Service.getInstance();
   
+  console.log('🔍 useQuotesPaginated called with:', { filters, page, pageSize });
+  
   return useQuery({
     queryKey: [...quoteKeys.list(filters || {}), 'paginated', { page, pageSize }],
-    queryFn: () => quoteService.getQuotesPaginated(filters, page, pageSize),
+    queryFn: async () => {
+      console.log('🚀 React Query executing queryFn for quotes...');
+      try {
+        const result = await quoteService.getQuotesPaginated(filters, page, pageSize);
+        console.log('✅ React Query received result:', { 
+          totalQuotes: result.pagination?.total || 0,
+          currentPageQuotes: result.data?.length || 0
+        });
+        return result;
+      } catch (error) {
+        console.error('❌ React Query error in quotes fetch:', error);
+        throw error;
+      }
+    },
+    enabled: true, // Always enabled for now
     staleTime: 30 * 1000, // 30 seconds for admin view - faster updates
     refetchInterval: 60 * 1000, // Auto-refetch every minute
     refetchOnWindowFocus: true, // Refresh when window regains focus
     keepPreviousData: true, // Keep previous page data while loading new page
+    onError: (error) => {
+      console.error('🚨 React Query onError callback:', error);
+    },
+    onSuccess: (data) => {
+      console.log('🎉 React Query onSuccess callback:', data?.pagination);
+    }
   });
 };
 

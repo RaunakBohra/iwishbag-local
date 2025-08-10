@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -31,7 +32,7 @@ export const HomepageBanner: React.FC = () => {
           {/* Promotional Badge */}
           <div className="flex justify-center mb-8">
             <Badge className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-2 text-sm font-medium shadow-lg">
-              🌟 Free shipping on orders over $500
+              Free shipping on orders over $500
             </Badge>
           </div>
 
@@ -56,8 +57,9 @@ export const HomepageBanner: React.FC = () => {
             <Button
               size="lg"
               className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-8 py-4 text-lg font-semibold h-14 shadow-xl hover:shadow-2xl transition-all duration-300"
+              asChild
             >
-              Get Your Free Quote
+              <Link to="/quote">Get Your Free Quote</Link>
             </Button>
             <Button
               size="lg"

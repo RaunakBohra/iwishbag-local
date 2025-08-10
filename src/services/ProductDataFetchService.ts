@@ -303,15 +303,15 @@ class ProductDataFetchService {
         }
       }
 
-      // For AliExpress, use AliExpressScrapingService
+      // For AliExpress, use MCP Bright Data Bridge directly
       if (siteInfo.site === 'aliexpress') {
-        const { aliExpressScrapingService } = await import('./AliExpressScrapingService');
-        const result = await aliExpressScrapingService.scrapeProduct(url);
+        const { mcpBrightDataBridge } = await import('./MCPBrightDataBridge');
+        const result = await mcpBrightDataBridge.scrapeAliExpressProduct(url);
         
         if (result.success && result.data) {
           return {
             success: true,
-            data: this.normalizeProductData(aliExpressScrapingService.convertToProductData(result.data)),
+            data: this.normalizeProductData(result.data),
             source: 'scraper'
           };
         } else {

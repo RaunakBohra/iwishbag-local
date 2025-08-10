@@ -506,13 +506,22 @@ class BrightDataProductService {
    */
   async fetchProductData(url: string, options: ScrapeOptions = {}): Promise<FetchResult> {
     try {
+      console.log(`🔍 BrightDataProductService.fetchProductData: Starting for URL: ${url}`);
+      console.log(`🔧 BrightDataProductService.fetchProductData: Options:`, options);
+
       // Check cache first
       const cached = this.getFromCache(url);
-      if (cached) return cached;
+      if (cached) {
+        console.log(`💾 BrightDataProductService.fetchProductData: Cache hit! Returning cached result`);
+        return cached;
+      }
 
       // Detect platform
       const platform = this.detectPlatform(url);
+      console.log(`🎯 BrightDataProductService.fetchProductData: Detected platform: ${platform || 'UNKNOWN'}`);
+      
       if (!platform) {
+        console.log(`❌ BrightDataProductService.fetchProductData: Unsupported platform for URL: ${url}`);
         return {
           success: false,
           error: 'Unsupported platform',
@@ -522,6 +531,7 @@ class BrightDataProductService {
 
       // Use appropriate Bright Data scraper
       let result: FetchResult;
+      console.log(`🛠️ BrightDataProductService.fetchProductData: Using scraper for platform: ${platform}`);
       
       switch (platform) {
         case 'amazon':
@@ -564,6 +574,7 @@ class BrightDataProductService {
           result = await this.scrapeHermesProduct(url, options);
           break;
         case 'flipkart':
+          console.log(`🛒 BrightDataProductService.fetchProductData: Calling Flipkart scraper!`);
           result = await this.scrapeFlipkartProduct(url, options);
           break;
         case 'toysrus':
@@ -588,6 +599,7 @@ class BrightDataProductService {
           result = await this.scrapeChanelProduct(url, options);
           break;
         default:
+          console.log(`⚠️ BrightDataProductService.fetchProductData: No specific scraper for platform: ${platform}, using generic`);
           result = await this.scrapeGenericProduct(url, options);
       }
 
@@ -1074,19 +1086,34 @@ class BrightDataProductService {
    */
   private async scrapeFlipkartProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
     try {
-      const mcpResult = await this.callBrightDataMCP('flipkart_product', {
+      console.log(`🛒 BrightDataProductService.scrapeFlipkartProduct: Starting Flipkart scraping for: ${url}`);
+      console.log(`📋 BrightDataProductService.scrapeFlipkartProduct: Options:`, options);
+
+      const mcpParams = {
         url,
         include_specifications: true,
         include_highlights: true,
         include_rating: true
-      });
+      };
+
+      console.log(`📞 BrightDataProductService.scrapeFlipkartProduct: Calling MCP with params:`, mcpParams);
+      
+      const mcpResult = await this.callBrightDataMCP('flipkart_product', mcpParams);
+
+      console.log(`📥 BrightDataProductService.scrapeFlipkartProduct: MCP Result:`, mcpResult);
+      console.log(`📥 BrightDataProductService.scrapeFlipkartProduct: MCP Result data:`, JSON.stringify(mcpResult.data, null, 2));
 
       if (!mcpResult.success) {
+        console.log(`❌ BrightDataProductService.scrapeFlipkartProduct: MCP failed with error: ${mcpResult.error}`);
         throw new Error(mcpResult.error || 'Flipkart scraping failed');
       }
 
+      console.log(`🔧 BrightDataProductService.scrapeFlipkartProduct: Normalizing Flipkart data...`);
+      console.log(`🔧 BrightDataProductService.scrapeFlipkartProduct: Raw data to normalize:`, JSON.stringify(mcpResult.data, null, 2));
       const productData = this.normalizeFlipkartData(mcpResult.data);
       
+      console.log(`✅ BrightDataProductService.scrapeFlipkartProduct: Success! Product data:`, productData);
+
       return {
         success: true,
         data: productData,
@@ -1094,9 +1121,13 @@ class BrightDataProductService {
       };
 
     } catch (error) {
+      console.error(`💥 BrightDataProductService.scrapeFlipkartProduct: Exception caught:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Flipkart scraping failed';
+      console.error(`💥 BrightDataProductService.scrapeFlipkartProduct: Error message: ${errorMessage}`);
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Flipkart scraping failed',
+        error: errorMessage,
         source: 'scraper'
       };
     }
@@ -2851,20 +2882,43 @@ class BrightDataProductService {
 
   private normalizeFlipkartData(rawData: any): ProductData {
     try {
-      // Handle Flipkart's response format from our custom scraper
-      const price = rawData.final_price || rawData.price;
+      console.log('🔧 normalizeFlipkartData: Input data:', JSON.stringify(rawData, null, 2));
       
-      // Extract weight from specifications (safely)
+      // Handle webhook data format: product_title, current_price, specifications (object)
+      const title = rawData.product_title || rawData.title || 'Unknown Product';
+      
+      // Extract price from string format "₹672" or use fallback
+      let price = 0;
+      const priceStr = rawData.current_price || rawData.final_price || rawData.price;
+      if (typeof priceStr === 'string') {
+        // Remove currency symbol and extract number
+        const priceMatch = priceStr.match(/[\d,]+(?:\.\d+)?/);
+        if (priceMatch) {
+          price = parseFloat(priceMatch[0].replace(/,/g, '')) || 0;
+        }
+      } else if (typeof priceStr === 'number') {
+        price = priceStr;
+      }
+      
+      // Extract weight from specifications object format
       let weight: number | undefined;
       try {
-        if (rawData.specifications && Array.isArray(rawData.specifications)) {
-          const specs = rawData.specifications;
-          const weightSpec = specs.find((spec: any) => 
-            spec?.specification_name && 
-            spec.specification_name.toLowerCase().includes('weight')
-          );
-          if (weightSpec && weightSpec.specification_value) {
-            const weightMatch = weightSpec.specification_value.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|oz|lb)/i);
+        if (rawData.specifications) {
+          let weightStr = '';
+          
+          if (typeof rawData.specifications === 'object') {
+            // Object format: { weight: "440 g" }
+            weightStr = rawData.specifications.weight || rawData.specifications.Weight || '';
+          } else if (Array.isArray(rawData.specifications)) {
+            // Array format: [{ specification_name: "Weight", specification_value: "440 g" }]
+            const weightSpec = rawData.specifications.find((spec: any) => 
+              spec?.specification_name?.toLowerCase().includes('weight')
+            );
+            weightStr = weightSpec?.specification_value || '';
+          }
+          
+          if (weightStr) {
+            const weightMatch = weightStr.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|oz|lb)/i);
             if (weightMatch) {
               let extractedWeight = parseFloat(weightMatch[1]);
               const unit = weightMatch[2].toLowerCase();
@@ -2878,39 +2932,56 @@ class BrightDataProductService {
           }
         }
       } catch (weightError) {
-        logger.warn('Failed to extract weight from Flipkart specifications:', weightError);
+        console.warn('Failed to extract weight from Flipkart specifications:', weightError);
       }
 
-      // Extract category from URL or fallback to general
+      // Extract brand from specifications
+      const brand = rawData.specifications?.brand || rawData.specifications?.Brand || rawData.brand || '';
+
+      // Extract category from title
       let category = rawData.category || 'general';
       if (category === 'general') {
-        // Try to infer from title or URL
-        const title = rawData.title || '';
-        if (title.toLowerCase().includes('phone') || title.toLowerCase().includes('mobile')) {
+        const titleLower = title.toLowerCase();
+        if (titleLower.includes('phone') || titleLower.includes('mobile')) {
           category = 'electronics';
-        } else if (title.toLowerCase().includes('shirt') || title.toLowerCase().includes('dress')) {
+        } else if (titleLower.includes('shirt') || titleLower.includes('dress') || titleLower.includes('clothing')) {
           category = 'fashion';
+        } else if (titleLower.includes('backpack') || titleLower.includes('bag')) {
+          category = 'bags';
         }
       }
 
-      // Return normalized data
-      return {
-        title: rawData.title || 'Unknown Product',
-        price: this.parsePrice(price) || 0,
-        currency: rawData.currency || 'INR',
+      // Handle images - main_image + image_gallery array
+      const images = [];
+      if (rawData.main_image) {
+        images.push(rawData.main_image);
+      }
+      if (rawData.image_gallery && Array.isArray(rawData.image_gallery)) {
+        images.push(...rawData.image_gallery.filter(img => img && img !== rawData.main_image));
+      }
+
+      const normalizedData = {
+        title: title,
+        price: price,
+        currency: 'INR', // Flipkart is always INR
         weight: weight,
-        images: rawData.images || [],
-        brand: rawData.brand,
+        images: images,
+        brand: brand,
         category: category,
         availability: rawData.availability || 'unknown',
         description: rawData.highlights ? rawData.highlights.join('. ') : '',
-        variants: []
+        variants: rawData.color_variants || []
       };
 
+      console.log('✅ normalizeFlipkartData: Output data:', JSON.stringify(normalizedData, null, 2));
+      return normalizedData;
+
     } catch (error) {
-      logger.error('Error normalizing Flipkart data:', error);
+      console.error('💥 Error normalizing Flipkart data:', error);
+      console.error('💥 Raw data that caused error:', JSON.stringify(rawData, null, 2));
+      
       return {
-        title: rawData?.title || 'Unknown Product',
+        title: rawData?.product_title || rawData?.title || 'Unknown Product',
         price: 0,
         currency: 'INR',
         category: 'general',

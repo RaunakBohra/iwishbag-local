@@ -19,6 +19,76 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// Store to keep track of pending requests and their results  
+const pendingRequests = new Map();
+
+/**
+ * Safely parse webhook body supporting gzip/br compression and NDJSON
+ */
+async function parseWebhookBody(request: Request): Promise<any> {
+  try {
+    const contentEncoding = request.headers.get('content-encoding') || '';
+    const contentType = (request.headers.get('content-type') || '').toLowerCase();
+
+    // If body is empty, return an empty object
+    const cloned = request.clone();
+    const rawText = await cloned.text();
+    if (!rawText) return {};
+
+    // If NDJSON, split and parse per line
+    if (contentType.includes('ndjson') || contentType.includes('x-ndjson')) {
+      const lines = rawText.split(/\r?\n/).filter(Boolean);
+      return lines.map((line) => JSON.parse(line));
+    }
+
+    // If compressed, use DecompressionStream API
+    if (contentEncoding.includes('gzip') || contentEncoding.includes('br')) {
+      const ds = new DecompressionStream(contentEncoding.includes('br') ? 'brotli' : 'gzip');
+      const decompressedStream = (request as any).body.pipeThrough(ds);
+      const decompressedArrayBuffer = await new Response(decompressedStream).arrayBuffer();
+      const text = new TextDecoder().decode(new Uint8Array(decompressedArrayBuffer));
+      return JSON.parse(text);
+    }
+
+    // Default: JSON
+    return JSON.parse(rawText);
+  } catch (_err) {
+    // As a safe fallback, return empty object to avoid failing webhook tests
+    return {};
+  }
+}
+
+/**
+ * Normalize Flipkart URLs for consistent matching
+ * Extracts the core product identifier to match URLs with different parameters
+ */
+function normalizeFlipkartURL(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    
+    // Extract product path and essential identifiers
+    const pathMatch = urlObj.pathname.match(/\/([^\/]+)\/p\/([^\/\?]+)/);
+    const pidMatch = urlObj.searchParams.get('pid');
+    
+    if (pathMatch && pidMatch) {
+      // Create normalized key: domain + product-name + product-id + pid
+      return `${urlObj.origin}${pathMatch[0]}?pid=${pidMatch}`;
+    }
+    
+    // Fallback: use full path + pid if available
+    if (pidMatch) {
+      return `${urlObj.origin}${urlObj.pathname}?pid=${pidMatch}`;
+    }
+    
+    // Final fallback: use pathname only
+    return `${urlObj.origin}${urlObj.pathname}`;
+    
+  } catch (error) {
+    console.log(`⚠️ URL normalization failed for: ${url}, using original`);
+    return url;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const requestId = Math.random().toString(36).substring(7);
@@ -31,6 +101,68 @@ export default {
     if (request.method === 'OPTIONS') {
       console.log(`✅ [${requestId}] CORS preflight handled`);
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // Handle BrightData webhook notifications
+    const url = new URL(request.url);
+    if (url.pathname === '/webhook') {
+      console.log(`📬 [${requestId}] Webhook notification received`);
+      try {
+        // Accept both POST (real deliveries) and GET (test pings)
+        if (request.method !== 'POST') {
+          return new Response('OK', { headers: corsHeaders });
+        }
+
+        const webhookData = await parseWebhookBody(request);
+        try { console.log(`📋 [${requestId}] Webhook data:`, JSON.stringify(webhookData, null, 2)); } catch {}
+        
+        // Store the webhook result for later retrieval
+        // BrightData webhook sends array of results, extract the data
+        const resultData = Array.isArray(webhookData) ? webhookData : [webhookData];
+        const productData = resultData[0];
+        
+        if (productData && productData.input && productData.input.url) {
+          // Use normalized URL for consistent matching
+          const originalUrl = productData.input.url;
+          const normalizedUrl = normalizeFlipkartURL(originalUrl);
+          console.log(`💾 [${requestId}] Storing webhook result with normalized URL: ${normalizedUrl}`);
+          console.log(`📋 [${requestId}] Original URL: ${originalUrl}`);
+          
+          // Store by normalized URL
+          pendingRequests.set(`url:${normalizedUrl}`, {
+            data: resultData,
+            timestamp: Date.now(),
+            status: 'completed'
+          });
+          
+          // Also check all pending requests and match by normalized URL
+          console.log(`🔍 [${requestId}] Checking ${pendingRequests.size} pending requests for URL match: ${normalizedUrl}`);
+          for (const [key, value] of pendingRequests.entries()) {
+            if (value.status === 'waiting' && normalizeFlipkartURL(value.url) === normalizedUrl) {
+              console.log(`🎯 [${requestId}] Found matching pending request by normalized URL: ${key}`);
+              pendingRequests.set(key, {
+                data: resultData,
+                timestamp: Date.now(),
+                status: 'completed',
+                url: value.url,
+                requestId: value.requestId
+              });
+            } else if (value.status === 'waiting') {
+              console.log(`🔍 [${requestId}] Pending request ${key} URL doesn't match:`);
+              console.log(`   Expected normalized: "${normalizedUrl}"`);
+              console.log(`   Actual normalized:   "${normalizeFlipkartURL(value.url)}"`);
+            }
+          }
+        } else {
+          console.log(`⚠️ [${requestId}] Webhook data missing URL identifier:`, Object.keys(productData || {}));
+        }
+        
+        return new Response('OK', { headers: corsHeaders });
+      } catch (error) {
+        console.error(`❌ [${requestId}] Webhook processing error:`, error);
+        // Don't fail Bright Data's test; acknowledge receipt even if parsing failed
+        return new Response('OK', { headers: corsHeaders });
+      }
     }
 
     try {
@@ -177,6 +309,28 @@ export default {
         
         return new Response(
           JSON.stringify(etsyResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle AliExpress with custom implementation
+      if (tool === 'aliexpress_product') {
+        console.log(`🛒 [${requestId}] Using custom AliExpress implementation`);
+        const aliexpressApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const aliexpressResult = await callAliExpressProductAPI(args?.url, aliexpressApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] AliExpress request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(aliexpressResult),
           {
             headers: {
               ...corsHeaders,
@@ -1586,10 +1740,12 @@ async function callFlipkartProductAPI(url: string, apiToken: string, requestId: 
     console.log(`📋 [${requestId}] Flipkart DCA collection triggered`);
     
     // Wait for results and download
-    const finalData = await waitAndDownloadFlipkartDCAResults(triggerResult, apiToken, requestId);
+    const finalData = await waitAndDownloadFlipkartDCAResults(triggerResult, apiToken, requestId, url);
     
     // Transform data to our expected format
+    console.log(`🔧 [${requestId}] Raw final data before transformation:`, JSON.stringify(finalData, null, 2));
     const transformedData = mapFlipkartDataToProductData(finalData[0] || {}, url, requestId);
+    console.log(`🔧 [${requestId}] Transformed data:`, JSON.stringify(transformedData, null, 2));
     
     console.log(`✅ [${requestId}] Flipkart scraping completed successfully`);
     
@@ -1610,6 +1766,13 @@ async function callFlipkartProductAPI(url: string, apiToken: string, requestId: 
  */
 async function triggerFlipkartDCACollection(url: string, collectorId: string, apiToken: string, requestId: string) {
   console.log(`📤 [${requestId}] Triggering Flipkart DCA collection...`);
+  console.log(`📋 [${requestId}] Request payload:`, JSON.stringify([{ url }], null, 2));
+  
+  const payload = [{ 
+    "url": url
+  }];
+  
+  console.log(`📤 [${requestId}] Sending payload to BrightData:`, JSON.stringify(payload, null, 2));
   
   const response = await fetch(`https://api.brightdata.com/dca/trigger?queue_next=1&collector=${collectorId}`, {
     method: 'POST',
@@ -1617,7 +1780,7 @@ async function triggerFlipkartDCACollection(url: string, collectorId: string, ap
       'Authorization': `Bearer ${apiToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify([{ url }])
+    body: JSON.stringify(payload)
   });
   
   if (!response.ok) {
@@ -1635,7 +1798,7 @@ async function triggerFlipkartDCACollection(url: string, collectorId: string, ap
  * Wait for and download Flipkart DCA collection results
  * Simplified approach - DCA often returns results directly or needs simpler polling
  */
-async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: string, requestId: string) {
+async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: string, requestId: string, url: string) {
   console.log(`⏳ [${requestId}] Processing Flipkart DCA results...`);
   console.log(`📋 [${requestId}] Trigger result keys:`, Object.keys(triggerResult));
   
@@ -1655,23 +1818,53 @@ async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: s
     console.log(`📥 [${requestId}] Got single product result directly`);
     return [triggerResult];
   }
-  
-  // If we have an ID, try a simpler polling approach
+
+  // Get collection ID for webhook/polling approach
   const resultId = triggerResult.response_id || triggerResult.id || triggerResult.request_id || triggerResult.collection_id;
-  
+
   if (!resultId) {
     console.log(`⚠️ [${requestId}] No result ID found, trying to use trigger result as-is`);
-    // Sometimes DCA returns the data directly in an unexpected format
     return [triggerResult];
+  }
+
+  console.log(`🔍 [${requestId}] Collection ID: ${resultId}`);
+  
+  // Store the request ID for webhook matching
+  console.log(`📝 [${requestId}] Storing pending request with URL: ${url}`);
+  pendingRequests.set(resultId, {
+    status: 'waiting',
+    timestamp: Date.now(),
+    requestId: requestId,
+    url: url  // Store URL for webhook matching
+  });
+  console.log(`📊 [${requestId}] Total pending requests: ${pendingRequests.size}`);
+
+  // First, check if we already have webhook results (immediate check)
+  const webhookResult = pendingRequests.get(resultId);
+  if (webhookResult && webhookResult.status === 'completed') {
+    console.log(`🎉 [${requestId}] Found immediate webhook result for collection ${resultId}`);
+    pendingRequests.delete(resultId); // Clean up
+    return Array.isArray(webhookResult.data) ? webhookResult.data : [webhookResult.data];
+  }
+  
+  // Also check URL-based webhook results immediately using normalized URL
+  const normalizedUrl = normalizeFlipkartURL(url);
+  const urlKey = `url:${normalizedUrl}`;
+  console.log(`🔍 [${requestId}] Checking for immediate webhook with normalized URL: ${normalizedUrl}`);
+  const urlWebhookResult = pendingRequests.get(urlKey);
+  if (urlWebhookResult && urlWebhookResult.status === 'completed') {
+    console.log(`🎉 [${requestId}] Found immediate URL-based webhook result`);
+    pendingRequests.delete(urlKey); // Clean up
+    return Array.isArray(urlWebhookResult.data) ? urlWebhookResult.data : [urlWebhookResult.data];
   }
   
   console.log(`🔍 [${requestId}] Polling for results with ID: ${resultId}`);
   
   // Enhanced polling with better timeout handling
   const config = {
-    maxAttempts: 10,  // Reduced from 20 to 10
-    interval: 10000,  // Increased from 15000 to 10000 (10 seconds)
-    totalTimeout: '100 seconds'
+    maxAttempts: 18,  // ~3 minutes total
+    interval: 10000,  // 10 seconds
+    totalTimeout: '180 seconds'
   };
   let attempts = 0;
   
@@ -1679,11 +1872,46 @@ async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: s
     attempts++;
     console.log(`🔄 [${requestId}] DCA polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
+    // Check for webhook results first before polling
+    const currentWebhookResult = pendingRequests.get(resultId);
+    if (currentWebhookResult && currentWebhookResult.status === 'completed') {
+      console.log(`🎉 [${requestId}] Webhook delivered results during polling!`);
+      pendingRequests.delete(resultId);
+      return Array.isArray(currentWebhookResult.data) ? currentWebhookResult.data : [currentWebhookResult.data];
+    }
+    
+    // Also check URL-based webhook results using normalized URL
+    const normalizedUrl = normalizeFlipkartURL(url);
+    const urlKey = `url:${normalizedUrl}`;
+    const urlWebhookResult = pendingRequests.get(urlKey);
+    if (urlWebhookResult && urlWebhookResult.status === 'completed') {
+      console.log(`🎉 [${requestId}] Found URL-based webhook results during polling!`);
+      pendingRequests.delete(urlKey);
+      return Array.isArray(urlWebhookResult.data) ? urlWebhookResult.data : [urlWebhookResult.data];
+    }
+    
     try {
-      // Try the most common DCA result endpoint
-      const resultResponse = await fetch(`https://api.brightdata.com/dca/results/${resultId}`, {
+      // Try multiple BrightData API endpoints for results
+      let resultResponse;
+      
+      // Try datasets API first (for API download delivery method)
+      resultResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${resultId}`, {
         headers: { 'Authorization': `Bearer ${apiToken}` }
       });
+      
+      if (!resultResponse.ok) {
+        // Fallback to DCA results endpoint  
+        resultResponse = await fetch(`https://api.brightdata.com/dca/results/${resultId}`, {
+          headers: { 'Authorization': `Bearer ${apiToken}` }
+        });
+      }
+      
+      if (!resultResponse.ok) {
+        // Try collection status endpoint
+        resultResponse = await fetch(`https://api.brightdata.com/dca/collection_status?collection_id=${resultId}`, {
+          headers: { 'Authorization': `Bearer ${apiToken}` }
+        });
+      }
       
       if (resultResponse.ok) {
         const data = await resultResponse.json();
@@ -2233,6 +2461,62 @@ function processZaraUrl(url: string, requestId: string): string {
   }
   
   return url;
+}
+
+/**
+ * AliExpress Product API Implementation
+ * Uses your configured collector ID for AliExpress scraping
+ */
+async function callAliExpressProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🛒 [${requestId}] Starting AliExpress product scraping for: ${url}`);
+    
+    // Use the DCA trigger with your collector ID
+    const collectorId = 'c_me4lfvsp1m11p0io1a';
+    const payload = [{ url }];
+    
+    console.log(`📤 [${requestId}] Triggering AliExpress collection with collector: ${collectorId}`);
+    
+    const response = await fetch(`https://api.brightdata.com/dca/trigger?queue_next=1&collector=${collectorId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`AliExpress API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log(`📥 [${requestId}] AliExpress scraping result:`, result);
+    
+    // Process the result - it should be an array with product data
+    if (Array.isArray(result) && result.length > 0) {
+      const productData = result[0];
+      
+      return {
+        success: true,
+        content: [{
+          text: JSON.stringify([productData])
+        }]
+      };
+    }
+    
+    return {
+      success: false,
+      error: 'No product data received from AliExpress scraper'
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] AliExpress scraping failed:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'AliExpress scraping failed'
+    };
+  }
 }
 
 /**

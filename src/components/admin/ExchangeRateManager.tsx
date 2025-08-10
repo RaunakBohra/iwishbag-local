@@ -111,78 +111,99 @@ export function ExchangeRateManager() {
   const updateShippingRouteRates = async () => {
     try {
       setLoading(true);
+      console.log('🔄 [ExchangeRateManager] Starting shipping route exchange rate updates...');
 
-      // Use a direct SQL query to update all shipping routes based on country_settings
-      const { data, error } = await supabase.rpc('update_shipping_route_exchange_rates');
+      // Step 1: First update the base exchange rates using our admin service
+      console.log('🔄 [ExchangeRateManager] Updating base exchange rates...');
+      
+      const { data: updateResult, error: updateError } = await supabase.functions.invoke(
+        'admin-update-exchange-rates',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      if (error) {
-        // Fallback to manual update if the RPC doesn't exist
-        console.log('RPC not found, using manual update...');
+      if (updateError) {
+        console.error('❌ [ExchangeRateManager] Base update failed:', updateError);
+        throw new Error(`Base exchange rate update failed: ${updateError.message}`);
+      }
 
-        // Get all shipping routes
-        const { data: routes, error: routesError } = await supabase
-          .from('shipping_routes')
-          .select('id, origin_country, destination_country')
-          .eq('is_active', true);
+      if (!updateResult?.success) {
+        throw new Error(updateResult?.error || 'Base exchange rate update failed');
+      }
 
-        if (routesError) throw routesError;
+      const baseUpdatedCount = updateResult?.updated_count || 0;
+      console.log(`✅ [ExchangeRateManager] Base rates updated: ${baseUpdatedCount} countries`);
 
-        // Get all country settings for rate calculation
-        const { data: countrySettings, error: settingsError } = await supabase
-          .from('country_settings')
-          .select('code, rate_from_usd')
-          .not('rate_from_usd', 'is', null);
+      // Step 2: Now update shipping routes with the fresh exchange rates
+      console.log('🔄 [ExchangeRateManager] Updating shipping route exchange rates...');
 
-        if (settingsError) throw settingsError;
+      // Get all active shipping routes
+      const { data: routes, error: routesError } = await supabase
+        .from('shipping_routes')
+        .select('id, origin_country, destination_country')
+        .eq('is_active', true);
 
-        // Create a map for quick lookup
-        const rateMap = new Map<string, number>();
-        countrySettings.forEach((setting) => {
-          rateMap.set(setting.code, setting.rate_from_usd);
-        });
+      if (routesError) throw routesError;
 
-        let updatedCount = 0;
+      let routeUpdatedCount = 0;
 
-        for (const route of routes) {
-          const originRate = rateMap.get(route.origin_country);
-          const destRate = rateMap.get(route.destination_country);
-
-          if (originRate && destRate && originRate > 0 && destRate > 0) {
-            // Calculate exchange rate: origin currency → destination currency
-            const exchangeRate = parseFloat((destRate / originRate).toFixed(4));
-
-            const { error: updateError } = await supabase
+      // Use our enhanced CurrencyService to calculate fresh rates for each route
+      console.log(`🔄 [ExchangeRateManager] Found ${routes.length} active shipping routes to update:`, routes);
+      
+      for (const route of routes) {
+        try {
+          console.log(`🔄 [ExchangeRateManager] Processing route ${route.id}: ${route.origin_country} → ${route.destination_country}`);
+          
+          const exchangeRate = await currencyService.getExchangeRate(route.origin_country, route.destination_country);
+          console.log(`🔄 [ExchangeRateManager] CurrencyService returned rate:`, exchangeRate);
+          
+          if (exchangeRate && exchangeRate > 0) {
+            const roundedRate = parseFloat(exchangeRate.toFixed(4));
+            console.log(`🔄 [ExchangeRateManager] Updating route ${route.id} with rate: ${roundedRate}`);
+            
+            const { error: routeUpdateError } = await supabase
               .from('shipping_routes')
               .update({
-                exchange_rate: exchangeRate,
+                exchange_rate: roundedRate,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', route.id);
 
-            if (!updateError) {
-              updatedCount++;
+            if (!routeUpdateError) {
+              routeUpdatedCount++;
+              console.log(`✅ [ExchangeRateManager] Route ${route.id} updated: ${route.origin_country} → ${route.destination_country} = ${roundedRate}`);
+            } else {
+              console.error(`❌ [ExchangeRateManager] Route ${route.id} update failed:`, routeUpdateError);
             }
+          } else {
+            console.warn(`⚠️ [ExchangeRateManager] Skipped route ${route.id} with invalid rate: ${route.origin_country} → ${route.destination_country}, received: ${exchangeRate}`);
           }
+        } catch (routeError) {
+          console.error(`❌ [ExchangeRateManager] Route ${route.id} calculation failed for ${route.origin_country} → ${route.destination_country}:`, routeError);
         }
-
-        toast({
-          title: 'Success',
-          description: `Updated ${updatedCount} shipping route exchange rates`,
-        });
-      } else {
-        toast({
-          title: 'Success',
-          description: `Updated shipping route exchange rates using database function`,
-        });
       }
+
+      console.log(`✅ [ExchangeRateManager] Update completed: ${baseUpdatedCount} countries, ${routeUpdatedCount} routes`);
+
+      toast({
+        title: '🎉 Exchange Rates Updated Successfully!',
+        description: `Updated ${baseUpdatedCount} base rates and ${routeUpdatedCount} shipping routes with live rates and freshness validation.`,
+      });
 
       // Refresh the display
       fetchExchangeRates();
+      
     } catch (error) {
-      console.error('Error updating shipping route rates:', error);
+      console.error('💥 [ExchangeRateManager] Error updating rates:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({
-        title: 'Error',
-        description: 'Failed to update shipping route exchange rates',
+        title: '❌ Failed to Update Exchange Rates',
+        description: `${errorMessage}. Some rates may have been updated.`,
         variant: 'destructive',
       });
     } finally {
@@ -254,24 +275,52 @@ export function ExchangeRateManager() {
 
   const testExchangeRate = async (originCountry: string, destinationCountry: string) => {
     try {
-      const result = await currencyService.getExchangeRate(originCountry, destinationCountry);
+      console.log(`🧪 [TEST] Starting exchange rate test: ${originCountry} → ${destinationCountry}`);
+      
+      // Clear cache to force fresh data
+      currencyService.clearCache();
+      console.log(`🧹 [TEST] Cache cleared for fresh test`);
+      
+      const rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
+      console.log(`🧪 [TEST] Test completed successfully: ${rate}`);
 
-      const confidence =
-        result.confidence === 'high'
-          ? 'success'
-          : result.confidence === 'medium'
-            ? 'warning'
-            : 'destructive';
+      // Get currency symbols for better display
+      const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+      const destCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
+      
+      const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+      const destSymbol = currencyService.getCurrencySymbol(destCurrency);
+
+      // Determine confidence based on rate reasonableness and freshness
+      let confidence: 'success' | 'warning' | 'destructive' = 'success';
+      let statusMessage = '';
+      
+      if (rate <= 0 || rate > 10000) {
+        confidence = 'destructive';
+        statusMessage = ' ❌ Invalid rate';
+      } else if (rate === 1.0 && originCountry !== destinationCountry) {
+        confidence = 'warning';
+        statusMessage = ' ⚠️ Fallback rate';
+      } else {
+        // Check console logs to determine actual source
+        console.log(`🔍 [TEST] Analyzing rate source for ${originCountry}→${destinationCountry}: ${rate}`);
+        
+        // We'll update this based on what we see in logs
+        // For now, let's be honest about the uncertainty
+        statusMessage = ' 📊 Check console for data source';
+        confidence = 'warning'; // Until we confirm it's truly live
+      }
 
       toast({
         title: `Exchange Rate Test`,
-        description: `${originCountry} → ${destinationCountry}: ${result.rate} (${result.source})`,
+        description: `${originCountry} → ${destinationCountry}: 1 ${originSymbol} = ${rate.toFixed(4)} ${destSymbol}${statusMessage}`,
         variant: confidence === 'destructive' ? 'destructive' : 'default',
       });
-    } catch {
+    } catch (error) {
+      console.error('🚨 [TEST] Exchange rate test failed:', error);
       toast({
         title: 'Test Failed',
-        description: 'Could not test exchange rate',
+        description: error instanceof Error ? error.message : 'Could not test exchange rate',
         variant: 'destructive',
       });
     }
@@ -313,6 +362,46 @@ export function ExchangeRateManager() {
           <Button onClick={updateShippingRouteRates} variant="outline" size="sm">
             <ArrowRightLeft className="h-4 w-4 mr-2" />
             Update Routes
+          </Button>
+          <Button 
+            onClick={async () => {
+              console.log('🔍 [D1Health] Testing D1 Edge API health...');
+              try {
+                const response = await fetch('https://iwishbag-edge-api.rnkbohra.workers.dev/api/countries');
+                const data = await response.json();
+                console.log('🔍 [D1Health] D1 API Response:', data);
+                
+                if (data.countries && data.countries.length > 0) {
+                  const sampleCountry = data.countries[0];
+                  const dataAge = sampleCountry.updated_at ? 
+                    Math.round((Date.now() - (sampleCountry.updated_at * 1000)) / (1000 * 60 * 60)) : 
+                    'unknown';
+                  
+                  toast({
+                    title: 'D1 Edge API Status',
+                    description: `✅ API responding with ${data.countries.length} countries. Sample data age: ${dataAge}h`,
+                  });
+                } else {
+                  toast({
+                    title: 'D1 Edge API Status', 
+                    description: '⚠️ API responding but no country data found',
+                    variant: 'destructive'
+                  });
+                }
+              } catch (error) {
+                console.error('🚨 [D1Health] D1 API Error:', error);
+                toast({
+                  title: 'D1 Edge API Status',
+                  description: `❌ API not responding: ${error.message}`,
+                  variant: 'destructive'
+                });
+              }
+            }}
+            variant="outline" 
+            size="sm"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            Test D1 API
           </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

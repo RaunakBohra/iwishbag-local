@@ -12,6 +12,7 @@ interface QuoteMessagingButtonProps {
   className?: string;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
+  stacked?: boolean;
 }
 
 const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
@@ -19,7 +20,8 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
   onMessageSent,
   className = '',
   variant = 'outline',
-  size = 'md'
+  size = 'md',
+  stacked = false
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,6 +83,11 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
   };
 
   const handleViewTicket = () => {
+    // Navigate directly to the ticket thread when it exists
+    if (existingTicket?.id) {
+      navigate(`/support/my-tickets?ticket=${existingTicket.id}`);
+      return;
+    }
     const quoteParam = quote.quote_number || quote.id?.slice(-8) || '';
     navigate(`/support/my-tickets?quote=${quoteParam}`);
   };
@@ -109,14 +116,17 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
   };
 
   const currentSize = sizeConfig[size];
+  const containerClass = stacked
+    ? `flex flex-col gap-2 w-full ${className}`
+    : `inline-flex flex-col sm:flex-row gap-2 w-full sm:w-auto ${className}`;
 
   // STATE 1: Loading - Check for existing tickets
   if (checkingTicket) {
     return (
-      <div className={`inline-flex ${className}`}>
+      <div className={containerClass}>
         <Button
           variant={variant}
-          className={`${currentSize.button} ${currentSize.gap} min-w-[120px] justify-center`}
+          className={`${currentSize.button} ${currentSize.gap} min-w-[120px] justify-center ${stacked ? 'w-full' : ''}`}
           disabled={true}
         >
           <div className={`animate-spin rounded-full ${currentSize.icon} border-2 border-current border-t-transparent`} />
@@ -129,46 +139,26 @@ const QuoteMessagingButton: React.FC<QuoteMessagingButtonProps> = ({
   // STATE 2: Has Existing Tickets - Show dual action buttons
   if (existingTicket) {
     return (
-      <div className={`inline-flex flex-col sm:flex-row gap-2 w-full sm:w-auto ${className}`}>
-        {/* Primary Action: View Conversation */}
+      <div className={containerClass}>
+        {/* Only show View Chat when a ticket already exists */}
         <Button
           variant="default"
-          className={`${currentSize.button} ${currentSize.gap} bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm flex-1 sm:flex-initial min-w-[140px] justify-center`}
+          className={`${currentSize.button} ${currentSize.gap} bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm flex-1 sm:flex-initial min-w-[140px] justify-center ${stacked ? 'w-full' : ''}`}
           onClick={handleViewTicket}
         >
           <OptimizedIcon name="MessageCircle" className={currentSize.icon} />
           <span>View Chat</span>
         </Button>
-
-        {/* Secondary Action: New Ticket */}
-        <Button
-          variant="outline"
-          className={`${currentSize.button} ${currentSize.gap} border-gray-300 hover:border-gray-400 hover:bg-gray-50 flex-1 sm:flex-initial min-w-[100px] justify-center`}
-          onClick={() => setModalOpen(true)}
-          disabled={isLoading}
-        >
-          <OptimizedIcon name="Plus" className={currentSize.icon} />
-          <span>New Ticket</span>
-        </Button>
-
-        {/* Modal for new ticket creation */}
-        <QuoteMessageModal
-          quote={quote}
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSuccess={handleSuccess}
-          onSubmitting={handleSubmitting}
-        />
       </div>
     );
   }
 
   // STATE 3: No Existing Tickets - Show contact support
   return (
-    <div className={`inline-flex ${className}`}>
+    <div className={containerClass}>
       <Button
         variant={variant}
-        className={`${currentSize.button} ${currentSize.gap} min-w-[140px] justify-center font-medium`}
+        className={`${currentSize.button} ${currentSize.gap} min-w-[140px] justify-center font-medium ${stacked ? 'w-full' : ''}`}
         onClick={() => setModalOpen(true)}
         disabled={isLoading}
       >

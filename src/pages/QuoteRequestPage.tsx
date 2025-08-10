@@ -158,7 +158,15 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 text-xs"
-                      onClick={() => productScraping.scrapeProduct(currentUrl)}
+                      onClick={() => {
+                        console.log(`🚀 QuoteRequestPage: User clicked Fetch Data button for URL: ${currentUrl}`);
+                        toast({
+                          title: "Fetching product data...",
+                          description: `Scraping data from ${new URL(currentUrl).hostname}`,
+                          duration: 3000,
+                        });
+                        productScraping.scrapeProduct(currentUrl);
+                      }}
                     >
                       <Download className="h-3 w-3 mr-1" />
                       Fetch Data
@@ -198,7 +206,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
         />
       </div>
 
-      {/* Second row: Origin Country, Quantity, Weight, Price */}
+      {/* Second row: Origin Country, Price, Quantity, Weight */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
         <FormField
           control={form.control}
@@ -226,11 +234,27 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
                   )}
                 </SelectContent>
               </Select>
-              {urlAnalysis.isValid && urlAnalysis.domain && (
-                <div className="text-xs text-gray-500 mt-1">
-                  Detected from: {urlAnalysis.domain}
-                </div>
-              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`items.${index}.price_origin`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price ({currency})</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  placeholder={currency === 'USD' ? '999.99' : currency === 'INR' ? '8299.99' : '999.99'}
+                  {...field}
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  className={productScraping.isScraped && productScraping.autoFillData?.price ? 'border-green-200 bg-green-50/30' : ''}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -269,27 +293,6 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
                   {...field}
                   onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                   className={productScraping.isScraped && productScraping.autoFillData?.weight ? 'border-green-200 bg-green-50/30' : ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name={`items.${index}.price_origin`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Price ({currency})</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  placeholder={currency === 'USD' ? '999.99' : currency === 'INR' ? '8299.99' : '999.99'}
-                  {...field}
-                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                  className={productScraping.isScraped && productScraping.autoFillData?.price ? 'border-green-200 bg-green-50/30' : ''}
                 />
               </FormControl>
               <FormMessage />
@@ -665,7 +668,7 @@ export default function QuoteRequestPage() {
                                 htmlFor="single"
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                               >
-                                🎯 Single Combined Quote
+                                Single Combined Quote
                               </label>
                               <p className="text-xs text-muted-foreground">
                                 All items in one quote with combined shipping and customs
@@ -679,7 +682,7 @@ export default function QuoteRequestPage() {
                                 htmlFor="separate"
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                               >
-                                📋 Separate Quotes
+                                Separate Quotes
                               </label>
                               <p className="text-xs text-muted-foreground">
                                 Individual quote for each item with separate pricing

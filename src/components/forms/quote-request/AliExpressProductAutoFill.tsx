@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, CheckCircle, AlertCircle, Wand2 } from 'lucide-react';
 import { UseFormSetValue } from 'react-hook-form';
-import { productDataFetchService } from '@/services/ProductDataFetchService';
+import { enhancedAliExpressIntegration } from '@/services/enhanced-aliexpress-integration';
 import { useToast } from '@/hooks/use-toast';
 
 interface AliExpressProductAutoFillProps {
@@ -53,7 +53,7 @@ export const AliExpressProductAutoFill: React.FC<AliExpressProductAutoFillProps>
     setFetchResult(null);
 
     try {
-      const result = await productDataFetchService.fetchProductData(productUrl);
+      const result = await enhancedAliExpressIntegration.fetchProductData(productUrl);
       
       if (result.success && result.data) {
         const data = result.data;
@@ -95,6 +95,23 @@ export const AliExpressProductAutoFill: React.FC<AliExpressProductAutoFillProps>
           data.variants.forEach((variant, i) => {
             productNotes += `${variant.name}: ${variant.options.join(', ')}\n`;
           });
+        }
+
+        // Add AliExpress-specific information if available
+        if (data.aliexpress_specific) {
+          const specific = data.aliexpress_specific;
+          if (specific.store_name) {
+            productNotes += `\nStore: ${specific.store_name}`;
+          }
+          if (specific.sold_count > 0) {
+            productNotes += `\nSold: ${specific.sold_count} items`;
+          }
+          if (specific.review_count > 0) {
+            productNotes += `\nReviews: ${specific.review_count}`;
+          }
+          if (specific.shipping_info) {
+            productNotes += `\nShipping: ${specific.shipping_info}`;
+          }
         }
         
         if (productNotes) {

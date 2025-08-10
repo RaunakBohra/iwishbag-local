@@ -121,6 +121,7 @@ serve(async (req) => {
             name: setting.name,
             currency: setting.currency,
             rate_from_usd: roundedRate,
+            updated_at: new Date().toISOString(),
           };
         }
         console.warn(
@@ -146,6 +147,68 @@ serve(async (req) => {
       console.log('⚠️ No country settings were updated (no matching currencies found).');
     }
 
+    // =========================================
+    // 🚀 SYNC TO D1 EDGE CACHE FOR INSTANT GLOBAL ACCESS
+    // =========================================
+    console.log('🔄 Syncing updated exchange rates to D1 Edge Cache...');
+    
+    const syncResults = [];
+    
+    try {
+      // Get environment variables for D1 sync
+      const edgeApiUrl = Deno.env.get('EDGE_API_URL') || 'https://iwishbag-edge-api.rnkbohra.workers.dev';
+      const syncApiKey = Deno.env.get('SYNC_API_KEY') || Deno.env.get('CLOUDFLARE_API_TOKEN');
+      
+      if (syncApiKey) {
+        console.log(`🔄 Syncing ${updates.length} countries to D1 Edge Cache...`);
+        
+        // Sync each updated country to D1
+        for (const country of updates) {
+          try {
+            const syncResponse = await fetch(`${edgeApiUrl}/api/sync`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': syncApiKey,
+              },
+              body: JSON.stringify({
+                type: 'country',
+                country: {
+                  ...country,
+                  exchange_rate: country.rate_from_usd, // Map field name for D1
+                  updated_at: Math.floor(Date.now() / 1000), // Convert to Unix timestamp
+                }
+              })
+            });
+            
+            if (syncResponse.ok) {
+              const syncData = await syncResponse.json();
+              syncResults.push({ country: country.code, status: 'success' });
+              console.log(`✅ Synced ${country.code} to D1: ${country.rate_from_usd} ${country.currency}/USD`);
+            } else {
+              const errorText = await syncResponse.text();
+              syncResults.push({ country: country.code, status: 'failed', error: errorText });
+              console.error(`❌ Failed to sync ${country.code} to D1: ${syncResponse.status} - ${errorText}`);
+            }
+          } catch (syncError) {
+            syncResults.push({ country: country.code, status: 'error', error: syncError.message });
+            console.error(`💥 Error syncing ${country.code} to D1:`, syncError);
+          }
+          
+          // Add small delay to avoid overwhelming D1 API
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        
+        const successfulSyncs = syncResults.filter(r => r.status === 'success').length;
+        console.log(`🎉 D1 Sync completed: ${successfulSyncs}/${updates.length} countries synced successfully`);
+        
+      } else {
+        console.warn('⚠️ No SYNC_API_KEY found - skipping D1 sync');
+      }
+    } catch (d1Error) {
+      console.error('💥 D1 sync process failed:', d1Error);
+    }
+
     const processingTime = Date.now() - startTime;
     console.log(`✅ Exchange rates updated successfully in  ${processingTime}ms.`);
 
@@ -155,6 +218,8 @@ serve(async (req) => {
         message: 'Exchange rates updated successfully.',
         updated_count: updates.length,
         processing_time_ms: processingTime,
+        d1_sync_results: syncResults,
+        d1_synced_count: syncResults.filter(r => r.status === 'success').length,
       }),
       {
         status: 200,

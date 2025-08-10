@@ -47,12 +47,17 @@ export class QuoteV2Service {
       const offset = (page - 1) * pageSize;
       
       console.log('📋 Fetching paginated quotes:', { filters, page, pageSize });
+      console.log('📋 Database query details:', { 
+        offset, 
+        range: `${offset} to ${offset + pageSize - 1}`,
+        table: 'quotes_v2'
+      });
 
-      // Build base query with count
+      // Build base query with count - sort by most recent activity first
       let query = supabase
         .from('quotes_v2')
         .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .range(offset, offset + pageSize - 1);
 
       // Apply filters
@@ -90,6 +95,13 @@ export class QuoteV2Service {
       }
 
       const { data, error, count } = await query;
+
+      console.log('📋 Database response:', { 
+        count, 
+        dataLength: data?.length || 0, 
+        error: error?.message || 'none',
+        errorCode: error?.code || 'none'
+      });
 
       if (error) {
         console.error('❌ Error fetching paginated quotes:', error);
@@ -202,7 +214,8 @@ export class QuoteV2Service {
       let query = supabase
         .from('quotes_v2')
         .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        // For customers, prioritize active quotes first, then by most recent activity
+        .order('updated_at', { ascending: false })
         .range(offset, offset + pageSize - 1);
 
       // Apply filters

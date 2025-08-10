@@ -401,38 +401,87 @@ export class ProductScrapingEngine {
   }
 
   private async performScraping(job: ScrapeJob): Promise<FetchResult> {
-    // This is a placeholder for the actual scraping logic
-    // In the real implementation, this would:
-    // 1. Use MCPIntegrationService to call Bright Data MCP
-    // 2. Use DataNormalizationService to process the response
-    // 3. Use ProductValidationService to validate the result
-    // 4. Use ScrapingCacheService to cache the result
-
     this.updateJobProgress(job.id, 'Calling scraping service', 50);
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-    
-    this.updateJobProgress(job.id, 'Processing scraped data', 75);
-    
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-
-    // Return mock result
-    return {
-      success: true,
-      data: {
-        title: 'Sample Product',
-        price: 99.99,
-        currency: 'USD',
-        images: ['https://example.com/image.jpg'],
-        description: 'Sample product description',
-        url: job.url,
-        platform: job.platform,
-        availability: 'in_stock',
-      } as ProductData,
-      source: 'scraper' as const,
-    };
+    try {
+      // Import MCPBrightDataBridge for actual scraping
+      const { mcpBrightDataBridge } = await import('../MCPBrightDataBridge');
+      
+      let result;
+      
+      // Handle different platforms
+      switch (job.platform) {
+        case 'aliexpress':
+          result = await mcpBrightDataBridge.scrapeAliExpressProduct(job.url);
+          break;
+        case 'amazon':
+          result = await mcpBrightDataBridge.scrapeAmazonProduct(job.url);
+          break;
+        case 'flipkart':
+          result = await mcpBrightDataBridge.scrapeFlipkartProduct(job.url);
+          break;
+        case 'myntra':
+          result = await mcpBrightDataBridge.scrapeMyntraProduct(job.url);
+          break;
+        case 'ebay':
+          result = await mcpBrightDataBridge.scrapeEbayProduct(job.url);
+          break;
+        case 'walmart':
+          result = await mcpBrightDataBridge.scrapeWalmartProduct(job.url);
+          break;
+        case 'bestbuy':
+          result = await mcpBrightDataBridge.scrapeBestBuyProduct(job.url);
+          break;
+        case 'target':
+          result = await mcpBrightDataBridge.scrapeTargetProduct(job.url);
+          break;
+        case 'etsy':
+          result = await mcpBrightDataBridge.scrapeEtsyProduct(job.url);
+          break;
+        case 'hm':
+          result = await mcpBrightDataBridge.scrapeHMProduct(job.url);
+          break;
+        case 'asos':
+          result = await mcpBrightDataBridge.scrapeASOSProduct(job.url);
+          break;
+        case 'zara':
+          result = await mcpBrightDataBridge.scrapeZaraProduct(job.url);
+          break;
+        default:
+          throw new Error(`Unsupported platform: ${job.platform}`);
+      }
+      
+      this.updateJobProgress(job.id, 'Processing scraped data', 75);
+      
+      if (result.success && result.data) {
+        // Normalize the data from MCP response to ProductData format
+        const { DataNormalizationService } = await import('./DataNormalizationService');
+        const normalizer = new (DataNormalizationService as any)();
+        const normalizedData = normalizer.normalizeFromPlatform(result.data, job.platform);
+        
+        return {
+          success: true,
+          data: normalizedData,
+          source: 'scraper' as const,
+        };
+      } else {
+        throw new Error(result.error || 'Scraping failed');
+      }
+      
+    } catch (error) {
+      logger.error('Scraping failed', { 
+        jobId: job.id, 
+        platform: job.platform, 
+        url: job.url, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Scraping failed',
+        source: 'scraper' as const,
+      };
+    }
   }
 
   private updateMetrics(platform: SupportedPlatform, success: boolean, processingTime: number): void {
@@ -457,6 +506,63 @@ export class ProductScrapingEngine {
   }
 
   /**
+   * Direct scraping method for simple use cases
+   * Creates a job and waits for completion
+   */
+  async scrapeProduct(url: string, options: ScrapeOptions = {}): Promise<FetchResult> {
+    try {
+      logger.info('Starting direct product scraping', { url });
+
+      // Create and start the job
+      const jobId = await this.createJob(url, { ...options, priority: 'high' });
+      
+      // Poll for completion
+      let job = this.getJob(jobId);
+      const startTime = Date.now();
+      const timeout = options.timeout || 300000; // 5 minutes default
+      
+      while (job && job.status === 'queued' || job?.status === 'running') {
+        // Check timeout
+        if (Date.now() - startTime > timeout) {
+          this.cancelJob(jobId);
+          throw new Error(`Scraping timeout after ${timeout}ms`);
+        }
+        
+        // Wait before next check
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        job = this.getJob(jobId);
+      }
+      
+      if (!job) {
+        throw new Error('Job disappeared during processing');
+      }
+      
+      if (job.status === 'failed') {
+        throw new Error(job.error || 'Scraping failed');
+      }
+      
+      if (job.status === 'cancelled') {
+        throw new Error('Scraping was cancelled');
+      }
+      
+      if (job.status === 'completed' && job.result) {
+        logger.info('Direct scraping completed successfully', { 
+          url, 
+          jobId, 
+          processingTime: Date.now() - startTime 
+        });
+        return job.result;
+      }
+      
+      throw new Error('Unexpected job state: ' + job.status);
+      
+    } catch (error) {
+      logger.error('Direct scraping failed', { url, error: error instanceof Error ? error.message : 'Unknown error' });
+      throw error;
+    }
+  }
+
+  /**
    * Clean up resources
    */
   dispose(): void {
@@ -474,5 +580,8 @@ export class ProductScrapingEngine {
     logger.info('ProductScrapingEngine disposed');
   }
 }
+
+// Export singleton instance for easy use
+export const productScrapingEngine = new ProductScrapingEngine();
 
 export default ProductScrapingEngine;

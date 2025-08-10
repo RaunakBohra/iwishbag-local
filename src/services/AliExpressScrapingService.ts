@@ -51,17 +51,14 @@ export interface AliExpressScrapingResult {
   response_time_ms?: number;
 }
 
+import { brightDataConfig, isConfigured } from '@/config/brightdata';
+
 class AliExpressScrapingService {
-  private apiToken: string;
-  private collectorId: string = 'c_me4lfvsp1m11p0io1a';
-  private baseUrl: string = 'https://api.brightdata.com/dca/trigger';
   private cache: Map<string, { data: AliExpressScrapingResult; timestamp: number }> = new Map();
   private cacheTimeout = 30 * 60 * 1000; // 30 minutes
 
   constructor() {
-    this.apiToken = import.meta.env.VITE_BRIGHTDATA_API_TOKEN || process.env.BRIGHTDATA_API_TOKEN || '';
-    
-    if (!this.apiToken) {
+    if (!isConfigured()) {
       console.warn('AliExpressScrapingService: No BrightData API token found');
     }
   }
@@ -70,7 +67,7 @@ class AliExpressScrapingService {
    * Scrape AliExpress product data
    */
   async scrapeProduct(url: string): Promise<AliExpressScrapingResult> {
-    if (!this.apiToken) {
+    if (!isConfigured()) {
       return {
         success: false,
         error: 'BrightData API token not configured'
@@ -98,10 +95,10 @@ class AliExpressScrapingService {
         url: url
       }];
 
-      const response = await fetch(`${this.baseUrl}?queue_next=1&collector=${this.collectorId}`, {
+      const response = await fetch(`${brightDataConfig.baseUrl}?queue_next=1&collector=${brightDataConfig.collectors.aliexpress}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiToken}`,
+          'Authorization': `Bearer ${brightDataConfig.apiToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -379,8 +376,8 @@ class AliExpressScrapingService {
   getStats() {
     return {
       cacheSize: this.cache.size,
-      configured: !!this.apiToken,
-      collectorId: this.collectorId
+      configured: isConfigured(),
+      collectorId: brightDataConfig.collectors.aliexpress
     };
   }
 

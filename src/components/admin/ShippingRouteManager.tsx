@@ -101,39 +101,48 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
     if (!originCountry || !destinationCountry) return;
 
     try {
-      // Get country settings for both countries
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select('code, rate_from_usd')
-        .in('code', [originCountry, destinationCountry])
-        .not('rate_from_usd', 'is', null);
-
-      if (error) {
-        console.error('Error fetching country settings:', error);
-        return;
-      }
-
-      const originRate = countrySettings?.find((c) => c.code === originCountry)?.rate_from_usd;
-      const destRate = countrySettings?.find((c) => c.code === destinationCountry)?.rate_from_usd;
-
-      if (originRate && destRate && originRate > 0 && destRate > 0) {
-        const calculatedRate = parseFloat((destRate / originRate).toFixed(4));
-
+      console.log(`🔄 [ShippingRoute] Calculating exchange rate: ${originCountry} → ${destinationCountry}`);
+      
+      // Use the enhanced CurrencyService which includes data freshness validation and live API fallback
+      const calculatedRate = await currencyService.getExchangeRate(originCountry, destinationCountry);
+      
+      if (calculatedRate && calculatedRate > 0) {
+        const roundedRate = parseFloat(calculatedRate.toFixed(4));
+        
         setFormData((prev) => ({
           ...prev,
-          exchangeRate: calculatedRate,
+          exchangeRate: roundedRate,
         }));
+
+        console.log(`✅ [ShippingRoute] Exchange rate calculated: ${roundedRate}`);
 
         // Only show toast for new routes, not when editing existing ones
         if (!initialData?.exchangeRate) {
+          const originSymbol = currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry));
+          const destSymbol = currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry));
+          
           toast({
-            title: 'Exchange Rate Updated',
-            description: `Calculated rate: 1 ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry))} = ${calculatedRate} ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry))}`,
+            title: '🎯 Exchange Rate Auto-Calculated',
+            description: `Live rate: 1 ${originSymbol} = ${roundedRate} ${destSymbol} (includes freshness validation)`,
           });
         }
+      } else {
+        console.warn(`⚠️ [ShippingRoute] Could not calculate exchange rate for ${originCountry} → ${destinationCountry}`);
+        
+        toast({
+          title: '⚠️ Exchange Rate Unavailable',
+          description: `Could not fetch live rate for ${originCountry} → ${destinationCountry}. Please set manually.`,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      console.error('Error calculating exchange rate:', error);
+      console.error('💥 [ShippingRoute] Error calculating exchange rate:', error);
+      
+      toast({
+        title: '❌ Exchange Rate Error',
+        description: `Failed to calculate rate: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
     }
   };
 

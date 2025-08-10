@@ -17,6 +17,8 @@ import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
+// Back to original component now that we know the data works
+import QuotesListPageOriginal from '@/pages/admin/QuotesListPage';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -70,7 +72,8 @@ const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTicketsOptimize
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
 // const AdminQuoteDetailsPage = React.lazy(() => import('@/pages/admin/quote/AdminQuoteDetailsPage')); // REMOVED: Redundant - QuoteCalculatorV2 handles editing
-const QuotesListPage = React.lazy(() => import('@/pages/admin/QuotesListPage'));
+// Use original quotes page now that we know data works
+const QuotesListPage = QuotesListPageOriginal;
 // const EmailTemplatesPage = React.lazy(() => import('@/pages/admin/EmailTemplates')); // Email templates removed
 const PaymentManagement = React.lazy(() => import('@/pages/admin/PaymentManagement'));
 const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes'));

@@ -810,9 +810,6 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
   }, [quote, displayCurrency, convertCurrency]);
 
   const [approveModalOpen, setApproveModalOpen] = useState(false);
-  const [questionModalOpen, setQuestionModalOpen] = useState(false);
-  const [questionType, setQuestionType] = useState('');
-  const [questionText, setQuestionText] = useState('');
   const [mobileBreakdownExpanded, setMobileBreakdownExpanded] = useState(false);
   const [quoteOptions, setQuoteOptions] = useState({
     shipping: 'express',
@@ -1029,44 +1026,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
     }
   };
 
-  const handleSubmitQuestion = async () => {
-    try {
-      // Create a support ticket
-      const { error } = await supabase
-        .from('support_system')
-        .insert({
-          user_id: user?.id,
-          quote_id: quote.id,
-          system_type: 'ticket',
-          ticket_data: {
-            subject: `Question about Quote #${quote.quote_number || quote.id.slice(0, 8)}`,
-            description: questionText,
-            category: questionType,
-            priority: 'medium',
-            status: 'open'
-          }
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Question Submitted",
-        description: "We'll get back to you within 24 hours",
-      });
-
-      setQuestionModalOpen(false);
-      setQuestionText('');
-      setQuestionType('');
-      
-    } catch (error) {
-      console.error('Error submitting question:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit question",
-        variant: "destructive"
-      });
-    }
-  };
+  // Ask Question flow removed in favor of unified ticket/chat
 
   const getDaysUntilExpiry = () => {
     if (!quote?.expires_at) return null;
@@ -1700,14 +1660,15 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                         variant="outline"
                         size="lg"
                         className="h-12 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700"
+                        stacked
                         onMessageSent={() => {
                           // Refresh quote data after sending message
                           refreshQuote();
                         }}
                       />
                       
-                      {/* Reject button - show only for sent and expired quotes, hide for rejected quotes */}
-                      {(quote.status === 'sent' || quote.status === 'expired') && (
+                      {/* Reject button - only for sent and expired quotes */}
+                      {(quote.status === 'sent' || quote.status === 'expired') ? (
                         <Button 
                           variant="destructive" 
                           className="h-12"
@@ -1716,18 +1677,9 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
                           <X className="w-4 h-4 mr-2" />
                           Reject Quote
                         </Button>
-                      )}
-                      
-                      {/* Ask Question button - when reject is not shown */}
-                      {!['sent', 'expired'].includes(quote.status) && (
-                        <Button 
-                          variant="outline" 
-                          className="h-12"
-                          onClick={() => setQuestionModalOpen(true)}
-                        >
-                          <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
-                          Ask Question
-                        </Button>
+                      ) : (
+                        // Keep grid balanced when reject isn't shown
+                        <div className="h-12" />
                       )}
                     </div>
 
@@ -1905,60 +1857,7 @@ const ShopifyStyleQuoteView: React.FC<ShopifyStyleQuoteViewProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Question Modal */}
-      <Dialog open={questionModalOpen} onOpenChange={setQuestionModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Request Modifications</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <p className="text-muted-foreground">
-              Let us know what you'd like to change and we'll get back to you within 24 hours.
-            </p>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">What would you like to modify?</label>
-              <Select value={questionType} onValueChange={setQuestionType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pricing">Pricing concerns</SelectItem>
-                  <SelectItem value="shipping">Shipping options</SelectItem>
-                  <SelectItem value="products">Product modifications</SelectItem>
-                  <SelectItem value="delivery">Delivery timeline</SelectItem>
-                  <SelectItem value="insurance">Insurance coverage</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Please explain in detail</label>
-              <Textarea 
-                placeholder="The more details you provide, the better we can help..."
-                value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setQuestionModalOpen(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSubmitQuestion} 
-                disabled={!questionType || !questionText.trim()}
-                className="flex-1"
-              >
-                <OptimizedIcon name="MessageCircle" className="w-4 h-4 mr-2" />
-                Submit Request
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Ask Question flow removed in favor of unified ticket/chat */}
 
 
       {/* Mobile Sticky Bar - Only show for full access */}

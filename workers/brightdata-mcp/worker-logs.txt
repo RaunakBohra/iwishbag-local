@@ -1,0 +1,145 @@
+
+ ⛅️ wrangler 3.114.12 (update available 4.28.1)
+-----------------------------------------------
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe version of Wrangler you are using is now out-of-date.[0m
+
+  Please update to the latest version to prevent critical errors.
+  Run `npm install --save-dev wrangler@4` to update to the latest version.
+  After installation, run Wrangler with `npx wrangler`.
+
+
+Successfully created tail, expires at 2025-08-10T09:38:24Z
+Connected to brightdata-mcp, waiting for logs...
+POST https://brightdata-mcp.rnkbohra.workers.dev/webhook - Ok @ 8/10/2025, 9:57:09 AM
+  (log) 🚀 [qi5mw5] Request started at 2025-08-10T04:12:09.459Z
+  (log) 📍 [qi5mw5] Method: POST, URL: https://brightdata-mcp.rnkbohra.workers.dev/webhook
+  (log) 📬 [qi5mw5] Webhook notification received
+  (log) 📋 [qi5mw5] Webhook data: {
+  "product_title": "WomenBuzz Medium 25 L Laptop Backpack Backpack Purse for Women Convertible 25L Travel Vintage PU Leather Shoulder Bag  (Pink)",
+  "current_price": "₹672",
+  "original_price": "₹2,499",
+  "discount_percentage": "73% off",
+  "rating": 4.24,
+  "rating_count": "27,557 ratings and 1,972 reviews27,557 ratings and 1,972 reviews",
+  "seller_name": "ProArch",
+  "seller_rating": 4.2,
+  "main_image": "https://rukminim2.flixcart.com/image/832/832/xif0q/backpack/p/u/o/15-backpack-purse-for-women-convertible-25l-travel-vintage-pu-original-imah4fpmhb6eu4pw.jpeg?q=70&crop=false",
+  "image_gallery": [
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/p/u/o/15-backpack-purse-for-women-convertible-25l-travel-vintage-pu-original-imah4fpmhb6eu4pw.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/o/q/l/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmckhjhzeu.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/t/o/d/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmzvzpjmgt.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/g/f/q/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmezm6rg8n.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/g/e/1/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmzgcdqgum.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/t/d/m/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmrg8ncmcu.jpeg?q=70&crop=false",
+    "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/l/e/j/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmg95fxuyy.jpeg?q=70&crop=false"
+  ],
+  "color_variants": [
+    "Black",
+    "Blue-USA1",
+    "BlueLE",
+    "Brown",
+    "Coco",
+    "Cream",
+    "DarkGrey",
+    "Grey",
+    "Peach"
+  ],
+  "delivery_date": "18 Aug, Monday?",
+  "specifications": {
+    "brand": "WomenBuzz",
+    "type": "Backpack",
+    "ideal_for": "Women",
+    "laptop_sleeve": "Yes",
+    "features": "Bottle Pocket",
+    "pattern": "Solid",
+    "capacity": "25 L",
+    "dimensions": "W x H: 13 x 15 inch",
+    "weight": "440 g"
+  },
+  "return_policy": "Cash on Delivery available",
+  "payment_options": "10 days return policy",
+  "review_count": 1972,
+  "url": "https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2?pid=BKPHFJ6B6YR8YQKC",
+  "input": {
+    "url": "https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2?pid=BKPHFJ6B6YR8YQKC"
+  }
+}
+  (log) 💾 [qi5mw5] Storing webhook result with normalized URL: https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2?pid=BKPHFJ6B6YR8YQKC
+  (log) 📋 [qi5mw5] Original URL: https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2?pid=BKPHFJ6B6YR8YQKC
+  (log) 🔍 [qi5mw5] Checking 1 pending requests for URL match: https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2?pid=BKPHFJ6B6YR8YQKC
+POST https://brightdata-mcp.rnkbohra.workers.dev/ - Canceled @ 8/10/2025, 9:55:29 AM
+  (log) 🚀 [8dnp1] Request started at 2025-08-10T04:10:29.123Z
+  (log) 📍 [8dnp1] Method: POST, URL: https://brightdata-mcp.rnkbohra.workers.dev/
+  (log) 📦 [8dnp1] Request body: {
+  "tool": "flipkart_product",
+  "arguments": {
+    "url": "https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse"
+  }
+}
+  (log) 🔧 [8dnp1] Tool: flipkart_product, URL: https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse
+  (log) 🎯 [8dnp1] Mapped tool: flipkart_product → flipkart_product
+  (log) 🛒 [8dnp1] Using custom Flipkart dataset implementation
+  (log) 🛒 [8dnp1] Starting Flipkart product scraping for: https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse
+  (log) 📤 [8dnp1] Triggering Flipkart DCA collection...
+  (log) 📋 [8dnp1] Request payload: [
+  {
+    "url": "https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse"
+  }
+]
+  (log) 📤 [8dnp1] Sending payload to BrightData: [
+  {
+    "url": "https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse"
+  }
+]
+  (log) 📋 [8dnp1] DCA trigger response: {
+  collection_id: 'j_me5618ph2htizqjnaq',
+  start_eta: '2025-08-10T04:10:29.550Z'
+}
+  (log) 📋 [8dnp1] Flipkart DCA collection triggered
+  (log) ⏳ [8dnp1] Processing Flipkart DCA results...
+  (log) 📋 [8dnp1] Trigger result keys: [ 'collection_id', 'start_eta' ]
+  (log) 🔍 [8dnp1] Collection ID: j_me5618ph2htizqjnaq
+  (log) 📝 [8dnp1] Storing pending request with URL: https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY&lid=LSTACCHDARVXHF9HCNYEK7IK2&marketplace=FLIPKART&store=0pm%2Ffcn%2F821%2Ffof&srno=b_1_1&otracker=browse&fm=productRecommendation%2Fsimilar&iid=en_TtfH7ZIMOAHqdHH5zrS-40UnAftiFk_G2dwx4oAs335HNXYByKCsBYrzwXJRwMuMZG0iOt_bo1Mr1VFzvZzxTw%3D%3D&ppt=browse&ppn=browse
+  (log) 📊 [8dnp1] Total pending requests: 3
+  (log) 🔍 [8dnp1] Checking for immediate webhook with normalized URL: https://www.flipkart.com/uddo-original-ibeats-360sound-lightning-wired-earphone-100-supports-i5-i13/p/itm60bcd84cad3e6?pid=ACCHDARVXHF9HCNY
+  (log) 🔍 [8dnp1] Polling for results with ID: j_me5618ph2htizqjnaq
+  (log) 🔄 [8dnp1] DCA polling attempt 1/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 2/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 3/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 4/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 5/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 6/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 7/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 8/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 9/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 10/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 11/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 12/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 13/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 14/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+  (log) 🔄 [8dnp1] DCA polling attempt 15/18 (10s intervals)...
+  (log) ⚠️ [8dnp1] DCA polling response: 404 Not Found
+pretty
+FatalError: Tail disconnected, exiting.
+    at createFatalError (/Users/raunakbohra/Desktop/global-wishlist-hub/workers/brightdata-mcp/node_modules/wrangler/wrangler-dist/cli.js:81622:12)
+    at Timeout._onTimeout (/Users/raunakbohra/Desktop/global-wishlist-hub/workers/brightdata-mcp/node_modules/wrangler/wrangler-dist/cli.js:146737:17)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7) {
+  telemetryMessage: 'Tail disconnected, exiting.',
+  code: 1
+}

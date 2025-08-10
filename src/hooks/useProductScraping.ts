@@ -51,6 +51,9 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
       return;
     }
 
+    console.log(`🚀 useProductScraping: Starting scrape for URL: ${url}`);
+    console.log(`📋 useProductScraping: Options:`, options);
+
     setIsLoading(true);
     setError(null);
     setIsScraped(false);
@@ -65,14 +68,21 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
         ...options
       };
 
+      console.log(`🔧 useProductScraping: Final scrape options:`, scrapeOptions);
+      console.log(`📞 useProductScraping: Calling brightDataProductService.fetchProductData...`);
+
       const result: FetchResult = await brightDataProductService.fetchProductData(url, scrapeOptions);
 
+      console.log(`📥 useProductScraping: Service result:`, result);
+
       if (result.success && result.data) {
+        console.log(`✅ useProductScraping: Scraping successful! Data:`, result.data);
         setProductData(result.data);
         setSource(result.source);
         setIsScraped(true);
         setError(null);
       } else {
+        console.log(`❌ useProductScraping: Scraping failed. Error: ${result.error}`);
         setError(result.error || 'Failed to scrape product data');
         setProductData(null);
         setSource(null);
@@ -80,11 +90,14 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error(`💥 useProductScraping: Exception caught:`, err);
+      console.error(`💥 useProductScraping: Error message: ${errorMessage}`);
       setError(errorMessage);
       setProductData(null);
       setSource(null);
       setIsScraped(false);
     } finally {
+      console.log(`🏁 useProductScraping: Scraping completed. Loading: false`);
       setIsLoading(false);
     }
   }, []);

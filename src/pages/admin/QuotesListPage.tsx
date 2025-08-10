@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBatchProcessing } from '@/hooks/useBatchProcessing';
 
 const QuotesListPage: React.FC = () => {
+  console.log('🎯 QuotesListPage component loaded - no auth dependencies');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -103,8 +104,8 @@ const QuotesListPage: React.FC = () => {
       return new Date(a.review_requested_at) - new Date(b.review_requested_at);
     }
     
-    // 3. Default: most recent first
-    return new Date(b.updated_at) - new Date(a.updated_at);
+    // 3. Default: most recent first (by creation date for consistency with DB query)
+    return new Date(b.created_at) - new Date(a.created_at);
   });
   
   // Group quotes by category for organized display

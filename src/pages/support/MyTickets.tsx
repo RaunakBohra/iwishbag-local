@@ -37,7 +37,7 @@ import { useUserTickets } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { NewTicketForm } from '@/components/support/NewTicketForm';
 import { businessHoursService } from '@/config/businessHours';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   CUSTOMER_TICKET_STATUS_LABELS,
@@ -246,8 +246,17 @@ export default function MyTicketsPage() {
   const [activeTab, setActiveTab] = useState('active');
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: tickets = [], isLoading, error, refetch } = useUserTickets(user?.id);
+
+  // Deep-link: open a specific ticket if `?ticket=<id>` is present
+  React.useEffect(() => {
+    const ticketParam = searchParams.get('ticket');
+    if (ticketParam) {
+      setSelectedTicketId(ticketParam);
+    }
+  }, [searchParams]);
 
   const handleTicketCreated = () => {
     setShowNewTicketForm(false);
@@ -260,6 +269,11 @@ export default function MyTicketsPage() {
 
   const handleBackToList = () => {
     setSelectedTicketId(null);
+    // Remove ticket param from URL
+    if (searchParams.get('ticket')) {
+      searchParams.delete('ticket');
+      setSearchParams(searchParams, { replace: true });
+    }
   };
 
   // Filter tickets based on tab and search
@@ -287,18 +301,15 @@ export default function MyTicketsPage() {
   });
 
 
-  // If a ticket is selected, show the detail view
+  // If a ticket is selected (including via deep-link), show the detail view directly
   if (selectedTicketId) {
-    const selectedTicket = tickets.find((t) => t.id === selectedTicketId);
-    if (selectedTicket) {
-      return (
-        <div className="min-h-screen bg-gray-50">
-          <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <TicketDetailView ticketId={selectedTicket.id} onBack={handleBackToList} />
-          </div>
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <TicketDetailView ticketId={selectedTicketId} onBack={handleBackToList} />
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   const isCurrentlyBusinessHours = businessHoursService.isCurrentlyBusinessHours();
