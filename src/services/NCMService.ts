@@ -271,8 +271,32 @@ class NCMService {
     } catch (error) {
       console.error('❌ [NCM] Edge Function call failed:', error);
       
-      // Return fallback rates
-      return this.getFallbackRates(request);
+      // Log detailed error information for debugging
+      if (error instanceof Error) {
+        console.error('❌ [NCM] Error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack?.slice(0, 500) // Limit stack trace
+        });
+      }
+      
+      // Check if it's a CORS error
+      if (error instanceof Error && error.message.includes('CORS')) {
+        console.warn('⚠️ [NCM] CORS error detected - check if Supabase functions are running locally');
+        console.warn('⚠️ [NCM] Try running: supabase functions serve');
+      }
+      
+      // Check if it's a network error
+      if (error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('net::ERR') || error.message.includes('Failed to send a request'))) {
+        console.warn('⚠️ [NCM] Network error - check Supabase local development status');
+        console.warn('⚠️ [NCM] Try running: supabase status');
+      }
+      
+      // Return fallback rates on error
+      const fallbackRates = this.getFallbackRates(request);
+      
+      console.log('🔄 [NCM] Using local fallback rates due to error');
+      return fallbackRates;
     }
   }
 

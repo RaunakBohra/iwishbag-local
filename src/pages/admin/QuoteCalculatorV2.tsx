@@ -43,6 +43,7 @@ import NCMService from '@/services/NCMService';
 import { EditableUrlInput } from '@/components/EditableUrlInput';
 import { ncmBranchMappingService } from '@/services/NCMBranchMappingService';
 import { smartNCMBranchMapper, type SmartBranchMapping } from '@/services/SmartNCMBranchMapper';
+import { ncmLogger } from '@/services/NCMLogger';
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
@@ -540,7 +541,7 @@ const QuoteCalculatorV2: React.FC = () => {
     if (!destinationAddress.city && !destinationAddress.state) return;
     
     const timeoutId = setTimeout(async () => {
-      console.log('⏱️ [Real-time] Checking address input for NCM suggestions:', destinationAddress);
+      ncmLogger.debug('RealTime', 'Checking address input for NCM suggestions', destinationAddress);
       
       // Performance optimization: Check if we already have cached result for this address
       const cacheKey = `${destinationAddress.city?.toLowerCase()}_${destinationAddress.state?.toLowerCase()}`;
@@ -563,19 +564,19 @@ const QuoteCalculatorV2: React.FC = () => {
         try {
           const suggestions = await smartNCMBranchMapper.getSuggestions(addressInput, 3);
           if (suggestions.length > 0) {
-            console.log(`💡 [Real-time] Found ${suggestions.length} suggestions based on manual input`);
+            ncmLogger.info('RealTime', `Found ${suggestions.length} suggestions based on manual input`);
             setSuggestedNCMBranches(suggestions);
             
             // Auto-select if high confidence and no current selection
             if (!selectedNCMBranch && suggestions[0].confidence === 'high') {
-              console.log(`🎯 [Real-time] Auto-selecting high confidence suggestion: ${suggestions[0].branch.name}`);
+              ncmLogger.info('RealTime', `Auto-selecting high confidence suggestion: ${suggestions[0].branch.name}`);
               setSelectedNCMBranch(suggestions[0].branch);
               setBranchMapping(suggestions[0]);
               setIsAutoSelected(true);
             }
           }
         } catch (error) {
-          logger.error('❌ [Real-time] Error getting suggestions:', error);
+          ncmLogger.error('RealTime', 'Error getting suggestions', error);
         }
       }
     }, 1500); // 1.5 second debounce for real-time input

@@ -8,6 +8,7 @@ import { NCMBranch } from './NCMService';
 import { NCMBranchMappingService } from './NCMBranchMappingService';
 import { NepalAddressService, District } from './NepalAddressService';
 import { ncmLogger } from './NCMLogger';
+import { ncmConfigurationService, type NCMConfiguration } from './NCMConfigurationService';
 
 export interface AddressInput {
   city?: string;
@@ -32,24 +33,25 @@ export class SmartNCMBranchMapper {
   private nepalAddressService: NepalAddressService;
   private ncmBranchMappingService: NCMBranchMappingService;
   private cache = new Map<string, { data: SmartBranchMapping; timestamp: number }>();
-  private readonly CACHE_DURATION = 300000; // 5 minutes
+  private configuration: NCMConfiguration | null = null;
+  private readonly CACHE_DURATION = 300000; // 5 minutes (will be overridden by config)
 
   // Comprehensive city to district mappings for Nepal (200+ municipalities)
   private readonly CITY_TO_DISTRICT_MAP: Record<string, string> = {
-    // Kathmandu Valley
+    // Kathmandu Valley - All routed to Tinkune (Kathmandu) branch
     'kathmandu': 'kathmandu',
     'ktm': 'kathmandu', 
-    'lalitpur': 'lalitpur',
-    'patan': 'lalitpur',
-    'bhaktapur': 'bhaktapur',
+    'lalitpur': 'kathmandu',  // Route to Tinkune branch
+    'patan': 'kathmandu',     // Route to Tinkune branch  
+    'bhaktapur': 'kathmandu', // Route to Tinkune branch
     'banepa': 'kavrepalanchok',
     'dhulikhel': 'kavrepalanchok',
     'panauti': 'kavrepalanchok',
     'namobuddha': 'kavrepalanchok',
     'kirtipur': 'kathmandu',
-    'madhyapur': 'bhaktapur',
-    'changunarayan': 'bhaktapur',
-    'suryabinayak': 'bhaktapur',
+    'madhyapur': 'kathmandu',      // Route to Tinkune branch
+    'changunarayan': 'kathmandu',  // Route to Tinkune branch
+    'suryabinayak': 'kathmandu',   // Route to Tinkune branch
     
     // Province 1 (Koshi)
     'biratnagar': 'morang',
@@ -372,8 +374,8 @@ export class SmartNCMBranchMapper {
     'saptari': 'saptari',
     'chitwan': 'chitwan',
     'kavrepalanchok': 'kavrepalanchok',
-    'bhaktapur': 'bhaktapur',
-    'lalitpur': 'lalitpur',
+    'bhaktapur': 'kathmandu',  // Route to Tinkune branch
+    'lalitpur': 'kathmandu',   // Route to Tinkune branch
     'kathmandu': 'kathmandu',
     'udayapur': 'udayapur',
     'dhankuta': 'dhankuta',
@@ -394,12 +396,12 @@ export class SmartNCMBranchMapper {
 
   // Common NCM branch name variations
   private readonly BRANCH_NAME_VARIATIONS: Record<string, string[]> = {
-    'KATHMANDU': ['tinkune', 'ktm', 'kathmandu', 'katmandu'],
+    'KATHMANDU': ['tinkune', 'ktm', 'kathmandu', 'katmandu', 'lalitpur', 'bhaktapur', 'patan'], // Include valley cities
+    'TINKUNE': ['tinkune', 'ktm', 'kathmandu', 'katmandu', 'lalitpur', 'bhaktapur', 'patan'],   // Direct Tinkune mapping
     'POKHARA': ['pokhara', 'pokhra', 'pkhra', 'kaski'],
     'CHITWAN': ['chitwan', 'bharatpur', 'narayanghat'],
     'BIRATNAGAR': ['biratnagar', 'brtngr'], // Specific branch for Biratnagar city
     'MORANG': ['morang'], // Generic Morang district branch (if exists)
-    'LALITPUR': ['lalitpur', 'patan', 'lalit'],
     'JHAPA': ['damak', 'jhapa', 'mechinagar'],
     'PARSA': ['birgunj', 'birganj', 'parsa'],
     'SUNSARI': ['dharan', 'itahari', 'sunsari'],
@@ -422,6 +424,42 @@ export class SmartNCMBranchMapper {
   }
 
   /**
+   * Load configuration from configuration service
+   */
+  private async loadConfiguration(): Promise<NCMConfiguration> {
+    if (this.configuration) {
+      return this.configuration;
+    }
+
+    try {
+      this.configuration = await ncmConfigurationService.getConfiguration();
+      ncmLogger.debug('SmartMapper', 'Loaded configuration', {
+        cityMappings: Object.keys(this.configuration.city_mappings).length,
+        branchPriorities: Object.keys(this.configuration.branch_priorities).length
+      });
+      return this.configuration;
+    } catch (error) {
+      ncmLogger.error('SmartMapper', 'Failed to load configuration', error);
+      // Return basic configuration on failure
+      return {
+        city_mappings: this.CITY_TO_DISTRICT_MAP,
+        branch_priorities: {},
+        fallback_strategies: {
+          enabled_strategies: ['city_match', 'city_to_district', 'district_match', 'fuzzy_match', 'province_fallback'],
+          confidence_thresholds: { high: 90, medium: 70, low: 50 },
+          auto_select_confidence: 'high'
+        },
+        province_hub_mappings: {},
+        performance_settings: {
+          cache_duration_ms: 300000,
+          debounce_delay_ms: 1500,
+          max_suggestions: 3
+        }
+      };
+    }
+  }
+
+  /**
    * Find the best NCM branch match for given address with confidence scoring
    */
   async findBestMatch(address: AddressInput): Promise<SmartBranchMapping | null> {
@@ -432,9 +470,12 @@ export class SmartNCMBranchMapper {
     const timer = ncmLogger.startTimer('SmartMapper', 'findBestMatch');
     ncmLogger.debug('SmartMapper', 'Finding best branch match', address);
 
+    // Load configuration
+    const config = await this.loadConfiguration();
+
     // Create cache key
     const cacheKey = this.createCacheKey(address);
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache(cacheKey, config.performance_settings.cache_duration_ms);
     if (cached) {
       ncmLogger.debug('SmartMapper', 'Using cached result', { cacheKey });
       return cached;
@@ -462,60 +503,71 @@ export class SmartNCMBranchMapper {
       })));
 
       // NEW APPROACH: City-first matching with district fallback
-      console.log(`🔍 [SmartMapper] Trying city-first matching for: ${address.city || 'no city'}`);
+      ncmLogger.debug('SmartMapper', 'Trying city-first matching', { city: address.city || 'no city' });
       
-      // Strategy 1: Try exact city match first
-      const cityMatch = this.findExactCityMatch(address, branches);
-      if (cityMatch) {
-        console.log(`✅ [SmartMapper] Found exact city match: ${cityMatch.branch.name} (${cityMatch.matchReason})`);
-        this.setCache(cacheKey, cityMatch);
-        return cityMatch;
+      // Strategy 1: Try exact city match first (if enabled)
+      if (config.fallback_strategies.enabled_strategies.includes('city_match')) {
+        const cityMatch = this.findExactCityMatch(address, branches, config);
+        if (cityMatch) {
+          ncmLogger.info('SmartMapper', `Found exact city match: ${cityMatch.branch.name}`, { matchReason: cityMatch.matchReason });
+          this.setCache(cacheKey, cityMatch, config.performance_settings.cache_duration_ms);
+          timer.end({ strategy: 'city_match', branch: cityMatch.branch.name });
+          return cityMatch;
+        }
       }
 
-      // Strategy 2: Try city-to-district mapping
-      const cityToDistrictMatch = this.findCityToDistrictMatch(address, branches);
-      if (cityToDistrictMatch) {
-        console.log(`✅ [SmartMapper] Found city-to-district match: ${cityToDistrictMatch.branch.name} (${cityToDistrictMatch.matchReason})`);
-        this.setCache(cacheKey, cityToDistrictMatch);
-        return cityToDistrictMatch;
+      // Strategy 2: Try city-to-district mapping (if enabled)
+      if (config.fallback_strategies.enabled_strategies.includes('city_to_district')) {
+        const cityToDistrictMatch = this.findCityToDistrictMatch(address, branches, config);
+        if (cityToDistrictMatch) {
+          ncmLogger.info('SmartMapper', `Found city-to-district match: ${cityToDistrictMatch.branch.name}`, { matchReason: cityToDistrictMatch.matchReason });
+          this.setCache(cacheKey, cityToDistrictMatch, config.performance_settings.cache_duration_ms);
+          timer.end({ strategy: 'city_to_district', branch: cityToDistrictMatch.branch.name });
+          return cityToDistrictMatch;
+        }
       }
 
       // Strategy 3: If no exact match found, check if there are multiple branches in the district
       // In this case, we DON'T auto-select but let the UI show all district branches
       const districtBranches = await this.findDistrictBranches(address);
       if (districtBranches.length > 1) {
-        console.log(`🏢 [SmartMapper] Found ${districtBranches.length} branches in district - letting user choose manually`);
+        ncmLogger.info('SmartMapper', `Found ${districtBranches.length} branches in district - letting user choose manually`);
+        timer.end({ strategy: 'multiple_district_branches', count: districtBranches.length });
         // Don't auto-select when multiple branches exist in district
         // The UI will show these as suggestions
         return null;
       } else if (districtBranches.length === 1) {
         // Only one branch in district, auto-select it
-        console.log(`✅ [SmartMapper] Auto-selecting single branch in district: ${districtBranches[0].branch.name}`);
+        ncmLogger.info('SmartMapper', `Auto-selecting single branch in district: ${districtBranches[0].branch.name}`);
         this.setCache(cacheKey, districtBranches[0]);
+        timer.end({ strategy: 'single_district_branch', branch: districtBranches[0].branch.name });
         return districtBranches[0];
       }
 
       // Strategy 4: Try fuzzy matching as fallback
       const fuzzyMatch = this.findFuzzyMatch(address, branches);
       if (fuzzyMatch) {
-        console.log(`✅ [SmartMapper] Found fuzzy match: ${fuzzyMatch.branch.name} (${fuzzyMatch.matchReason})`);
+        ncmLogger.info('SmartMapper', `Found fuzzy match: ${fuzzyMatch.branch.name}`, { matchReason: fuzzyMatch.matchReason });
         this.setCache(cacheKey, fuzzyMatch);
+        timer.end({ strategy: 'fuzzy_match', branch: fuzzyMatch.branch.name });
         return fuzzyMatch;
       }
 
       // Strategy 5: Enhanced province-based geographic fallback
       const provinceMatch = this.findProvinceBasedFallback(address, branches);
       if (provinceMatch) {
-        console.log(`✅ [SmartMapper] Found province fallback: ${provinceMatch.branch.name} (${provinceMatch.matchReason})`);
+        ncmLogger.info('SmartMapper', `Found province fallback: ${provinceMatch.branch.name}`, { matchReason: provinceMatch.matchReason });
         this.setCache(cacheKey, provinceMatch);
+        timer.end({ strategy: 'province_fallback', branch: provinceMatch.branch.name });
         return provinceMatch;
       }
 
-      console.log('❌ [SmartMapper] No suitable match found even with fallbacks');
+      ncmLogger.warn('SmartMapper', 'No suitable match found even with fallbacks', address);
+      timer.end({ strategy: 'no_match' });
       return null;
 
     } catch (error) {
-      console.error('❌ [SmartMapper] Error finding branch match:', error);
+      ncmLogger.error('SmartMapper', 'Error finding branch match', error, address);
       return null;
     }
   }
@@ -634,7 +686,7 @@ export class SmartNCMBranchMapper {
    * Strategy 1: Exact city match (prioritized)
    * Matches user's city with NCM branch names and covered areas
    */
-  private findExactCityMatch(address: AddressInput, branches: NCMBranch[]): SmartBranchMapping | null {
+  private findExactCityMatch(address: AddressInput, branches: NCMBranch[], config: NCMConfiguration): SmartBranchMapping | null {
     const city = address.city;
     if (!city) return null;
 
@@ -707,14 +759,15 @@ export class SmartNCMBranchMapper {
   }
 
   /**
-   * Strategy 2: City-to-district translation
+   * Strategy 2: City-to-district translation using configuration
    */
-  private findCityToDistrictMatch(address: AddressInput, branches: NCMBranch[]): SmartBranchMapping | null {
+  private findCityToDistrictMatch(address: AddressInput, branches: NCMBranch[], config: NCMConfiguration): SmartBranchMapping | null {
     const city = address.city;
     if (!city) return null;
 
     const normalizedCity = city.toLowerCase().trim();
-    const mappedDistrict = this.CITY_TO_DISTRICT_MAP[normalizedCity];
+    // Use configuration mappings first, then fallback to static mappings
+    const mappedDistrict = config.city_mappings[normalizedCity] || this.CITY_TO_DISTRICT_MAP[normalizedCity];
     
     if (mappedDistrict) {
       const districtBranches = branches.filter(branch => 
@@ -1026,15 +1079,16 @@ export class SmartNCMBranchMapper {
     });
   }
 
-  private getFromCache(key: string): SmartBranchMapping | null {
+  private getFromCache(key: string, cacheDurationMs?: number): SmartBranchMapping | null {
     const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+    const duration = cacheDurationMs || this.CACHE_DURATION;
+    if (cached && Date.now() - cached.timestamp < duration) {
       return cached.data;
     }
     return null;
   }
 
-  private setCache(key: string, data: SmartBranchMapping): void {
+  private setCache(key: string, data: SmartBranchMapping, cacheDurationMs?: number): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now()
