@@ -64,7 +64,7 @@ COMMENT ON EXTENSION pg_net IS 'Async HTTP';
 -- Name: pgbouncer; Type: SCHEMA; Schema: -; Owner: pgbouncer
 --
 
-CREATE SCHEMA pgbouncer;
+-- CREATE SCHEMA pgbouncer; -- System schema, skipping
 
 ALTER SCHEMA pgbouncer OWNER TO pgbouncer;
 
